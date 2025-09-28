@@ -810,7 +810,7 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       .from('leave_requests')
       .select(`
         *,
-        users!inner(first_name, last_name, email, department)
+        users!leave_requests_user_id_fkey(first_name, last_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -848,7 +848,7 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
         id: req.users.id,
         name: `${req.users.first_name} ${req.users.last_name}`,
         email: req.users.email,
-        department: req.users.department
+        department: 'Non specificato'
       }
     }));
 
