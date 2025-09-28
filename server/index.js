@@ -943,129 +943,6 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
   }
 });
 
-// ==================== DASHBOARD API ====================
-
-// Dashboard stats
-app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
-  try {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Get today's attendance count
-    const { data: todayAttendance, error: attendanceError } = await supabase
-      .from('attendance')
-      .select('id')
-      .eq('date', today)
-      .not('check_in', 'is', null);
-
-    if (attendanceError) {
-      console.error('Dashboard stats error:', attendanceError);
-      return res.status(500).json({ error: 'Errore nel recupero delle statistiche' });
-    }
-
-    // Get pending requests count
-    const { data: pendingRequests, error: requestsError } = await supabase
-      .from('leave_requests')
-      .select('id')
-      .eq('status', 'pending');
-
-    if (requestsError) {
-      console.error('Dashboard stats error:', requestsError);
-      return res.status(500).json({ error: 'Errore nel recupero delle statistiche' });
-    }
-
-    res.json({
-      presentToday: todayAttendance.length,
-      pendingRequests: pendingRequests.length
-    });
-  } catch (error) {
-    console.error('Dashboard stats error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Weekly attendance chart data
-app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
-
-    const today = new Date();
-    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
-    const weekEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-
-    const { data: weeklyAttendance, error } = await supabase
-      .from('attendance')
-      .select('date, check_in, check_out')
-      .gte('date', weekStart.toISOString().split('T')[0])
-      .lte('date', weekEnd.toISOString().split('T')[0])
-      .not('check_in', 'is', null);
-
-    if (error) {
-      console.error('Weekly attendance error:', error);
-      return res.status(500).json({ error: 'Errore nel recupero dei dati settimanali' });
-    }
-
-    // Group by date and count
-    const dailyCounts = {};
-    weeklyAttendance.forEach(att => {
-      dailyCounts[att.date] = (dailyCounts[att.date] || 0) + 1;
-    });
-
-    // Format for chart
-    const chartData = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      chartData.push({
-        date: dateStr,
-        count: dailyCounts[dateStr] || 0
-      });
-    }
-
-    res.json(chartData);
-  } catch (error) {
-    console.error('Weekly attendance error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Department distribution
-app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
-
-    const { data: departments, error } = await supabase
-      .from('employees')
-      .select('department')
-      .eq('status', 'active');
-
-    if (error) {
-      console.error('Departments error:', error);
-      return res.status(500).json({ error: 'Errore nel recupero dei dipartimenti' });
-    }
-
-    // Count by department
-    const deptCounts = {};
-    departments.forEach(emp => {
-      deptCounts[emp.department] = (deptCounts[emp.department] || 0) + 1;
-    });
-
-    const chartData = Object.entries(deptCounts).map(([name, count]) => ({
-      name,
-      count
-    }));
-
-    res.json(chartData);
-  } catch (error) {
-    console.error('Departments error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
 
 // ==================== HEALTH CHECK ====================
 
@@ -1076,6 +953,11 @@ app.get('/health', (req, res) => {
     uptime: process.uptime()
   });
 });
+
+// ==================== STATIC FILES ====================
+
+// Serve static files from client/dist
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // ==================== CATCH-ALL ROUTE ====================
 
