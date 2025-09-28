@@ -3,9 +3,14 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{html,js,jsx,ts,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
       colors: {
         primary: {
           50: '#eff6ff',
@@ -51,4 +56,40 @@ export default {
     },
   },
   plugins: [],
+  safelist: [
+    // Safelist per classi dinamiche
+    'bg-slate-700',
+    'bg-slate-800',
+    'bg-slate-900',
+    'text-white',
+    'text-slate-300',
+    'text-slate-400',
+    'border-slate-600',
+    'border-slate-700',
+    'hover:bg-slate-700',
+    'hover:bg-slate-800',
+    'focus:ring-indigo-500',
+    'focus:border-transparent',
+    'rounded-xl',
+    'rounded-2xl',
+    'rounded-3xl',
+    'p-4',
+    'p-6',
+    'p-8',
+    'py-3',
+    'py-4',
+    'px-4',
+    'px-6',
+    'transition-all',
+    'duration-300',
+    'shadow-lg',
+    'shadow-xl',
+    'glass',
+    'glass-card',
+    'animate-float',
+    // Pattern per classi dinamiche
+    { pattern: /(bg|text|border)-(slate|indigo|purple)-(100|200|300|400|500|600|700|800|900)/ },
+    { pattern: /(hover|focus):(bg|text|border)-(slate|indigo|purple)-(100|200|300|400|500|600|700|800|900)/ },
+    { pattern: /(rounded|p|py|px|m|my|mx|w|h)-(xs|sm|md|lg|xl|2xl|3xl)/ },
+  ],
 }
