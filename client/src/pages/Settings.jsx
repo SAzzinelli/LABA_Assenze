@@ -30,6 +30,7 @@ import {
 const Settings = () => {
   const { user, apiCall } = useAuthStore();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'company' : 'notifications');
+  const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
     company: {
       name: 'LABA Firenze',
@@ -88,6 +89,7 @@ const Settings = () => {
   React.useEffect(() => {
     const loadSettings = async () => {
       try {
+        setLoading(true);
         const response = await apiCall('/api/settings');
         if (response.ok) {
           const data = await response.json();
@@ -111,6 +113,8 @@ const Settings = () => {
         if (saved) {
           setSettings(JSON.parse(saved));
         }
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -470,17 +474,25 @@ const Settings = () => {
         {/* Content */}
         <div className="lg:col-span-3">
           <div className="bg-slate-800 rounded-lg p-6">
-            {renderTabContent()}
-            
-            <div className="mt-8 pt-6 border-t border-slate-700">
-              <button
-                onClick={handleSaveSettings}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-              >
-                <Save className="h-5 w-5 mr-2" />
-                Salva Impostazioni
-              </button>
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-slate-400">Caricamento impostazioni...</div>
+              </div>
+            ) : (
+              <>
+                {renderTabContent()}
+                
+                <div className="mt-8 pt-6 border-t border-slate-700">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                  >
+                    <Save className="h-5 w-5 mr-2" />
+                    Salva Impostazioni
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
