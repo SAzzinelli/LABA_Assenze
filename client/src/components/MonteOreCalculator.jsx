@@ -118,11 +118,8 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
             const [start, end] = day.afternoon.split('-');
             dayHours += calculateHours(start, end);
           }
-          // Sottrai la pausa pranzo se presente
-          if (day.lunchBreak) {
-            const [start, end] = day.lunchBreak.split('-');
-            dayHours -= calculateHours(start, end);
-          }
+          // NON sottrarre la pausa pranzo: è già esclusa dal calcolo mattina/pomeriggio
+          // La pausa pranzo (13:00-14:00) è il gap tra mattina e pomeriggio
         }
         
         totalHours += dayHours;
