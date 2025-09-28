@@ -624,9 +624,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
 // Dashboard weekly attendance data
 app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
+    // Admin vede tutti i dati, employee vede solo i propri
 
     // Get last 7 days
     const today = new Date();
@@ -637,17 +635,26 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const { count: presenze } = await supabase
+      let presenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr)
         .not('check_in', 'is', null);
       
-      const { count: assenze } = await supabase
+      let assenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr)
         .is('check_in', null);
+      
+      // Se è employee, mostra solo i propri dati
+      if (req.user.role === 'employee') {
+        presenzeQuery = presenzeQuery.eq('user_id', req.user.id);
+        assenzeQuery = assenzeQuery.eq('user_id', req.user.id);
+      }
+      
+      const { count: presenze } = await presenzeQuery;
+      const { count: assenze } = await assenzeQuery;
       
       weekData.push({
         name: date.toLocaleDateString('it-IT', { weekday: 'short' }),
