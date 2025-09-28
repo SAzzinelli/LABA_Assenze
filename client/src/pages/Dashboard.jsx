@@ -10,7 +10,8 @@ import {
   ArrowDownRight,
   Activity,
   Target,
-  Calendar
+  Calendar,
+  MapPin
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -24,6 +25,14 @@ const Dashboard = () => {
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Stati per KPI utente
+  const [userKPIs, setUserKPIs] = useState({
+    weeklyHours: '0h 0m',
+    overtimeBalance: '+0h 0m',
+    remainingPermissions: '0h',
+    monthlyPresences: '0/20'
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -351,13 +360,29 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Pulsante Rapido Timbratura - Solo per Utenti */}
+      {/* Timbratura - Solo per Utenti */}
       {user?.role !== 'admin' && (
         <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
             <Clock className="h-6 w-6 mr-3 text-green-400" />
-            Timbratura Rapida
+            Timbratura
           </h3>
+          
+          {/* Selezione Sede di Lavoro */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-300 mb-3 flex items-center">
+              <MapPin className="h-4 w-4 mr-2" />
+              Sede di Lavoro
+            </label>
+            <select 
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="badia">Piazza di Badia a Ripoli 1/A</option>
+              <option value="vecchietti">Via de' Vecchietti 6</option>
+            </select>
+          </div>
+
+          {/* Pulsanti Timbratura */}
           <div className="flex gap-4">
             <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
               <CheckCircle className="h-5 w-5 mr-2" />
