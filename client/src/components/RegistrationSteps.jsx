@@ -29,8 +29,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
 
   const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
   const workplaces = [
-    'Piazza di Badia a Ripoli 1/A',
-    'Via de\' Vecchietti 6'
+    { value: 'badia', label: 'Piazza di Badia a Ripoli 1/A' },
+    { value: 'vecchietti', label: 'Via de\' Vecchietti 6' }
   ];
   const contractTypes = [
     'Full Time - Indeterminato',
@@ -244,7 +244,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           >
             <option value="">Seleziona sede</option>
             {workplaces.map(workplace => (
-              <option key={workplace} value={workplace}>{workplace}</option>
+              <option key={workplace.value} value={workplace.value}>{workplace.label}</option>
             ))}
           </select>
         </div>

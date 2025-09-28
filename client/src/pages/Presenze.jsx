@@ -18,8 +18,8 @@ const Attendance = () => {
 
   // Opzioni sedi disponibili
   const locationOptions = [
-    { value: 'piazza-badia', label: 'Piazza di Badia a Ripoli 1/A' },
-    { value: 'via-vecchietti', label: 'Via de\' Vecchietti 6' }
+    { value: 'badia', label: 'Piazza di Badia a Ripoli 1/A' },
+    { value: 'vecchietti', label: 'Via de\' Vecchietti 6' }
   ];
 
   useEffect(() => {
@@ -67,16 +67,22 @@ const Attendance = () => {
 
   // Funzione per determinare la sede predefinita dal workplace
   const getDefaultLocationFromWorkplace = (workplace) => {
-    if (!workplace) return 'via-vecchietti'; // Default
+    if (!workplace) return 'vecchietti'; // Default
     
-    const workplaceLower = workplace.toLowerCase();
-    if (workplaceLower.includes('badia') || workplaceLower.includes('ripoli')) {
-      return 'piazza-badia';
-    } else if (workplaceLower.includes('vecchietti')) {
-      return 'via-vecchietti';
+    // Se workplace è già un valore (badia/vecchietti)
+    if (workplace === 'badia' || workplace === 'vecchietti') {
+      return workplace;
     }
     
-    return 'via-vecchietti'; // Default fallback
+    // Se workplace è una stringa completa, convertila
+    const workplaceLower = workplace.toLowerCase();
+    if (workplaceLower.includes('badia') || workplaceLower.includes('ripoli')) {
+      return 'badia';
+    } else if (workplaceLower.includes('vecchietti')) {
+      return 'vecchietti';
+    }
+    
+    return 'vecchietti'; // Default fallback
   };
 
   // Funzione per ottenere il label della sede selezionata

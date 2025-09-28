@@ -40,6 +40,12 @@ const Profile = () => {
     contractType: user?.contractType || ''
   });
 
+  // Opzioni sedi di lavoro
+  const officeLocations = [
+    { value: 'badia', label: 'Piazza di Badia a Ripoli 1/A' },
+    { value: 'vecchietti', label: 'Via de\' Vecchietti 6' }
+  ];
+
   // Carica l'orario salvato dal localStorage o usa quello di default
   const defaultWorkSchedule = {
     monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
@@ -526,15 +532,20 @@ const Profile = () => {
             <MapPin className="h-4 w-4 mr-2 text-indigo-400" />
             Sede di Lavoro
           </label>
-          <input
-            type="text"
+          <select
             name="officeLocation"
             value={formData.officeLocation}
             onChange={handleInputChange}
             disabled={!isEditing}
-            placeholder="Es. LABА Firenze - Sede Via Vecchietti"
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-          />
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:text-slate-300"
+          >
+            <option value="">Seleziona sede...</option>
+            {officeLocations.map((location) => (
+              <option key={location.value} value={location.value}>
+                {location.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
