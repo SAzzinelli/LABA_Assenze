@@ -59,12 +59,19 @@ const Dashboard = () => {
         }
       }
 
-      // Fetch departments - fallback to mock data if empty
-      const departmentsResponse = await apiCall('/api/dashboard/departments');
+      // Fetch departments from new API
+      const departmentsResponse = await apiCall('/api/departments');
       if (departmentsResponse.ok) {
         const departmentsData = await departmentsResponse.json();
         if (departmentsData && departmentsData.length > 0) {
-          setDepartments(departmentsData);
+          // Convert API data to chart format
+          const chartData = departmentsData.map((dept, index) => ({
+            name: dept.name,
+            value: Math.floor(Math.random() * 10) + 3, // TODO: Get real employee count
+            color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
+            employees: Math.floor(Math.random() * 10) + 3
+          }));
+          setDepartments(chartData);
         } else {
           // Mock data for testing
           setDepartments([

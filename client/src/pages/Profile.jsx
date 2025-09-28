@@ -49,12 +49,68 @@ const Profile = () => {
     sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
   };
 
-  const [workSchedule, setWorkSchedule] = useState(() => {
-    const saved = localStorage.getItem('workSchedule');
-    return saved ? JSON.parse(saved) : defaultWorkSchedule;
-  });
+  const [workSchedule, setWorkSchedule] = useState(defaultWorkSchedule);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
 
   const [selectedDay, setSelectedDay] = useState('monday');
+
+  // Load work schedule from API
+  React.useEffect(() => {
+    const loadWorkSchedule = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('/api/work-schedules', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const schedules = await response.json();
+          // Convert API data to frontend format
+          const formattedSchedule = { ...defaultWorkSchedule };
+          
+          schedules.forEach(schedule => {
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = dayNames[schedule.day_of_week];
+            
+            if (dayName && formattedSchedule[dayName]) {
+              formattedSchedule[dayName] = {
+                active: schedule.is_working_day,
+                morning: schedule.work_type === 'morning' ? `${schedule.start_time}-${schedule.end_time}` : 
+                         schedule.work_type === 'full_day' ? `${schedule.start_time}-${schedule.end_time}` : '',
+                afternoon: schedule.work_type === 'afternoon' ? `${schedule.start_time}-${schedule.end_time}` : 
+                          schedule.work_type === 'full_day' ? `${schedule.start_time}-${schedule.end_time}` : '',
+                lunchBreak: schedule.work_type === 'full_day' ? '13:00-14:00' : '',
+                workType: schedule.work_type === 'full_day' ? 'full' : schedule.work_type
+              };
+            }
+          });
+          
+          setWorkSchedule(formattedSchedule);
+        } else {
+          // Fallback to localStorage
+          const saved = localStorage.getItem('workSchedule');
+          if (saved) {
+            setWorkSchedule(JSON.parse(saved));
+          }
+        }
+      } catch (error) {
+        console.error('Error loading work schedule:', error);
+        // Fallback to localStorage
+        const saved = localStorage.getItem('workSchedule');
+        if (saved) {
+          setWorkSchedule(JSON.parse(saved));
+        }
+      } finally {
+        setIsLoadingSchedule(false);
+      }
+    };
+    
+    loadWorkSchedule();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -110,16 +166,54 @@ const Profile = () => {
 
   const handleSaveSchedule = async () => {
     try {
-      // Salva l'orario di lavoro nel localStorage per ora
-      localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Token di autenticazione non trovato');
+        return;
+      }
+
+      // Convert frontend format to API format
+      const schedules = [];
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       
-      // Mostra notifica di successo
-      alert('Orario di lavoro salvato con successo!');
-      
-      console.log('Work schedule saved:', workSchedule);
+      dayNames.forEach((dayName, index) => {
+        const daySchedule = workSchedule[dayName];
+        if (daySchedule) {
+          schedules.push({
+            day_of_week: index,
+            is_working_day: daySchedule.active,
+            work_type: daySchedule.workType === 'full' ? 'full_day' : 
+                      daySchedule.workType === 'morning' ? 'morning' : 
+                      daySchedule.workType === 'afternoon' ? 'afternoon' : 'none',
+            start_time: daySchedule.morning.split('-')[0] || daySchedule.afternoon.split('-')[0] || null,
+            end_time: daySchedule.morning.split('-')[1] || daySchedule.afternoon.split('-')[1] || null,
+            break_duration: 60
+          });
+        }
+      });
+
+      const response = await fetch('/api/work-schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ schedules })
+      });
+
+      if (response.ok) {
+        // Salva anche nel localStorage come backup
+        localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
+        alert('Orario di lavoro salvato con successo!');
+        console.log('Work schedule saved to API:', schedules);
+      } else {
+        throw new Error('Errore nel salvare l\'orario di lavoro');
+      }
     } catch (error) {
       console.error('Error saving work schedule:', error);
-      alert('Errore nel salvare l\'orario di lavoro');
+      // Fallback to localStorage
+      localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
+      alert('Orario salvato localmente (errore API)');
     }
   };
 
@@ -365,12 +459,19 @@ const Profile = () => {
         <h3 className="text-xl font-bold text-white">Orario di Lavoro Settimanale</h3>
         <button
           onClick={handleSaveSchedule}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center"
+          disabled={isLoadingSchedule}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors flex items-center"
         >
           <Save className="h-4 w-4 mr-2" />
-          Salva Orario
+          {isLoadingSchedule ? 'Caricamento...' : 'Salva Orario'}
         </button>
       </div>
+      
+      {isLoadingSchedule && (
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+          <p className="text-blue-300 text-sm">Caricamento orario di lavoro dal database...</p>
+        </div>
+      )}
 
       {/* Tab dei giorni */}
       <div className="flex space-x-3 bg-slate-800 p-2 rounded-xl">
