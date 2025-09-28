@@ -79,7 +79,6 @@ const Settings = () => {
       googleCalendar: false,
       slack: false,
       teams: false,
-      payroll: false,
       attendance: true,
       documents: true
     }

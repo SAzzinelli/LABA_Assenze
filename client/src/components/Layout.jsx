@@ -78,7 +78,7 @@ const Layout = ({ children }) => {
     { name: 'Permessi', href: '/leave-requests', icon: FileText },
     { name: 'Malattia', href: '/sick-leave', icon: Heart },
     { name: 'Ferie', href: '/vacation', icon: Plane },
-    { name: 'Payroll', href: '/payroll', icon: DollarSign },
+,
     { name: 'Impostazioni', href: '/settings', icon: Settings },
   ];
 

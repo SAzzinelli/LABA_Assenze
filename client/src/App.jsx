@@ -12,7 +12,6 @@ import AdminAttendance from './pages/AdminAttendance';
 import LeaveRequests from './pages/LeaveRequests';
 import SickLeave from './pages/SickLeave';
 import Vacation from './pages/Vacation';
-import Payroll from './pages/Payroll';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
@@ -124,18 +123,6 @@ function App() {
                         <Profile />
                       </Layout>
                     )
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
-              <Route
-                path="/payroll"
-                element={
-                  isAuthenticated ? (
-                    <Layout>
-                      <Payroll />
-                    </Layout>
                   ) : (
                     <Navigate to="/login" replace />
                   )
