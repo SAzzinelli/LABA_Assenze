@@ -28,7 +28,10 @@ const RegistrationSteps = ({ onRegister, loading }) => {
   ];
 
   const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
-  const workplaces = ['LABA Firenze - Sede Via Vecchietti'];
+  const workplaces = [
+    'Piazza di Badia a Ripoli 1/A',
+    'Via de\' Vecchietti 6'
+  ];
   const contractTypes = [
     'Full Time - Indeterminato',
     'Part Time - Indeterminato', 

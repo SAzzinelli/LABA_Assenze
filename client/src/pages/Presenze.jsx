@@ -14,6 +14,13 @@ const Attendance = () => {
   });
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedLocation, setSelectedLocation] = useState('');
+
+  // Opzioni sedi disponibili
+  const locationOptions = [
+    { value: 'piazza-badia', label: 'Piazza di Badia a Ripoli 1/A' },
+    { value: 'via-vecchietti', label: 'Via de\' Vecchietti 6' }
+  ];
 
   useEffect(() => {
     fetchAttendance();
@@ -48,10 +55,34 @@ const Attendance = () => {
       if (response.ok) {
         const data = await response.json();
         setUserStats(data);
+        
+        // Imposta la sede predefinita basata sul workplace dell'utente
+        const defaultLocation = getDefaultLocationFromWorkplace(data.workplace);
+        setSelectedLocation(defaultLocation);
       }
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
+  };
+
+  // Funzione per determinare la sede predefinita dal workplace
+  const getDefaultLocationFromWorkplace = (workplace) => {
+    if (!workplace) return 'via-vecchietti'; // Default
+    
+    const workplaceLower = workplace.toLowerCase();
+    if (workplaceLower.includes('badia') || workplaceLower.includes('ripoli')) {
+      return 'piazza-badia';
+    } else if (workplaceLower.includes('vecchietti')) {
+      return 'via-vecchietti';
+    }
+    
+    return 'via-vecchietti'; // Default fallback
+  };
+
+  // Funzione per ottenere il label della sede selezionata
+  const getSelectedLocationLabel = () => {
+    const location = locationOptions.find(loc => loc.value === selectedLocation);
+    return location ? location.label : 'Seleziona sede';
   };
 
   const formatTime = (date) => {
@@ -108,6 +139,27 @@ const Attendance = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-slate-800 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Timbratura</h3>
+          
+          {/* Dropdown Selezione Sede */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+              <MapPin className="h-4 w-4 mr-2 text-indigo-400" />
+              Sede di Lavoro
+            </label>
+            <select
+              value={selectedLocation}
+              onChange={(e) => setSelectedLocation(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {locationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Pulsanti Timbratura */}
           <div className="space-y-4">
             <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
               <CheckCircle className="h-5 w-5 mr-2" />
@@ -118,10 +170,12 @@ const Attendance = () => {
               Timbra Uscita
             </button>
           </div>
+
+          {/* Info Posizione Selezionata */}
           <div className="mt-4 p-3 bg-slate-700 rounded-lg">
             <div className="flex items-center text-slate-300 text-sm">
               <MapPin className="h-4 w-4 mr-2" />
-              Posizione: {userStats.workplace}
+              Posizione: {getSelectedLocationLabel()}
             </div>
           </div>
         </div>
