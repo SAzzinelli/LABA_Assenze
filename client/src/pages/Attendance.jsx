@@ -16,14 +16,8 @@ const Attendance = () => {
 
   const fetchAttendance = async () => {
     try {
-      // Simulazione dati per ora
-      const mockAttendance = [
-        { id: 1, date: '2024-01-15', checkIn: '08:30', checkOut: '17:45', hours: '8h 15m', status: 'completed' },
-        { id: 2, date: '2024-01-14', checkIn: '08:45', checkOut: '18:00', hours: '8h 15m', status: 'completed' },
-        { id: 3, date: '2024-01-13', checkIn: '09:00', checkOut: '17:30', hours: '7h 30m', status: 'completed' },
-        { id: 4, date: '2024-01-12', checkIn: '08:30', checkOut: null, hours: null, status: 'missing-checkout' },
-      ];
-      setAttendance(mockAttendance);
+      // Array vuoto - nessun dato placeholder
+      setAttendance([]);
     } catch (error) {
       console.error('Error fetching attendance:', error);
     } finally {

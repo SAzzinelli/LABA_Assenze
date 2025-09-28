@@ -38,6 +38,10 @@ const Layout = ({ children }) => {
         const data = await response.json();
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.is_read).length);
+      } else if (response.status === 401) {
+        // Token scaduto, fai logout automatico
+        logout();
+        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
@@ -55,6 +59,10 @@ const Layout = ({ children }) => {
           prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
+      } else if (response.status === 401) {
+        // Token scaduto, fai logout automatico
+        logout();
+        window.location.href = '/login';
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
