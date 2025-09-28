@@ -171,13 +171,6 @@ const Attendance = () => {
             </button>
           </div>
 
-          {/* Info Posizione Selezionata */}
-          <div className="mt-4 p-3 bg-slate-700 rounded-lg">
-            <div className="flex items-center text-slate-300 text-sm">
-              <MapPin className="h-4 w-4 mr-2" />
-              Posizione: {getSelectedLocationLabel()}
-            </div>
-          </div>
         </div>
 
         <div className="bg-slate-800 rounded-lg p-6">
