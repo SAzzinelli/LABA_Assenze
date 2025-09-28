@@ -1026,9 +1026,17 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
     const results = [];
     
     for (const category of categories) {
+      // Prima cancella le impostazioni esistenti per questa categoria
+      await supabase
+        .from('settings')
+        .delete()
+        .eq('user_id', req.user.id)
+        .eq('category', category);
+
+      // Poi inserisci le nuove impostazioni
       const { data, error } = await supabase
         .from('settings')
-        .upsert({
+        .insert({
           user_id: req.user.id,
           category: category,
           settings: settings[category],
