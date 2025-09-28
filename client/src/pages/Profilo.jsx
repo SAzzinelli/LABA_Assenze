@@ -153,17 +153,10 @@ const Profile = () => {
   React.useEffect(() => {
     const loadWorkSchedule = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        const response = await apiCall('/api/work-schedules');
         
-        const response = await fetch('/api/work-schedules', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const schedules = await response.json();
+        if (response.ok || Array.isArray(response)) {
+          const schedules = Array.isArray(response) ? response : await response.json();
           // Convert API data to frontend format
           const formattedSchedule = { ...defaultWorkSchedule };
           
@@ -300,12 +293,6 @@ const Profile = () => {
 
   const handleSaveSchedule = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Token di autenticazione non trovato');
-        return;
-      }
-
       // Convert frontend format to API format
       const schedules = [];
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -326,16 +313,16 @@ const Profile = () => {
         }
       });
 
-      const response = await fetch('/api/work-schedules', {
+      // Usa apiCall invece di fetch diretto
+      const response = await apiCall('/api/work-schedules', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ schedules })
       });
 
-      if (response.ok) {
+      if (response.ok || response.success) {
         // Salva anche nel localStorage come backup
         localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
         alert('Orario di lavoro salvato con successo!');
