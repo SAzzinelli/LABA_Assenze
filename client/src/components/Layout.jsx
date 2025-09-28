@@ -258,65 +258,111 @@ const Layout = ({ children }) => {
                   )}
                 </button>
                 
-                {/* Dropdown notifiche */}
+                {/* Sidebar Notifiche */}
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">Notifiche</h3>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          Nessuna notifica
-                        </div>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            onClick={() => {
-                              if (!notification.is_read) {
-                                markAsRead(notification.id);
-                              }
-                            }}
-                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                              !notification.is_read ? 'bg-blue-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-start">
-                              <div className={`w-2 h-2 rounded-full mt-2 mr-3 ${
-                                !notification.is_read ? 'bg-blue-500' : 'bg-gray-300'
-                              }`} />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {notification.title}
-                                </p>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  {new Date(notification.created_at).toLocaleDateString('it-IT', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
+                  <>
+                    {/* Overlay */}
+                    <div 
+                      className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300"
+                      onClick={() => setNotificationsOpen(false)}
+                    />
+                    
+                    {/* Sidebar */}
+                    <div className="fixed right-0 top-0 h-full w-96 bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
+                      <div className="flex flex-col h-full">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-700">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white flex items-center">
+                              <Bell className="h-6 w-6 mr-3 text-blue-400" />
+                              Notifiche
+                            </h3>
+                            <button
+                              onClick={() => setNotificationsOpen(false)}
+                              className="text-slate-400 hover:text-white transition-colors duration-200"
+                            >
+                              <X className="h-6 w-6" />
+                            </button>
                           </div>
-                        ))
-                      )}
+                          {unreadCount > 0 && (
+                            <p className="text-sm text-blue-400 mt-2">
+                              {unreadCount} notifiche non lette
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                              <Bell className="h-16 w-16 text-slate-600 mb-4" />
+                              <h4 className="text-lg font-medium text-slate-300 mb-2">
+                                Nessuna notifica
+                              </h4>
+                              <p className="text-sm text-slate-500">
+                                Non hai ancora ricevuto notifiche
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="p-4 space-y-3">
+                              {notifications.map((notification, index) => (
+                                <div
+                                  key={notification.id}
+                                  onClick={() => {
+                                    if (!notification.is_read) {
+                                      markAsRead(notification.id);
+                                    }
+                                  }}
+                                  className={`p-4 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
+                                    !notification.is_read 
+                                      ? 'bg-blue-900/30 border border-blue-500/30 shadow-lg' 
+                                      : 'bg-slate-700/50 border border-slate-600/30'
+                                  }`}
+                                  style={{
+                                    animationDelay: `${index * 50}ms`,
+                                    animation: 'slideInRight 0.3s ease-out forwards'
+                                  }}
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+                                      !notification.is_read ? 'bg-blue-400' : 'bg-slate-500'
+                                    }`} />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-white mb-1">
+                                        {notification.title}
+                                      </p>
+                                      <p className="text-sm text-slate-300 mb-2">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-slate-500">
+                                        {new Date(notification.created_at).toLocaleDateString('it-IT', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-700">
+                          <button
+                            onClick={() => setNotificationsOpen(false)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                          >
+                            Chiudi
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="p-2 border-t border-gray-200">
-                      <button 
-                        onClick={() => setNotificationsOpen(false)}
-                        className="w-full text-center text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Chiudi
-                      </button>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
