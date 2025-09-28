@@ -1029,18 +1029,36 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Settings data required' });
     }
 
-    // Salva nel database (per ora usiamo una tabella semplice)
-    const { data, error } = await supabase
-      .from('settings')
-      .upsert({
-        user_id: req.user.id,
-        settings: settings,
-        updated_at: new Date().toISOString()
-      });
+    // Salva nelle tabelle settings per categoria
+    const categories = Object.keys(settings);
+    const results = [];
+    
+    for (const category of categories) {
+      const { data, error } = await supabase
+        .from('settings')
+        .upsert({
+          user_id: req.user.id,
+          category: category,
+          settings: settings[category],
+          updated_at: new Date().toISOString()
+        })
+        .select();
+      
+      if (error) {
+        console.error(`Settings save error for ${category}:`, error);
+        results.push({ category, success: false, error: error.message });
+      } else {
+        results.push({ category, success: true });
+      }
+    }
 
-    if (error) {
-      console.error('Settings save error:', error);
-      return res.status(500).json({ error: 'Errore nel salvare le impostazioni' });
+    const hasErrors = results.some(r => !r.success);
+    
+    if (hasErrors) {
+      return res.status(500).json({ 
+        error: 'Errore nel salvare alcune impostazioni', 
+        details: results 
+      });
     }
 
     res.json({ success: true, message: 'Impostazioni salvate con successo' });
@@ -1055,18 +1073,192 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('settings')
-      .select('settings')
-      .eq('user_id', req.user.id)
-      .single();
+      .select('category, settings')
+      .eq('user_id', req.user.id);
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error) {
       console.error('Settings fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recuperare le impostazioni' });
     }
 
-    res.json(data?.settings || {});
+    // Raggruppa settings per categoria
+    const settings = {};
+    data.forEach(item => {
+      settings[item.category] = item.settings;
+    });
+
+    res.json(settings);
   } catch (error) {
     console.error('Settings fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== WORK SCHEDULES ENDPOINTS ====================
+
+// Get work schedule for user
+app.get('/api/work-schedules', authenticateToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('day_of_week');
+
+    if (error) {
+      console.error('Work schedules fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare gli orari di lavoro' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Work schedules fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Save work schedule for user
+app.post('/api/work-schedules', authenticateToken, async (req, res) => {
+  try {
+    const { schedules } = req.body;
+    
+    if (!schedules || !Array.isArray(schedules)) {
+      return res.status(400).json({ error: 'Array schedules richiesto' });
+    }
+
+    // Cancella orari esistenti
+    await supabase
+      .from('work_schedules')
+      .delete()
+      .eq('user_id', req.user.id);
+
+    // Inserisci nuovi orari
+    const schedulesWithUserId = schedules.map(schedule => ({
+      ...schedule,
+      user_id: req.user.id
+    }));
+
+    const { data, error } = await supabase
+      .from('work_schedules')
+      .insert(schedulesWithUserId)
+      .select();
+
+    if (error) {
+      console.error('Work schedules save error:', error);
+      return res.status(500).json({ error: 'Errore nel salvare gli orari di lavoro' });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Work schedules save error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== LEAVE BALANCES ENDPOINTS ====================
+
+// Get leave balances for user
+app.get('/api/leave-balances', authenticateToken, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+    
+    const { data, error } = await supabase
+      .from('leave_balances')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('year', parseInt(year))
+      .order('leave_type');
+
+    if (error) {
+      console.error('Leave balances fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare i saldi ferie' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Leave balances fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== DEPARTMENTS ENDPOINTS ====================
+
+// Get all departments
+app.get('/api/departments', authenticateToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Departments fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare i dipartimenti' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Departments fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== NOTIFICATIONS ENDPOINTS ====================
+
+// Get notifications for user
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 50, unread_only = false } = req.query;
+    
+    let query = supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(parseInt(limit));
+
+    if (unread_only === 'true') {
+      query = query.eq('is_read', false);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Notifications fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare le notifiche' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Notifications fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Mark notification as read
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('notifications')
+      .update({ 
+        is_read: true, 
+        read_at: new Date().toISOString() 
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select();
+
+    if (error) {
+      console.error('Notification update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornare la notifica' });
+    }
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Notification update error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
