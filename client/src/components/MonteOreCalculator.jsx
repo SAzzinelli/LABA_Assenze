@@ -244,8 +244,8 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-300">Differenza:</span>
-              <span className={`font-semibold ${overtime.weekly > 0 ? 'text-yellow-400' : overtime.weekly < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                {overtime.weekly > 0 ? '+' : ''}{overtime.weekly.toFixed(1)}h
+              <span className={`font-semibold ${(weeklyHours - 40) > 0 ? 'text-yellow-400' : (weeklyHours - 40) < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {(weeklyHours - 40) > 0 ? '+' : ''}{(weeklyHours - 40).toFixed(1)}h
               </span>
             </div>
           </div>
