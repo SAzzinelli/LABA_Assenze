@@ -146,47 +146,68 @@ const Attendance = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
-              {attendance.map((record) => (
-                <tr key={record.id} className="hover:bg-slate-700/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-white">
-                      {formatDate(record.date)}
+              {attendance.length > 0 ? (
+                attendance.map((record) => (
+                  <tr key={record.id} className="hover:bg-slate-700/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">
+                        {formatDate(record.date)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-300 flex items-center">
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
+                        {record.checkIn}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-300 flex items-center">
+                        {record.checkOut ? (
+                          <>
+                            <XCircle className="h-4 w-4 mr-2 text-red-400" />
+                            {record.checkOut}
+                          </>
+                        ) : (
+                          <span className="text-slate-500">Non timbrato</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-slate-300">
+                        {record.hours || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        record.status === 'completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {record.status === 'completed' ? 'Completato' : 'Incompleto'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <Calendar className="h-12 w-12 text-slate-500" />
+                      <div className="text-slate-400">
+                        <h3 className="text-lg font-medium text-slate-300 mb-2">
+                          Nessuna presenza registrata
+                        </h3>
+                        <p className="text-sm">
+                          Le tue presenze appariranno qui dopo aver effettuato le prime timbrature.
+                        </p>
+                        <p className="text-xs text-slate-500 mt-2">
+                          Usa i pulsanti "Timbra Entrata" e "Timbra Uscita" per iniziare a tracciare le tue ore di lavoro.
+                        </p>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-300 flex items-center">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                      {record.checkIn}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-300 flex items-center">
-                      {record.checkOut ? (
-                        <>
-                          <XCircle className="h-4 w-4 mr-2 text-red-400" />
-                          {record.checkOut}
-                        </>
-                      ) : (
-                        <span className="text-slate-500">Non timbrato</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-300">
-                      {record.hours || '-'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      record.status === 'completed' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {record.status === 'completed' ? 'Completato' : 'Incompleto'}
-                    </span>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
