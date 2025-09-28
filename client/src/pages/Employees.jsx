@@ -166,12 +166,7 @@ const Employees = () => {
           }
         },
       ];
-      setEmployees(mockEmployees);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    } finally {
-      setLoading(false);
-    }
+    return mockEmployees;
   };
 
   const handleInputChange = (e) => {
