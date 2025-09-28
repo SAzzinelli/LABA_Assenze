@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
-import { 
-  LogOut, 
-  Bell, 
-  Home, 
-  Users, 
-  Clock, 
-  FileText, 
-  User, 
+import {
+  LogOut,
+  Bell,
+  Home,
+  Users,
+  Clock,
+  FileText,
+  User,
   Settings,
   Menu,
   X,
@@ -28,12 +28,19 @@ const Layout = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, color: 'from-blue-500 to-cyan-500' },
-    { name: 'Dipendenti', href: '/employees', icon: Users, color: 'from-purple-500 to-pink-500' },
+    { name: 'Dipendenti', href: '/employees', icon: Users, color: 'from-purple-500 to-pink-500', roles: ['admin'] },
     { name: 'Presenze', href: '/attendance', icon: Clock, color: 'from-emerald-500 to-teal-500' },
     { name: 'Richieste Permessi', href: '/leave-requests', icon: FileText, color: 'from-amber-500 to-orange-500' },
     { name: 'Profilo', href: '/profile', icon: User, color: 'from-indigo-500 to-purple-500' },
     { name: 'Impostazioni', href: '/settings', icon: Settings, color: 'from-slate-500 to-gray-500' },
   ];
+
+  const filteredNavigation = navigation.filter(item => {
+    if (item.roles && user) {
+      return item.roles.includes(user.role);
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -62,7 +69,7 @@ const Layout = ({ children }) => {
                 </div>
               </div>
               <nav className="mt-8 px-2 space-y-2">
-                {navigation.map((item) => {
+                {filteredNavigation.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = location.pathname === item.href;
                   return (
@@ -104,7 +111,7 @@ const Layout = ({ children }) => {
 
               {/* Navigation */}
               <nav className="flex-1 px-3 space-y-2">
-                {navigation.map((item) => {
+                {filteredNavigation.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = location.pathname === item.href;
                   return (
@@ -123,7 +130,7 @@ const Layout = ({ children }) => {
                 })}
               </nav>
             </div>
-            
+
             {/* User profile at bottom */}
             <div className="flex-shrink-0 border-t border-slate-700/50 p-4">
               <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
@@ -169,14 +176,14 @@ const Layout = ({ children }) => {
           >
             <Menu className="h-6 w-6" />
           </button>
-          
+
           <button
             className="hidden lg:flex px-4 border-r border-slate-700/50 text-slate-400 hover:text-slate-300 transition-colors"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           >
             <ChevronLeft className={`h-5 w-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
           </button>
-          
+
           <div className="flex-1 px-6 flex justify-between items-center">
             <div className="flex-1 flex">
               <div className="w-full flex md:ml-0">

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { 
-  Users, 
-  Clock, 
-  FileText, 
-  TrendingUp, 
+import {
+  Users,
+  Clock,
+  FileText,
+  TrendingUp,
   Calendar,
   CheckCircle,
   AlertCircle,
@@ -16,7 +16,7 @@ import {
   Target,
   Award
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const Dashboard = () => {
   const { user } = useAuthStore();
@@ -37,10 +37,12 @@ const Dashboard = () => {
       const response = await fetch('/api/dashboard/stats', {
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+      } else {
+        console.error('Failed to fetch stats:', response.statusText);
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -49,7 +51,7 @@ const Dashboard = () => {
     }
   };
 
-  // Dati realistici per i grafici
+  // Dati per i grafici
   const weeklyAttendanceData = [
     { name: 'Lun', presenze: 42, assenze: 3, ore: 336 },
     { name: 'Mar', presenze: 44, assenze: 1, ore: 352 },
@@ -83,7 +85,7 @@ const Dashboard = () => {
       user: 'Marco Rossi',
       time: '08:30',
       icon: CheckCircle,
-      color: 'text-green-400'
+      color: 'text-emerald-400'
     },
     {
       id: 2,
@@ -91,7 +93,7 @@ const Dashboard = () => {
       user: 'Anna Bianchi',
       time: '09:15',
       icon: FileText,
-      color: 'text-yellow-400'
+      color: 'text-amber-400'
     },
     {
       id: 3,
@@ -119,7 +121,7 @@ const Dashboard = () => {
       gradient: 'from-blue-500 to-cyan-500',
       change: '+2',
       changeType: 'positive',
-      subtitle: 'Dipendenti attivi'
+      subtitle: 'Dipendenze attive'
     },
     {
       title: 'Presenti Oggi',
@@ -153,7 +155,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -170,7 +172,7 @@ const Dashboard = () => {
                 Dashboard
               </h1>
               <p className="text-slate-400 mt-2 text-lg">
-                Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>! 
+                Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>!
                 Ecco un riepilogo delle attività del sistema HR
               </p>
             </div>
@@ -260,9 +262,9 @@ const Dashboard = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
               <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
               <YAxis stroke="#94a3b8" fontSize={12} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1e293b', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '12px',
                   color: '#f8fafc',
@@ -298,9 +300,9 @@ const Dashboard = () => {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1e293b', 
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
                   border: '1px solid #334155',
                   borderRadius: '12px',
                   color: '#f8fafc',
@@ -365,9 +367,9 @@ const Dashboard = () => {
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
             <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
             <YAxis stroke="#94a3b8" fontSize={12} domain={[80, 100]} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1e293b', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1e293b',
                 border: '1px solid #334155',
                 borderRadius: '12px',
                 color: '#f8fafc',
