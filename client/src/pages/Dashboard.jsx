@@ -8,95 +8,85 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
-  Target
+  Target,
+  Calendar
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const Dashboard = () => {
   const { user } = useAuthStore();
   const [stats, setStats] = useState({
-    totalEmployees: 0,
     presentToday: 0,
-    pendingRequests: 0,
-    attendanceRate: 0
+    pendingRequests: 0
   });
+  const [weeklyAttendance, setWeeklyAttendance] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard/stats', {
+      // Fetch stats
+      const statsResponse = await fetch('/api/dashboard/stats', {
         credentials: 'include'
       });
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats({
+          presentToday: statsData.presentToday || 0,
+          pendingRequests: statsData.pendingRequests || 0
+        });
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      // Fetch weekly attendance
+      const attendanceResponse = await fetch('/api/dashboard/attendance', {
+        credentials: 'include'
+      });
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        setWeeklyAttendance(attendanceData);
+      }
+
+      // Fetch departments
+      const departmentsResponse = await fetch('/api/dashboard/departments', {
+        credentials: 'include'
+      });
+      if (departmentsResponse.ok) {
+        const departmentsData = await departmentsResponse.json();
+        setDepartments(departmentsData);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Dati per i grafici
-  const weeklyAttendanceData = [
-    { name: 'Lun', presenze: 42, assenze: 3 },
-    { name: 'Mar', presenze: 44, assenze: 1 },
-    { name: 'Mer', presenze: 43, assenze: 2 },
-    { name: 'Gio', presenze: 45, assenze: 0 },
-    { name: 'Ven', presenze: 41, assenze: 4 },
-    { name: 'Sab', presenze: 18, assenze: 0 },
-    { name: 'Dom', presenze: 8, assenze: 0 }
-  ];
-
-  const departmentData = [
-    { name: 'Amministrazione', value: 12, color: '#8b5cf6' },
-    { name: 'Segreteria', value: 8, color: '#06b6d4' },
-    { name: 'Orientamento', value: 15, color: '#10b981' },
-    { name: 'Reparto IT', value: 6, color: '#f59e0b' }
-  ];
+  // Usa i dati reali dal database
+  const weeklyAttendanceData = weeklyAttendance;
+  const departmentData = departments;
 
   const statCards = [
     {
-      title: 'Totale Dipendenti',
-      value: stats.totalEmployees || 41,
-      icon: Users,
-      color: 'blue',
-      change: '+2',
-      changeType: 'positive',
-      subtitle: 'Dipendenze attive'
-    },
-    {
       title: 'Presenti Oggi',
-      value: stats.presentToday || 38,
+      value: stats.presentToday || 0,
       icon: CheckCircle,
       color: 'green',
       change: '+5%',
       changeType: 'positive',
-      subtitle: 'Tasso presenza: 93%'
+      subtitle: 'In ufficio oggi'
     },
     {
       title: 'Richieste in Sospeso',
-      value: stats.pendingRequests || 7,
+      value: stats.pendingRequests || 0,
       icon: FileText,
       color: 'yellow',
       change: '-3',
       changeType: 'negative',
       subtitle: 'Da approvare'
-    },
-    {
-      title: 'Ore Lavorate',
-      value: '2,184h',
-      icon: Clock,
-      color: 'purple',
-      change: '+12%',
-      changeType: 'positive',
-      subtitle: 'Questo mese'
     }
   ];
 
@@ -120,7 +110,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {statCards.map((stat, index) => {
           const IconComponent = stat.icon;
           const colorClasses = {
@@ -231,41 +221,17 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* In Calendario */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold text-white mb-6">Azioni Rapide</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {user?.role === 'admin' ? (
-            <>
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <Users className="h-5 w-5 mr-2" />
-                Gestisci Dipendenti
-              </button>
-              <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <FileText className="h-5 w-5 mr-2" />
-                Approva Richieste
-              </button>
-              <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <Activity className="h-5 w-5 mr-2" />
-                Report Presenze
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <Clock className="h-5 w-5 mr-2" />
-                Timbra Presenza
-              </button>
-              <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <FileText className="h-5 w-5 mr-2" />
-                Richiedi Permesso
-              </button>
-              <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Le Mie Presenze
-              </button>
-            </>
-          )}
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+          <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
+          In Calendario
+        </h3>
+        <div className="space-y-4">
+          <div className="p-4 bg-slate-700 rounded-lg">
+            <p className="text-slate-300 text-sm">Prossimamente: Integrazione calendari aziendali</p>
+            <p className="text-slate-400 text-xs mt-1">Eventi, riunioni e scadenze saranno mostrati qui</p>
+          </div>
         </div>
       </div>
     </div>

@@ -27,7 +27,7 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Dipendenti', href: '/employees', icon: Users, roles: ['admin'] },
-    { name: 'Presenze', href: '/attendance', icon: Clock },
+    { name: 'Presenze', href: user?.role === 'admin' ? '/admin-attendance' : '/attendance', icon: Clock },
     { name: 'Richieste Permessi', href: '/leave-requests', icon: FileText },
     { name: 'Profilo', href: '/profile', icon: User },
     { name: 'Impostazioni', href: '/settings', icon: Settings },

@@ -581,6 +581,178 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Dashboard weekly attendance data
+app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Get last 7 days
+    const today = new Date();
+    const weekData = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const { count: presenze } = await supabase
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('date', dateStr)
+        .not('check_in', 'is', null);
+      
+      const { count: assenze } = await supabase
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('date', dateStr)
+        .is('check_in', null);
+      
+      weekData.push({
+        name: date.toLocaleDateString('it-IT', { weekday: 'short' }),
+        presenze: presenze || 0,
+        assenze: assenze || 0,
+        date: dateStr
+      });
+    }
+
+    res.json(weekData);
+  } catch (error) {
+    console.error('Weekly attendance error:', error);
+    res.status(500).json({ error: 'Errore nel recupero delle presenze settimanali' });
+  }
+});
+
+// Dashboard departments data
+app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { data: departments, error } = await supabase
+      .from('employees')
+      .select('department')
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('Departments error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipartimenti' });
+    }
+
+    // Count employees per department
+    const deptCount = {};
+    departments.forEach(emp => {
+      deptCount[emp.department] = (deptCount[emp.department] || 0) + 1;
+    });
+
+    const colors = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
+    const result = Object.entries(deptCount).map(([name, value], index) => ({
+      name,
+      value,
+      color: colors[index % colors.length],
+      employees: value
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Departments error:', error);
+    res.status(500).json({ error: 'Errore nel recupero dei dipartimenti' });
+  }
+});
+
+// Current attendance (who's in office now)
+app.get('/api/attendance/current', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get people who checked in today but haven't checked out
+    const { data: currentAttendance, error } = await supabase
+      .from('attendance')
+      .select(`
+        *,
+        users!inner(first_name, last_name, department)
+      `)
+      .eq('date', today)
+      .not('check_in', 'is', null)
+      .is('check_out', null)
+      .order('check_in');
+
+    if (error) {
+      console.error('Current attendance error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero delle presenze attuali' });
+    }
+
+    const formatted = currentAttendance.map(att => ({
+      id: att.id,
+      user_id: att.user_id,
+      name: `${att.users.first_name} ${att.users.last_name}`,
+      department: att.users.department,
+      check_in: att.check_in,
+      check_out: att.check_out,
+      hours_worked: att.hours_worked
+    }));
+
+    res.json(formatted);
+  } catch (error) {
+    console.error('Current attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Upcoming departures (next 2 hours)
+app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const now = new Date();
+    const in2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    const { data: upcoming, error } = await supabase
+      .from('attendance')
+      .select(`
+        *,
+        users!inner(first_name, last_name, department)
+      `)
+      .eq('date', now.toISOString().split('T')[0])
+      .not('check_in', 'is', null)
+      .is('check_out', null)
+      .order('check_in');
+
+    if (error) {
+      console.error('Upcoming departures error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero delle uscite imminenti' });
+    }
+
+    // Calculate expected departure times (assuming 8-hour workday)
+    const upcomingDepartures = upcoming.map(att => {
+      const checkInTime = new Date(`${att.date}T${att.check_in}`);
+      const expectedCheckOut = new Date(checkInTime.getTime() + 8 * 60 * 60 * 1000);
+      
+      return {
+        id: att.id,
+        name: `${att.users.first_name} ${att.users.last_name}`,
+        department: att.users.department,
+        check_in: att.check_in,
+        expected_check_out: expectedCheckOut.toTimeString().split(' ')[0].substring(0, 5),
+        minutes_until_departure: Math.round((expectedCheckOut - now) / (1000 * 60))
+      };
+    }).filter(att => att.minutes_until_departure > 0 && att.minutes_until_departure <= 120);
+
+    res.json(upcomingDepartures);
+  } catch (error) {
+    console.error('Upcoming departures error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== HEALTH CHECK ====================
 
 app.get('/health', (req, res) => {

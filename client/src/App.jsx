@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Attendance from './pages/Attendance';
+import AdminAttendance from './pages/AdminAttendance';
 import LeaveRequests from './pages/LeaveRequests';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -55,6 +56,18 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <Attendance />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/admin-attendance"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <AdminAttendance />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
