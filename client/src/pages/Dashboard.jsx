@@ -107,7 +107,9 @@ const Dashboard = () => {
   const weeklyAttendanceData = weeklyAttendance;
   const departmentData = departments;
 
-  const statCards = [
+  // Statistiche diverse per admin e utenti
+  const statCards = user?.role === 'admin' ? [
+    // Admin: statistiche aziendali
     {
       title: 'Presenti Oggi',
       value: stats.presentToday || 0,
@@ -126,6 +128,44 @@ const Dashboard = () => {
       changeType: 'negative',
       subtitle: 'Da approvare'
     }
+  ] : [
+    // Utente: KPI personali
+    {
+      title: 'Ore Lavorate',
+      value: '32h 45m',
+      icon: Clock,
+      color: 'blue',
+      change: '+2h 15m',
+      changeType: 'positive',
+      subtitle: 'Questa settimana'
+    },
+    {
+      title: 'Saldo Ore',
+      value: '+4h 30m',
+      icon: Activity,
+      color: 'green',
+      change: '+1h 20m',
+      changeType: 'positive',
+      subtitle: 'Straordinari'
+    },
+    {
+      title: 'Permessi Rimanenti',
+      value: '24h',
+      icon: FileText,
+      color: 'purple',
+      change: '-3h',
+      changeType: 'negative',
+      subtitle: 'Ore disponibili'
+    },
+    {
+      title: 'Presenze Mese',
+      value: '18/20',
+      icon: Target,
+      color: 'yellow',
+      change: '+1',
+      changeType: 'positive',
+      subtitle: 'Giorni lavorati'
+    }
   ];
 
   if (loading) {
@@ -143,12 +183,15 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-slate-400 mt-2">
           Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>!
-          Ecco un riepilogo delle attività del sistema HR
+          {user?.role === 'admin' 
+            ? ' Ecco un riepilogo delle attività del sistema HR'
+            : ' La tua dashboard personale con le tue attività'
+          }
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${user?.role === 'admin' ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
         {statCards.map((stat, index) => {
           const IconComponent = stat.icon;
           const colorClasses = {
@@ -188,7 +231,9 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Charts Section - Solo per Admin */}
+      {user?.role === 'admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Weekly Attendance Chart */}
         <div className="bg-slate-800 rounded-lg p-6">
           <h3 className="text-xl font-bold text-white mb-6 flex items-center">
@@ -302,7 +347,28 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Pulsante Rapido Timbratura - Solo per Utenti */}
+      {user?.role !== 'admin' && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+            <Clock className="h-6 w-6 mr-3 text-green-400" />
+            Timbratura Rapida
+          </h3>
+          <div className="flex gap-4">
+            <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Timbra Entrata
+            </button>
+            <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
+              <XCircle className="h-5 w-5 mr-2" />
+              Timbra Uscita
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />

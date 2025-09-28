@@ -5,14 +5,14 @@ import { useAuthStore } from './utils/store';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Employees from './pages/Employees';
-import Attendance from './pages/Attendance';
+import Profilo from './pages/Profilo';
+import Dipendenti from './pages/Dipendenti';
+import Presenze from './pages/Presenze';
 import AdminAttendance from './pages/AdminAttendance';
-import LeaveRequests from './pages/LeaveRequests';
-import SickLeave from './pages/SickLeave';
-import Vacation from './pages/Vacation';
-import Settings from './pages/Settings';
+import Permessi from './pages/Permessi';
+import Malattia from './pages/Malattia';
+import Ferie from './pages/Ferie';
+import Impostazioni from './pages/Impostazioni';
 import Layout from './components/Layout';
 
 function App() {
@@ -41,11 +41,11 @@ function App() {
             }
           />
           <Route
-            path="/employees"
+            path="/dipendenti"
             element={
               isAuthenticated ? (
                 <Layout>
-                  <Employees />
+                  <Dipendenti />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
@@ -53,11 +53,11 @@ function App() {
             }
           />
           <Route
-            path="/attendance"
+            path="/presenze"
             element={
               isAuthenticated ? (
                 <Layout>
-                  <Attendance />
+                  <Presenze />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
@@ -77,11 +77,11 @@ function App() {
             }
           />
               <Route
-                path="/leave-requests"
+                path="/permessi"
                 element={
                   isAuthenticated ? (
                     <Layout>
-                      <LeaveRequests />
+                      <Permessi />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />
@@ -89,11 +89,11 @@ function App() {
                 }
               />
               <Route
-                path="/sick-leave"
+                path="/malattia"
                 element={
                   isAuthenticated ? (
                     <Layout>
-                      <SickLeave />
+                      <Malattia />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />
@@ -101,11 +101,11 @@ function App() {
                 }
               />
               <Route
-                path="/vacation"
+                path="/ferie"
                 element={
                   isAuthenticated ? (
                     <Layout>
-                      <Vacation />
+                      <Ferie />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />
@@ -113,14 +113,14 @@ function App() {
                 }
               />
               <Route
-                path="/profile"
+                path="/profilo"
                 element={
                   isAuthenticated ? (
                     user?.role === 'admin' ? (
                       <Navigate to="/dashboard" replace />
                     ) : (
                       <Layout>
-                        <Profile />
+                        <Profilo />
                       </Layout>
                     )
                   ) : (
@@ -129,11 +129,11 @@ function App() {
                 }
               />
           <Route
-            path="/settings"
+            path="/impostazioni"
             element={
               isAuthenticated ? (
                 <Layout>
-                  <Settings />
+                  <Impostazioni />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />

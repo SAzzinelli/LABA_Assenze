@@ -30,6 +30,17 @@ const Layout = ({ children }) => {
     await logout();
   };
 
+  // Funzione per tradurre i ruoli in italiano
+  const getRoleDisplay = (role) => {
+    const roleTranslations = {
+      'admin': 'Amministratore',
+      'employee': 'Dipendente',
+      'manager': 'Manager',
+      'hr': 'Risorse Umane'
+    };
+    return roleTranslations[role] || role;
+  };
+
   // Carica notifiche
   const loadNotifications = async () => {
     try {
@@ -80,14 +91,13 @@ const Layout = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Profilo', href: '/profile', icon: User, hideForAdmin: true },
-    { name: 'Dipendenti', href: '/employees', icon: Users, roles: ['admin'] },
-    { name: 'Presenze', href: user?.role === 'admin' ? '/admin-attendance' : '/attendance', icon: Clock },
-    { name: 'Permessi', href: '/leave-requests', icon: FileText },
-    { name: 'Malattia', href: '/sick-leave', icon: Heart },
-    { name: 'Ferie', href: '/vacation', icon: Plane },
-,
-    { name: 'Impostazioni', href: '/settings', icon: Settings },
+    { name: 'Profilo', href: '/profilo', icon: User, hideForAdmin: true },
+    { name: 'Dipendenti', href: '/dipendenti', icon: Users, roles: ['admin'] },
+    { name: 'Presenze', href: user?.role === 'admin' ? '/admin-attendance' : '/presenze', icon: Clock },
+    { name: 'Permessi', href: '/permessi', icon: FileText },
+    { name: 'Malattia', href: '/malattia', icon: Heart },
+    { name: 'Ferie', href: '/ferie', icon: Plane },
+    { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
   const filteredNavigation = navigation.filter(item => {
@@ -107,8 +117,8 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-900 flex">
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-slate-800 border-r border-slate-700">
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 transform transition-transform duration-300 ease-in-out">
+        <div className="flex flex-col flex-grow bg-slate-800 border-r border-slate-700 shadow-xl">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 py-4">
             <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
@@ -126,10 +136,10 @@ const Layout = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
                     isActive
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-lg'
+                      : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:shadow-md'
                   }`}
                 >
                   <IconComponent className="mr-3 h-5 w-5" />
@@ -153,8 +163,8 @@ const Layout = ({ children }) => {
                 <p className="text-sm font-medium text-white">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-slate-400 capitalize">
-                  {user?.role?.replace('_', ' ')}
+                <p className="text-xs text-slate-400">
+                  {getRoleDisplay(user?.role)}
                 </p>
               </div>
               <button
