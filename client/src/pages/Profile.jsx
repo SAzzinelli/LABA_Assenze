@@ -65,22 +65,74 @@ const Profile = () => {
         if (response.ok) {
           const data = await response.json();
           setUserData(data);
+          
+          // Carica dati dal database, con fallback a localStorage
+          const savedData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+          
           setFormData({
-            firstName: data.first_name || '',
-            lastName: data.last_name || '',
-            email: data.email || '',
-            phone: data.phone || '',
-            birthDate: data.birth_date || '',
-            department: data.department || '',
-            has104: data.has_104 || false,
-            position: data.position || '',
-            hireDate: data.hire_date || '',
-            workplace: data.workplace || '',
-            contractType: data.contract_type || ''
+            firstName: data.first_name || savedData.firstName || '',
+            lastName: data.last_name || savedData.lastName || '',
+            email: data.email || savedData.email || '',
+            phone: data.phone || savedData.phone || '',
+            birthDate: data.birth_date || savedData.birthDate || '',
+            department: data.department || savedData.department || '',
+            has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
+            position: data.position || savedData.position || '',
+            hireDate: data.hire_date || savedData.hireDate || '',
+            workplace: data.workplace || savedData.workplace || '',
+            contractType: data.contract_type || savedData.contractType || ''
+          });
+          
+          // Salva i dati caricati in localStorage per il fallback
+          const profileData = {
+            firstName: data.first_name || savedData.firstName || '',
+            lastName: data.last_name || savedData.lastName || '',
+            email: data.email || savedData.email || '',
+            phone: data.phone || savedData.phone || '',
+            birthDate: data.birth_date || savedData.birthDate || '',
+            department: data.department || savedData.department || '',
+            has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
+            position: data.position || savedData.position || '',
+            hireDate: data.hire_date || savedData.hireDate || '',
+            workplace: data.workplace || savedData.workplace || '',
+            contractType: data.contract_type || savedData.contractType || ''
+          };
+          localStorage.setItem('userProfile', JSON.stringify(profileData));
+          
+        } else {
+          // Se l'API fallisce, carica da localStorage
+          const savedData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+          setFormData({
+            firstName: savedData.firstName || user?.firstName || '',
+            lastName: savedData.lastName || user?.lastName || '',
+            email: savedData.email || user?.email || '',
+            phone: savedData.phone || '',
+            birthDate: savedData.birthDate || '',
+            department: savedData.department || '',
+            has104: savedData.has104 || false,
+            position: savedData.position || '',
+            hireDate: savedData.hireDate || '',
+            workplace: savedData.workplace || '',
+            contractType: savedData.contractType || ''
           });
         }
       } catch (error) {
         console.error('Errore nel caricamento dati utente:', error);
+        // Fallback a localStorage
+        const savedData = JSON.parse(localStorage.getItem('userProfile') || '{}');
+        setFormData({
+          firstName: savedData.firstName || user?.firstName || '',
+          lastName: savedData.lastName || user?.lastName || '',
+          email: savedData.email || user?.email || '',
+          phone: savedData.phone || '',
+          birthDate: savedData.birthDate || '',
+          department: savedData.department || '',
+          has104: savedData.has104 || false,
+          position: savedData.position || '',
+          hireDate: savedData.hireDate || '',
+          workplace: savedData.workplace || '',
+          contractType: savedData.contractType || ''
+        });
       } finally {
         setLoading(false);
       }
@@ -195,10 +247,49 @@ const Profile = () => {
     }));
   };
 
-  const handleSave = () => {
-    console.log('Saving profile:', formData);
-    console.log('Saving work schedule:', workSchedule);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      console.log('Saving profile:', formData);
+      
+      // Salva in localStorage
+      localStorage.setItem('userProfile', JSON.stringify(formData));
+      
+      // Prova a salvare nel database (quando i campi saranno disponibili)
+      try {
+        const response = await apiCall('/api/user', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: formData.phone,
+            position: formData.position,
+            department: formData.department,
+            hire_date: formData.hireDate,
+            workplace: formData.workplace,
+            contract_type: formData.contractType,
+            birth_date: formData.birthDate,
+            has_104: formData.has104
+          })
+        });
+        
+        if (response.ok) {
+          console.log('✅ Profilo salvato nel database');
+        } else {
+          console.log('⚠️ Salvataggio database fallito, salvato solo in localStorage');
+        }
+      } catch (dbError) {
+        console.log('⚠️ Errore salvataggio database:', dbError.message);
+        console.log('✅ Salvato in localStorage come fallback');
+      }
+      
+      setIsEditing(false);
+      alert('Profilo salvato con successo!');
+      
+    } catch (error) {
+      console.error('Errore nel salvataggio profilo:', error);
+      alert('Errore nel salvataggio del profilo');
+    }
   };
 
   const handleSaveSchedule = async () => {

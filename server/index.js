@@ -193,6 +193,70 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   }
 });
 
+// Get current user data
+app.get('/api/user', authenticateToken, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Rimuovi la password dalla risposta
+    delete user.password;
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Update current user data
+app.put('/api/user', authenticateToken, async (req, res) => {
+  try {
+    const updateData = {};
+    
+    // Aggiungi solo i campi che esistono nel database
+    if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.position !== undefined) updateData.position = req.body.position;
+    if (req.body.department !== undefined) updateData.department = req.body.department;
+    if (req.body.hire_date !== undefined) updateData.hire_date = req.body.hire_date;
+    if (req.body.workplace !== undefined) updateData.workplace = req.body.workplace;
+    if (req.body.contract_type !== undefined) updateData.contract_type = req.body.contract_type;
+    if (req.body.birth_date !== undefined) updateData.birth_date = req.body.birth_date;
+    if (req.body.has_104 !== undefined) updateData.has_104 = req.body.has_104;
+    
+    // Se non ci sono dati da aggiornare, restituisci successo
+    if (Object.keys(updateData).length === 0) {
+      return res.json({ message: 'Nessun dato da aggiornare' });
+    }
+    
+    const { data: updatedUser, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', req.user.id)
+      .select();
+
+    if (error) {
+      console.error('Update user error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento utente' });
+    }
+
+    // Rimuovi la password dalla risposta
+    delete updatedUser[0].password;
+
+    res.json(updatedUser[0]);
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Registration
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
