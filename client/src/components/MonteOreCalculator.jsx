@@ -15,7 +15,31 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         const response = await apiCall('/api/leave-balances?year=2025');
         if (response.ok) {
           const data = await response.json();
-          setLeaveBalances(data);
+          // Converti oggetto in array per compatibilità
+          const balancesArray = [
+            {
+              leave_type: 'vacation',
+              total_entitled: data.vacation?.total || 26,
+              used: data.vacation?.used || 0,
+              pending: data.vacation?.pending || 0,
+              remaining: data.vacation?.remaining || 26
+            },
+            {
+              leave_type: 'sick',
+              total_entitled: data.sick?.total || 180,
+              used: data.sick?.used || 0,
+              pending: data.sick?.pending || 0,
+              remaining: data.sick?.remaining || 180
+            },
+            {
+              leave_type: 'permission',
+              total_entitled: data.permission?.total || 104,
+              used: data.permission?.used || 0,
+              pending: data.permission?.pending || 0,
+              remaining: data.permission?.remaining || 104
+            }
+          ];
+          setLeaveBalances(balancesArray);
         } else {
           // Fallback a dati mock se API fallisce
           setLeaveBalances(getMockLeaveBalances());
@@ -239,7 +263,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
             <div className="text-center text-slate-400">Caricamento saldi...</div>
           ) : (
             <div className="space-y-2">
-              {leaveBalances.map((balance) => {
+              {(Array.isArray(leaveBalances) ? leaveBalances : []).map((balance) => {
                 const typeLabels = {
                   vacation: 'Ferie',
                   sick: 'Malattia',

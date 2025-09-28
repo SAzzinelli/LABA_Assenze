@@ -460,7 +460,7 @@ const Profile = () => {
             value={formData.birthDate}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-75 disabled:text-slate-300"
           />
         </div>
         <div>
@@ -518,7 +518,7 @@ const Profile = () => {
             value={formData.hireDate}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-75 disabled:text-slate-300"
           />
         </div>
         <div>
