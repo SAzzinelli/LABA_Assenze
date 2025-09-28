@@ -5,6 +5,11 @@ import { useAuthStore } from './utils/store';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Employees from './pages/Employees';
+import Attendance from './pages/Attendance';
+import LeaveRequests from './pages/LeaveRequests';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
 function App() {
@@ -26,6 +31,66 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <Dashboard />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/employees"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <Employees />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/attendance"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <Attendance />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/leave-requests"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <LeaveRequests />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <Profile />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <Settings />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
