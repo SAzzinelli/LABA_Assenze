@@ -728,6 +728,7 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
         .eq('date', dateStr)
         .not('check_in', 'is', null);
       
+      // Calcola assenze: chi non ha check_in MA non è in permesso/malattia/ferie
       let assenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
@@ -741,7 +742,19 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
       }
       
       const { count: presenze } = await presenzeQuery;
-      const { count: assenze } = await assenzeQuery;
+      const { count: totalAssenze } = await assenzeQuery;
+      
+      // Conta quanti sono in permesso/malattia/ferie approvati in questa data
+      const { count: inPermessi } = await supabase
+        .from('leave_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved')
+        .lte('start_date', dateStr)
+        .gte('end_date', dateStr)
+        .in('type', ['permission', 'sick', 'vacation']);
+      
+      // Assenze reali = Totali assenze - Quelli in permesso/malattia/ferie
+      const assenze = Math.max(0, (totalAssenze || 0) - (inPermessi || 0));
       
       weekData.push({
         name: date.toLocaleDateString('it-IT', { weekday: 'short' }),
@@ -949,13 +962,27 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       }
     }
 
-    // Count monthly presences
-    const { count: monthlyPresences, error: monthlyError } = await supabase
+    // Count monthly presences (giorni con check_in)
+    const { count: daysWithAttendance, error: monthlyError } = await supabase
       .from('attendance')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`)
+      .not('clock_in', 'is', null);
+
+    // Count approved leave days in this month
+    const { count: approvedLeaveDays } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'approved')
+      .in('type', ['permission', 'sick', 'vacation'])
+      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('end_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    // Monthly presences = days with attendance + approved leave days
+    const monthlyPresences = (daysWithAttendance || 0) + (approvedLeaveDays || 0);
 
     // Get user workplace from profile
     const { data: userData, error: userError } = await supabase
