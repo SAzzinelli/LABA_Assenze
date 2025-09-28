@@ -30,33 +30,31 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch stats
+      // Fetch real stats from database
       const statsResponse = await apiCall('/api/dashboard/stats');
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         setStats({
-          presentToday: statsData.presentToday || 12,
-          pendingRequests: statsData.pendingRequests || 5
+          presentToday: statsData.presentToday || 0,
+          pendingRequests: statsData.pendingRequests || 0
+        });
+      } else {
+        // Fallback to 0 if no data
+        setStats({
+          presentToday: 0,
+          pendingRequests: 0
         });
       }
 
-      // Fetch weekly attendance - fallback to mock data if empty
+      // Fetch real weekly attendance from database
       const attendanceResponse = await apiCall('/api/dashboard/attendance');
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
         if (attendanceData && attendanceData.length > 0) {
           setWeeklyAttendance(attendanceData);
         } else {
-          // Mock data for testing
-          setWeeklyAttendance([
-            { name: 'Lun', presenze: 15, assenze: 2, date: '2025-09-22' },
-            { name: 'Mar', presenze: 18, assenze: 1, date: '2025-09-23' },
-            { name: 'Mer', presenze: 16, assenze: 3, date: '2025-09-24' },
-            { name: 'Gio', presenze: 19, assenze: 0, date: '2025-09-25' },
-            { name: 'Ven', presenze: 17, assenze: 2, date: '2025-09-26' },
-            { name: 'Sab', presenze: 8, assenze: 0, date: '2025-09-27' },
-            { name: 'Dom', presenze: 0, assenze: 0, date: '2025-09-28' }
-          ]);
+          // No real data available - show empty array
+          setWeeklyAttendance([]);
         }
       }
 

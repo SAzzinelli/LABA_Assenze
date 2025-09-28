@@ -3,25 +3,54 @@ import { useAuthStore } from '../utils/store';
 import { Clock, Calendar, CheckCircle, XCircle, MapPin } from 'lucide-react';
 
 const Attendance = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [attendance, setAttendance] = useState([]);
+  const [userStats, setUserStats] = useState({
+    isClockedIn: false,
+    todayHours: '0h 0m',
+    monthlyPresences: 0,
+    expectedMonthlyPresences: 20,
+    workplace: 'LABA Firenze - Sede Via Vecchietti'
+  });
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     fetchAttendance();
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    fetchUserStats();
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+      fetchUserStats(); // Update stats every second for real-time hours
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   const fetchAttendance = async () => {
     try {
-      // Array vuoto - nessun dato placeholder
-      setAttendance([]);
+      const response = await apiCall('/api/attendance');
+      if (response.ok) {
+        const data = await response.json();
+        setAttendance(data);
+      } else {
+        setAttendance([]);
+      }
     } catch (error) {
       console.error('Error fetching attendance:', error);
+      setAttendance([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await apiCall('/api/attendance/user-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
   };
 
@@ -92,7 +121,7 @@ const Attendance = () => {
           <div className="mt-4 p-3 bg-slate-700 rounded-lg">
             <div className="flex items-center text-slate-300 text-sm">
               <MapPin className="h-4 w-4 mr-2" />
-              Posizione: Ufficio LABA Firenze
+              Posizione: {userStats.workplace}
             </div>
           </div>
         </div>
@@ -102,15 +131,19 @@ const Attendance = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-slate-300">Oggi</span>
-              <span className="text-white font-medium">Non timbrato</span>
+              <span className={`font-medium ${userStats.isClockedIn ? 'text-green-400' : 'text-red-400'}`}>
+                {userStats.isClockedIn ? 'Timbrato' : 'Non timbrato'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-300">Ore lavorate</span>
-              <span className="text-white font-medium">0h 0m</span>
+              <span className="text-white font-medium">{userStats.todayHours}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-300">Presenze questo mese</span>
-              <span className="text-white font-medium">15/20</span>
+              <span className="text-white font-medium">
+                {userStats.monthlyPresences}/{userStats.expectedMonthlyPresences}
+              </span>
             </div>
           </div>
         </div>

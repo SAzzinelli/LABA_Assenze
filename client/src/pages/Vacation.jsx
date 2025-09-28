@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { 
   Plane, 
@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const Vacation = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
     startDate: '',
@@ -45,16 +45,52 @@ const Vacation = () => {
   // Array vuoto per le richieste di ferie
   const [vacationRequests, setVacationRequests] = useState([]);
 
-  // Calcolo dinamico del bilancio ferie
+  // Calcolo dinamico del bilancio ferie da API
   const [vacationBalance, setVacationBalance] = useState({
     totalDays: 26, // Base legale italiana
-    usedDays: 15,
-    remainingDays: 11,
-    pendingDays: 4,
+    usedDays: 0,
+    remainingDays: 26,
+    pendingDays: 0,
     bonusDays: 0, // Bonus per anzianità
     rolDays: 0, // Giorni ROL da ore extra
     has104: user?.has104 || false // Bonus legge 104
   });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real data on component mount
+  useEffect(() => {
+    fetchVacationData();
+  }, []);
+
+  const fetchVacationData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch vacation requests
+      const requestsResponse = await apiCall('/api/leave-requests?type=vacation');
+      if (requestsResponse.ok) {
+        const requestsData = await requestsResponse.json();
+        setVacationRequests(requestsData);
+      }
+
+      // Fetch vacation balance
+      const balanceResponse = await apiCall('/api/leave-balances');
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        setVacationBalance(prev => ({
+          ...prev,
+          totalDays: balanceData.vacation.total,
+          usedDays: balanceData.vacation.used,
+          remainingDays: balanceData.vacation.remaining,
+          pendingDays: balanceData.vacation.pending
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching vacation data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Calcolo dinamico basato su dati reali
   React.useEffect(() => {

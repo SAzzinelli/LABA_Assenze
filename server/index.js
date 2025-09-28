@@ -896,6 +896,152 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
 
 // ==================== LEAVE REQUESTS API ====================
 
+// ==================== USER ATTENDANCE STATS ====================
+
+// Get user attendance statistics
+app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
+    // Check if user is clocked in today
+    const { data: todayAttendance, error: todayError } = await supabase
+      .from('attendance')
+      .select('clock_in, clock_out')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .single();
+
+    let isClockedIn = false;
+    let todayHours = '0h 0m';
+    
+    if (todayAttendance && !todayError) {
+      isClockedIn = !!todayAttendance.clock_in;
+      if (todayAttendance.clock_in && todayAttendance.clock_out) {
+        const clockIn = new Date(todayAttendance.clock_in);
+        const clockOut = new Date(todayAttendance.clock_out);
+        const hours = (clockOut - clockIn) / (1000 * 60 * 60);
+        const h = Math.floor(hours);
+        const m = Math.floor((hours - h) * 60);
+        todayHours = `${h}h ${m}m`;
+      } else if (todayAttendance.clock_in) {
+        const clockIn = new Date(todayAttendance.clock_in);
+        const now = new Date();
+        const hours = (now - clockIn) / (1000 * 60 * 60);
+        const h = Math.floor(hours);
+        const m = Math.floor((hours - h) * 60);
+        todayHours = `${h}h ${m}m`;
+      }
+    }
+
+    // Count monthly presences
+    const { count: monthlyPresences, error: monthlyError } = await supabase
+      .from('attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    // Get user workplace from profile
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('workplace')
+      .eq('id', userId)
+      .single();
+
+    res.json({
+      isClockedIn,
+      todayHours,
+      monthlyPresences: monthlyPresences || 0,
+      expectedMonthlyPresences: 20, // Standard working days per month
+      workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
+    });
+
+  } catch (error) {
+    console.error('User attendance stats error:', error);
+    res.status(500).json({ error: 'Errore nel recupero delle statistiche' });
+  }
+});
+
+// ==================== LEAVE BALANCES API ====================
+
+// Get user leave balances (vacation, sick, permissions)
+app.get('/api/leave-balances', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { year = new Date().getFullYear() } = req.query;
+
+    const { data: balances, error } = await supabase
+      .from('leave_balances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('year', year);
+
+    if (error) {
+      console.error('Leave balances error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
+    }
+
+    // Format data for frontend
+    const formattedBalances = {
+      vacation: {
+        total: 26, // Base Italian vacation days
+        used: 0,
+        pending: 0,
+        remaining: 26
+      },
+      sick: {
+        total: 180, // Annual sick days
+        used: 0,
+        pending: 0,
+        remaining: 180
+      },
+      permission: {
+        total: 104, // Annual permission hours
+        used: 0,
+        pending: 0,
+        remaining: 104
+      }
+    };
+
+    // Update with real data if available
+    balances.forEach(balance => {
+      if (balance.leave_type === 'vacation') {
+        formattedBalances.vacation = {
+          total: balance.total_entitled,
+          used: balance.used,
+          pending: balance.pending,
+          remaining: balance.remaining
+        };
+      } else if (balance.leave_type === 'sick') {
+        formattedBalances.sick = {
+          total: balance.total_entitled,
+          used: balance.used,
+          pending: balance.pending,
+          remaining: balance.remaining
+        };
+      } else if (balance.leave_type === 'permission') {
+        formattedBalances.permission = {
+          total: balance.total_entitled,
+          used: balance.used,
+          pending: balance.pending,
+          remaining: balance.remaining
+        };
+      }
+    });
+
+    res.json(formattedBalances);
+
+  } catch (error) {
+    console.error('Leave balances error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== LEAVE REQUESTS ENDPOINTS ====================
+
 // Get all leave requests (admin) or user's requests
 app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
