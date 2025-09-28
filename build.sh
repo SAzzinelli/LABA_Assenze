@@ -11,7 +11,7 @@ rm -rf node_modules client/node_modules
 
 # Install dependencies with clean cache
 echo "📦 Installing server dependencies..."
-npm ci --only=production
+npm ci
 
 # Install client dependencies
 echo "📦 Installing client dependencies..."
