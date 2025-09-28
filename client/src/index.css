@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Modern Design System */
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  --accent: #06b6d4;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --dark: #0f172a;
+  --dark-light: #1e293b;
+  --gray: #64748b;
+  --gray-light: #94a3b8;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f8fafc;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Glass Morphism Effect */
+.glass {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Modern Components */
+@layer components {
+  /* Modern Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 focus:ring-indigo-500;
+  }
+  
+  .btn-secondary {
+    @apply glass text-slate-200 hover:bg-slate-700/50 hover:scale-105 focus:ring-slate-500;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-105 focus:ring-emerald-500;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg hover:shadow-xl hover:shadow-red-500/25 hover:scale-105 focus:ring-red-500;
+  }
+  
+  .btn-warning {
+    @apply bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg hover:shadow-xl hover:shadow-amber-500/25 hover:scale-105 focus:ring-amber-500;
+  }
+
+  /* Modern Cards */
+  .card {
+    @apply glass-card rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-900/50;
+  }
+  
+  .stat-card {
+    @apply glass-card rounded-2xl p-6 relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl;
+  }
+  
+  .stat-card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500;
+  }
+
+  /* Modern Form Elements */
+  .form-input {
+    @apply w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300;
+  }
+  
+  .form-select {
+    @apply w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300;
+  }
+  
+  .form-label {
+    @apply block text-sm font-semibold text-slate-300 mb-2;
+  }
+
+  /* Modern Tables */
+  .table {
+    @apply w-full glass-card rounded-2xl overflow-hidden;
+  }
+  
+  .table-header {
+    @apply bg-slate-800/50;
+  }
+  
+  .table-header-cell {
+    @apply px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider;
+  }
+  
+  .table-body {
+    @apply divide-y divide-slate-700/50;
+  }
+  
+  .table-row {
+    @apply hover:bg-slate-700/30 transition-colors duration-200;
+  }
+  
+  .table-cell {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-slate-100;
+  }
+
+  /* Modern Badges */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+  }
+  
+  .badge-success {
+    @apply bg-emerald-500/20 text-emerald-300 border border-emerald-500/30;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-500/20 text-amber-300 border border-amber-500/30;
+  }
+  
+  .badge-danger {
+    @apply bg-red-500/20 text-red-300 border border-red-500/30;
+  }
+  
+  .badge-info {
+    @apply bg-blue-500/20 text-blue-300 border border-blue-500/30;
+  }
+
+  /* Modern Sidebar */
+  .sidebar {
+    @apply glass w-64 h-full flex flex-col;
+  }
+  
+  .nav-item {
+    @apply flex items-center px-4 py-3 text-slate-300 rounded-xl mx-2 transition-all duration-300 hover:bg-slate-700/50 hover:text-white hover:scale-105;
+  }
+  
+  .nav-item.active {
+    @apply bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg;
+  }
+
+  /* Modern Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
+
+/* Force text readability */
+.text-gray-900,
+.text-gray-800,
+.text-gray-700,
+.text-black,
+.text-gray-600 {
+  color: #f8fafc !important;
+}
+
+label {
+  color: #cbd5e1 !important;
+}
+
+p, span, div {
+  color: #f8fafc !important;
+}
+
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header p {
+  color: #f8fafc !important;
+}
+
+.table-header-cell {
+  color: #cbd5e1 !important;
+}
+
+.table-body td {
+  color: #f8fafc !important;
+}

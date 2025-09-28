@@ -1,0 +1,26 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "./build.sh"
+  },
+  "deploy": {
+    "startCommand": "node server/index.js",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_VERSION": "20",
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "FRONTEND_URL": "https://hr.laba.biz",
+        "SUPABASE_URL": "https://gojhljczpwbjxbbrtrlq.supabase.co",
+        "SUPABASE_ANON_KEY": "sb_publishable_5-DIzLOLYry-rBKdcoo2ZQ_xX9y6inu",
+        "SUPABASE_SERVICE_KEY": "sb_secret_s7Vzh0AtPEaEv3f3VmkIEg_3ZqBhGsS",
+        "JWT_SECRET": "your_jwt_secret_key_here_change_in_production"
+      }
+    }
+  }
+}
