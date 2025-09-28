@@ -1407,9 +1407,14 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 
 // ==================== CATCH-ALL ROUTE ====================
 
-// Catch-all route for SPA (must be last)
+// Catch-all route for SPA (must be last - only for non-API GET requests)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  // Solo per richieste GET che non sono API
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  } else {
+    res.status(404).json({ error: 'API endpoint non trovato' });
+  }
 });
 
 server.listen(PORT, () => {
