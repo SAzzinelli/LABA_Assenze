@@ -672,9 +672,10 @@ app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
     }
 
     const { data: departments, error } = await supabase
-      .from('employees')
+      .from('users')
       .select('department')
-      .eq('status', 'active');
+      .eq('role', 'employee')
+      .eq('is_active', true);
 
     if (error) {
       console.error('Departments error:', error);
@@ -684,7 +685,8 @@ app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
     // Count employees per department
     const deptCount = {};
     departments.forEach(emp => {
-      deptCount[emp.department] = (deptCount[emp.department] || 0) + 1;
+      const dept = emp.department || 'Non specificato';
+      deptCount[dept] = (deptCount[dept] || 0) + 1;
     });
 
     const colors = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
@@ -1173,23 +1175,174 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
 
 // ==================== DEPARTMENTS ENDPOINTS ====================
 
-// Get all departments
+// Get all departments with employee count
 app.get('/api/departments', authenticateToken, async (req, res) => {
   try {
-    const { data, error } = await supabase
+    // Ottieni dipartimenti
+    const { data: departments, error: deptError } = await supabase
       .from('departments')
       .select('*')
       .eq('is_active', true)
       .order('name');
 
-    if (error) {
-      console.error('Departments fetch error:', error);
+    if (deptError) {
+      console.error('Departments fetch error:', deptError);
       return res.status(500).json({ error: 'Errore nel recuperare i dipartimenti' });
+    }
+
+    // Ottieni conteggio dipendenti per dipartimento
+    const { data: employees, error: empError } = await supabase
+      .from('users')
+      .select('department')
+      .eq('role', 'employee')
+      .eq('is_active', true);
+
+    if (empError) {
+      console.error('Employee count error:', empError);
+      return res.status(500).json({ error: 'Errore nel contare i dipendenti' });
+    }
+
+    // Conta dipendenti per dipartimento
+    const departmentCounts = {};
+    employees.forEach(emp => {
+      const dept = emp.department || 'Non specificato';
+      departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
+    });
+
+    // Aggiungi conteggio a ogni dipartimento
+    const departmentsWithCount = departments.map(dept => ({
+      ...dept,
+      employee_count: departmentCounts[dept.name] || 0
+    }));
+
+    res.json(departmentsWithCount);
+  } catch (error) {
+    console.error('Departments fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== HOLIDAYS ENDPOINTS ====================
+
+// Get holidays for year
+app.get('/api/holidays', authenticateToken, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear() } = req.query;
+
+    const { data, error } = await supabase
+      .from('holidays')
+      .select('*')
+      .eq('year', parseInt(year))
+      .order('date');
+
+    if (error) {
+      console.error('Holidays fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare i giorni festivi' });
     }
 
     res.json(data);
   } catch (error) {
-    console.error('Departments fetch error:', error);
+    console.error('Holidays fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Get holidays calendar for month
+app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = req.query;
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+
+    const { data, error } = await supabase
+      .from('holidays')
+      .select('*')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date');
+
+    if (error) {
+      console.error('Holidays calendar error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare il calendario festivo' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Holidays calendar error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== PAYROLL ENDPOINTS ====================
+
+// Get payroll data for user (employee sees own, admin sees all)
+app.get('/api/payroll', authenticateToken, async (req, res) => {
+  try {
+    const { year = new Date().getFullYear(), month = new Date().getMonth() + 1 } = req.query;
+    
+    let query = supabase
+      .from('payroll')
+      .select('*, users!payroll_user_id_fkey(first_name, last_name, email)')
+      .eq('year', parseInt(year))
+      .eq('month', parseInt(month));
+
+    // Se non è admin, mostra solo i propri dati
+    if (req.user.role !== 'admin') {
+      query = query.eq('user_id', req.user.id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Payroll fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare i dati payroll' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Payroll fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Get payroll summary for dashboard
+app.get('/api/payroll/summary', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    // Totale stipendi del mese corrente
+    const { data: currentMonthData, error: currentError } = await supabase
+      .from('payroll')
+      .select('gross_salary, net_salary, taxes, deductions')
+      .eq('year', currentYear)
+      .eq('month', currentMonth);
+
+    if (currentError) {
+      console.error('Current month payroll error:', currentError);
+      return res.status(500).json({ error: 'Errore nel recuperare i dati del mese corrente' });
+    }
+
+    const summary = currentMonthData.reduce((acc, item) => ({
+      totalGross: acc.totalGross + (item.gross_salary || 0),
+      totalNet: acc.totalNet + (item.net_salary || 0),
+      totalTaxes: acc.totalTaxes + (item.taxes || 0),
+      totalDeductions: acc.totalDeductions + (item.deductions || 0),
+      employeeCount: acc.employeeCount + 1
+    }), { totalGross: 0, totalNet: 0, totalTaxes: 0, totalDeductions: 0, employeeCount: 0 });
+
+    res.json({
+      ...summary,
+      averageGross: summary.employeeCount > 0 ? summary.totalGross / summary.employeeCount : 0,
+      averageNet: summary.employeeCount > 0 ? summary.totalNet / summary.employeeCount : 0
+    });
+  } catch (error) {
+    console.error('Payroll summary error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });

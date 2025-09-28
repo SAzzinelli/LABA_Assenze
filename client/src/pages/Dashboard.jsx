@@ -12,6 +12,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import HolidaysCalendar from '../components/HolidaysCalendar';
 
 const Dashboard = () => {
   const { user, apiCall } = useAuthStore();
@@ -305,19 +306,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* In Calendario */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-          <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
-          In Calendario
-        </h3>
-        <div className="space-y-4">
-          <div className="p-4 bg-slate-700 rounded-lg">
-            <p className="text-slate-300 text-sm">Prossimamente: Integrazione calendari aziendali</p>
-            <p className="text-slate-400 text-xs mt-1">Eventi, riunioni e scadenze saranno mostrati qui</p>
-          </div>
-        </div>
-      </div>
+      {/* Giorni Festivi */}
+      <HolidaysCalendar year={new Date().getFullYear()} />
     </div>
   );
 };
