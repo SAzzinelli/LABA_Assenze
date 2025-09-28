@@ -36,7 +36,7 @@ const Profile = () => {
     has104: user?.has104 || false,
     position: user?.position || '',
     hireDate: user?.hireDate || '',
-    officeLocation: user?.officeLocation || '',
+    officeLocation: user?.workplace || '',
     contractType: user?.contractType || ''
   });
 
@@ -85,7 +85,7 @@ const Profile = () => {
             has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
             position: data.position || savedData.position || '',
             hireDate: data.hire_date || savedData.hireDate || '',
-            workplace: data.workplace || savedData.workplace || '',
+            officeLocation: data.workplace || savedData.officeLocation || '',
             contractType: data.contract_type || savedData.contractType || ''
           });
           
@@ -100,7 +100,7 @@ const Profile = () => {
             has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
             position: data.position || savedData.position || '',
             hireDate: data.hire_date || savedData.hireDate || '',
-            workplace: data.workplace || savedData.workplace || '',
+            officeLocation: data.workplace || savedData.officeLocation || '',
             contractType: data.contract_type || savedData.contractType || ''
           };
           localStorage.setItem('userProfile', JSON.stringify(profileData));
@@ -118,7 +118,7 @@ const Profile = () => {
             has104: savedData.has104 || false,
             position: savedData.position || '',
             hireDate: savedData.hireDate || '',
-            workplace: savedData.workplace || '',
+            officeLocation: savedData.officeLocation || '',
             contractType: savedData.contractType || ''
           });
         }
@@ -136,7 +136,7 @@ const Profile = () => {
           has104: savedData.has104 || false,
           position: savedData.position || '',
           hireDate: savedData.hireDate || '',
-          workplace: savedData.workplace || '',
+          officeLocation: savedData.officeLocation || '',
           contractType: savedData.contractType || ''
         });
       } finally {
@@ -265,7 +265,7 @@ const Profile = () => {
             position: formData.position,
             department: formData.department,
             hire_date: formData.hireDate,
-            workplace: formData.workplace,
+            workplace: formData.officeLocation,
             contract_type: formData.contractType,
             birth_date: formData.birthDate,
             has_104: formData.has104
@@ -346,7 +346,11 @@ const Profile = () => {
       phone: user?.phone || '',
       birthDate: user?.birthDate || '',
       department: user?.department || '',
-      has104: user?.has104 || false
+      has104: user?.has104 || false,
+      position: user?.position || '',
+      hireDate: user?.hireDate || '',
+      officeLocation: user?.workplace || '',
+      contractType: user?.contractType || ''
     });
     setIsEditing(false);
   };
