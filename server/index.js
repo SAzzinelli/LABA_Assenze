@@ -307,13 +307,10 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 app.get('/api/employees', apiLimiter, authenticateToken, async (req, res) => {
   try {
     const { data: employees, error } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        users!inner(id, email, first_name, last_name, is_active)
-      `)
-      .eq('status', 'active')
-      .order('users.last_name');
+      .from('users')
+      .select('*')
+      .eq('is_active', true)
+      .order('last_name');
 
     if (error) {
       console.error('Employees fetch error:', error);
@@ -322,18 +319,17 @@ app.get('/api/employees', apiLimiter, authenticateToken, async (req, res) => {
 
     const formattedEmployees = employees.map(emp => ({
       id: emp.id,
-      user_id: emp.user_id,
-      employeeNumber: emp.employee_number,
-      firstName: emp.users.first_name,
-      lastName: emp.users.last_name,
-      email: emp.users.email,
-      department: emp.department,
-      position: emp.position,
-      hireDate: emp.hire_date,
-      status: emp.status,
+      firstName: emp.first_name,
+      lastName: emp.last_name,
+      name: `${emp.first_name} ${emp.last_name}`,
+      email: emp.email,
+      department: emp.department || 'Non specificato',
+      position: emp.position || 'Dipendente',
+      hireDate: emp.hire_date || emp.created_at?.split('T')[0],
+      status: emp.is_active ? 'active' : 'inactive',
       has104: emp.has_104,
-      phone: emp.personal_info?.phone || '',
-      birthDate: emp.personal_info?.birth_date || ''
+      phone: emp.phone || '',
+      birthDate: emp.date_of_birth || ''
     }));
 
     res.json(formattedEmployees);
@@ -729,9 +725,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         users!inner(first_name, last_name, department)
       `)
       .eq('date', today)
-      .not('check_in', 'is', null)
-      .is('check_out', null)
-      .order('check_in');
+      .not('clock_in', 'is', null)
+      .is('clock_out', null)
+      .order('clock_in');
 
     if (error) {
       console.error('Current attendance error:', error);
@@ -743,8 +739,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       user_id: att.user_id,
       name: `${att.users.first_name} ${att.users.last_name}`,
       department: att.users.department,
-      check_in: att.check_in,
-      check_out: att.check_out,
+      clock_in: att.clock_in,
+      clock_out: att.clock_out,
       hours_worked: att.hours_worked
     }));
 
@@ -772,9 +768,9 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
         users!inner(first_name, last_name, department)
       `)
       .eq('date', now.toISOString().split('T')[0])
-      .not('check_in', 'is', null)
-      .is('check_out', null)
-      .order('check_in');
+      .not('clock_in', 'is', null)
+      .is('clock_out', null)
+      .order('clock_in');
 
     if (error) {
       console.error('Upcoming departures error:', error);
@@ -783,14 +779,14 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
 
     // Calculate expected departure times (assuming 8-hour workday)
     const upcomingDepartures = upcoming.map(att => {
-      const checkInTime = new Date(`${att.date}T${att.check_in}`);
+      const checkInTime = new Date(att.clock_in);
       const expectedCheckOut = new Date(checkInTime.getTime() + 8 * 60 * 60 * 1000);
       
       return {
         id: att.id,
         name: `${att.users.first_name} ${att.users.last_name}`,
         department: att.users.department,
-        check_in: att.check_in,
+        clock_in: att.clock_in,
         expected_check_out: expectedCheckOut.toTimeString().split(' ')[0].substring(0, 5),
         minutes_until_departure: Math.round((expectedCheckOut - now) / (1000 * 60))
       };
