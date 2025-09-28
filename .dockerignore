@@ -1,18 +1,64 @@
-node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+client/dist/
+client/build/
+
+# Environment files
 .env
-.nyc_output
-coverage
-.vscode
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
 .DS_Store
-*.log
-client/node_modules
-client/dist
-client/.vite
-scripts
-tests
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Test files
+__tests__/
 *.test.js
 *.spec.js
+coverage/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Scripts (non necessari per il build)
+scripts/
+
+# Development files
+*.dev.js
+*.development.js
