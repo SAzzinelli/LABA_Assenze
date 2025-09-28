@@ -1018,6 +1018,59 @@ app.use((err, req, res, next) => {
 
 // ==================== START SERVER ====================
 
+// ==================== SETTINGS ENDPOINTS ====================
+
+// Save settings
+app.post('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    
+    if (!settings) {
+      return res.status(400).json({ error: 'Settings data required' });
+    }
+
+    // Salva nel database (per ora usiamo una tabella semplice)
+    const { data, error } = await supabase
+      .from('settings')
+      .upsert({
+        user_id: req.user.id,
+        settings: settings,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Settings save error:', error);
+      return res.status(500).json({ error: 'Errore nel salvare le impostazioni' });
+    }
+
+    res.json({ success: true, message: 'Impostazioni salvate con successo' });
+  } catch (error) {
+    console.error('Settings save error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Get settings
+app.get('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('settings')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Settings fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare le impostazioni' });
+    }
+
+    res.json(data?.settings || {});
+  } catch (error) {
+    console.error('Settings fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);

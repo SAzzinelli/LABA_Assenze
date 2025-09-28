@@ -97,8 +97,29 @@ const Settings = () => {
 
   const handleSaveSettings = async () => {
     try {
-      // Salva le impostazioni nel localStorage per ora
+      // Salva le impostazioni nel localStorage
       localStorage.setItem('settings', JSON.stringify(settings));
+      
+      // Prova a salvare anche nel database (se l'API è disponibile)
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ settings })
+          });
+          
+          if (response.ok) {
+            console.log('Settings salvate anche nel database');
+          }
+        }
+      } catch (dbError) {
+        console.log('Database save failed, using localStorage only:', dbError);
+      }
       
       // Mostra notifica di successo
       alert('Impostazioni salvate con successo!');
