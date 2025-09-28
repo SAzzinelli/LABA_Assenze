@@ -1634,6 +1634,100 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 
 // ==================== CATCH-ALL ROUTE ====================
 
+// User weekly hours calculation
+app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get current week start and end dates
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    // Get attendance records for current week
+    const { data: weeklyAttendance, error } = await supabase
+      .from('attendance')
+      .select('hours_worked')
+      .eq('user_id', userId)
+      .gte('date', startOfWeek.toISOString().split('T')[0])
+      .lte('date', endOfWeek.toISOString().split('T')[0])
+      .not('hours_worked', 'is', null);
+    
+    if (error) {
+      console.error('Weekly hours error:', error);
+      return res.status(500).json({ error: 'Errore nel calcolo delle ore settimanali' });
+    }
+    
+    // Calculate total hours
+    const totalHours = weeklyAttendance.reduce((sum, record) => {
+      return sum + (parseFloat(record.hours_worked) || 0);
+    }, 0);
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        totalHours: totalHours,
+        weeklyAttendance: weeklyAttendance.length
+      } 
+    });
+  } catch (error) {
+    console.error('Weekly hours error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// User overtime calculation
+app.get('/api/attendance/user-overtime', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get current month start and end dates
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    // Get attendance records for current month
+    const { data: monthlyAttendance, error } = await supabase
+      .from('attendance')
+      .select('hours_worked')
+      .eq('user_id', userId)
+      .gte('date', startOfMonth.toISOString().split('T')[0])
+      .lte('date', endOfMonth.toISOString().split('T')[0])
+      .not('hours_worked', 'is', null);
+    
+    if (error) {
+      console.error('Overtime error:', error);
+      return res.status(500).json({ error: 'Errore nel calcolo degli straordinari' });
+    }
+    
+    // Calculate total hours worked this month
+    const totalHoursWorked = monthlyAttendance.reduce((sum, record) => {
+      return sum + (parseFloat(record.hours_worked) || 0);
+    }, 0);
+    
+    // Calculate expected hours (assuming 8h/day, 20 working days/month)
+    const expectedHours = 160; // 8h * 20 days
+    const overtimeHours = totalHoursWorked - expectedHours;
+    
+    res.json({ 
+      success: true, 
+      data: { 
+        overtimeHours: overtimeHours,
+        totalHoursWorked: totalHoursWorked,
+        expectedHours: expectedHours
+      } 
+    });
+  } catch (error) {
+    console.error('Overtime error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Catch-all route for SPA (must be last - only for non-API GET requests)
 app.get('*', (req, res) => {
   // Solo per richieste GET che non sono API

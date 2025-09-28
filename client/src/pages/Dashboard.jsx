@@ -40,32 +40,37 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch real stats from database
-      const statsResponse = await apiCall('/api/dashboard/stats');
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStats({
-          presentToday: statsData.presentToday || 0,
-          pendingRequests: statsData.pendingRequests || 0
-        });
-      } else {
-        // Fallback to 0 if no data
-        setStats({
-          presentToday: 0,
-          pendingRequests: 0
-        });
-      }
-
-      // Fetch real weekly attendance from database
-      const attendanceResponse = await apiCall('/api/dashboard/attendance');
-      if (attendanceResponse.ok) {
-        const attendanceData = await attendanceResponse.json();
-        if (attendanceData && attendanceData.length > 0) {
-          setWeeklyAttendance(attendanceData);
+      if (user?.role === 'admin') {
+        // Fetch real stats from database per admin
+        const statsResponse = await apiCall('/api/dashboard/stats');
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json();
+          setStats({
+            presentToday: statsData.presentToday || 0,
+            pendingRequests: statsData.pendingRequests || 0
+          });
         } else {
-          // No real data available - show empty array
-          setWeeklyAttendance([]);
+          // Fallback to 0 if no data
+          setStats({
+            presentToday: 0,
+            pendingRequests: 0
+          });
         }
+
+        // Fetch real weekly attendance from database
+        const attendanceResponse = await apiCall('/api/dashboard/attendance');
+        if (attendanceResponse.ok) {
+          const attendanceData = await attendanceResponse.json();
+          if (attendanceData && attendanceData.length > 0) {
+            setWeeklyAttendance(attendanceData);
+          } else {
+            // No real data available - show empty array
+            setWeeklyAttendance([]);
+          }
+        }
+      } else {
+        // Fetch KPI utente
+        await fetchUserKPIs();
       }
 
       // Fetch departments from new API
@@ -113,6 +118,46 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserKPIs = async () => {
+    try {
+      // 1. Ore lavorate questa settimana
+      const weeklyHoursResponse = await apiCall('/api/attendance/user-weekly-hours');
+      const weeklyHours = weeklyHoursResponse.success ? weeklyHoursResponse.data.totalHours : 0;
+      
+      // 2. Saldo ore (straordinari)
+      const overtimeResponse = await apiCall('/api/attendance/user-overtime');
+      const overtimeHours = overtimeResponse.success ? overtimeResponse.data.overtimeHours : 0;
+      
+      // 3. Permessi rimanenti
+      const permissionsResponse = await apiCall('/api/leave-balances');
+      const remainingPermissions = permissionsResponse.success ? permissionsResponse.data.permission?.remaining || 0 : 0;
+      
+      // 4. Presenze mese
+      const monthlyPresencesResponse = await apiCall('/api/attendance/user-stats');
+      const monthlyPresences = monthlyPresencesResponse.success ? monthlyPresencesResponse.data.monthlyPresences || 0 : 0;
+      
+      setUserKPIs({
+        weeklyHours: formatHours(weeklyHours),
+        overtimeBalance: formatOvertime(overtimeHours),
+        remainingPermissions: `${remainingPermissions}h`,
+        monthlyPresences: `${monthlyPresences}/20`
+      });
+    } catch (error) {
+      console.error('Error fetching user KPIs:', error);
+    }
+  };
+
+  const formatHours = (hours) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m}m`;
+  };
+
+  const formatOvertime = (hours) => {
+    const sign = hours >= 0 ? '+' : '';
+    return `${sign}${formatHours(Math.abs(hours))}`;
+  };
+
   // Usa i dati reali dal database
   const weeklyAttendanceData = weeklyAttendance;
   const departmentData = departments;
@@ -139,40 +184,40 @@ const Dashboard = () => {
       subtitle: 'Da approvare'
     }
   ] : [
-    // Utente: KPI personali
+    // Utente: KPI personali REALI
     {
       title: 'Ore Lavorate',
-      value: '32h 45m',
+      value: userKPIs.weeklyHours,
       icon: Clock,
       color: 'blue',
-      change: '+2h 15m',
+      change: '+0h 0m',
       changeType: 'positive',
       subtitle: 'Questa settimana'
     },
     {
       title: 'Saldo Ore',
-      value: '+4h 30m',
+      value: userKPIs.overtimeBalance,
       icon: Activity,
       color: 'green',
-      change: '+1h 20m',
+      change: '+0h 0m',
       changeType: 'positive',
       subtitle: 'Straordinari'
     },
     {
       title: 'Permessi Rimanenti',
-      value: '24h',
+      value: userKPIs.remainingPermissions,
       icon: FileText,
       color: 'purple',
-      change: '-3h',
-      changeType: 'negative',
+      change: '0h',
+      changeType: 'neutral',
       subtitle: 'Ore disponibili'
     },
     {
       title: 'Presenze Mese',
-      value: '18/20',
+      value: userKPIs.monthlyPresences,
       icon: Target,
       color: 'yellow',
-      change: '+1',
+      change: '0',
       changeType: 'positive',
       subtitle: 'Giorni lavorati'
     }
