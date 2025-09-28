@@ -627,7 +627,20 @@ app.post('/api/attendance/clock-out', authenticateToken, async (req, res) => {
 
     const clockOutTime = new Date().toISOString();
     const clockInTime = new Date(record.clock_in);
-    const hoursWorked = ((new Date(clockOutTime) - clockInTime) / (1000 * 60 * 60)).toFixed(2);
+    
+    // Calcola ore totali tra entrata e uscita
+    const totalHours = ((new Date(clockOutTime) - clockInTime) / (1000 * 60 * 60));
+    
+    // Calcola automaticamente la pausa pranzo
+    let lunchBreakHours = 0;
+    
+    // Se le ore totali sono >= 6 ore, applica automaticamente 1 ora di pausa pranzo
+    if (totalHours >= 6) {
+      lunchBreakHours = 1; // Pausa pranzo standard di 1 ora
+    }
+    
+    // Calcola ore lavorate sottraendo la pausa pranzo
+    const hoursWorked = (totalHours - lunchBreakHours).toFixed(2);
 
     const { error } = await supabase
       .from('attendance')
