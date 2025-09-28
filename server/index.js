@@ -1144,6 +1144,38 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
     }
 
+    // Crea notifica per tutti gli admin
+    try {
+      const { data: admins, error: adminError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .eq('role', 'admin');
+
+      if (!adminError && admins) {
+        const typeLabels = {
+          'permission': 'Permesso',
+          'sick': 'Malattia', 
+          'vacation': 'Ferie'
+        };
+
+        const notifications = admins.map(admin => ({
+          user_id: admin.id,
+          title: `Nuova richiesta ${typeLabels[type] || type}`,
+          message: `${req.user.first_name} ${req.user.last_name} ha richiesto ${typeLabels[type] || type} dal ${startDate} al ${endDate}`,
+          type: 'request',
+          is_read: false,
+          created_at: new Date().toISOString()
+        }));
+
+        await supabase
+          .from('notifications')
+          .insert(notifications);
+      }
+    } catch (notificationError) {
+      console.error('Notification creation error:', notificationError);
+      // Non bloccare la richiesta se le notifiche falliscono
+    }
+
     res.status(201).json({
       success: true,
       message: 'Richiesta inviata con successo',
@@ -1180,6 +1212,36 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     if (error) {
       console.error('Leave request update error:', error);
       return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
+    }
+
+    // Crea notifica per il dipendente
+    try {
+      const typeLabels = {
+        'permission': 'Permesso',
+        'sick': 'Malattia', 
+        'vacation': 'Ferie'
+      };
+
+      const statusLabels = {
+        'approved': 'approvata',
+        'rejected': 'rifiutata'
+      };
+
+      await supabase
+        .from('notifications')
+        .insert([
+          {
+            user_id: updatedRequest.user_id,
+            title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
+            message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} dal ${updatedRequest.start_date} al ${updatedRequest.end_date} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
+            type: 'response',
+            is_read: false,
+            created_at: new Date().toISOString()
+          }
+        ]);
+    } catch (notificationError) {
+      console.error('Notification creation error:', notificationError);
+      // Non bloccare l'aggiornamento se le notifiche falliscono
     }
 
     res.json({
@@ -1437,6 +1499,46 @@ app.get('/api/work-schedules/:userId', authenticateToken, async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error('Employee work schedules fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Create notification
+app.post('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { userId, title, message, type = 'info' } = req.body;
+
+    if (!userId || !title || !message) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([
+        {
+          user_id: userId,
+          title: title,
+          message: message,
+          type: type,
+          is_read: false,
+          created_at: new Date().toISOString()
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Notification creation error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione della notifica' });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Notifica creata con successo',
+      notification: data
+    });
+  } catch (error) {
+    console.error('Notification creation error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
