@@ -71,30 +71,31 @@ const Login = () => {
   const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-xl mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-4 animate-float">
             <Sparkles className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
             Presenze LABA
           </h1>
           <p className="text-slate-400 mt-2">Sistema HR per la gestione delle presenze</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-slate-800 p-8 rounded-2xl border border-slate-600">
+        <div className="glass-card p-8 rounded-3xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 blur-3xl -z-10"></div>
           {/* Toggle Login/Register */}
-          <div className="flex mb-6 bg-slate-700 rounded-lg p-1">
+          <div className="flex mb-6 bg-slate-800/50 rounded-xl p-1">
             <button
               type="button"
               onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                 isLogin 
-                  ? 'bg-slate-600 text-white' 
-                  : 'text-slate-300 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Login
@@ -102,10 +103,10 @@ const Login = () => {
             <button
               type="button"
               onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
                 !isLogin 
-                  ? 'bg-slate-600 text-white' 
-                  : 'text-slate-300 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Registrati
@@ -266,7 +267,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:bg-slate-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 flex items-center justify-center"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -281,7 +282,7 @@ const Login = () => {
 
           {/* Demo Credentials */}
           {isLogin && (
-            <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
+            <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
               <h3 className="text-sm font-medium text-slate-300 mb-2">Credenziali Demo:</h3>
               <div className="text-xs text-slate-400 space-y-1">
                 <div>Admin: admin@laba.com / admin123</div>
