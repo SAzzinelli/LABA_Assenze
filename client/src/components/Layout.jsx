@@ -18,13 +18,56 @@ import {
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, apiCall } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [notifications, setNotifications] = React.useState([]);
+  const [unreadCount, setUnreadCount] = React.useState(0);
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const location = useLocation();
 
   const handleLogout = async () => {
     await logout();
   };
+
+  // Carica notifiche
+  const loadNotifications = async () => {
+    try {
+      const response = await apiCall('/api/notifications?limit=10&unread_only=false');
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
+  // Marca notifica come letta
+  const markAsRead = async (notificationId) => {
+    try {
+      const response = await apiCall(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT'
+      });
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Carica notifiche al mount e ogni 30 secondi
+  React.useEffect(() => {
+    if (user) {
+      loadNotifications();
+      const interval = setInterval(loadNotifications, 30000); // Aggiorna ogni 30 secondi
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -182,10 +225,80 @@ const Layout = ({ children }) => {
               </div>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <button className="bg-slate-800 p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white relative">
-                <Bell className="h-6 w-6" />
-                <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400"></span>
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  className="bg-slate-800 p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white relative"
+                >
+                  <Bell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400">
+                      <span className="sr-only">{unreadCount} notifiche non lette</span>
+                    </span>
+                  )}
+                </button>
+                
+                {/* Dropdown notifiche */}
+                {notificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-200">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">Notifiche</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          Nessuna notifica
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => {
+                              if (!notification.is_read) {
+                                markAsRead(notification.id);
+                              }
+                            }}
+                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                              !notification.is_read ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start">
+                              <div className={`w-2 h-2 rounded-full mt-2 mr-3 ${
+                                !notification.is_read ? 'bg-blue-500' : 'bg-gray-300'
+                              }`} />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {notification.title}
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {new Date(notification.created_at).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="p-2 border-t border-gray-200">
+                      <button 
+                        onClick={() => setNotificationsOpen(false)}
+                        className="w-full text-center text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Chiudi
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

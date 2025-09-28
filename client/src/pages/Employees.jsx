@@ -3,8 +3,9 @@ import { useAuthStore } from '../utils/store';
 import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
 
 const Employees = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -25,19 +26,41 @@ const Employees = () => {
 
   useEffect(() => {
     fetchEmployees();
+    fetchDepartments();
   }, []);
 
   const fetchEmployees = async () => {
     try {
-      // TODO: Sostituire con chiamata API reale
-      // const response = await fetch('/api/employees', {
-      //   method: 'GET',
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // });
-      // const employees = await response.json();
-      
-      // Simulazione dati per ora (poi collegheremo al database)
-      const mockEmployees = [
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const employees = await response.json();
+        setEmployees(employees);
+      } else {
+        // Fallback a dati mock se API fallisce
+        setEmployees(getMockEmployees());
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      setEmployees(getMockEmployees());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await apiCall('/api/departments');
+      if (response.ok) {
+        const departments = await response.json();
+        setDepartments(departments);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const getMockEmployees = () => {
+    return [
         { 
           id: 1, 
           firstName: 'Marco', 
@@ -564,10 +587,11 @@ const Employees = () => {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Seleziona dipartimento</option>
-                  <option value="Amministrazione">Amministrazione</option>
-                  <option value="Segreteria">Segreteria</option>
-                  <option value="Orientamento">Orientamento</option>
-                  <option value="Reparto IT">Reparto IT</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -693,10 +717,12 @@ const Employees = () => {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="Amministrazione">Amministrazione</option>
-                  <option value="Segreteria">Segreteria</option>
-                  <option value="Orientamento">Orientamento</option>
-                  <option value="Reparto IT">Reparto IT</option>
+                  <option value="">Seleziona dipartimento</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               
