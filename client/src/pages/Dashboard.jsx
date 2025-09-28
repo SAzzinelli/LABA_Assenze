@@ -5,6 +5,7 @@ import {
   Clock,
   FileText,
   CheckCircle,
+  XCircle,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
