@@ -951,12 +951,6 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 }
 
-// ==================== CATCH-ALL ROUTE ====================
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-});
-
 // ==================== WEBSOCKET REAL-TIME ====================
 
 // WebSocket connection handling
@@ -1257,6 +1251,13 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     console.error('Notification update error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
+});
+
+// ==================== CATCH-ALL ROUTE ====================
+
+// Catch-all route for SPA (must be last)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
 server.listen(PORT, () => {
