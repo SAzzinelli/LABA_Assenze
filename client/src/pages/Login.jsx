@@ -340,24 +340,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          {isLogin && (
-            <div className="mt-8 p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Credenziali Demo
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                  <span className="text-slate-400">Admin:</span>
-                  <span className="text-white font-mono">admin@laba.com / admin123</span>
-                </div>
-                <div className="text-slate-400 text-center">
-                  Dipendente: Registrati con email @labafirenze.com
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
       

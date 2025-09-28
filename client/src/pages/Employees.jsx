@@ -36,12 +36,12 @@ const Employees = () => {
         const employees = await response.json();
         setEmployees(employees);
       } else {
-        // Fallback a dati mock se API fallisce
-        setEmployees(getMockEmployees());
+        // Nessun dipendente trovato
+        setEmployees([]);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
-      setEmployees(getMockEmployees());
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
@@ -59,115 +59,6 @@ const Employees = () => {
     }
   };
 
-  const getMockEmployees = () => {
-    return [
-        { 
-          id: 1, 
-          firstName: 'Marco', 
-          lastName: 'Rossi', 
-          name: 'Marco Rossi', 
-          email: 'marco.rossi@labafirenze.com', 
-          phone: '+39 333 123 4567',
-          birthDate: '1985-03-15',
-          department: 'Amministrazione', 
-          position: 'Manager', 
-          status: 'active',
-          has104: false,
-          hireDate: '2020-01-15',
-          weeklyHours: 40,
-          usedVacationDays: 15,
-          totalVacationDays: 26,
-          workSchedule: {
-            monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
-            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
-          }
-        },
-        { 
-          id: 2, 
-          firstName: 'Anna', 
-          lastName: 'Bianchi', 
-          name: 'Anna Bianchi', 
-          email: 'anna.bianchi@labafirenze.com', 
-          phone: '+39 333 234 5678',
-          birthDate: '1990-07-22',
-          department: 'Segreteria', 
-          position: 'Segretaria', 
-          status: 'active',
-          has104: false,
-          hireDate: '2021-03-01',
-          weeklyHours: 35,
-          usedVacationDays: 8,
-          totalVacationDays: 26,
-          workSchedule: {
-            monday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
-            tuesday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
-            wednesday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
-            thursday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
-            friday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
-            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
-            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
-          }
-        },
-        { 
-          id: 3, 
-          firstName: 'Luca', 
-          lastName: 'Verdi', 
-          name: 'Luca Verdi', 
-          email: 'luca.verdi@labafirenze.com', 
-          phone: '+39 333 345 6789',
-          birthDate: '1988-11-10',
-          department: 'Orientamento', 
-          position: 'Consulente', 
-          status: 'active',
-          has104: true,
-          hireDate: '2019-09-01',
-          weeklyHours: 40,
-          usedVacationDays: 20,
-          totalVacationDays: 26,
-          workSchedule: {
-            monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
-            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
-          }
-        },
-        { 
-          id: 4, 
-          firstName: 'Sofia', 
-          lastName: 'Neri', 
-          name: 'Sofia Neri', 
-          email: 'sofia.neri@labafirenze.com', 
-          phone: '+39 333 456 7890',
-          birthDate: '1992-05-08',
-          department: 'Reparto IT', 
-          position: 'Sviluppatore', 
-          status: 'active',
-          has104: false,
-          hireDate: '2022-01-10',
-          weeklyHours: 40,
-          usedVacationDays: 5,
-          totalVacationDays: 26,
-          workSchedule: {
-            monday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
-            tuesday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
-            wednesday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
-            thursday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
-            friday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
-            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
-            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
-          }
-        },
-      ];
-    return mockEmployees;
-  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

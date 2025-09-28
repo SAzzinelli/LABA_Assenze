@@ -43,43 +43,8 @@ const SickLeave = () => {
   // Stato per collassabile filtri
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
 
-  // Mock data per le richieste di malattia
-  const [sickRequests, setSickRequests] = useState([
-    {
-      id: 1,
-      startDate: '2025-09-20',
-      endDate: '2025-09-22',
-      reason: 'Influenza',
-      doctor: 'Dr. Rossi',
-      status: 'approved',
-      submittedAt: '2025-09-19T10:30:00Z',
-      approvedAt: '2025-09-19T14:20:00Z',
-      approvedBy: 'Admin',
-      notes: 'Certificato medico allegato'
-    },
-    {
-      id: 2,
-      startDate: '2025-09-15',
-      endDate: '2025-09-16',
-      reason: 'Mal di testa',
-      doctor: 'Dr. Bianchi',
-      status: 'pending',
-      submittedAt: '2025-09-14T16:45:00Z',
-      notes: 'Richiesta urgente'
-    },
-    {
-      id: 3,
-      startDate: '2025-09-10',
-      endDate: '2025-09-10',
-      reason: 'Visita specialistica',
-      doctor: 'Dr. Verdi',
-      status: 'approved',
-      submittedAt: '2025-09-09T09:15:00Z',
-      approvedAt: '2025-09-09T11:30:00Z',
-      approvedBy: 'Admin',
-      notes: 'Controllo periodico'
-    }
-  ]);
+  // Array vuoto per le richieste di malattia
+  const [sickRequests, setSickRequests] = useState([]);
 
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;

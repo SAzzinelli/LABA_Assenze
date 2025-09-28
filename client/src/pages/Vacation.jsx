@@ -42,40 +42,8 @@ const Vacation = () => {
   // Stato per collassabile filtri
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
 
-  // Mock data per le richieste di ferie
-  const [vacationRequests, setVacationRequests] = useState([
-    {
-      id: 1,
-      startDate: '2025-12-23',
-      endDate: '2025-12-31',
-      reason: 'Vacanze Natalizie',
-      status: 'approved',
-      submittedAt: '2025-11-15T10:30:00Z',
-      approvedAt: '2025-11-16T09:15:00Z',
-      approvedBy: 'Admin',
-      notes: 'Vacanze con la famiglia'
-    },
-    {
-      id: 2,
-      startDate: '2025-10-15',
-      endDate: '2025-10-18',
-      reason: 'Ponte del 1° Novembre',
-      status: 'pending',
-      submittedAt: '2025-09-20T14:20:00Z',
-      notes: 'Weekend lungo'
-    },
-    {
-      id: 3,
-      startDate: '2025-08-05',
-      endDate: '2025-08-20',
-      reason: 'Vacanze Estive',
-      status: 'approved',
-      submittedAt: '2025-07-01T11:45:00Z',
-      approvedAt: '2025-07-02T08:30:00Z',
-      approvedBy: 'Admin',
-      notes: 'Vacanze al mare con amici'
-    }
-  ]);
+  // Array vuoto per le richieste di ferie
+  const [vacationRequests, setVacationRequests] = useState([]);
 
   // Calcolo dinamico del bilancio ferie
   const [vacationBalance, setVacationBalance] = useState({
