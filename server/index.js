@@ -1413,6 +1413,34 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
   }
 });
 
+// Get work schedule for specific employee (admin only)
+app.get('/api/work-schedules/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Solo admin può vedere orari di altri utenti
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { userId } = req.params;
+    
+    const { data, error } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .order('day_of_week');
+
+    if (error) {
+      console.error('Employee work schedules fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recuperare gli orari di lavoro del dipendente' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Employee work schedules fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== LEAVE BALANCES ENDPOINTS ====================
 
 // Get leave balances for user
