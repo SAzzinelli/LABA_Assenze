@@ -48,6 +48,16 @@ app.use(session({
   }
 }));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '2.0.0'
+  });
+});
+
 // Serve static files
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
