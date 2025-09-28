@@ -204,6 +204,10 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
       birthDate, 
       phone, 
       department, 
+      position,
+      hireDate,
+      workplace,
+      contractType,
       has104 = false 
     } = req.body;
     
@@ -213,7 +217,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     }
     
     // Validazione campi obbligatori
-    if (!email || !password || !firstName || !lastName || !department) {
+    if (!email || !password || !firstName || !lastName || !department || !position || !hireDate || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
@@ -243,7 +247,13 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
           first_name: firstName,
           last_name: lastName,
           is_active: true,
-          has_104: has104
+          has_104: has104,
+          phone: phone,
+          position: position,
+          hire_date: hireDate,
+          workplace: workplace,
+          contract_type: contractType,
+          department: department
         }
       ])
       .select()

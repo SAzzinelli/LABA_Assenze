@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { 
   User, 
@@ -21,13 +21,15 @@ import {
 import MonteOreCalculator from '../components/MonteOreCalculator';
 
 const Profile = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
+    firstName: '',
+    lastName: '',
+    email: '',
     phone: user?.phone || '',
     birthDate: user?.birthDate || '',
     department: user?.department || '',
@@ -53,6 +55,41 @@ const Profile = () => {
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
 
   const [selectedDay, setSelectedDay] = useState('monday');
+
+  // Carica dati utente dal database
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+        const response = await apiCall('/api/user');
+        if (response.ok) {
+          const data = await response.json();
+          setUserData(data);
+          setFormData({
+            firstName: data.first_name || '',
+            lastName: data.last_name || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            birthDate: data.birth_date || '',
+            department: data.department || '',
+            has104: data.has_104 || false,
+            position: data.position || '',
+            hireDate: data.hire_date || '',
+            workplace: data.workplace || '',
+            contractType: data.contract_type || ''
+          });
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento dati utente:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      loadUserData();
+    }
+  }, [user, apiCall]);
 
   // Load work schedule from API
   React.useEffect(() => {
