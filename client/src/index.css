@@ -40,18 +40,16 @@ body {
   min-height: 100vh;
 }
 
-/* Glass Morphism Effect */
+/* Simple Card Effects */
 .glass {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1e293b;
+  border: 1px solid #475569;
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: #1e293b;
+  border: 1px solid #475569;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Modern Components */
@@ -61,9 +59,9 @@ body {
     @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900;
   }
   
-  .btn-primary {
-    @apply bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 focus:ring-indigo-500;
-  }
+      .btn-primary {
+        @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500;
+      }
   
   .btn-secondary {
     @apply glass text-slate-200 hover:bg-slate-700/50 hover:scale-105 focus:ring-slate-500;
@@ -199,13 +197,65 @@ body {
   @apply bg-slate-500;
 }
 
-/* Force text readability */
+/* Force text readability - ULTRA STRONG */
 .text-gray-900,
 .text-gray-800,
 .text-gray-700,
 .text-black,
-.text-gray-600 {
+.text-gray-600,
+.text-slate-900,
+.text-slate-800,
+.text-slate-700,
+.text-slate-600,
+.text-zinc-900,
+.text-zinc-800,
+.text-zinc-700,
+.text-zinc-600,
+.text-neutral-900,
+.text-neutral-800,
+.text-neutral-700,
+.text-neutral-600,
+input,
+textarea,
+select,
+option {
   color: #f8fafc !important;
+}
+
+/* Input fields readability */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+textarea,
+select {
+  color: #f8fafc !important;
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+  color: #f8fafc !important;
+  background-color: #1e293b !important;
+  border-color: #6366f1 !important;
+}
+
+/* Tab styling */
+.tab-active {
+  color: #f8fafc !important;
+  background-color: #374151 !important;
+}
+
+.tab-inactive {
+  color: #9ca3af !important;
+  background-color: #1f2937 !important;
 }
 
 label {
