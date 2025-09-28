@@ -28,17 +28,16 @@ import {
 } from 'lucide-react';
 
 const Settings = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'company' : 'notifications');
   const [settings, setSettings] = useState({
     company: {
-      companyName: 'LABA Firenze',
+      name: 'LABA Firenze',
       address: 'Via Roma, 123 - 50123 Firenze',
-      vatNumber: 'IT12345678901',
+      vat: 'IT12345678901',
       phone: '+39 055 123 4567',
       email: 'info@labafirenze.com',
-      website: 'https://labafirenze.com',
-      timezone: 'Europe/Rome'
+      website: 'https://labafirenze.com'
     },
     notifications: {
       email: true,
@@ -85,6 +84,39 @@ const Settings = () => {
     }
   });
 
+  // Carica impostazioni dal database al mount
+  React.useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await apiCall('/api/settings');
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prevSettings => ({
+            ...prevSettings,
+            ...data
+          }));
+          console.log('Settings caricate dal database:', data);
+        } else {
+          // Fallback al localStorage se API fallisce
+          const saved = localStorage.getItem('settings');
+          if (saved) {
+            setSettings(JSON.parse(saved));
+            console.log('Settings caricate da localStorage');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        // Fallback al localStorage
+        const saved = localStorage.getItem('settings');
+        if (saved) {
+          setSettings(JSON.parse(saved));
+        }
+      }
+    };
+
+    loadSettings();
+  }, [apiCall]);
+
   const handleSettingChange = (category, setting, value) => {
     setSettings(prev => ({
       ...prev,
@@ -97,32 +129,27 @@ const Settings = () => {
 
   const handleSaveSettings = async () => {
     try {
-      // Salva le impostazioni nel localStorage
-      localStorage.setItem('settings', JSON.stringify(settings));
+      // Salva le impostazioni nel database usando apiCall
+      const { apiCall } = useAuthStore.getState();
+      const response = await apiCall('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ settings })
+      });
       
-      // Prova a salvare anche nel database (se l'API è disponibile)
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ settings })
-          });
-          
-          if (response.ok) {
-            console.log('Settings salvate anche nel database');
-          }
-        }
-      } catch (dbError) {
-        console.log('Database save failed, using localStorage only:', dbError);
+      if (response.ok) {
+        // Salva anche nel localStorage come backup
+        localStorage.setItem('settings', JSON.stringify(settings));
+        console.log('Settings salvate nel database e localStorage');
+        alert('Impostazioni salvate con successo!');
+      } else {
+        // Fallback: salva solo nel localStorage
+        localStorage.setItem('settings', JSON.stringify(settings));
+        console.log('Database save failed, using localStorage only');
+        alert('Impostazioni salvate localmente (errore database)');
       }
-      
-      // Mostra notifica di successo
-      alert('Impostazioni salvate con successo!');
       
       console.log('Settings saved:', settings);
     } catch (error) {
@@ -151,8 +178,8 @@ const Settings = () => {
           <label className="block text-sm font-medium text-slate-300 mb-2">Nome Azienda</label>
           <input
             type="text"
-            value={settings.company.companyName}
-            onChange={(e) => handleSettingChange('company', 'companyName', e.target.value)}
+            value={settings.company.name}
+            onChange={(e) => handleSettingChange('company', 'name', e.target.value)}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -169,8 +196,8 @@ const Settings = () => {
           <label className="block text-sm font-medium text-slate-300 mb-2">P.IVA</label>
           <input
             type="text"
-            value={settings.company.vatNumber}
-            onChange={(e) => handleSettingChange('company', 'vatNumber', e.target.value)}
+            value={settings.company.vat}
+            onChange={(e) => handleSettingChange('company', 'vat', e.target.value)}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
