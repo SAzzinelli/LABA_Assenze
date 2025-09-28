@@ -103,13 +103,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Serve static files (only in production)
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-} else {
-  // In development, Vite serves the files on port 5173
-  console.log('🔧 Modalità sviluppo: Vite serve i file statici su porta 5173');
-}
+// Static files will be served later after API routes
 
 // Auth middleware
 const authenticateToken = async (req, res, next) => {
@@ -952,8 +946,10 @@ app.get('/health', (req, res) => {
 
 // ==================== STATIC FILES ====================
 
-// Serve static files from client/dist
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Serve static files from client/dist (only in production, after API routes)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+}
 
 // ==================== CATCH-ALL ROUTE ====================
 
