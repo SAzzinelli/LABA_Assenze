@@ -99,6 +99,25 @@ export const useAuthStore = create(
       setLoading: (loading) => {
         set({ loading });
       },
+
+      // Helper function for authenticated API calls
+      apiCall: async (url, options = {}) => {
+        const { token } = get();
+        const headers = {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        return fetch(url, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+      },
     }),
     {
       name: 'auth-storage',

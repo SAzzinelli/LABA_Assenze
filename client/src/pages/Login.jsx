@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
-import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, User, Building2, Calendar, Phone, CheckSquare } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, User, Building2, Calendar, Phone, CheckSquare, MapPin, FileText } from 'lucide-react';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,6 +25,8 @@ const Login = () => {
     firstName: '',
     lastName: '',
     department: '',
+    workplace: '',
+    contractType: '',
     phone: '',
     birthDate: '',
     has104: false
@@ -76,20 +78,20 @@ const Login = () => {
         
         {/* Header Section */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-4 animate-float">
-            <Sparkles className="h-10 w-10 text-white" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl mb-4 p-2">
+            <img src="/logoSito.svg" alt="LABA Logo" className="h-16 w-16" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Presenze LABA
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+              Gestione Personale
             </h1>
-            <p className="text-slate-400 text-lg">Sistema HR per la gestione delle presenze</p>
+            <p className="text-slate-400 text-lg">Sistema HR per il personale LABA</p>
           </div>
         </div>
 
         {/* Main Card */}
         <div className="glass-card p-8 rounded-3xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 blur-3xl -z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-600/10 blur-3xl -z-10"></div>
           
           {/* Tab Navigation */}
           <div className="flex mb-8 bg-slate-800/50 rounded-xl p-1">
@@ -98,7 +100,7 @@ const Login = () => {
               onClick={() => setIsLogin(true)}
               className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                 isLogin 
-                  ? 'bg-indigo-600 text-white shadow-lg' 
+                  ? 'bg-blue-600 text-white shadow-lg' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
             >
@@ -109,7 +111,7 @@ const Login = () => {
               onClick={() => setIsLogin(false)}
               className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                 !isLogin 
-                  ? 'bg-indigo-600 text-white shadow-lg' 
+                  ? 'bg-blue-600 text-white shadow-lg' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
               }`}
             >
@@ -141,7 +143,7 @@ const Login = () => {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Il tuo nome"
                       required={!isLogin}
                     />
@@ -156,7 +158,7 @@ const Login = () => {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Il tuo cognome"
                       required={!isLogin}
                     />
@@ -172,13 +174,54 @@ const Login = () => {
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required={!isLogin}
                   >
                     <option value="">Seleziona dipartimento</option>
                     {departments.map(dept => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-300 flex items-center">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Sede di Lavoro
+                  </label>
+                  <select
+                    name="workplace"
+                    value={formData.workplace}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required={!isLogin}
+                  >
+                    <option value="">Seleziona sede</option>
+                    <option value="LABA Firenze - Via Vecchietti">LABA Firenze - Via Vecchietti</option>
+                    <option value="LABA Firenze - Piazza di Badia a Ripoli 1/A">LABA Firenze - Piazza di Badia a Ripoli 1/A</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-300 flex items-center">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Tipo di Contratto
+                  </label>
+                  <select
+                    name="contractType"
+                    value={formData.contractType}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required={!isLogin}
+                  >
+                    <option value="">Seleziona contratto</option>
+                    <option value="Full Time - Indeterminato">Full Time - Indeterminato</option>
+                    <option value="Part Time - Indeterminato">Part Time - Indeterminato</option>
+                    <option value="Full Time - Determinato">Full Time - Determinato</option>
+                    <option value="Part Time - Determinato">Part Time - Determinato</option>
+                    <option value="P.IVA">P.IVA</option>
+                    <option value="Co.Co.Co.">Co.Co.Co.</option>
+                    <option value="Apprendistato">Apprendistato</option>
                   </select>
                 </div>
 
@@ -193,7 +236,7 @@ const Login = () => {
                       name="birthDate"
                       value={formData.birthDate}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       required={!isLogin}
                     />
                   </div>
@@ -207,25 +250,12 @@ const Login = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="+39 123 456 7890"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center p-4 bg-slate-700/30 rounded-xl">
-                  <input
-                    type="checkbox"
-                    name="has104"
-                    checked={formData.has104}
-                    onChange={handleInputChange}
-                    className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                  />
-                  <label className="ml-3 text-sm text-slate-300 flex items-center">
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Beneficiario Legge 104
-                  </label>
-                </div>
               </div>
             )}
 
@@ -242,7 +272,7 @@ const Login = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="email@labafirenze.com"
                   required
                 />
@@ -262,7 +292,7 @@ const Login = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pl-12 pr-12 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full pl-12 pr-12 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -276,11 +306,28 @@ const Login = () => {
               </div>
             </div>
 
+            {/* Beneficiario 104 - Solo per registrazione */}
+            {!isLogin && (
+              <div className="flex items-center p-4 bg-slate-700/30 rounded-xl">
+                <input
+                  type="checkbox"
+                  name="has104"
+                  checked={formData.has104}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                />
+                <label className="ml-3 text-sm text-slate-300 flex items-center">
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Beneficiario Legge 104
+                </label>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:bg-slate-600 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:bg-slate-600 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-blue-500/25 hover:scale-105 flex items-center justify-center"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -312,6 +359,13 @@ const Login = () => {
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Footer */}
+      <div className="absolute bottom-4 left-0 right-0 text-center">
+        <p className="text-slate-500 text-sm">
+          © LABA Firenze 2025 - Sviluppato con 💙 da Simone Azzinelli
+        </p>
       </div>
     </div>
   );

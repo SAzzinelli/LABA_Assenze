@@ -3,7 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { Clock, Users, AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
 
 const AdminAttendance = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [currentAttendance, setCurrentAttendance] = useState([]);
   const [upcomingDepartures, setUpcomingDepartures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,18 +21,14 @@ const AdminAttendance = () => {
       setLoading(true);
       
       // Fetch current attendance
-      const currentResponse = await fetch('/api/attendance/current', {
-        credentials: 'include'
-      });
+      const currentResponse = await apiCall('/api/attendance/current');
       if (currentResponse.ok) {
         const currentData = await currentResponse.json();
         setCurrentAttendance(currentData);
       }
 
       // Fetch upcoming departures
-      const upcomingResponse = await fetch('/api/attendance/upcoming-departures', {
-        credentials: 'include'
-      });
+      const upcomingResponse = await apiCall('/api/attendance/upcoming-departures');
       if (upcomingResponse.ok) {
         const upcomingData = await upcomingResponse.json();
         setUpcomingDepartures(upcomingData);

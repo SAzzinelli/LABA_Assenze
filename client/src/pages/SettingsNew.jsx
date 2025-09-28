@@ -29,8 +29,20 @@ import {
 
 const Settings = () => {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'company' : 'notifications');
+  const [activeTab, setActiveTab] = useState('profile');
   const [settings, setSettings] = useState({
+    profile: {
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phone: '',
+      position: '',
+      department: '',
+      hireDate: '',
+      officeLocation: '',
+      workingHours: '9:00-18:00',
+      contractType: 'full-time'
+    },
     company: {
       companyName: 'LABA Firenze',
       address: 'Via Roma, 123 - 50123 Firenze',
@@ -38,6 +50,9 @@ const Settings = () => {
       phone: '+39 055 123 4567',
       email: 'info@labafirenze.com',
       website: 'https://labafirenze.com',
+      workingDays: ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì'],
+      workingHours: '9:00-18:00',
+      lunchBreak: '13:00-14:00',
       timezone: 'Europe/Rome'
     },
     notifications: {
@@ -95,33 +110,129 @@ const Settings = () => {
     }));
   };
 
-  const handleSaveSettings = async () => {
-    try {
-      // Salva le impostazioni nel localStorage per ora
-      localStorage.setItem('settings', JSON.stringify(settings));
-      
-      // Mostra notifica di successo
-      alert('Impostazioni salvate con successo!');
-      
-      console.log('Settings saved:', settings);
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Errore nel salvare le impostazioni');
-    }
+  const handleSaveSettings = () => {
+    console.log('Saving settings:', settings);
+    // Qui implementeremo la logica per salvare le impostazioni
   };
 
   const tabs = [
-    ...(user?.role === 'admin' ? [{ id: 'company', name: 'Azienda', icon: Building2 }] : []),
+    { id: 'profile', name: 'Profilo', icon: User },
+    { id: 'company', name: 'Azienda', icon: Building2 },
     { id: 'notifications', name: 'Notifiche', icon: Bell },
     { id: 'privacy', name: 'Privacy', icon: Shield },
     { id: 'security', name: 'Sicurezza', icon: Lock },
-    ...(user?.role === 'admin' ? [
-      { id: 'system', name: 'Sistema', icon: SettingsIcon },
-      { id: 'integrations', name: 'Integrazioni', icon: Network },
-      { id: 'backup', name: 'Backup', icon: Database }
-    ] : [])
+    { id: 'system', name: 'Sistema', icon: SettingsIcon },
+    { id: 'integrations', name: 'Integrazioni', icon: Network },
+    { id: 'backup', name: 'Backup', icon: Database }
   ];
 
+  const renderProfileTab = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Nome</label>
+          <input
+            type="text"
+            value={settings.profile.firstName}
+            onChange={(e) => handleSettingChange('profile', 'firstName', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome</label>
+          <input
+            type="text"
+            value={settings.profile.lastName}
+            onChange={(e) => handleSettingChange('profile', 'lastName', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+          <input
+            type="email"
+            value={settings.profile.email}
+            onChange={(e) => handleSettingChange('profile', 'email', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Telefono</label>
+          <input
+            type="tel"
+            value={settings.profile.phone}
+            onChange={(e) => handleSettingChange('profile', 'phone', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Posizione</label>
+          <input
+            type="text"
+            value={settings.profile.position}
+            onChange={(e) => handleSettingChange('profile', 'position', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento</label>
+          <select
+            value={settings.profile.department}
+            onChange={(e) => handleSettingChange('profile', 'department', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Seleziona dipartimento</option>
+            <option value="Amministrazione">Amministrazione</option>
+            <option value="Segreteria">Segreteria</option>
+            <option value="Orientamento">Orientamento</option>
+            <option value="Reparto IT">Reparto IT</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Data Assunzione</label>
+          <input
+            type="date"
+            value={settings.profile.hireDate}
+            onChange={(e) => handleSettingChange('profile', 'hireDate', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Sede di Lavoro</label>
+          <input
+            type="text"
+            value={settings.profile.officeLocation}
+            onChange={(e) => handleSettingChange('profile', 'officeLocation', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Via Roma, 123 - Firenze"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Orario di Lavoro</label>
+          <input
+            type="text"
+            value={settings.profile.workingHours}
+            onChange={(e) => handleSettingChange('profile', 'workingHours', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="9:00-18:00"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Tipo di Contratto</label>
+          <select
+            value={settings.profile.contractType}
+            onChange={(e) => handleSettingChange('profile', 'contractType', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="full-time">Tempo Pieno</option>
+            <option value="part-time">Part Time</option>
+            <option value="contract">Contratto</option>
+            <option value="internship">Stage</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderCompanyTab = () => (
     <div className="space-y-6">
@@ -136,7 +247,7 @@ const Settings = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Sede Legale</label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Indirizzo</label>
           <input
             type="text"
             value={settings.company.address}
@@ -179,6 +290,45 @@ const Settings = () => {
             onChange={(e) => handleSettingChange('company', 'website', e.target.value)}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Orario di Lavoro</label>
+          <input
+            type="text"
+            value={settings.company.workingHours}
+            onChange={(e) => handleSettingChange('company', 'workingHours', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Pausa Pranzo</label>
+          <input
+            type="text"
+            value={settings.company.lunchBreak}
+            onChange={(e) => handleSettingChange('company', 'lunchBreak', e.target.value)}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Giorni Lavorativi</label>
+          <div className="space-y-2">
+            {['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'].map(day => (
+              <label key={day} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.company.workingDays.includes(day)}
+                  onChange={(e) => {
+                    const days = e.target.checked 
+                      ? [...settings.company.workingDays, day]
+                      : settings.company.workingDays.filter(d => d !== day);
+                    handleSettingChange('company', 'workingDays', days);
+                  }}
+                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-slate-300 capitalize">{day}</span>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -368,6 +518,7 @@ const Settings = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'profile': return renderProfileTab();
       case 'company': return renderCompanyTab();
       case 'notifications': return renderNotificationsTab();
       case 'system': return renderSystemTab();

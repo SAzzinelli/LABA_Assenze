@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../utils/store';
-import { User, Mail, Phone, Calendar, Briefcase, Edit, Save, X } from 'lucide-react';
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  Calendar, 
+  Briefcase, 
+  Edit, 
+  Save, 
+  X, 
+  Clock,
+  Sun,
+  Moon,
+  Coffee,
+  CheckSquare,
+  Square,
+  MapPin,
+  FileText
+} from 'lucide-react';
+import MonteOreCalculator from '../components/MonteOreCalculator';
 
 const Profile = () => {
   const { user } = useAuthStore();
+  const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -12,8 +31,30 @@ const Profile = () => {
     phone: user?.phone || '',
     birthDate: user?.birthDate || '',
     department: user?.department || '',
-    has104: user?.has104 || false
+    has104: user?.has104 || false,
+    position: user?.position || '',
+    hireDate: user?.hireDate || '',
+    officeLocation: user?.officeLocation || '',
+    contractType: user?.contractType || ''
   });
+
+  // Carica l'orario salvato dal localStorage o usa quello di default
+  const defaultWorkSchedule = {
+    monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+    tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+    wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+    thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+    friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+    saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+    sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+  };
+
+  const [workSchedule, setWorkSchedule] = useState(() => {
+    const saved = localStorage.getItem('workSchedule');
+    return saved ? JSON.parse(saved) : defaultWorkSchedule;
+  });
+
+  const [selectedDay, setSelectedDay] = useState('monday');
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -23,10 +64,63 @@ const Profile = () => {
     }));
   };
 
+
+  const toggleWorkDay = (day) => {
+    setWorkSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        active: !prev[day].active,
+        morning: !prev[day].active ? '09:00-13:00' : '',
+        afternoon: !prev[day].active ? '14:00-18:00' : '',
+        lunchBreak: !prev[day].active ? '13:00-14:00' : '',
+        workType: !prev[day].active ? 'full' : 'none'
+      }
+    }));
+  };
+
+  const handleWorkTypeChange = (workType) => {
+    setWorkSchedule(prev => ({
+      ...prev,
+      [selectedDay]: {
+        ...prev[selectedDay],
+        workType: workType,
+        morning: workType === 'morning' ? '09:00-13:00' : workType === 'full' ? '09:00-13:00' : '',
+        afternoon: workType === 'afternoon' ? '14:00-18:00' : workType === 'full' ? '14:00-18:00' : '',
+        lunchBreak: workType === 'full' ? '13:00-14:00' : ''
+      }
+    }));
+  };
+
+  const handleWorkScheduleChange = (field, value) => {
+    setWorkSchedule(prev => ({
+      ...prev,
+      [selectedDay]: {
+        ...prev[selectedDay],
+        [field]: value
+      }
+    }));
+  };
+
   const handleSave = () => {
-    // Qui implementeremo la logica per salvare le modifiche
     console.log('Saving profile:', formData);
+    console.log('Saving work schedule:', workSchedule);
     setIsEditing(false);
+  };
+
+  const handleSaveSchedule = async () => {
+    try {
+      // Salva l'orario di lavoro nel localStorage per ora
+      localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
+      
+      // Mostra notifica di successo
+      alert('Orario di lavoro salvato con successo!');
+      
+      console.log('Work schedule saved:', workSchedule);
+    } catch (error) {
+      console.error('Error saving work schedule:', error);
+      alert('Errore nel salvare l\'orario di lavoro');
+    }
   };
 
   const handleCancel = () => {
@@ -42,6 +136,408 @@ const Profile = () => {
     setIsEditing(false);
   };
 
+  const tabs = [
+    { id: 'personal', name: 'Informazioni Personali', icon: User },
+    { id: 'schedule', name: 'Orario di Lavoro', icon: Clock },
+    { id: 'monteore', name: 'Monte Ore', icon: Clock }
+  ];
+
+  const dayNames = {
+    monday: 'Lunedì',
+    tuesday: 'Martedì',
+    wednesday: 'Mercoledì',
+    thursday: 'Giovedì',
+    friday: 'Venerdì',
+    saturday: 'Sabato',
+    sunday: 'Domenica'
+  };
+
+  const renderPersonalTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-white">Informazioni Personali</h3>
+        {user?.role !== 'admin' && (
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
+              isEditing 
+                ? 'bg-slate-600 hover:bg-slate-500 text-white' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+          >
+            {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+            {isEditing ? 'Annulla' : 'Modifica'}
+          </button>
+        )}
+      </div>
+
+      {user?.role === 'admin' && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <User className="h-5 w-5 text-amber-400 mr-3" />
+            <div>
+              <h4 className="text-amber-300 font-semibold">Account Amministratore</h4>
+              <p className="text-amber-200 text-sm">
+                I dati amministrativi sono gestiti dal sistema e non possono essere modificati.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Nome</label>
+          <input
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleInputChange}
+            disabled={!isEditing || user?.role === 'admin'}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome</label>
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+          <input
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Telefono</label>
+          <input
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita</label>
+          <input
+            type="date"
+            name="birthDate"
+            value={formData.birthDate}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento</label>
+          <select
+            name="department"
+            value={formData.department}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          >
+            <option value="">Seleziona dipartimento</option>
+            <option value="Amministrazione">Amministrazione</option>
+            <option value="Segreteria">Segreteria</option>
+            <option value="Orientamento">Orientamento</option>
+            <option value="Reparto IT">Reparto IT</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              name="has104"
+              checked={formData.has104}
+              onChange={handleInputChange}
+              disabled={!isEditing}
+              className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500 disabled:opacity-50"
+            />
+            <span className="ml-2 text-slate-300">Legge 104 (Permessi speciali)</span>
+          </label>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+            <Briefcase className="h-4 w-4 mr-2 text-indigo-400" />
+            Posizione
+          </label>
+          <input
+            type="text"
+            name="position"
+            value={formData.position}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            placeholder="Es. Manager, Sviluppatore, Segretaria..."
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+            <Calendar className="h-4 w-4 mr-2 text-indigo-400" />
+            Data Assunzione
+          </label>
+          <input
+            type="date"
+            name="hireDate"
+            value={formData.hireDate}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+            <MapPin className="h-4 w-4 mr-2 text-indigo-400" />
+            Sede di Lavoro
+          </label>
+          <input
+            type="text"
+            name="officeLocation"
+            value={formData.officeLocation}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            placeholder="Es. LABА Firenze - Sede Via Vecchietti"
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+            <FileText className="h-4 w-4 mr-2 text-indigo-400" />
+            Tipo di Contratto
+          </label>
+          <select
+            name="contractType"
+            value={formData.contractType}
+            onChange={handleInputChange}
+            disabled={!isEditing}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          >
+            <option value="">Seleziona tipo contratto</option>
+            <option value="Full Time - Indeterminato">Full Time - Indeterminato</option>
+            <option value="Part Time - Indeterminato">Part Time - Indeterminato</option>
+            <option value="Full Time - Determinato">Full Time - Determinato</option>
+            <option value="Part Time - Determinato">Part Time - Determinato</option>
+            <option value="P.IVA">P.IVA</option>
+            <option value="Co.Co.Co.">Co.Co.Co.</option>
+            <option value="Apprendistato">Apprendistato</option>
+          </select>
+        </div>
+      </div>
+
+      {isEditing && (
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={handleCancel}
+            className="px-6 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+          >
+            <X className="h-4 w-4 mr-2 inline" />
+            Annulla
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            <Save className="h-4 w-4 mr-2 inline" />
+            Salva Modifiche
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderScheduleTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-white">Orario di Lavoro Settimanale</h3>
+        <button
+          onClick={handleSaveSchedule}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          Salva Orario
+        </button>
+      </div>
+
+      {/* Tab dei giorni */}
+      <div className="flex space-x-3 bg-slate-800 p-2 rounded-xl">
+        {Object.entries(dayNames).map(([dayKey, dayName]) => (
+          <button
+            key={dayKey}
+            onClick={() => setSelectedDay(dayKey)}
+            className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+              selectedDay === dayKey
+                ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
+                : 'text-slate-400 hover:text-white border-2 border-slate-600 hover:border-slate-500'
+            }`}
+          >
+            {dayName.slice(0, 3).toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+
+      {/* Contenuto del giorno selezionato */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h4 className="text-lg font-semibold text-white">{dayNames[selectedDay]}</h4>
+          <button
+            onClick={() => toggleWorkDay(selectedDay)}
+            className="flex items-center space-x-3 transition-all duration-200 hover:scale-105"
+          >
+            <div className={`w-6 h-6 rounded border-2 transition-all duration-200 flex items-center justify-center ${
+              workSchedule[selectedDay].active 
+                ? 'bg-green-500 border-green-500' 
+                : 'bg-transparent border-slate-500'
+            }`}>
+              {workSchedule[selectedDay].active && (
+                <CheckSquare className="h-4 w-4 text-white" />
+              )}
+            </div>
+            <span className="text-sm font-medium text-slate-300">
+              {workSchedule[selectedDay].active ? 'Giorno Lavorativo' : 'Non Lavorativo'}
+            </span>
+          </button>
+        </div>
+
+        {workSchedule[selectedDay].active && (
+          <div className="space-y-6">
+            {/* Tipo di Lavoro - Pulsanti a Pill */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-4">
+                Tipo di Orario
+              </label>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => handleWorkTypeChange('morning')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    workSchedule[selectedDay].workType === 'morning'
+                      ? 'bg-yellow-500/20 border-2 border-yellow-400/50 text-yellow-300'
+                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Sun className="h-4 w-4 mr-2 inline" />
+                  Solo Mattina
+                </button>
+                <button
+                  onClick={() => handleWorkTypeChange('afternoon')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    workSchedule[selectedDay].workType === 'afternoon'
+                      ? 'bg-blue-500/20 border-2 border-blue-400/50 text-blue-300'
+                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Moon className="h-4 w-4 mr-2 inline" />
+                  Solo Pomeriggio
+                </button>
+                <button
+                  onClick={() => handleWorkTypeChange('full')}
+                  className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
+                    workSchedule[selectedDay].workType === 'full'
+                      ? 'bg-purple-500/20 border-2 border-purple-400/50 text-purple-300'
+                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  <Clock className="h-4 w-4 mr-2 inline" />
+                  Giornata Completa
+                </button>
+              </div>
+            </div>
+
+            {/* Orari */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(workSchedule[selectedDay].workType === 'morning' || workSchedule[selectedDay].workType === 'full') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+                    <Sun className="h-4 w-4 mr-2 text-yellow-400" />
+                    Orario Mattina
+                  </label>
+                  <input
+                    type="text"
+                    value={workSchedule[selectedDay].morning}
+                    onChange={(e) => handleWorkScheduleChange('morning', e.target.value)}
+                    placeholder="09:00-13:00"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+              
+              {workSchedule[selectedDay].workType === 'full' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+                    <Coffee className="h-4 w-4 mr-2 text-amber-400" />
+                    Pausa Pranzo
+                  </label>
+                  <input
+                    type="text"
+                    value={workSchedule[selectedDay].lunchBreak}
+                    onChange={(e) => handleWorkScheduleChange('lunchBreak', e.target.value)}
+                    placeholder="13:00-14:00"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+              
+              {(workSchedule[selectedDay].workType === 'afternoon' || workSchedule[selectedDay].workType === 'full') && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
+                    <Moon className="h-4 w-4 mr-2 text-blue-400" />
+                    Orario Pomeriggio
+                  </label>
+                  <input
+                    type="text"
+                    value={workSchedule[selectedDay].afternoon}
+                    onChange={(e) => handleWorkScheduleChange('afternoon', e.target.value)}
+                    placeholder="14:00-18:00"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+        <p className="text-blue-300 text-sm">
+          <strong>Nota:</strong> L'orario di lavoro impostato sarà visibile all'amministratore nella sezione dipendenti e verrà utilizzato per calcolare le ore di presenza e assenze.
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderMonteOreTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-white">Monte Ore e Calcoli</h3>
+      </div>
+      <MonteOreCalculator user={user} workSchedule={workSchedule} />
+    </div>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'personal': return renderPersonalTab();
+      case 'schedule': return renderScheduleTab();
+      case 'monteore': return renderMonteOreTab();
+      default: return renderPersonalTab();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -49,226 +545,46 @@ const Profile = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <User className="h-8 w-8 mr-3 text-purple-400" />
-              Profilo Utente
+              <User className="h-8 w-8 mr-3 text-indigo-400" />
+              Profilo Personale
             </h1>
             <p className="text-slate-400 mt-2">
-              Gestisci le tue informazioni personali
+              Gestisci le tue informazioni personali e l'orario di lavoro
             </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {isEditing ? (
-              <>
-                <button
-                  onClick={handleSave}
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Salva
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="bg-slate-600 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Annulla
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Modifica
-              </button>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Profile Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Avatar and Basic Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="text-center">
-              <div className="h-24 w-24 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white font-bold text-2xl">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
-                </span>
-              </div>
-              <h2 className="text-xl font-bold text-white">
-                {user?.firstName} {user?.lastName}
-              </h2>
-              <p className="text-slate-400 capitalize">
-                {user?.role?.replace('_', ' ')}
-              </p>
-              <p className="text-slate-400 mt-1">
-                {user?.department}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div className="lg:col-span-2">
-          <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-white mb-6">Informazioni Personali</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nome
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <p className="text-white">{user?.firstName}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Cognome
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <p className="text-white">{user?.lastName}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email
-                </label>
-                {isEditing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <p className="text-white">{user?.email}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Telefono
-                </label>
-                {isEditing ? (
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <p className="text-white">{user?.phone || 'Non specificato'}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Data di Nascita
-                </label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    name="birthDate"
-                    value={formData.birthDate}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                ) : (
-                  <p className="text-white">
-                    {user?.birthDate ? new Date(user.birthDate).toLocaleDateString('it-IT') : 'Non specificata'}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-                  <Briefcase className="h-4 w-4 mr-2" />
-                  Dipartimento
-                </label>
-                {isEditing ? (
-                  <select
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          <div className="bg-slate-800 rounded-lg p-4">
+            <nav className="space-y-2">
+              {tabs.map((tab) => {
+                const IconComponent = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-300 hover:bg-slate-700'
+                    }`}
                   >
-                    <option value="">Seleziona dipartimento</option>
-                    <option value="Amministrazione">Amministrazione</option>
-                    <option value="Segreteria">Segreteria</option>
-                    <option value="Orientamento">Orientamento</option>
-                    <option value="Reparto IT">Reparto IT</option>
-                  </select>
-                ) : (
-                  <p className="text-white">{user?.department}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="has104"
-                  checked={formData.has104}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                />
-                <span className="ml-2 text-sm text-slate-300">
-                  Beneficiario Legge 104
-                </span>
-              </label>
-            </div>
+                    <IconComponent className="h-5 w-5 mr-3" />
+                    {tab.name}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
         </div>
-      </div>
 
-      {/* Additional Info */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Informazioni Account</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Ruolo
-            </label>
-            <p className="text-white capitalize">
-              {user?.role?.replace('_', ' ')}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Data Registrazione
-            </label>
-            <p className="text-white">
-              {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('it-IT') : 'Non disponibile'}
-            </p>
+        {/* Content */}
+        <div className="lg:col-span-3">
+          <div className="bg-slate-800 rounded-lg p-6">
+            {renderTabContent()}
           </div>
         </div>
       </div>

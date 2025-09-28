@@ -7,9 +7,41 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
+// Rate limiting middleware
+const rateLimit = require('express-rate-limit');
+
+// Create rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: { error: 'Troppi tentativi di login. Riprova tra 15 minuti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Troppe richieste. Riprova tra 15 minuti.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' 
+      ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
+      : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 const PORT = process.env.PORT || 3000;
 
 // Supabase configuration
@@ -20,14 +52,27 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
+// Admin middleware
+const requireAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Accesso negato. Richiesti privilegi di amministratore.' });
+  }
+  next();
+};
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 
+// CORS configuration
+const corsOrigin = process.env.NODE_ENV === 'production' 
+  ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
+  : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://hr.laba.biz',
+  origin: corsOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -58,8 +103,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../client/dist')));
+// Serve static files (only in production)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+} else {
+  // In development, Vite serves the files on port 5173
+  console.log('🔧 Modalità sviluppo: Vite serve i file statici su porta 5173');
+}
 
 // Auth middleware
 const authenticateToken = async (req, res, next) => {
@@ -95,7 +145,7 @@ const authenticateToken = async (req, res, next) => {
 // ==================== AUTH ENDPOINTS ====================
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -150,7 +200,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Registration
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { 
       email, 
@@ -254,7 +304,7 @@ app.post('/api/auth/register', async (req, res) => {
 // ==================== EMPLOYEES ENDPOINTS ====================
 
 // Get all employees
-app.get('/api/employees', authenticateToken, async (req, res) => {
+app.get('/api/employees', apiLimiter, authenticateToken, async (req, res) => {
   try {
     const { data: employees, error } = await supabase
       .from('employees')
@@ -753,6 +803,270 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
   }
 });
 
+// ==================== LEAVE REQUESTS API ====================
+
+// Get all leave requests (admin) or user's requests
+app.get('/api/leave-requests', authenticateToken, async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    
+    let query = supabase
+      .from('leave_requests')
+      .select(`
+        *,
+        users!inner(first_name, last_name, email, department)
+      `)
+      .order('created_at', { ascending: false });
+
+    // Filter by month/year if provided
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month, 0).toISOString();
+      query = query.gte('start_date', startDate).lte('end_date', endDate);
+    }
+
+    // If not admin, only show user's own requests
+    if (req.user.role !== 'admin') {
+      query = query.eq('user_id', req.user.id);
+    }
+
+    const { data: requests, error } = await query;
+
+    if (error) {
+      console.error('Leave requests fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero delle richieste' });
+    }
+
+    const formattedRequests = requests.map(req => ({
+      id: req.id,
+      type: req.type,
+      startDate: req.start_date,
+      endDate: req.end_date,
+      reason: req.reason,
+      status: req.status,
+      submittedAt: req.created_at,
+      approvedAt: req.approved_at,
+      approvedBy: req.approved_by,
+      notes: req.notes,
+      user: {
+        id: req.users.id,
+        name: `${req.users.first_name} ${req.users.last_name}`,
+        email: req.users.email,
+        department: req.users.department
+      }
+    }));
+
+    res.json(formattedRequests);
+  } catch (error) {
+    console.error('Leave requests fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Create leave request
+app.post('/api/leave-requests', authenticateToken, async (req, res) => {
+  try {
+    const { type, startDate, endDate, reason, notes } = req.body;
+
+    // Validation
+    if (!type || !startDate || !endDate || !reason) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+
+    const { data: newRequest, error } = await supabase
+      .from('leave_requests')
+      .insert([
+        {
+          user_id: req.user.id,
+          type: type, // 'permission', 'sick', 'vacation'
+          start_date: startDate,
+          end_date: endDate,
+          reason: reason,
+          notes: notes || '',
+          status: 'pending'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Leave request creation error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Richiesta inviata con successo',
+      request: newRequest
+    });
+  } catch (error) {
+    console.error('Leave request creation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Approve/Reject leave request (admin only)
+app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Stato non valido' });
+    }
+
+    const { data: updatedRequest, error } = await supabase
+      .from('leave_requests')
+      .update({
+        status: status,
+        approved_at: new Date().toISOString(),
+        approved_by: req.user.id,
+        notes: notes || ''
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Leave request update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
+    }
+
+    res.json({
+      success: true,
+      message: `Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'} con successo`,
+      request: updatedRequest
+    });
+  } catch (error) {
+    console.error('Leave request update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== DASHBOARD API ====================
+
+// Dashboard stats
+app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get today's attendance count
+    const { data: todayAttendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('date', today)
+      .not('check_in', 'is', null);
+
+    if (attendanceError) {
+      console.error('Dashboard stats error:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel recupero delle statistiche' });
+    }
+
+    // Get pending requests count
+    const { data: pendingRequests, error: requestsError } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('status', 'pending');
+
+    if (requestsError) {
+      console.error('Dashboard stats error:', requestsError);
+      return res.status(500).json({ error: 'Errore nel recupero delle statistiche' });
+    }
+
+    res.json({
+      presentToday: todayAttendance.length,
+      pendingRequests: pendingRequests.length
+    });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Weekly attendance chart data
+app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date();
+    const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
+    const weekEnd = new Date(today.setDate(today.getDate() - today.getDay() + 6));
+
+    const { data: weeklyAttendance, error } = await supabase
+      .from('attendance')
+      .select('date, check_in, check_out')
+      .gte('date', weekStart.toISOString().split('T')[0])
+      .lte('date', weekEnd.toISOString().split('T')[0])
+      .not('check_in', 'is', null);
+
+    if (error) {
+      console.error('Weekly attendance error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei dati settimanali' });
+    }
+
+    // Group by date and count
+    const dailyCounts = {};
+    weeklyAttendance.forEach(att => {
+      dailyCounts[att.date] = (dailyCounts[att.date] || 0) + 1;
+    });
+
+    // Format for chart
+    const chartData = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      chartData.push({
+        date: dateStr,
+        count: dailyCounts[dateStr] || 0
+      });
+    }
+
+    res.json(chartData);
+  } catch (error) {
+    console.error('Weekly attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Department distribution
+app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { data: departments, error } = await supabase
+      .from('employees')
+      .select('department')
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('Departments error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipartimenti' });
+    }
+
+    // Count by department
+    const deptCounts = {};
+    departments.forEach(emp => {
+      deptCounts[emp.department] = (deptCounts[emp.department] || 0) + 1;
+    });
+
+    const chartData = Object.entries(deptCounts).map(([name, count]) => ({
+      name,
+      count
+    }));
+
+    res.json(chartData);
+  } catch (error) {
+    console.error('Departments error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== HEALTH CHECK ====================
 
 app.get('/health', (req, res) => {
@@ -769,6 +1083,54 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
+// ==================== WEBSOCKET REAL-TIME ====================
+
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log(`🔌 Client connesso: ${socket.id}`);
+
+  // Join user to their room
+  socket.on('join', (userData) => {
+    if (userData.userId) {
+      socket.join(`user_${userData.userId}`);
+      console.log(`👤 Utente ${userData.userId} si è unito alla stanza`);
+    }
+    if (userData.role === 'admin') {
+      socket.join('admin_room');
+      console.log(`👑 Admin si è unito alla stanza admin`);
+    }
+  });
+
+  // Handle attendance updates
+  socket.on('attendance_update', (data) => {
+    // Broadcast to admin room
+    io.to('admin_room').emit('attendance_changed', data);
+    console.log(`📊 Aggiornamento presenze: ${JSON.stringify(data)}`);
+  });
+
+  // Handle leave request updates
+  socket.on('leave_request_update', (data) => {
+    // Broadcast to admin room
+    io.to('admin_room').emit('new_leave_request', data);
+    console.log(`📋 Nuova richiesta permessi: ${JSON.stringify(data)}`);
+  });
+
+  // Handle request approval/rejection
+  socket.on('request_decision', (data) => {
+    // Notify the specific user
+    io.to(`user_${data.userId}`).emit('request_updated', data);
+    console.log(`✅ Decisione richiesta: ${JSON.stringify(data)}`);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`🔌 Client disconnesso: ${socket.id}`);
+  });
+});
+
+// Make io available to routes
+app.set('io', io);
+
 // ==================== ERROR HANDLING ====================
 
 app.use((err, req, res, next) => {
@@ -778,11 +1140,12 @@ app.use((err, req, res, next) => {
 
 // ==================== START SERVER ====================
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
+  console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
 });
 
 module.exports = app;

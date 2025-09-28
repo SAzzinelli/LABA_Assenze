@@ -5,16 +5,18 @@ import { useAuthStore } from './utils/store';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import Employees from './pages/Employees';
 import Attendance from './pages/Attendance';
 import AdminAttendance from './pages/AdminAttendance';
 import LeaveRequests from './pages/LeaveRequests';
-import Profile from './pages/Profile';
+import SickLeave from './pages/SickLeave';
+import Vacation from './pages/Vacation';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   return (
     <Router>
@@ -74,30 +76,58 @@ function App() {
               )
             }
           />
-          <Route
-            path="/leave-requests"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <LeaveRequests />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <Profile />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+              <Route
+                path="/leave-requests"
+                element={
+                  isAuthenticated ? (
+                    <Layout>
+                      <LeaveRequests />
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/sick-leave"
+                element={
+                  isAuthenticated ? (
+                    <Layout>
+                      <SickLeave />
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/vacation"
+                element={
+                  isAuthenticated ? (
+                    <Layout>
+                      <Vacation />
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  isAuthenticated ? (
+                    user?.role === 'admin' ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Layout>
+                        <Profile />
+                      </Layout>
+                    )
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
           <Route
             path="/settings"
             element={

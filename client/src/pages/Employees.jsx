@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
 
 const Employees = () => {
   const { user } = useAuthStore();
@@ -11,6 +11,7 @@ const Employees = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [detailActiveTab, setDetailActiveTab] = useState('details');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -28,6 +29,13 @@ const Employees = () => {
 
   const fetchEmployees = async () => {
     try {
+      // TODO: Sostituire con chiamata API reale
+      // const response = await fetch('/api/employees', {
+      //   method: 'GET',
+      //   headers: { 'Authorization': `Bearer ${token}` }
+      // });
+      // const employees = await response.json();
+      
       // Simulazione dati per ora (poi collegheremo al database)
       const mockEmployees = [
         { 
@@ -45,7 +53,16 @@ const Employees = () => {
           hireDate: '2020-01-15',
           weeklyHours: 40,
           usedVacationDays: 15,
-          totalVacationDays: 26
+          totalVacationDays: 26,
+          workSchedule: {
+            monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+          }
         },
         { 
           id: 2, 
@@ -62,7 +79,16 @@ const Employees = () => {
           hireDate: '2021-03-01',
           weeklyHours: 35,
           usedVacationDays: 8,
-          totalVacationDays: 26
+          totalVacationDays: 26,
+          workSchedule: {
+            monday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
+            tuesday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
+            wednesday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
+            thursday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
+            friday: { active: true, morning: '08:30-12:30', afternoon: '14:00-17:00', lunchBreak: '12:30-14:00', workType: 'full' },
+            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+          }
         },
         { 
           id: 3, 
@@ -79,7 +105,16 @@ const Employees = () => {
           hireDate: '2019-09-01',
           weeklyHours: 40,
           usedVacationDays: 20,
-          totalVacationDays: 26
+          totalVacationDays: 26,
+          workSchedule: {
+            monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+          }
         },
         { 
           id: 4, 
@@ -96,7 +131,16 @@ const Employees = () => {
           hireDate: '2022-01-10',
           weeklyHours: 40,
           usedVacationDays: 5,
-          totalVacationDays: 26
+          totalVacationDays: 26,
+          workSchedule: {
+            monday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
+            tuesday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
+            wednesday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
+            thursday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
+            friday: { active: true, morning: '10:00-14:00', afternoon: '15:00-19:00', lunchBreak: '14:00-15:00', workType: 'full' },
+            saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+            sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+          }
         },
       ];
       setEmployees(mockEmployees);
@@ -115,7 +159,45 @@ const Employees = () => {
     }));
   };
 
+  const dayNames = {
+    monday: 'Lunedì',
+    tuesday: 'Martedì',
+    wednesday: 'Mercoledì',
+    thursday: 'Giovedì',
+    friday: 'Venerdì',
+    saturday: 'Sabato',
+    sunday: 'Domenica'
+  };
+
+  const getWorkTypeIcon = (workType) => {
+    switch (workType) {
+      case 'morning': return <Sun className="h-4 w-4 text-yellow-400" />;
+      case 'afternoon': return <Moon className="h-4 w-4 text-blue-400" />;
+      case 'full': return <Clock className="h-4 w-4 text-purple-400" />;
+      default: return <X className="h-4 w-4 text-slate-400" />;
+    }
+  };
+
+  const getWorkTypeLabel = (workType) => {
+    switch (workType) {
+      case 'morning': return 'Solo Mattina';
+      case 'afternoon': return 'Solo Pomeriggio';
+      case 'full': return 'Giornata Completa';
+      default: return 'Non Lavorativo';
+    }
+  };
+
   const handleAddEmployee = () => {
+    // TODO: Sostituire con chiamata API POST /api/employees
+    // const response = await fetch('/api/employees', {
+    //   method: 'POST',
+    //   headers: { 
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}` 
+    //   },
+    //   body: JSON.stringify(formData)
+    // });
+    
     const newEmployee = {
       id: Date.now(),
       firstName: formData.firstName,
@@ -131,7 +213,17 @@ const Employees = () => {
       hireDate: new Date().toISOString().split('T')[0],
       weeklyHours: 40,
       usedVacationDays: 0,
-      totalVacationDays: 26
+      totalVacationDays: 26,
+      // TODO: Aggiungere workSchedule dal form o default
+      workSchedule: {
+        monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+        tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+        wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+        thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+        friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
+        saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
+        sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+      }
     };
     
     setEmployees(prev => [...prev, newEmployee]);
@@ -155,6 +247,16 @@ const Employees = () => {
   };
 
   const handleUpdateEmployee = () => {
+    // TODO: Sostituire con chiamata API PUT /api/employees/:id
+    // const response = await fetch(`/api/employees/${selectedEmployee.id}`, {
+    //   method: 'PUT',
+    //   headers: { 
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${token}` 
+    //   },
+    //   body: JSON.stringify(formData)
+    // });
+    
     setEmployees(prev => prev.map(emp => 
       emp.id === selectedEmployee.id 
         ? {
@@ -178,11 +280,18 @@ const Employees = () => {
 
   const handleDeleteEmployee = (employeeId) => {
     if (window.confirm('Sei sicuro di voler eliminare questo dipendente?')) {
+      // TODO: Sostituire con chiamata API DELETE /api/employees/:id
+      // const response = await fetch(`/api/employees/${employeeId}`, {
+      //   method: 'DELETE',
+      //   headers: { 'Authorization': `Bearer ${token}` }
+      // });
+      
       setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
     }
   };
 
   const handleViewDetails = (employee) => {
+    console.log('Opening details for:', employee);
     setSelectedEmployee(employee);
     setShowDetailsModal(true);
   };
@@ -205,6 +314,14 @@ const Employees = () => {
     emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center h-96 text-white text-2xl font-bold">
+        Accesso negato. Solo gli amministratori possono visualizzare questa pagina.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -305,7 +422,17 @@ const Employees = () => {
                     <div className="text-sm text-slate-300">{employee.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${
+                      employee.department === 'Amministrazione' 
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30' 
+                        : employee.department === 'Segreteria'
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                        : employee.department === 'Orientamento'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                        : employee.department === 'Reparto IT'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                        : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                    }`}>
                       {employee.department}
                     </span>
                   </td>
@@ -313,10 +440,10 @@ const Employees = () => {
                     {employee.position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${
                       employee.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' 
+                        : 'bg-red-500/20 text-red-300 border border-red-400/30'
                     }`}>
                       {employee.status === 'active' ? 'Attivo' : 'Inattivo'}
                     </span>
@@ -618,118 +745,197 @@ const Employees = () => {
       {/* Modal Dettagli Dipendente */}
       {showDetailsModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Dettagli Dipendente</h3>
+              <h3 className="text-xl font-bold text-white">Dettagli Dipendente - {selectedEmployee.name}</h3>
               <button 
-                onClick={() => setShowDetailsModal(false)}
+                onClick={() => {
+                  setShowDetailsModal(false);
+                  setDetailActiveTab('details');
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Informazioni Personali */}
-              <div className="bg-slate-700 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <User className="h-5 w-5 mr-2 text-indigo-400" />
-                  Informazioni Personali
-                </h4>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-slate-400 text-sm">Nome Completo:</span>
-                    <p className="text-white">{selectedEmployee.name}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Email:</span>
-                    <p className="text-white">{selectedEmployee.email}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Telefono:</span>
-                    <p className="text-white">{selectedEmployee.phone}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Data di Nascita:</span>
-                    <p className="text-white">{new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT')}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Legge 104:</span>
-                    <p className="text-white">{selectedEmployee.has104 ? 'Sì' : 'No'}</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Informazioni Lavorative */}
-              <div className="bg-slate-700 rounded-lg p-4">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <Briefcase className="h-5 w-5 mr-2 text-green-400" />
-                  Informazioni Lavorative
-                </h4>
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-slate-400 text-sm">Dipartimento:</span>
-                    <p className="text-white">{selectedEmployee.department}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Posizione:</span>
-                    <p className="text-white">{selectedEmployee.position}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Data Assunzione:</span>
-                    <p className="text-white">{new Date(selectedEmployee.hireDate).toLocaleDateString('it-IT')}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Ore Settimanali:</span>
-                    <p className="text-white">{selectedEmployee.weeklyHours}h</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 text-sm">Stato:</span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      selectedEmployee.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedEmployee.status === 'active' ? 'Attivo' : 'Inattivo'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Presenze e Ferie */}
-              <div className="bg-slate-700 rounded-lg p-4 md:col-span-2">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <Clock className="h-5 w-5 mr-2 text-amber-400" />
-                  Presenze e Ferie
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-slate-600 rounded-lg p-3">
-                    <div className="text-slate-400 text-sm">Ferie Godute</div>
-                    <div className="text-2xl font-bold text-white">{selectedEmployee.usedVacationDays}</div>
-                    <div className="text-slate-400 text-xs">giorni</div>
-                  </div>
-                  <div className="bg-slate-600 rounded-lg p-3">
-                    <div className="text-slate-400 text-sm">Ferie Rimanenti</div>
-                    <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays - selectedEmployee.usedVacationDays}</div>
-                    <div className="text-slate-400 text-xs">giorni</div>
-                  </div>
-                  <div className="bg-slate-600 rounded-lg p-3">
-                    <div className="text-slate-400 text-sm">Totale Ferie</div>
-                    <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays}</div>
-                    <div className="text-slate-400 text-xs">giorni annui</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-6">
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 bg-slate-700 p-1 rounded-lg mb-6">
               <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                onClick={() => setDetailActiveTab('details')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  detailActiveTab === 'details'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                }`}
               >
-                Chiudi
+                <User className="h-4 w-4 inline mr-2" />
+                Dettagli
+              </button>
+              <button
+                onClick={() => setDetailActiveTab('schedule')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  detailActiveTab === 'schedule'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                }`}
+              >
+                <Clock className="h-4 w-4 inline mr-2" />
+                Orario di Lavoro
               </button>
             </div>
+
+            {/* Tab Content */}
+            {detailActiveTab === 'details' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Informazioni Personali */}
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <User className="h-5 w-5 mr-2 text-indigo-400" />
+                    Informazioni Personali
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-slate-400 text-sm">Nome Completo:</span>
+                      <p className="text-white font-bold">{selectedEmployee.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Email:</span>
+                      <p className="text-white font-bold">{selectedEmployee.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Telefono:</span>
+                      <p className="text-white font-bold">{selectedEmployee.phone}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Data di Nascita:</span>
+                      <p className="text-white font-bold">{new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT')}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Legge 104:</span>
+                      <p className="text-white font-bold">{selectedEmployee.has104 ? 'Sì' : 'No'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informazioni Lavorative */}
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Briefcase className="h-5 w-5 mr-2 text-green-400" />
+                    Informazioni Lavorative
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-slate-400 text-sm">Dipartimento:</span>
+                      <p className="text-white font-bold">{selectedEmployee.department}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Posizione:</span>
+                      <p className="text-white font-bold">{selectedEmployee.position}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Data Assunzione:</span>
+                      <p className="text-white font-bold">{new Date(selectedEmployee.hireDate).toLocaleDateString('it-IT')}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Ore Settimanali:</span>
+                      <p className="text-white font-bold">{selectedEmployee.weeklyHours}h</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-sm">Stato:</span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-2 ${
+                        selectedEmployee.status === 'active' 
+                          ? 'bg-green-600 text-white' 
+                          : 'bg-red-600 text-white'
+                      }`}>
+                        {selectedEmployee.status === 'active' ? 'Attivo' : 'Inattivo'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Presenze e Ferie */}
+                <div className="bg-slate-700 rounded-lg p-4 md:col-span-2">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Clock className="h-5 w-5 mr-2 text-amber-400" />
+                    Presenze e Ferie
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-600 rounded-lg p-3">
+                      <div className="text-slate-400 text-sm">Ferie Godute</div>
+                      <div className="text-2xl font-bold text-white">{selectedEmployee.usedVacationDays}</div>
+                      <div className="text-slate-400 text-xs">giorni</div>
+                    </div>
+                    <div className="bg-slate-600 rounded-lg p-3">
+                      <div className="text-slate-400 text-sm">Ferie Rimanenti</div>
+                      <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays - selectedEmployee.usedVacationDays}</div>
+                      <div className="text-slate-400 text-xs">giorni</div>
+                    </div>
+                    <div className="bg-slate-600 rounded-lg p-3">
+                      <div className="text-slate-400 text-sm">Totale Ferie</div>
+                      <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays}</div>
+                      <div className="text-slate-400 text-xs">giorni annui</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'schedule' && selectedEmployee.workSchedule && (
+              <div className="space-y-6">
+                <div className="bg-slate-700 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Clock className="h-5 w-5 mr-2 text-blue-400" />
+                    Orario di Lavoro Settimanale
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(selectedEmployee.workSchedule).map(([dayKey, daySchedule]) => (
+                      <div key={dayKey} className="bg-slate-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="font-medium text-white">{dayNames[dayKey]}</h5>
+                          <div className={`w-4 h-4 rounded-full ${
+                            daySchedule.active ? 'bg-green-500' : 'bg-slate-500'
+                          }`}></div>
+                        </div>
+                        
+                        {daySchedule.active ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm">
+                              {getWorkTypeIcon(daySchedule.workType)}
+                              <span className="ml-2 text-slate-300">{getWorkTypeLabel(daySchedule.workType)}</span>
+                            </div>
+                            
+                            {daySchedule.morning && (
+                              <div className="flex items-center text-sm">
+                                <Sun className="h-3 w-3 text-yellow-400 mr-2" />
+                                <span className="text-slate-300">{daySchedule.morning}</span>
+                              </div>
+                            )}
+                            
+                            {daySchedule.lunchBreak && (
+                              <div className="flex items-center text-sm bg-slate-700 rounded px-2 py-1">
+                                <span className="text-amber-400 mr-2">🍽️</span>
+                                <span className="text-slate-300">{daySchedule.lunchBreak}</span>
+                              </div>
+                            )}
+                            
+                            {daySchedule.afternoon && (
+                              <div className="flex items-center text-sm">
+                                <Moon className="h-3 w-3 text-blue-400 mr-2" />
+                                <span className="text-slate-300">{daySchedule.afternoon}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 text-sm">Non lavorativo</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

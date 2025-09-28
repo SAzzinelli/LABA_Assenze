@@ -12,7 +12,9 @@ import {
   Settings,
   Menu,
   X,
-  Sparkles
+  Sparkles,
+  Heart,
+  Plane
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -26,17 +28,26 @@ const Layout = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Profilo', href: '/profile', icon: User, hideForAdmin: true },
     { name: 'Dipendenti', href: '/employees', icon: Users, roles: ['admin'] },
     { name: 'Presenze', href: user?.role === 'admin' ? '/admin-attendance' : '/attendance', icon: Clock },
-    { name: 'Richieste Permessi', href: '/leave-requests', icon: FileText },
-    { name: 'Profilo', href: '/profile', icon: User },
+    { name: 'Permessi', href: '/leave-requests', icon: FileText },
+    { name: 'Malattia', href: '/sick-leave', icon: Heart },
+    { name: 'Ferie', href: '/vacation', icon: Plane },
     { name: 'Impostazioni', href: '/settings', icon: Settings },
   ];
 
   const filteredNavigation = navigation.filter(item => {
+    // Nascondi profilo per admin
+    if (item.hideForAdmin && user?.role === 'admin') {
+      return false;
+    }
+    
+    // Controlla ruoli specifici
     if (item.roles && user) {
       return item.roles.includes(user.role);
     }
+    
     return true;
   });
 
@@ -47,8 +58,8 @@ const Layout = ({ children }) => {
         <div className="flex flex-col flex-grow bg-slate-800 border-r border-slate-700">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 py-4">
-            <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
+            <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
+              <img src="/logoSito.svg" alt="LABA Logo" className="h-6 w-6" />
             </div>
             <h1 className="ml-3 text-xl font-bold text-white">Presenze LABA</h1>
           </div>
@@ -79,8 +90,8 @@ const Layout = ({ children }) => {
           <div className="flex-shrink-0 p-4 border-t border-slate-700">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
+                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center">
+                  <span className="text-indigo-600 font-bold text-sm">
                     {user?.firstName?.[0]}{user?.lastName?.[0]}
                   </span>
                 </div>
@@ -119,8 +130,8 @@ const Layout = ({ children }) => {
             </div>
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
               <div className="flex-shrink-0 flex items-center px-4">
-                <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
+                <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
+                  <img src="/logoSito.svg" alt="LABA Logo" className="h-6 w-6" />
                 </div>
                 <h1 className="ml-3 text-xl font-bold text-white">Presenze LABA</h1>
               </div>
