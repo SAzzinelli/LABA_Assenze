@@ -12,9 +12,6 @@ import AdminAttendance from './pages/AdminAttendance';
 import Permessi from './pages/Permessi';
 import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
-import Trasferte from './pages/Trasferte';
-import MonteOre from './pages/MonteOre';
-import OrariLavoro from './pages/OrariLavoro';
 import Impostazioni from './pages/Impostazioni';
 import Layout from './components/Layout';
 
@@ -109,42 +106,6 @@ function App() {
                   isAuthenticated ? (
                     <Layout>
                       <Ferie />
-                    </Layout>
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
-              <Route
-                path="/trasferte"
-                element={
-                  isAuthenticated ? (
-                    <Layout>
-                      <Trasferte />
-                    </Layout>
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
-              <Route
-                path="/monte-ore"
-                element={
-                  isAuthenticated ? (
-                    <Layout>
-                      <MonteOre />
-                    </Layout>
-                  ) : (
-                    <Navigate to="/login" replace />
-                  )
-                }
-              />
-              <Route
-                path="/orari-lavoro"
-                element={
-                  isAuthenticated ? (
-                    <Layout>
-                      <OrariLavoro />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />

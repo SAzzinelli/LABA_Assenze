@@ -448,8 +448,9 @@ const Vacation = () => {
         </div>
       </div>
 
-      {/* Vacation Balance - Hours Based */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Vacation Balance - Hours Based - Solo per dipendenti */}
+      {user?.role !== 'admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Totale Ore</h3>
@@ -504,9 +505,10 @@ const Vacation = () => {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Work Pattern Info */}
-      {workPattern && (
+      {/* Work Pattern Info - Solo per dipendenti */}
+      {workPattern && user?.role !== 'admin' && (
         <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white flex items-center">

@@ -15,10 +15,7 @@ import {
   Sparkles,
   Heart,
   Plane,
-  MapPin,
-  Calculator,
-  DollarSign,
-  Timer
+  DollarSign
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -100,9 +97,6 @@ const Layout = ({ children }) => {
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
-    { name: 'Trasferte', href: '/trasferte', icon: MapPin },
-    { name: 'Monte Ore', href: '/monte-ore', icon: Calculator },
-    { name: 'Orari Lavoro', href: '/orari-lavoro', icon: Timer },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
