@@ -503,52 +503,6 @@ const Vacation = () => {
       </div>
       )}
 
-      {/* Work Pattern Info - Solo per dipendenti */}
-      {workPattern && user?.role !== 'admin' && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <Calculator className="h-5 w-5 mr-2 text-blue-400" />
-              Pattern di Lavoro Attivo
-            </h3>
-            <TrendingUp className="h-5 w-5 text-green-400" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Lun</p>
-              <p className="text-white font-semibold">{workPattern.monday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Mar</p>
-              <p className="text-white font-semibold">{workPattern.tuesday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Mer</p>
-              <p className="text-white font-semibold">{workPattern.wednesday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Gio</p>
-              <p className="text-white font-semibold">{workPattern.thursday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Ven</p>
-              <p className="text-white font-semibold">{workPattern.friday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Sab</p>
-              <p className="text-white font-semibold">{workPattern.saturday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Dom</p>
-              <p className="text-white font-semibold">{workPattern.sunday_hours}h</p>
-            </div>
-            <div className="bg-slate-700 rounded-lg p-3">
-              <p className="text-slate-400">Totale/Settimana</p>
-              <p className="text-white font-semibold">{workPattern.weekly_hours}h</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* New Request Modal */}
       {showNewRequest && (
