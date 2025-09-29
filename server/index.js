@@ -926,7 +926,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       id: att.id,
       user_id: att.user_id,
       name: `${att.users.first_name} ${att.users.last_name}`,
-      department: 'Amministrazione',
+      department: att.users.department || 'Non specificato',
       clock_in: att.clock_in,
       clock_out: att.clock_out,
       hours_worked: att.hours_worked
@@ -973,7 +973,7 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
       return {
         id: att.id,
         name: `${att.users.first_name} ${att.users.last_name}`,
-        department: 'Amministrazione',
+        department: att.users.department || 'Non specificato',
         clock_in: att.clock_in,
         expected_check_out: expectedCheckOut.toTimeString().split(' ')[0].substring(0, 5),
         minutes_until_departure: Math.round((expectedCheckOut - now) / (1000 * 60))
