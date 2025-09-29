@@ -259,12 +259,44 @@ const LeaveRequests = () => {
     }
   };
 
+  // Ottieni il tipo di richiesta dettagliato per i permessi
+  const getPermissionTypeText = (request) => {
+    if (request.type === 'permission' || request.type === 'permission_104') {
+      if (request.permissionType === 'uscita_prima') {
+        return 'Uscita Anticipata';
+      } else if (request.permissionType === 'entrata_dopo') {
+        return 'Entrata Posticipata';
+      }
+    }
+    return getTypeText(request.type);
+  };
+
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('it-IT');
+    if (!dateString) return 'Data non disponibile';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Data non valida';
+      return date.toLocaleDateString('it-IT');
+    } catch (error) {
+      return 'Data non valida';
+    }
   };
 
   const formatDateTime = (dateString) => {
     return new Date(dateString).toLocaleString('it-IT');
+  };
+
+  // Formatta ore con orario (es. "45 min | 10:45")
+  const formatHoursWithTime = (hours, time) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    const timeStr = time ? ` | ${time}` : '';
+    
+    if (h > 0) {
+      return `${h}h ${m}m${timeStr}`;
+    } else {
+      return `${m} min${timeStr}`;
+    }
   };
 
   const calculateDays = (startDate, endDate) => {
@@ -583,9 +615,12 @@ const LeaveRequests = () => {
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
                       {getStatusIcon(request.status)}
-                      <h3 className="text-lg font-semibold text-white ml-2">{request.reason}</h3>
+                      <h3 className="text-lg font-semibold text-white ml-2">{request.reason || getPermissionTypeText(request)}</h3>
                       <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
                         {getStatusText(request.status)}
+                      </span>
+                      <span className="ml-2 px-2 py-1 bg-slate-600 rounded text-xs text-slate-300">
+                        {getPermissionTypeText(request)}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
@@ -606,7 +641,12 @@ const LeaveRequests = () => {
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>{calculateDays(request.startDate, request.endDate)} giorni</span>
+                        <span>
+                          {request.hours ? 
+                            formatHoursWithTime(request.hours, request.permissionDate ? new Date(request.permissionDate).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : null) :
+                            `${calculateDays(request.startDate, request.endDate)} giorni`
+                          }
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-slate-400" />
