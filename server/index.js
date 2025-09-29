@@ -653,7 +653,7 @@ app.post('/api/attendance/clock-out', authenticateToken, async (req, res) => {
       .eq('date', today)
       .single();
 
-    if (!record || !record.clock_in || record.clock_out) {
+    if (!record || !record.clock_in || record.clock_out !== null) {
       return res.status(400).json({ error: 'Non puoi uscire senza essere entrato' });
     }
 
@@ -1036,7 +1036,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     let todayHours = '0h 0m';
     
     if (todayAttendance && !todayError) {
-      isClockedIn = !!todayAttendance.clock_in;
+      isClockedIn = !!todayAttendance.clock_in && !todayAttendance.clock_out;
       if (todayAttendance.clock_in && todayAttendance.clock_out) {
         const clockIn = new Date(todayAttendance.clock_in);
         const clockOut = new Date(todayAttendance.clock_out);
