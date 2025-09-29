@@ -45,7 +45,7 @@ const OrariLavoro = () => {
     try {
       setLoading(true);
       
-      const response = await apiCall('/api/users');
+      const response = await apiCall('/api/employees');
 
       if (response.ok) {
         const data = await response.json();
