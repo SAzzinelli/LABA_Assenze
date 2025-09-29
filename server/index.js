@@ -910,7 +910,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .from('attendance')
       .select(`
         *,
-        users!inner(first_name, last_name)
+        users!inner(first_name, last_name, department)
       `)
       .eq('date', today)
       .not('clock_in', 'is', null)
@@ -922,15 +922,26 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero delle presenze attuali' });
     }
 
-    const formatted = currentAttendance.map(att => ({
-      id: att.id,
-      user_id: att.user_id,
-      name: `${att.users.first_name} ${att.users.last_name}`,
-      department: att.users.department || 'Non specificato',
-      clock_in: att.clock_in,
-      clock_out: att.clock_out,
-      hours_worked: att.hours_worked
-    }));
+    const formatted = currentAttendance.map(att => {
+      // Calcola ore lavorate se non presente
+      let hoursWorked = att.hours_worked;
+      if (!hoursWorked && att.clock_in) {
+        const clockInTime = new Date(att.clock_in);
+        const now = new Date();
+        const diffMs = now - clockInTime;
+        hoursWorked = diffMs / (1000 * 60 * 60); // Converti in ore
+      }
+
+      return {
+        id: att.id,
+        user_id: att.user_id,
+        name: `${att.users.first_name} ${att.users.last_name}`,
+        department: att.users.department || 'Non specificato',
+        clock_in: att.clock_in,
+        clock_out: att.clock_out,
+        hours_worked: hoursWorked
+      };
+    });
 
     res.json(formatted);
   } catch (error) {
@@ -953,7 +964,7 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
       .from('attendance')
       .select(`
         *,
-        users!inner(first_name, last_name)
+        users!inner(first_name, last_name, department)
       `)
       .eq('date', now.toISOString().split('T')[0])
       .not('clock_in', 'is', null)
