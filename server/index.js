@@ -405,7 +405,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
            activeWorkPattern.friday_hours + activeWorkPattern.saturday_hours + 
            activeWorkPattern.sunday_hours) : 0
       };
-    }));
+    });
 
     res.json(formattedEmployees);
   } catch (error) {
