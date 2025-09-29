@@ -793,7 +793,8 @@ const Employees = () => {
               </div>
             )}
 
-            {detailActiveTab === 'schedule' && selectedEmployee.workSchedule && (
+            {detailActiveTab === 'schedule' && (
+              selectedEmployee.workSchedule ? (
               <div className="space-y-6">
                 <div className="bg-slate-700 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
@@ -814,30 +815,13 @@ const Employees = () => {
                         {daySchedule.active ? (
                           <div className="space-y-2">
                             <div className="flex items-center text-sm">
-                              {getWorkTypeIcon(daySchedule.workType)}
-                              <span className="ml-2 text-slate-300">{getWorkTypeLabel(daySchedule.workType)}</span>
+                              <Clock className="h-3 w-3 text-blue-400 mr-2" />
+                              <span className="text-slate-300">{daySchedule.hours}h</span>
                             </div>
                             
-                            {daySchedule.morning && (
-                              <div className="flex items-center text-sm">
-                                <Sun className="h-3 w-3 text-yellow-400 mr-2" />
-                                <span className="text-slate-300">{daySchedule.morning}</span>
-                              </div>
-                            )}
-                            
-                            {daySchedule.lunchBreak && (
-                              <div className="flex items-center text-sm bg-slate-700 rounded px-2 py-1">
-                                <span className="text-amber-400 mr-2">🍽️</span>
-                                <span className="text-slate-300">{daySchedule.lunchBreak}</span>
-                              </div>
-                            )}
-                            
-                            {daySchedule.afternoon && (
-                              <div className="flex items-center text-sm">
-                                <Moon className="h-3 w-3 text-blue-400 mr-2" />
-                                <span className="text-slate-300">{daySchedule.afternoon}</span>
-                              </div>
-                            )}
+                            <div className="text-xs text-slate-400">
+                              Giornata lavorativa
+                            </div>
                           </div>
                         ) : (
                           <p className="text-slate-400 text-sm">Non lavorativo</p>
@@ -845,8 +829,51 @@ const Employees = () => {
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Riepilogo ore settimanali */}
+                  <div className="bg-slate-700 rounded-lg p-4 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <div className="text-slate-400 text-sm">Ore Settimanali</div>
+                        <div className="text-2xl font-bold text-white">{selectedEmployee.weeklyHours}h</div>
+                        <div className="text-slate-400 text-xs">Totale settimana</div>
+                      </div>
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <div className="text-slate-400 text-sm">Tipo Contratto</div>
+                        <div className="text-lg font-semibold text-white">
+                          {selectedEmployee.contractType === 'full_time' ? 'Tempo Pieno' : 
+                           selectedEmployee.contractType === 'part_time' ? 'Part Time' : 
+                           selectedEmployee.contractType === 'apprenticeship' ? 'Apprendistato' : 
+                           selectedEmployee.contractType === 'cococo' ? 'Co.Co.Co' : 
+                           selectedEmployee.contractType}
+                        </div>
+                        <div className="text-slate-400 text-xs">Contratto attivo</div>
+                      </div>
+                      <div className="bg-slate-800 rounded-lg p-3">
+                        <div className="text-slate-400 text-sm">Giorni Lavorativi</div>
+                        <div className="text-2xl font-bold text-white">
+                          {Object.values(selectedEmployee.workSchedule).filter(day => day.active).length}
+                        </div>
+                        <div className="text-slate-400 text-xs">Giorni/settimana</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+              ) : (
+                <div className="bg-slate-700 rounded-lg p-6">
+                  <div className="text-center">
+                    <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-white mb-2">Orario Non Configurato</h4>
+                    <p className="text-slate-400">
+                      {selectedEmployee.name} non ha ancora configurato il suo orario di lavoro.
+                    </p>
+                    <p className="text-slate-500 text-sm mt-2">
+                      Il dipendente può configurare l'orario nella sezione Profilo.
+                    </p>
+                  </div>
+                </div>
+              )
             )}
           </div>
         </div>

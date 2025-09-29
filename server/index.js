@@ -358,7 +358,10 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   try {
     const { data: employees, error } = await supabase
       .from('users')
-      .select('*')
+      .select(`
+        *,
+        work_patterns!left(*)
+      `)
       .eq('is_active', true)
       .order('last_name');
 
@@ -367,19 +370,41 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
-    const formattedEmployees = employees.map(emp => ({
-      id: emp.id,
-      firstName: emp.first_name,
-      lastName: emp.last_name,
-      name: `${emp.first_name} ${emp.last_name}`,
-      email: emp.email,
-      department: emp.department || 'Non specificato',
-      position: emp.position || 'Dipendente',
-      hireDate: emp.hire_date || emp.created_at?.split('T')[0],
-      status: emp.is_active ? 'active' : 'inactive',
-      has104: emp.has_104,
-      phone: emp.phone || '',
-      birthDate: emp.date_of_birth || ''
+    const formattedEmployees = employees.map(emp => {
+      // Trova il work pattern attivo più recente
+      const activeWorkPattern = emp.work_patterns?.find(pattern => pattern.is_active) || 
+                               emp.work_patterns?.[0] || null;
+
+      return {
+        id: emp.id,
+        firstName: emp.first_name,
+        lastName: emp.last_name,
+        name: `${emp.first_name} ${emp.last_name}`,
+        email: emp.email,
+        department: emp.department || 'Non specificato',
+        position: emp.position || 'Dipendente',
+        hireDate: emp.hire_date || emp.created_at?.split('T')[0],
+        status: emp.is_active ? 'active' : 'inactive',
+        has104: emp.has_104,
+        phone: emp.phone || '',
+        birthDate: emp.date_of_birth || '',
+        // Aggiungi dati orario di lavoro
+        workSchedule: activeWorkPattern ? {
+          monday: { hours: activeWorkPattern.monday_hours, active: activeWorkPattern.monday_hours > 0 },
+          tuesday: { hours: activeWorkPattern.tuesday_hours, active: activeWorkPattern.tuesday_hours > 0 },
+          wednesday: { hours: activeWorkPattern.wednesday_hours, active: activeWorkPattern.wednesday_hours > 0 },
+          thursday: { hours: activeWorkPattern.thursday_hours, active: activeWorkPattern.thursday_hours > 0 },
+          friday: { hours: activeWorkPattern.friday_hours, active: activeWorkPattern.friday_hours > 0 },
+          saturday: { hours: activeWorkPattern.saturday_hours, active: activeWorkPattern.saturday_hours > 0 },
+          sunday: { hours: activeWorkPattern.sunday_hours, active: activeWorkPattern.sunday_hours > 0 }
+        } : null,
+        contractType: activeWorkPattern?.contract_type || 'full_time',
+        weeklyHours: activeWorkPattern ? 
+          (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours + 
+           activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours + 
+           activeWorkPattern.friday_hours + activeWorkPattern.saturday_hours + 
+           activeWorkPattern.sunday_hours) : 0
+      };
     }));
 
     res.json(formattedEmployees);
