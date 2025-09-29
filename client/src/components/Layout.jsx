@@ -22,7 +22,6 @@ import {
 
 const Layout = ({ children }) => {
   const { user, logout, apiCall } = useAuthStore();
-  const { isDark, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [notifications, setNotifications] = React.useState([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
