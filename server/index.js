@@ -1802,6 +1802,17 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== HOURS-BASED SYSTEM API ====================
+
+// Import hours-based API routes
+const hoursBasedAPI = require('./hours-based-api');
+
+// Add supabase to request object for hours-based API
+app.use('/api/hours', authenticateToken, (req, res, next) => {
+  req.supabase = supabase;
+  next();
+}, hoursBasedAPI);
+
 // ==================== CATCH-ALL ROUTE ====================
 
 // User weekly hours calculation

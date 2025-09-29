@@ -19,8 +19,17 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
-  Search
+  Search,
+  Calculator,
+  TrendingUp
 } from 'lucide-react';
+import { 
+  calculateVacationHoursForDay, 
+  formatHours, 
+  hoursToDays,
+  daysToHours,
+  CONTRACT_TYPES 
+} from '../utils/hoursCalculation';
 
 const Vacation = () => {
   const { user, apiCall } = useAuthStore();
@@ -45,16 +54,20 @@ const Vacation = () => {
   // Array vuoto per le richieste di ferie
   const [vacationRequests, setVacationRequests] = useState([]);
 
-  // Calcolo dinamico del bilancio ferie da API
+  // Sistema basato su ore
   const [vacationBalance, setVacationBalance] = useState({
-    totalDays: 26, // Base legale italiana
+    totalHours: 208, // 26 giorni * 8h per FT
+    usedHours: 0,
+    remainingHours: 208,
+    pendingHours: 0,
+    totalDays: 26,
     usedDays: 0,
     remainingDays: 26,
     pendingDays: 0,
-    bonusDays: 0, // Bonus per anzianità
-    rolDays: 0, // Giorni ROL da ore extra
+    bonusHours: 0, // Bonus per anzianità
     has104: user?.has104 || false // Bonus legge 104
   });
+  const [workPattern, setWorkPattern] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch real data on component mount
@@ -66,6 +79,42 @@ const Vacation = () => {
     try {
       setLoading(true);
       
+      // Simula pattern di lavoro basato sul tipo contratto utente
+      const defaultPattern = {
+        monday_hours: 8,
+        tuesday_hours: 8,
+        wednesday_hours: 8,
+        thursday_hours: 8,
+        friday_hours: 8,
+        saturday_hours: 0,
+        sunday_hours: 0,
+        weekly_hours: 40,
+        monthly_hours: 173.33
+      };
+      
+      // Personalizza pattern basato su contratto utente
+      if (user?.contract_type) {
+        const contractType = user.contract_type.toLowerCase();
+        if (contractType.includes('part') && contractType.includes('horizontal')) {
+          // Part-time orizzontale: stessi giorni, meno ore
+          defaultPattern.monday_hours = 4;
+          defaultPattern.tuesday_hours = 4;
+          defaultPattern.wednesday_hours = 4;
+          defaultPattern.thursday_hours = 4;
+          defaultPattern.friday_hours = 4;
+          defaultPattern.weekly_hours = 20;
+          defaultPattern.monthly_hours = 86.67;
+        } else if (contractType.includes('part') && contractType.includes('vertical')) {
+          // Part-time verticale: stessi orari, meno giorni
+          defaultPattern.tuesday_hours = 0;
+          defaultPattern.thursday_hours = 0;
+          defaultPattern.weekly_hours = 24;
+          defaultPattern.monthly_hours = 104;
+        }
+      }
+      
+      setWorkPattern(defaultPattern);
+
       // Fetch vacation requests
       const requestsResponse = await apiCall('/api/leave-requests?type=vacation');
       if (requestsResponse.ok) {
@@ -73,16 +122,40 @@ const Vacation = () => {
         setVacationRequests(requestsData);
       }
 
-      // Fetch vacation balance
+      // Simula saldi basati su dati esistenti
       const balanceResponse = await apiCall('/api/leave-balances');
       if (balanceResponse.ok) {
         const balanceData = await balanceResponse.json();
+        
+        // Converti giorni in ore usando il pattern
+        const totalHours = balanceData.vacation.total * 8; // Assumendo 8h/giorno
+        const usedHours = balanceData.vacation.used * 8;
+        const remainingHours = balanceData.vacation.remaining * 8;
+        const pendingHours = balanceData.vacation.pending * 8;
+        
         setVacationBalance(prev => ({
           ...prev,
+          totalHours: totalHours,
+          usedHours: usedHours,
+          remainingHours: remainingHours,
+          pendingHours: pendingHours,
           totalDays: balanceData.vacation.total,
           usedDays: balanceData.vacation.used,
           remainingDays: balanceData.vacation.remaining,
           pendingDays: balanceData.vacation.pending
+        }));
+      } else {
+        // Fallback con dati di default
+        setVacationBalance(prev => ({
+          ...prev,
+          totalHours: 208, // 26 giorni * 8h
+          usedHours: 0,
+          remainingHours: 208,
+          pendingHours: 0,
+          totalDays: 26,
+          usedDays: 0,
+          remainingDays: 26,
+          pendingDays: 0
         }));
       }
     } catch (error) {
@@ -128,26 +201,96 @@ const Vacation = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newRequest = {
-      id: Date.now(),
-      ...formData,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-      submittedBy: user?.firstName + ' ' + user?.lastName
-    };
     
-    setVacationRequests(prev => [newRequest, ...prev]);
-    setFormData({
-      startDate: '',
-      endDate: '',
-      reason: '',
-      destination: '',
-      emergencyContact: '',
-      notes: ''
-    });
-    setShowNewRequest(false);
+    try {
+      // Calcola le ore per il periodo richiesto
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      const dates = [];
+      
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+
+      // Calcola ore totali usando il pattern di lavoro
+      let totalHours = 0;
+      if (workPattern) {
+        dates.forEach(date => {
+          const dayOfWeek = new Date(date).getDay();
+          let dailyHours = 0;
+          
+          switch (dayOfWeek) {
+            case 1: dailyHours = workPattern.monday_hours; break;
+            case 2: dailyHours = workPattern.tuesday_hours; break;
+            case 3: dailyHours = workPattern.wednesday_hours; break;
+            case 4: dailyHours = workPattern.thursday_hours; break;
+            case 5: dailyHours = workPattern.friday_hours; break;
+            case 6: dailyHours = workPattern.saturday_hours; break;
+            case 0: dailyHours = workPattern.sunday_hours; break;
+          }
+          
+          totalHours += dailyHours;
+        });
+      } else {
+        // Fallback: 8h per giorno lavorativo
+        totalHours = dates.length * 8;
+      }
+
+      // Verifica saldo disponibile
+      if (totalHours > vacationBalance.remainingHours) {
+        alert(`Saldo insufficiente. Richieste: ${formatHours(totalHours)}, Disponibili: ${formatHours(vacationBalance.remainingHours)}`);
+        return;
+      }
+
+      // Crea richiesta usando l'API esistente
+      const response = await apiCall('/api/leave-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'vacation',
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          reason: formData.reason,
+          notes: formData.notes
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Aggiorna stato locale
+        const newRequest = {
+          id: Date.now(),
+          ...formData,
+          status: 'pending',
+          submittedAt: new Date().toISOString(),
+          submittedBy: user?.firstName + ' ' + user?.lastName,
+          calculatedHours: totalHours
+        };
+        
+        setVacationRequests(prev => [newRequest, ...prev]);
+        setFormData({
+          startDate: '',
+          endDate: '',
+          reason: '',
+          notes: ''
+        });
+        setShowNewRequest(false);
+        
+        // Refresh data
+        fetchVacationData();
+        
+        alert(`Richiesta inviata con successo! Ore richieste: ${formatHours(totalHours)}`);
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting vacation request:', error);
+      alert('Errore nella creazione della richiesta');
+    }
   };
 
   const handleCancel = () => {
@@ -305,19 +448,19 @@ const Vacation = () => {
         </div>
       </div>
 
-      {/* Vacation Balance */}
+      {/* Vacation Balance - Hours Based */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Totale Giorni</h3>
-            <Calendar className="h-8 w-8 text-blue-400" />
+            <h3 className="text-lg font-semibold text-white">Totale Ore</h3>
+            <Clock className="h-8 w-8 text-blue-400" />
           </div>
-          <p className="text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
-          <p className="text-slate-400 text-sm">Giorni di ferie annuali</p>
+          <p className="text-3xl font-bold text-blue-400">{formatHours(vacationBalance.totalHours)}</p>
+          <p className="text-slate-400 text-sm">Ore ferie annuali</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>Base: 26 giorni</p>
-            {vacationBalance.bonusDays > 0 && (
-              <p>Bonus: +{vacationBalance.bonusDays} giorni</p>
+            <p>≈ {vacationBalance.totalDays.toFixed(1)} giorni</p>
+            {vacationBalance.bonusHours > 0 && (
+              <p>Bonus: +{formatHours(vacationBalance.bonusHours)}</p>
             )}
             {vacationBalance.has104 && (
               <p className="text-amber-400">+ Legge 104</p>
@@ -327,20 +470,26 @@ const Vacation = () => {
         
         <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Giorni Utilizzati</h3>
+            <h3 className="text-lg font-semibold text-white">Ore Utilizzate</h3>
             <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
-          <p className="text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
+          <p className="text-3xl font-bold text-green-400">{formatHours(vacationBalance.usedHours)}</p>
           <p className="text-slate-400 text-sm">Ferie già godute</p>
+          <div className="mt-2 text-xs text-slate-500">
+            <p>≈ {vacationBalance.usedDays.toFixed(1)} giorni</p>
+          </div>
         </div>
         
         <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Giorni Rimanenti</h3>
+            <h3 className="text-lg font-semibold text-white">Ore Rimanenti</h3>
             <Sun className="h-8 w-8 text-yellow-400" />
           </div>
-          <p className="text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
+          <p className="text-3xl font-bold text-yellow-400">{formatHours(vacationBalance.remainingHours)}</p>
           <p className="text-slate-400 text-sm">Disponibili per richieste</p>
+          <div className="mt-2 text-xs text-slate-500">
+            <p>≈ {vacationBalance.remainingDays.toFixed(1)} giorni</p>
+          </div>
         </div>
         
         <div className="bg-slate-800 rounded-lg p-6">
@@ -348,10 +497,60 @@ const Vacation = () => {
             <h3 className="text-lg font-semibold text-white">In Attesa</h3>
             <AlertCircle className="h-8 w-8 text-orange-400" />
           </div>
-          <p className="text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
+          <p className="text-3xl font-bold text-orange-400">{formatHours(vacationBalance.pendingHours)}</p>
           <p className="text-slate-400 text-sm">Richieste pendenti</p>
+          <div className="mt-2 text-xs text-slate-500">
+            <p>≈ {vacationBalance.pendingDays.toFixed(1)} giorni</p>
+          </div>
         </div>
       </div>
+
+      {/* Work Pattern Info */}
+      {workPattern && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center">
+              <Calculator className="h-5 w-5 mr-2 text-blue-400" />
+              Pattern di Lavoro Attivo
+            </h3>
+            <TrendingUp className="h-5 w-5 text-green-400" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Lun</p>
+              <p className="text-white font-semibold">{workPattern.monday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Mar</p>
+              <p className="text-white font-semibold">{workPattern.tuesday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Mer</p>
+              <p className="text-white font-semibold">{workPattern.wednesday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Gio</p>
+              <p className="text-white font-semibold">{workPattern.thursday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Ven</p>
+              <p className="text-white font-semibold">{workPattern.friday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Sab</p>
+              <p className="text-white font-semibold">{workPattern.saturday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Dom</p>
+              <p className="text-white font-semibold">{workPattern.sunday_hours}h</p>
+            </div>
+            <div className="bg-slate-700 rounded-lg p-3">
+              <p className="text-slate-400">Totale/Settimana</p>
+              <p className="text-white font-semibold">{workPattern.weekly_hours}h</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Request Modal */}
       {showNewRequest && (
@@ -400,16 +599,63 @@ const Vacation = () => {
                 </div>
               </div>
 
-              {formData.startDate && formData.endDate && (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                  <p className="text-blue-300 text-sm">
-                    <strong>Durata richiesta:</strong> {calculateDays(formData.startDate, formData.endDate)} giorni
-                  </p>
-                  <p className="text-blue-300 text-sm">
-                    <strong>Giorni rimanenti dopo questa richiesta:</strong> {vacationBalance.remainingDays - calculateDays(formData.startDate, formData.endDate)} giorni
-                  </p>
-                </div>
-              )}
+              {formData.startDate && formData.endDate && (() => {
+                const start = new Date(formData.startDate);
+                const end = new Date(formData.endDate);
+                const dates = [];
+                
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                  dates.push(d.toISOString().split('T')[0]);
+                }
+
+                let totalHours = 0;
+                if (workPattern) {
+                  dates.forEach(date => {
+                    const dayOfWeek = new Date(date).getDay();
+                    let dailyHours = 0;
+                    
+                    switch (dayOfWeek) {
+                      case 1: dailyHours = workPattern.monday_hours; break;
+                      case 2: dailyHours = workPattern.tuesday_hours; break;
+                      case 3: dailyHours = workPattern.wednesday_hours; break;
+                      case 4: dailyHours = workPattern.thursday_hours; break;
+                      case 5: dailyHours = workPattern.friday_hours; break;
+                      case 6: dailyHours = workPattern.saturday_hours; break;
+                      case 0: dailyHours = workPattern.sunday_hours; break;
+                    }
+                    
+                    totalHours += dailyHours;
+                  });
+                } else {
+                  totalHours = dates.length * 8; // Fallback
+                }
+
+                const remainingAfterRequest = vacationBalance.remainingHours - totalHours;
+                const canRequest = remainingAfterRequest >= 0;
+
+                return (
+                  <div className={`border rounded-lg p-4 ${canRequest ? 'bg-blue-500/10 border-blue-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                    <div className="flex items-center mb-2">
+                      <Calculator className="h-4 w-4 mr-2 text-blue-400" />
+                      <p className="text-blue-300 text-sm font-semibold">Calcolo Ore Richieste</p>
+                    </div>
+                    <p className="text-blue-300 text-sm">
+                      <strong>Periodo:</strong> {calculateDays(formData.startDate, formData.endDate)} giorni
+                    </p>
+                    <p className="text-blue-300 text-sm">
+                      <strong>Ore richieste:</strong> {formatHours(totalHours)}
+                    </p>
+                    <p className="text-blue-300 text-sm">
+                      <strong>Ore rimanenti dopo questa richiesta:</strong> {formatHours(remainingAfterRequest)}
+                    </p>
+                    {!canRequest && (
+                      <p className="text-red-300 text-sm mt-2 font-semibold">
+                        ⚠️ Saldo insufficiente per questa richiesta
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">

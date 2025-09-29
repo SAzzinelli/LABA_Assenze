@@ -15,6 +15,8 @@ import {
   Sparkles,
   Heart,
   Plane,
+  MapPin,
+  Calculator,
   DollarSign
 } from 'lucide-react';
 
@@ -97,6 +99,8 @@ const Layout = ({ children }) => {
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
+    { name: 'Trasferte', href: '/trasferte', icon: MapPin },
+    { name: 'Monte Ore', href: '/monte-ore', icon: Calculator },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
