@@ -17,7 +17,27 @@ import {
   Target
 } from 'lucide-react';
 
+// Hook per ottenere i dati utente
+const useUser = () => {
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser(payload);
+      } catch (error) {
+        console.error('Errore parsing token:', error);
+      }
+    }
+  }, []);
+  
+  return user;
+};
+
 const MonteOre = () => {
+  const user = useUser();
   const [overtimeBalance, setOvertimeBalance] = useState({
     total_accrued: 0,
     total_used: 0,
@@ -202,33 +222,42 @@ const MonteOre = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white">Monte Ore</h1>
-          <p className="text-gray-600 dark:text-gray-300 dark:text-gray-300 mt-2">Gestisci straordinari e permessi di recupero</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {user?.role === 'admin' ? 'Gestione Monte Ore' : 'Il Mio Monte Ore'}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            {user?.role === 'admin' 
+              ? 'Visualizza e gestisci tutti i monte ore dei dipendenti'
+              : 'Gestisci i tuoi straordinari e permessi di recupero'
+            }
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setModalType('add');
-              resetForm();
-              setShowModal(true);
-            }}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Aggiungi Ore
-          </button>
-          <button
-            onClick={() => {
-              setModalType('use');
-              resetForm();
-              setShowModal(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Minus className="w-5 h-5" />
-            Usa Ore
-          </button>
-        </div>
+        {user?.role !== 'admin' && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setModalType('add');
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Aggiungi Ore
+            </button>
+            <button
+              onClick={() => {
+                setModalType('use');
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Minus className="w-5 h-5" />
+              Usa Ore
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Balance Cards */}

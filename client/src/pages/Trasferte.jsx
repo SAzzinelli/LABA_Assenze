@@ -17,7 +17,27 @@ import {
   Upload
 } from 'lucide-react';
 
+// Hook per ottenere i dati utente
+const useUser = () => {
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUser(payload);
+      } catch (error) {
+        console.error('Errore parsing token:', error);
+      }
+    }
+  }, []);
+  
+  return user;
+};
+
 const Trasferte = () => {
+  const user = useUser();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -209,20 +229,29 @@ const Trasferte = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Trasferte</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">Gestisci le trasferte e i viaggi per eventi</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {user?.role === 'admin' ? 'Gestione Trasferte' : 'Le Mie Trasferte'}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            {user?.role === 'admin' 
+              ? 'Visualizza e gestisci tutte le richieste di trasferte dei dipendenti'
+              : 'Gestisci le tue richieste di trasferte e viaggi per eventi'
+            }
+          </p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setEditingTrip(null);
-            setShowModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Nuova Trasferta
-        </button>
+        {user?.role !== 'admin' && (
+          <button
+            onClick={() => {
+              resetForm();
+              setEditingTrip(null);
+              setShowModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Nuova Trasferta
+          </button>
+        )}
       </div>
 
       {/* Filtri */}
