@@ -24,6 +24,7 @@ const Dashboard = () => {
   });
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [currentAttendance, setCurrentAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Stati per KPI utente
@@ -36,7 +37,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    
+    // Aggiornamento live ogni 30 secondi per admin
+    if (user?.role === 'admin') {
+      const interval = setInterval(() => {
+        fetchCurrentAttendance();
+      }, 30000); // 30 secondi
+      
+      return () => clearInterval(interval);
+    }
+  }, [user?.role]);
 
   const fetchDashboardData = async () => {
     try {
@@ -73,8 +83,11 @@ const Dashboard = () => {
         await fetchUserKPIs();
       }
 
-      // Fetch departments from new API
-      const departmentsResponse = await apiCall('/api/departments');
+        // Fetch current attendance for admin
+        await fetchCurrentAttendance();
+        
+        // Fetch departments from new API
+        const departmentsResponse = await apiCall('/api/departments');
       if (departmentsResponse.ok) {
         const departmentsData = await departmentsResponse.json();
         if (departmentsData && departmentsData.length > 0) {
@@ -115,6 +128,20 @@ const Dashboard = () => {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentAttendance = async () => {
+    try {
+      if (user?.role === 'admin') {
+        const response = await apiCall('/api/attendance/current');
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentAttendance(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current attendance:', error);
     }
   };
 
@@ -359,48 +386,57 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Department Distribution */}
+        {/* Presenti Attualmente */}
         <div className="bg-slate-800 rounded-lg p-6">
           <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Target className="h-6 w-6 mr-3 text-purple-400" />
-            Dipartimenti
+            <CheckCircle className="h-6 w-6 mr-3 text-green-400" />
+            Presenti Attualmente
+            <div className="ml-auto flex items-center text-sm text-slate-400">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+              Live
+            </div>
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={departmentData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {departmentData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#f9fafb'
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-4 space-y-2">
-            {departmentData.map((dept, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <div className="flex items-center">
-                  <div className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: dept.color }}></div>
-                  <span className="text-slate-300">{dept.name}</span>
-                </div>
-                <span className="text-white font-semibold">{dept.value}</span>
-              </div>
-            ))}
-          </div>
+          
+          {currentAttendance.length > 0 ? (
+            <div className="space-y-3">
+              {currentAttendance.map((person) => {
+                const clockInTime = new Date(person.clock_in);
+                const now = new Date();
+                const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(1);
+                
+                return (
+                  <div key={person.id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white font-semibold text-sm">
+                            {person.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-semibold">{person.name}</h4>
+                          <p className="text-slate-400 text-sm">{person.department}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-400 font-semibold">
+                          Entrato: {clockInTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="text-slate-400 text-sm">
+                          Ore lavorate: {hoursWorked}h
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-400">Nessuno presente in ufficio al momento</p>
+            </div>
+          )}
         </div>
         </div>
       )}

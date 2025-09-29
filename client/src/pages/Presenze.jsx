@@ -65,6 +65,54 @@ const Attendance = () => {
     }
   };
 
+  const handleClockIn = async () => {
+    try {
+      const response = await apiCall('/api/attendance/clock-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        fetchUserStats(); // Aggiorna le statistiche
+        fetchAttendance(); // Aggiorna la lista presenze
+      } else {
+        const error = await response.json();
+        alert(error.error);
+      }
+    } catch (error) {
+      console.error('Clock in error:', error);
+      alert('Errore durante la timbratura di entrata');
+    }
+  };
+
+  const handleClockOut = async () => {
+    try {
+      const response = await apiCall('/api/attendance/clock-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        fetchUserStats(); // Aggiorna le statistiche
+        fetchAttendance(); // Aggiorna la lista presenze
+      } else {
+        const error = await response.json();
+        alert(error.error);
+      }
+    } catch (error) {
+      console.error('Clock out error:', error);
+      alert('Errore durante la timbratura di uscita');
+    }
+  };
+
   // Funzione per determinare la sede predefinita dal workplace
   const getDefaultLocationFromWorkplace = (workplace) => {
     if (!workplace) return 'vecchietti'; // Default
@@ -167,13 +215,29 @@ const Attendance = () => {
 
           {/* Pulsanti Timbratura */}
           <div className="space-y-4">
-            <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+            <button 
+              onClick={handleClockIn}
+              disabled={userStats.isClockedIn}
+              className={`w-full font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
+                userStats.isClockedIn 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
               <CheckCircle className="h-5 w-5 mr-2" />
-              Timbra Entrata
+              {userStats.isClockedIn ? 'Già Entrato' : 'Timbra Entrata'}
             </button>
-            <button className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+            <button 
+              onClick={handleClockOut}
+              disabled={!userStats.isClockedIn}
+              className={`w-full font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
+                !userStats.isClockedIn 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
               <XCircle className="h-5 w-5 mr-2" />
-              Timbra Uscita
+              {!userStats.isClockedIn ? 'Non Entrato' : 'Timbra Uscita'}
             </button>
           </div>
 
