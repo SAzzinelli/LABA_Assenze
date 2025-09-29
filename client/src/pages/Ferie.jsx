@@ -38,7 +38,6 @@ const Vacation = () => {
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
-    reason: '',
     notes: ''
   });
 
@@ -256,7 +255,6 @@ const Vacation = () => {
           type: 'vacation',
           startDate: formData.startDate,
           endDate: formData.endDate,
-          reason: formData.reason,
           notes: formData.notes
         })
       });
@@ -278,7 +276,6 @@ const Vacation = () => {
         setFormData({
           startDate: '',
           endDate: '',
-          reason: '',
           notes: ''
         });
         setShowNewRequest(false);
@@ -301,9 +298,6 @@ const Vacation = () => {
     setFormData({
       startDate: '',
       endDate: '',
-      reason: '',
-      destination: '',
-      emergencyContact: '',
       notes: ''
     });
     setShowNewRequest(false);
@@ -356,11 +350,9 @@ const Vacation = () => {
       filtered = filtered.filter(request => {
         const searchLower = searchTerm.toLowerCase();
         return (
-          request.reason?.toLowerCase().includes(searchLower) ||
           request.notes?.toLowerCase().includes(searchLower) ||
           request.status?.toLowerCase().includes(searchLower) ||
-          request.submittedBy?.toLowerCase().includes(searchLower) ||
-          request.destination?.toLowerCase().includes(searchLower)
+          request.submittedBy?.toLowerCase().includes(searchLower)
         );
       });
     }
@@ -666,48 +658,7 @@ const Vacation = () => {
                 );
               })()}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Motivo delle Ferie *
-                </label>
-                <input
-                  type="text"
-                  name="reason"
-                  value={formData.reason}
-                  onChange={handleInputChange}
-                  placeholder="Es. Vacanze estive, famiglia, riposo..."
-                  required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Destinazione
-                </label>
-                <input
-                  type="text"
-                  name="destination"
-                  value={formData.destination}
-                  onChange={handleInputChange}
-                  placeholder="Dove andrai in ferie?"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Contatto di Emergenza
-                </label>
-                <input
-                  type="tel"
-                  name="emergencyContact"
-                  value={formData.emergencyContact}
-                  onChange={handleInputChange}
-                  placeholder="Numero di telefono per emergenze"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -802,7 +753,7 @@ const Vacation = () => {
               <Search className="h-5 w-5 text-green-400" />
               <input
                 type="text"
-                placeholder="Cerca per motivo, destinazione, note o stato..."
+                placeholder="Cerca per note o stato..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -853,7 +804,7 @@ const Vacation = () => {
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
                       {getStatusIcon(request.status)}
-                      <h3 className="text-lg font-semibold text-white ml-2">{request.reason}</h3>
+                      <h3 className="text-lg font-semibold text-white ml-2">Richiesta Ferie</h3>
                       <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
                         {getStatusText(request.status)}
                       </span>
@@ -867,18 +818,6 @@ const Vacation = () => {
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
                         <span>{calculateDays(request.startDate, request.endDate)} giorni</span>
                       </div>
-                      {request.destination && (
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Destinazione: {request.destination}</span>
-                        </div>
-                      )}
-                      {request.emergencyContact && (
-                        <div className="flex items-center">
-                          <Users className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Contatto: {request.emergencyContact}</span>
-                        </div>
-                      )}
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
                         <span>Richiesta: {formatDateTime(request.submittedAt)}</span>

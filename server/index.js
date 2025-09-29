@@ -1618,6 +1618,42 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== 104 PERMISSIONS ENDPOINTS ====================
+
+// Get 104 permissions count for current month
+app.get('/api/104-permissions/count', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+
+    // Count 104 permissions for current month
+    const { count, error } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    if (error) {
+      console.error('104 permissions count error:', error);
+      return res.status(500).json({ error: 'Errore nel conteggio permessi 104' });
+    }
+
+    res.json({
+      usedThisMonth: count || 0,
+      maxPerMonth: 3,
+      remaining: Math.max(0, 3 - (count || 0))
+    });
+  } catch (error) {
+    console.error('104 permissions count error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== DEPARTMENTS ENDPOINTS ====================
 
 // Get all departments with employee count

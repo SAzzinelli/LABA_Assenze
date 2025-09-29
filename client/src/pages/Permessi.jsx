@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import { 
@@ -43,9 +43,33 @@ const LeaveRequests = () => {
 
   // Array vuoto per le richieste di permessi
   const [requests, setRequests] = useState([]);
+  const [permissions104, setPermissions104] = useState({
+    usedThisMonth: 0,
+    maxPerMonth: 3,
+    remaining: 3
+  });
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
+
+  // Carica permessi 104 se l'utente li ha
+  useEffect(() => {
+    if (user?.has104) {
+      fetchPermissions104();
+    }
+  }, [user?.has104]);
+
+  const fetchPermissions104 = async () => {
+    try {
+      const response = await apiCall('/api/104-permissions/count');
+      if (response.ok) {
+        const data = await response.json();
+        setPermissions104(data);
+      }
+    } catch (error) {
+      console.error('Error fetching 104 permissions:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -57,6 +81,13 @@ const LeaveRequests = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Controlla limite permessi 104
+    if (formData.type === 'permission_104' && permissions104.remaining <= 0) {
+      alert('Hai raggiunto il limite massimo di 3 permessi 104 al mese');
+      return;
+    }
+    
     const newRequest = {
       id: Date.now(),
       ...formData,
@@ -74,6 +105,11 @@ const LeaveRequests = () => {
       notes: ''
     });
     setShowNewRequest(false);
+    
+    // Aggiorna i permessi 104 se necessario
+    if (formData.type === 'permission_104') {
+      fetchPermissions104();
+    }
   };
 
   const handleCancel = () => {
@@ -353,6 +389,9 @@ const LeaveRequests = () => {
                   <option value="permission">Permesso</option>
                   <option value="leave">Congedo</option>
                   <option value="emergency">Emergenza</option>
+                  {user?.has104 && (
+                    <option value="permission_104">Permesso 104</option>
+                  )}
                 </select>
               </div>
 
@@ -407,6 +446,36 @@ const LeaveRequests = () => {
                   Inserisci le ore di permesso (es. 2.5 per 2 ore e 30 minuti)
                 </p>
               </div>
+
+              {/* Avviso permessi 104 */}
+              {formData.type === 'permission_104' && user?.has104 && (
+                <div className={`p-4 rounded-lg border ${
+                  permissions104.remaining > 0 
+                    ? 'bg-amber-500/10 border-amber-500/20' 
+                    : 'bg-red-500/10 border-red-500/20'
+                }`}>
+                  <div className="flex items-center">
+                    <CheckCircle className={`h-5 w-5 mr-2 ${
+                      permissions104.remaining > 0 ? 'text-amber-400' : 'text-red-400'
+                    }`} />
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        permissions104.remaining > 0 ? 'text-amber-200' : 'text-red-200'
+                      }`}>
+                        {permissions104.remaining > 0 
+                          ? `Permessi 104: ${permissions104.usedThisMonth}/${permissions104.maxPerMonth} usati questo mese`
+                          : 'Hai raggiunto il limite massimo di 3 permessi 104 al mese'
+                        }
+                      </p>
+                      {permissions104.remaining > 0 && (
+                        <p className="text-amber-300 text-xs mt-1">
+                          Ti rimangono {permissions104.remaining} permessi 104 per questo mese
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">

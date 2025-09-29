@@ -26,6 +26,11 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [permissions104, setPermissions104] = useState({
+    usedThisMonth: 0,
+    maxPerMonth: 3,
+    remaining: 3
+  });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -148,6 +153,26 @@ const Profile = () => {
       loadUserData();
     }
   }, [user, apiCall]);
+
+  // Carica permessi 104 se l'utente li ha
+  const fetchPermissions104 = async () => {
+    try {
+      const response = await apiCall('/api/104-permissions/count');
+      if (response.ok) {
+        const data = await response.json();
+        setPermissions104(data);
+      }
+    } catch (error) {
+      console.error('Error fetching 104 permissions:', error);
+    }
+  };
+
+  // Carica permessi 104 quando l'utente ha 104
+  useEffect(() => {
+    if (user?.has104) {
+      fetchPermissions104();
+    }
+  }, [user?.has104]);
 
   // Load work schedule from API
   React.useEffect(() => {
@@ -578,6 +603,46 @@ const Profile = () => {
             <Save className="h-4 w-4 mr-2 inline" />
             Salva Modifiche
           </button>
+        </div>
+      )}
+
+      {/* Sezione Permessi 104 - Solo per chi ha 104 */}
+      {formData.has104 && (
+        <div className="bg-slate-700 rounded-lg p-6 mt-6">
+          <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <CheckSquare className="h-5 w-5 mr-2 text-amber-400" />
+            Permessi Legge 104
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-slate-800 rounded-lg p-4">
+              <div className="text-slate-400 text-sm mb-1">Usati questo mese</div>
+              <div className="text-2xl font-bold text-white">
+                {permissions104.usedThisMonth}
+              </div>
+              <div className="text-slate-400 text-xs">di {permissions104.maxPerMonth} disponibili</div>
+            </div>
+            <div className="bg-slate-800 rounded-lg p-4">
+              <div className="text-slate-400 text-sm mb-1">Rimanenti</div>
+              <div className={`text-2xl font-bold ${
+                permissions104.remaining > 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {permissions104.remaining}
+              </div>
+              <div className="text-slate-400 text-xs">permessi disponibili</div>
+            </div>
+            <div className="bg-slate-800 rounded-lg p-4">
+              <div className="text-slate-400 text-sm mb-1">Limite mensile</div>
+              <div className="text-2xl font-bold text-amber-400">
+                {permissions104.maxPerMonth}
+              </div>
+              <div className="text-slate-400 text-xs">massimo al mese</div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <p className="text-amber-200 text-sm">
+              <strong>Nota:</strong> I permessi Legge 104 sono limitati a 3 al mese per assistenza familiare con handicap grave.
+            </p>
+          </div>
         </div>
       )}
     </div>
