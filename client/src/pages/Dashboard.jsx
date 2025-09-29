@@ -25,6 +25,7 @@ const Dashboard = () => {
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [currentAttendance, setCurrentAttendance] = useState([]);
+  const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Stati per KPI utente
@@ -42,6 +43,7 @@ const Dashboard = () => {
     if (user?.role === 'admin') {
       const interval = setInterval(() => {
         fetchCurrentAttendance();
+        fetchRecentRequests();
       }, 30000); // 30 secondi
       
       return () => clearInterval(interval);
@@ -102,6 +104,9 @@ const Dashboard = () => {
         // Fetch current attendance for admin
         await fetchCurrentAttendance();
         
+        // Fetch recent requests for admin
+        await fetchRecentRequests();
+        
         // Fetch departments from new API
         const departmentsResponse = await apiCall('/api/departments');
         if (departmentsResponse.ok) {
@@ -142,6 +147,27 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching current attendance:', error);
+    }
+  };
+
+  const fetchRecentRequests = async () => {
+    try {
+      if (user?.role === 'admin') {
+        const response = await apiCall('/api/leave-requests');
+        if (response.ok) {
+          const data = await response.json();
+          // Filtra solo le richieste pending degli ultimi 7 giorni
+          const recent = data.filter(req => {
+            const requestDate = new Date(req.submittedAt);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return req.status === 'pending' && requestDate >= weekAgo;
+          }).slice(0, 5); // Massimo 5 richieste recenti
+          setRecentRequests(recent);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching recent requests:', error);
     }
   };
 
@@ -358,81 +384,8 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Charts */}
-      {/* Charts Section - Solo per Admin */}
+      {/* Presenti Attualmente - Full Width */}
       {user?.role === 'admin' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Attendance Chart */}
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Activity className="h-6 w-6 mr-3 text-indigo-400" />
-            Presenze Settimanali
-          </h3>
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={weeklyAttendanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <defs>
-                <linearGradient id="presenzeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.9}/>
-                  <stop offset="50%" stopColor="#059669" stopOpacity={0.7}/>
-                  <stop offset="100%" stopColor="#047857" stopOpacity={0.5}/>
-                </linearGradient>
-                <linearGradient id="assenzeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9}/>
-                  <stop offset="50%" stopColor="#dc2626" stopOpacity={0.7}/>
-                  <stop offset="100%" stopColor="#b91c1c" stopOpacity={0.5}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 4" stroke="#374151" opacity={0.4} />
-              <XAxis 
-                dataKey="name" 
-                stroke="#9ca3af" 
-                fontSize={12} 
-                fontWeight="500"
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                stroke="#9ca3af" 
-                fontSize={12} 
-                fontWeight="500"
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#111827',
-                  border: '1px solid #374151',
-                  borderRadius: '16px',
-                  color: '#f9fafb',
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-                  backdropFilter: 'blur(8px)',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-                cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
-                labelStyle={{ color: '#d1d5db', fontWeight: '600' }}
-              />
-              <Bar 
-                dataKey="presenze" 
-                fill="url(#presenzeGradient)" 
-                name="Presenze" 
-                radius={[8, 8, 0, 0]}
-                stroke="rgba(16, 185, 129, 0.3)"
-                strokeWidth={1}
-              />
-              <Bar 
-                dataKey="assenze" 
-                fill="url(#assenzeGradient)" 
-                name="Assenze" 
-                radius={[8, 8, 0, 0]}
-                stroke="rgba(239, 68, 68, 0.3)"
-                strokeWidth={1}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Presenti Attualmente */}
         <div className="bg-slate-800 rounded-lg p-6">
           <h3 className="text-xl font-bold text-white mb-6 flex items-center">
             <CheckCircle className="h-6 w-6 mr-3 text-green-400" />
@@ -502,6 +455,57 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Richieste Recenti - Solo per Admin */}
+      {user?.role === 'admin' && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+            <FileText className="h-6 w-6 mr-3 text-yellow-400" />
+            Richieste Recenti
+            <div className="ml-auto flex items-center text-sm text-slate-400">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+              In attesa
+            </div>
+          </h3>
+          
+          <div className="space-y-3">
+            {recentRequests.length > 0 ? (
+              recentRequests.map((request) => (
+                <div key={request.id} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 hover:bg-yellow-500/20 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-3">
+                        <FileText className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-semibold">{request.user?.name || 'Dipendente'}</h4>
+                        <p className="text-yellow-200 text-sm">
+                          {request.type === 'permission' ? 'Permesso' : 
+                           request.type === 'vacation' ? 'Ferie' : 
+                           request.type === 'sick' ? 'Malattia' : 'Richiesta'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-yellow-400 font-semibold">
+                        {new Date(request.submittedAt).toLocaleDateString('it-IT')}
+                      </div>
+                      <div className="text-yellow-300 text-sm">
+                        {request.reason || 'Nessun motivo specificato'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-400">Nessuna richiesta recente</p>
+                <p className="text-slate-500 text-sm mt-2">Le richieste dei dipendenti appariranno qui</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
