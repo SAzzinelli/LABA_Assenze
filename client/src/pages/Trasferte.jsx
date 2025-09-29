@@ -161,10 +161,10 @@ const Trasferte = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-yellow-100 text-yellow-800';
+      case 'approved': return 'bg-green-500/20 text-green-300 border border-green-400/30';
+      case 'rejected': return 'bg-red-500/20 text-red-300 border border-red-400/30';
+      case 'completed': return 'bg-blue-500/20 text-blue-300 border border-blue-400/30';
+      default: return 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30';
     }
   };
 

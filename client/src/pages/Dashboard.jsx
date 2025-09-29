@@ -145,6 +145,52 @@ const Dashboard = () => {
     }
   };
 
+  const handleClockIn = async () => {
+    try {
+      const response = await apiCall('/api/attendance/clock-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        fetchDashboardData(); // Aggiorna i dati della dashboard
+      } else {
+        const error = await response.json();
+        alert(error.error);
+      }
+    } catch (error) {
+      console.error('Clock in error:', error);
+      alert('Errore durante la timbratura di entrata');
+    }
+  };
+
+  const handleClockOut = async () => {
+    try {
+      const response = await apiCall('/api/attendance/clock-out', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message);
+        fetchDashboardData(); // Aggiorna i dati della dashboard
+      } else {
+        const error = await response.json();
+        alert(error.error);
+      }
+    } catch (error) {
+      console.error('Clock out error:', error);
+      alert('Errore durante la timbratura di uscita');
+    }
+  };
+
   const fetchUserKPIs = async () => {
     try {
       // 1. Ore lavorate questa settimana
@@ -465,11 +511,17 @@ const Dashboard = () => {
 
           {/* Pulsanti Timbratura */}
           <div className="flex gap-4">
-            <button className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
+            <button 
+              onClick={handleClockIn}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+            >
               <CheckCircle className="h-5 w-5 mr-2" />
               Timbra Entrata
             </button>
-            <button className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center">
+            <button 
+              onClick={handleClockOut}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+            >
               <XCircle className="h-5 w-5 mr-2" />
               Timbra Uscita
             </button>

@@ -330,8 +330,8 @@ const Attendance = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         record.status === 'completed' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                          : 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
                       }`}>
                         {record.status === 'completed' ? 'Completato' : 'Incompleto'}
                       </span>

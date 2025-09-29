@@ -150,11 +150,11 @@ const MonteOre = () => {
 
   const getTransactionColor = (type) => {
     switch (type) {
-      case 'accrual': return 'bg-green-100 text-green-800';
-      case 'usage': return 'bg-red-100 text-red-800';
-      case 'expiration': return 'bg-orange-100 text-orange-800';
-      case 'adjustment': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'accrual': return 'bg-green-500/20 text-green-300 border border-green-400/30';
+      case 'usage': return 'bg-red-500/20 text-red-300 border border-red-400/30';
+      case 'expiration': return 'bg-orange-500/20 text-orange-300 border border-orange-400/30';
+      case 'adjustment': return 'bg-blue-500/20 text-blue-300 border border-blue-400/30';
+      default: return 'bg-gray-500/20 text-gray-300 border border-gray-400/30';
     }
   };
 
