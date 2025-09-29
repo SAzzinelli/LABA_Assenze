@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS contract_types (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(100) UNIQUE NOT NULL, -- 'full_time', 'part_time_horizontal', 'part_time_vertical', 'apprenticeship', 'cococo', 'internship'
   description TEXT,
-  annual_vacation_hours DECIMAL(6,2) DEFAULT 208, -- ore ferie annue (26 giorni * 8h)
-  annual_permission_hours DECIMAL(6,2) DEFAULT 0, -- ore permessi ROL annue
-  max_carryover_hours DECIMAL(6,2) DEFAULT 104, -- max ore riportabili anno successivo (13 giorni * 8h)
+  annual_vacation_days DECIMAL(5,2) DEFAULT 26, -- giorni ferie annue
+  annual_permission_days DECIMAL(5,2) DEFAULT 0, -- giorni permessi ROL annui
+  max_carryover_days DECIMAL(5,2) DEFAULT 13, -- max giorni riportabili anno successivo
   accrual_frequency VARCHAR(20) DEFAULT 'monthly', -- 'monthly', 'weekly', 'daily'
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -11,36 +11,36 @@ export const CONTRACT_TYPES = {
   FULL_TIME: {
     name: 'full_time',
     description: 'Tempo pieno indeterminato',
-    annualVacationHours: 208, // 26 giorni * 8h
-    annualPermissionHours: 104, // 13 giorni * 8h
-    maxCarryoverHours: 104, // 13 giorni * 8h
+    annualVacationDays: 26, // giorni ferie annue
+    annualPermissionDays: 13, // giorni permessi annui
+    maxCarryoverDays: 13, // max giorni riportabili anno successivo
     defaultWeeklyHours: 40,
     defaultDailyHours: 8
   },
   PART_TIME_HORIZONTAL: {
     name: 'part_time_horizontal',
     description: 'Part-time orizzontale',
-    annualVacationHours: 104, // proporzionale
-    annualPermissionHours: 52,
-    maxCarryoverHours: 52,
+    annualVacationDays: 13, // giorni ferie annue
+    annualPermissionDays: 6.5, // giorni permessi annui
+    maxCarryoverDays: 6.5, // max giorni riportabili anno successivo
     defaultWeeklyHours: 20,
     defaultDailyHours: 4
   },
   PART_TIME_VERTICAL: {
     name: 'part_time_vertical',
     description: 'Part-time verticale',
-    annualVacationHours: 104, // proporzionale ai giorni lavorati
-    annualPermissionHours: 52,
-    maxCarryoverHours: 52,
+    annualVacationDays: 13, // giorni ferie annue
+    annualPermissionDays: 6.5, // giorni permessi annui
+    maxCarryoverDays: 6.5, // max giorni riportabili anno successivo
     defaultWeeklyHours: 20,
     defaultDailyHours: 8 // stessi orari del FT ma meno giorni
   },
   APPRENTICESHIP: {
     name: 'apprenticeship',
     description: 'Apprendistato',
-    annualVacationHours: 208,
-    annualPermissionHours: 104,
-    maxCarryoverHours: 104,
+    annualVacationDays: 26, // giorni ferie annue
+    annualPermissionDays: 13, // giorni permessi annui
+    maxCarryoverDays: 13, // max giorni riportabili anno successivo
     defaultWeeklyHours: 40,
     defaultDailyHours: 8,
     hasTrainingHours: true,
@@ -49,18 +49,18 @@ export const CONTRACT_TYPES = {
   COCOCO: {
     name: 'cococo',
     description: 'Collaborazione coordinata e continuativa',
-    annualVacationHours: 0,
-    annualPermissionHours: 0,
-    maxCarryoverHours: 0,
+    annualVacationDays: 0, // giorni ferie annue
+    annualPermissionDays: 0, // giorni permessi annui
+    maxCarryoverDays: 0, // max giorni riportabili anno successivo
     defaultWeeklyHours: 0,
     defaultDailyHours: 0
   },
   INTERNSHIP: {
     name: 'internship',
     description: 'Tirocinio',
-    annualVacationHours: 0,
-    annualPermissionHours: 0,
-    maxCarryoverHours: 0,
+    annualVacationDays: 0, // giorni ferie annue
+    annualPermissionDays: 0, // giorni permessi annui
+    maxCarryoverDays: 0, // max giorni riportabili anno successivo
     defaultWeeklyHours: 0,
     defaultDailyHours: 0
   }
@@ -76,6 +76,51 @@ export const CONTRACT_TYPES = {
 export function calculateWeeklyHours(workPattern) {
   const { monday, tuesday, wednesday, thursday, friday, saturday, sunday } = workPattern;
   return monday + tuesday + wednesday + thursday + friday + saturday + sunday;
+}
+
+/**
+ * Calcola le ore giornaliere medie da un pattern di lavoro
+ */
+export function calculateDailyHours(workPattern) {
+  const weeklyHours = calculateWeeklyHours(workPattern);
+  const workingDays = [workPattern.monday, workPattern.tuesday, workPattern.wednesday, 
+                      workPattern.thursday, workPattern.friday, workPattern.saturday, workPattern.sunday]
+                      .filter(hours => hours > 0).length;
+  
+  return workingDays > 0 ? weeklyHours / workingDays : 0;
+}
+
+/**
+ * Calcola le ore ferie annuali basate sui giorni e sull'orario del dipendente
+ */
+export function calculateAnnualVacationHours(contractType, workPattern) {
+  const contract = CONTRACT_TYPES[contractType.toUpperCase()];
+  if (!contract || !contract.annualVacationDays) return 0;
+  
+  const dailyHours = calculateDailyHours(workPattern);
+  return contract.annualVacationDays * dailyHours;
+}
+
+/**
+ * Calcola le ore permessi annuali basate sui giorni e sull'orario del dipendente
+ */
+export function calculateAnnualPermissionHours(contractType, workPattern) {
+  const contract = CONTRACT_TYPES[contractType.toUpperCase()];
+  if (!contract || !contract.annualPermissionDays) return 0;
+  
+  const dailyHours = calculateDailyHours(workPattern);
+  return contract.annualPermissionDays * dailyHours;
+}
+
+/**
+ * Calcola le ore massime riportabili basate sui giorni e sull'orario del dipendente
+ */
+export function calculateMaxCarryoverHours(contractType, workPattern) {
+  const contract = CONTRACT_TYPES[contractType.toUpperCase()];
+  if (!contract || !contract.maxCarryoverDays) return 0;
+  
+  const dailyHours = calculateDailyHours(workPattern);
+  return contract.maxCarryoverDays * dailyHours;
 }
 
 /**

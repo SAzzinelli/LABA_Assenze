@@ -261,7 +261,7 @@ const Trasferte = () => {
           <select
             value={filters.status}
             onChange={(e) => setFilters({...filters, status: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="">Tutti gli stati</option>
             <option value="pending">In attesa</option>
@@ -273,7 +273,7 @@ const Trasferte = () => {
           <select
             value={filters.year}
             onChange={(e) => setFilters({...filters, year: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="2024">2024</option>
             <option value="2025">2025</option>
@@ -283,7 +283,7 @@ const Trasferte = () => {
           <select
             value={filters.month}
             onChange={(e) => setFilters({...filters, month: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="">Tutti i mesi</option>
             <option value="1">Gennaio</option>
@@ -338,32 +338,32 @@ const Trasferte = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Partenza:</span>
-                      <span className="font-medium">{formatDate(trip.departure_date)}</span>
+                      <span className="text-gray-400">Partenza:</span>
+                      <span className="font-medium text-gray-300">{formatDate(trip.departure_date)}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Ritorno:</span>
-                      <span className="font-medium">{formatDate(trip.return_date)}</span>
+                      <span className="text-gray-400">Ritorno:</span>
+                      <span className="font-medium text-gray-300">{formatDate(trip.return_date)}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Viaggio:</span>
-                      <span className="font-medium">{formatHours(trip.travel_hours)}</span>
+                      <span className="text-gray-400">Viaggio:</span>
+                      <span className="font-medium text-gray-300">{formatHours(trip.travel_hours)}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-400" />
-                      <span className="text-gray-600">Evento:</span>
-                      <span className="font-medium">{formatHours(trip.event_hours)}</span>
+                      <span className="text-gray-400">Evento:</span>
+                      <span className="font-medium text-gray-300">{formatHours(trip.event_hours)}</span>
                     </div>
                   </div>
                   
                   {trip.notes && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">{trip.notes}</p>
+                    <div className="mt-3 p-3 bg-gray-700 rounded-lg border border-gray-600">
+                      <p className="text-sm text-gray-300">{trip.notes}</p>
                     </div>
                   )}
                 </div>
@@ -389,10 +389,10 @@ const Trasferte = () => {
               
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    Totale ore: <span className="font-semibold text-gray-900">{formatHours(trip.total_hours)}</span>
+                  <div className="text-sm text-gray-400">
+                    Totale ore: <span className="font-semibold text-gray-300">{formatHours(trip.total_hours)}</span>
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-400">
                     Creata il {formatDate(trip.created_at)}
                   </div>
                 </div>
@@ -405,35 +405,35 @@ const Trasferte = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-white">
               {editingTrip ? 'Modifica Trasferta' : 'Nuova Trasferta'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Destinazione *
                   </label>
                   <input
                     type="text"
                     value={formData.destination}
                     onChange={(e) => setFormData({...formData, destination: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Scopo *
                   </label>
                   <input
                     type="text"
                     value={formData.purpose}
                     onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -441,27 +441,27 @@ const Trasferte = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Data Partenza *
                   </label>
                   <input
                     type="date"
                     value={formData.departure_date}
                     onChange={(e) => setFormData({...formData, departure_date: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Data Ritorno *
                   </label>
                   <input
                     type="date"
                     value={formData.return_date}
                     onChange={(e) => setFormData({...formData, return_date: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -469,7 +469,7 @@ const Trasferte = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Ore Viaggio
                   </label>
                   <input
@@ -478,12 +478,12 @@ const Trasferte = () => {
                     min="0"
                     value={formData.travel_hours}
                     onChange={(e) => setFormData({...formData, travel_hours: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Ore Evento
                   </label>
                   <input
@@ -492,25 +492,25 @@ const Trasferte = () => {
                     min="0"
                     value={formData.event_hours}
                     onChange={(e) => setFormData({...formData, event_hours: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Note
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows="3"
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-blue-800">
+              <div className="bg-blue-900 p-3 rounded-lg border border-blue-700">
+                <div className="flex items-center gap-2 text-sm text-blue-200">
                   <Clock className="w-4 h-4" />
                   <span>Totale ore calcolato: <strong>{formatHours(calculateTotalHours())}</strong></span>
                 </div>
@@ -524,7 +524,7 @@ const Trasferte = () => {
                     setEditingTrip(null);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-300 border border-gray-600 bg-gray-700 rounded-lg hover:bg-gray-600"
                 >
                   Annulla
                 </button>

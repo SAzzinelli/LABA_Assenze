@@ -331,7 +331,7 @@ const MonteOre = () => {
           <select
             value={filters.year}
             onChange={(e) => setFilters({...filters, year: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="2024">2024</option>
             <option value="2025">2025</option>
@@ -341,7 +341,7 @@ const MonteOre = () => {
           <select
             value={filters.month}
             onChange={(e) => setFilters({...filters, month: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="">Tutti i mesi</option>
             <option value="1">Gennaio</option>
@@ -361,7 +361,7 @@ const MonteOre = () => {
           <select
             value={filters.type}
             onChange={(e) => setFilters({...filters, type: e.target.value})}
-            className="border rounded-lg px-3 py-2"
+            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
           >
             <option value="">Tutti i tipi</option>
             <option value="accrual">Maturate</option>
@@ -403,7 +403,7 @@ const MonteOre = () => {
             </div>
           ) : (
             transactions.map((transaction) => (
-              <div key={transaction.id} className="p-6 hover:bg-gray-50">
+              <div key={transaction.id} className="p-6 hover:bg-gray-700">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {getTransactionIcon(transaction.transaction_type)}
@@ -412,7 +412,7 @@ const MonteOre = () => {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTransactionColor(transaction.transaction_type)}`}>
                           {transaction.transaction_type}
                         </span>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-400">
                           {formatDate(transaction.transaction_date)}
                         </span>
                       </div>
@@ -427,7 +427,7 @@ const MonteOre = () => {
                     <p className={`text-lg font-bold ${transaction.transaction_type === 'accrual' ? 'text-green-600' : 'text-red-600'}`}>
                       {transaction.transaction_type === 'accrual' ? '+' : '-'}{formatHours(transaction.hours)}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-400">
                       {transaction.period_month}/{transaction.period_year}
                     </p>
                   </div>
@@ -441,14 +441,14 @@ const MonteOre = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-semibold mb-4">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 border border-gray-700">
+            <h2 className="text-xl font-semibold mb-4 text-white">
               {modalType === 'add' ? 'Aggiungi Ore Straordinario' : 'Usa Ore per Permesso'}
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Ore *
                 </label>
                 <input
@@ -457,47 +457,47 @@ const MonteOre = () => {
                   min="0"
                   value={formData.hours}
                   onChange={(e) => setFormData({...formData, hours: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Data *
                 </label>
                 <input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Motivo *
                 </label>
                 <input
                   type="text"
                   value={formData.reason}
                   onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={modalType === 'add' ? 'Es. Straordinario progetto urgente' : 'Es. Permesso recupero ore'}
                   required
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Note
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows="3"
-                  className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Note aggiuntive..."
                 />
               </div>
@@ -509,7 +509,7 @@ const MonteOre = () => {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-300 border border-gray-600 bg-gray-700 rounded-lg hover:bg-gray-600"
                 >
                   Annulla
                 </button>
