@@ -14,6 +14,7 @@ import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
 import Trasferte from './pages/Trasferte';
 import MonteOre from './pages/MonteOre';
+import OrariLavoro from './pages/OrariLavoro';
 import Impostazioni from './pages/Impostazioni';
 import Layout from './components/Layout';
 
@@ -132,6 +133,18 @@ function App() {
                   isAuthenticated ? (
                     <Layout>
                       <MonteOre />
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/orari-lavoro"
+                element={
+                  isAuthenticated ? (
+                    <Layout>
+                      <OrariLavoro />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />

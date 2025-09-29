@@ -223,16 +223,16 @@ const MonteOre = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {user?.role === 'admin' ? 'Gestione Monte Ore' : 'Il Mio Monte Ore'}
+            {user?.role === 'admin' || user?.role === 'Amministratore' ? 'Gestione Monte Ore' : 'Il Mio Monte Ore'}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            {user?.role === 'admin' 
+            {user?.role === 'admin' || user?.role === 'Amministratore'
               ? 'Visualizza e gestisci tutti i monte ore dei dipendenti'
               : 'Gestisci i tuoi straordinari e permessi di recupero'
             }
           </p>
         </div>
-        {user?.role !== 'admin' && (
+        {user?.role !== 'admin' && user?.role !== 'Amministratore' && (
           <div className="flex gap-2">
             <button
               onClick={() => {

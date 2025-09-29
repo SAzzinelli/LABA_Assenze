@@ -230,16 +230,16 @@ const Trasferte = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {user?.role === 'admin' ? 'Gestione Trasferte' : 'Le Mie Trasferte'}
+            {user?.role === 'admin' || user?.role === 'Amministratore' ? 'Gestione Trasferte' : 'Le Mie Trasferte'}
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            {user?.role === 'admin' 
+            {user?.role === 'admin' || user?.role === 'Amministratore'
               ? 'Visualizza e gestisci tutte le richieste di trasferte dei dipendenti'
               : 'Gestisci le tue richieste di trasferte e viaggi per eventi'
             }
           </p>
         </div>
-        {user?.role !== 'admin' && (
+        {user?.role !== 'admin' && user?.role !== 'Amministratore' && (
           <button
             onClick={() => {
               resetForm();

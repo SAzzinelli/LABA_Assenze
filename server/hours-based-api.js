@@ -1641,4 +1641,117 @@ router.get('/carryover/policy', async (req, res) => {
   }
 });
 
+// =====================================================
+// WORK PATTERNS ENDPOINTS
+// =====================================================
+
+// Get work patterns for a user
+router.get('/work-patterns', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non autorizzato' });
+    }
+
+    const { user_id } = req.query;
+    const userId = user_id || req.user.id;
+
+    const { data, error } = await req.supabase
+      .from('work_patterns')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('effective_from', { ascending: false });
+
+    if (error) {
+      if (error.code === 'PGRST205') {
+        // Se la tabella non esiste, restituisci pattern di default
+        const defaultPattern = {
+          user_id: userId,
+          contract_type: 'full_time',
+          monday_hours: 8,
+          tuesday_hours: 8,
+          wednesday_hours: 8,
+          thursday_hours: 8,
+          friday_hours: 8,
+          saturday_hours: 0,
+          sunday_hours: 0,
+          effective_from: new Date().toISOString().split('T')[0],
+          is_active: true
+        };
+        return res.json([defaultPattern]);
+      }
+      console.error('Work patterns fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei pattern di lavoro' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Work patterns error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Create or update work pattern
+router.post('/work-patterns', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non autorizzato' });
+    }
+
+    const {
+      user_id,
+      contract_type,
+      monday_hours,
+      tuesday_hours,
+      wednesday_hours,
+      thursday_hours,
+      friday_hours,
+      saturday_hours,
+      sunday_hours,
+      effective_from
+    } = req.body;
+
+    // Verifica che l'utente abbia i permessi per modificare questo pattern
+    if (user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'Amministratore') {
+      return res.status(403).json({ error: 'Non autorizzato a modificare questo pattern' });
+    }
+
+    // Disattiva pattern precedenti per questo utente
+    await req.supabase
+      .from('work_patterns')
+      .update({ is_active: false })
+      .eq('user_id', user_id);
+
+    // Crea nuovo pattern
+    const { data, error } = await req.supabase
+      .from('work_patterns')
+      .insert([{
+        user_id,
+        contract_type,
+        monday_hours: parseFloat(monday_hours),
+        tuesday_hours: parseFloat(tuesday_hours),
+        wednesday_hours: parseFloat(wednesday_hours),
+        thursday_hours: parseFloat(thursday_hours),
+        friday_hours: parseFloat(friday_hours),
+        saturday_hours: parseFloat(saturday_hours),
+        sunday_hours: parseFloat(sunday_hours),
+        effective_from: effective_from || new Date().toISOString().split('T')[0],
+        is_active: true,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Work pattern creation error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione del pattern di lavoro' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Work pattern creation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 module.exports = router;

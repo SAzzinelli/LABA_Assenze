@@ -54,7 +54,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in
 
 // Admin middleware
 const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'Amministratore') {
     return res.status(403).json({ error: 'Accesso negato. Richiesti privilegi di amministratore.' });
   }
   next();

@@ -17,7 +17,8 @@ import {
   Plane,
   MapPin,
   Calculator,
-  DollarSign
+  DollarSign,
+  Timer
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -101,6 +102,7 @@ const Layout = ({ children }) => {
     { name: 'Ferie', href: '/ferie', icon: Plane },
     { name: 'Trasferte', href: '/trasferte', icon: MapPin },
     { name: 'Monte Ore', href: '/monte-ore', icon: Calculator },
+    { name: 'Orari Lavoro', href: '/orari-lavoro', icon: Timer },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
