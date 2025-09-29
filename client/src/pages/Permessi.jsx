@@ -97,6 +97,13 @@ const LeaveRequests = () => {
     return 0;
   };
 
+  // Formatta le ore in modo leggibile (1h 42m invece di 1.7h)
+  const formatHoursReadable = (hours) => {
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}h ${m}m`;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -405,8 +412,8 @@ const LeaveRequests = () => {
                   required
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="uscita_anticipata">USCITA ANTICIPATA</option>
-                  <option value="entrata_posticipata">ENTRATA POSTICIPATA</option>
+                  <option value="uscita_anticipata">Uscita Anticipata</option>
+                  <option value="entrata_posticipata">Entrata Posticipata</option>
                   {user?.has104 && (
                     <option value="permission_104">Permesso 104</option>
                   )}
@@ -471,7 +478,7 @@ const LeaveRequests = () => {
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 text-indigo-400 mr-2" />
                     <span className="text-indigo-300 font-medium">
-                      Ore di permesso calcolate: {calculatePermissionHours().toFixed(1)}h
+                      Ore di permesso calcolate: {formatHoursReadable(calculatePermissionHours())}
                     </span>
                   </div>
                 </div>
