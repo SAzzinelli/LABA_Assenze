@@ -405,7 +405,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         lastName: emp.last_name,
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
-        department: emp.department || 'Non specificato',
+        department: emp.department || 'Amministrazione',
         position: emp.position || 'Dipendente',
         hireDate: emp.hire_date || emp.created_at?.split('T')[0],
         status: emp.is_active ? 'active' : 'inactive',
@@ -821,29 +821,19 @@ app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
         .eq('is_active', true);
 
       if (error) {
-        console.log('Campo department non esiste, uso conteggio di default');
-        // Se il campo non esiste, usa conteggi di default
-        deptCount = {
-          'Amministrazione': Math.floor(Math.random() * 5) + 3,
-          'Segreteria': Math.floor(Math.random() * 4) + 2,
-          'Orientamento': Math.floor(Math.random() * 6) + 4,
-          'Reparto IT': Math.floor(Math.random() * 3) + 2
-        };
+        console.log('Campo department non esiste, uso conteggio vuoto');
+        // Se il campo non esiste, usa conteggio vuoto
+        deptCount = {};
       } else {
         // Count employees per department
         departments.forEach(emp => {
-          const dept = emp.department || 'Non specificato';
+          const dept = emp.department || 'Amministrazione';
           deptCount[dept] = (deptCount[dept] || 0) + 1;
         });
       }
     } catch (error) {
-      console.log('Errore nel recupero dipartimenti, uso conteggio di default');
-      deptCount = {
-        'Amministrazione': Math.floor(Math.random() * 5) + 3,
-        'Segreteria': Math.floor(Math.random() * 4) + 2,
-        'Orientamento': Math.floor(Math.random() * 6) + 4,
-        'Reparto IT': Math.floor(Math.random() * 3) + 2
-      };
+      console.log('Errore nel recupero dipartimenti, uso conteggio vuoto');
+      deptCount = {};
     }
 
     const colors = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#3b82f6'];
@@ -1657,29 +1647,19 @@ app.get('/api/departments', authenticateToken, async (req, res) => {
         .eq('is_active', true);
 
       if (empError) {
-        console.log('Campo department non esiste, uso conteggio di default');
-        // Se il campo non esiste, usa conteggi di default
-        departmentCounts = {
-          'Amministrazione': Math.floor(Math.random() * 5) + 3,
-          'Segreteria': Math.floor(Math.random() * 4) + 2,
-          'Orientamento': Math.floor(Math.random() * 6) + 4,
-          'Reparto IT': Math.floor(Math.random() * 3) + 2
-        };
+        console.log('Campo department non esiste, uso conteggio vuoto');
+        // Se il campo non esiste, usa conteggio vuoto
+        departmentCounts = {};
       } else {
         // Conta dipendenti per dipartimento
         employees.forEach(emp => {
-          const dept = emp.department || 'Non specificato';
+          const dept = emp.department || 'Amministrazione';
           departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
         });
       }
     } catch (error) {
-      console.log('Errore nel conteggio dipendenti, uso conteggio di default');
-      departmentCounts = {
-        'Amministrazione': Math.floor(Math.random() * 5) + 3,
-        'Segreteria': Math.floor(Math.random() * 4) + 2,
-        'Orientamento': Math.floor(Math.random() * 6) + 4,
-        'Reparto IT': Math.floor(Math.random() * 3) + 2
-      };
+      console.log('Errore nel conteggio dipendenti, uso conteggio vuoto');
+      departmentCounts = {};
     }
 
     // Aggiungi conteggio a ogni dipartimento

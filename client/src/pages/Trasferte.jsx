@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useModal } from '../hooks/useModal';
 import { 
   Calendar, 
   MapPin, 
@@ -30,6 +31,9 @@ const Trasferte = () => {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+
+  // Hook per gestire chiusura modal con ESC e click fuori
+  useModal(showModal, () => setShowModal(false));
   const [editingTrip, setEditingTrip] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
@@ -378,7 +382,10 @@ const Trasferte = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+        >
           <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto border border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-white">
               {editingTrip ? 'Modifica Trasferta' : 'Nuova Trasferta'}

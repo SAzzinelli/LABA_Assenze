@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useModal } from '../hooks/useModal';
 import { 
   Clock, 
   Plus, 
@@ -38,6 +39,9 @@ const MonteOre = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('add'); // 'add' or 'use'
+
+  // Hook per gestire chiusura modal con ESC e click fuori
+  useModal(showModal, () => setShowModal(false));
   const [filters, setFilters] = useState({
     year: new Date().getFullYear(),
     month: '',
@@ -418,7 +422,10 @@ const MonteOre = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
+        >
           <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 border border-gray-700">
             <h2 className="text-xl font-semibold mb-4 text-white">
               {modalType === 'add' ? 'Aggiungi Ore Straordinario' : 'Usa Ore per Permesso'}

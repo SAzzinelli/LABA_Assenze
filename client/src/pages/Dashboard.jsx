@@ -88,44 +88,28 @@ const Dashboard = () => {
         
         // Fetch departments from new API
         const departmentsResponse = await apiCall('/api/departments');
-      if (departmentsResponse.ok) {
-        const departmentsData = await departmentsResponse.json();
-        if (departmentsData && departmentsData.length > 0) {
-          // Convert API data to chart format
-          const chartData = departmentsData.map((dept, index) => ({
-            name: dept.name,
-            value: Math.floor(Math.random() * 10) + 3, // TODO: Get real employee count
-            color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
-            employees: Math.floor(Math.random() * 10) + 3
-          }));
-          setDepartments(chartData);
-        } else {
-          // Mock data for testing
-          setDepartments([
-            { name: 'Amministrazione', value: 8, color: '#8b5cf6', employees: 8 },
-            { name: 'Segreteria', value: 6, color: '#06b6d4', employees: 6 },
-            { name: 'Orientamento', value: 12, color: '#10b981', employees: 12 },
-            { name: 'Reparto IT', value: 4, color: '#f59e0b', employees: 4 }
-          ]);
+        if (departmentsResponse.ok) {
+          const departmentsData = await departmentsResponse.json();
+          if (departmentsData && departmentsData.length > 0) {
+            // Convert API data to chart format with real employee counts
+            const chartData = departmentsData.map((dept, index) => ({
+              name: dept.name,
+              value: dept.employee_count || 0, // Use real employee count
+              color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
+              employees: dept.employee_count || 0
+            }));
+            setDepartments(chartData);
+          } else {
+            // No departments data - show empty
+            setDepartments([]);
+          }
         }
-      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Fallback mock data
-      setStats({ presentToday: 12, pendingRequests: 5 });
-      setWeeklyAttendance([
-        { name: 'Lun', presenze: 15, assenze: 2 },
-        { name: 'Mar', presenze: 18, assenze: 1 },
-        { name: 'Mer', presenze: 16, assenze: 3 },
-        { name: 'Gio', presenze: 19, assenze: 0 },
-        { name: 'Ven', presenze: 17, assenze: 2 }
-      ]);
-      setDepartments([
-        { name: 'Amministrazione', value: 8, color: '#8b5cf6', employees: 8 },
-        { name: 'Segreteria', value: 6, color: '#06b6d4', employees: 6 },
-        { name: 'Orientamento', value: 12, color: '#10b981', employees: 12 },
-        { name: 'Reparto IT', value: 4, color: '#f59e0b', employees: 4 }
-      ]);
+      // No fallback data - show empty state
+      setStats({ presentToday: 0, pendingRequests: 0 });
+      setWeeklyAttendance([]);
+      setDepartments([]);
     } finally {
       setLoading(false);
     }

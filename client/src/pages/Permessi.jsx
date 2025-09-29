@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useModal } from '../hooks/useModal';
 import { 
   FileText, 
   Plus, 
@@ -24,9 +25,9 @@ const LeaveRequests = () => {
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
     type: 'permission',
-    startDate: '',
-    endDate: '',
-    reason: '',
+    permissionDate: '',
+    permissionType: 'entrata_dopo', // entrata_dopo, uscita_prima
+    hours: '',
     notes: ''
   });
 
@@ -42,6 +43,9 @@ const LeaveRequests = () => {
 
   // Array vuoto per le richieste di permessi
   const [requests, setRequests] = useState([]);
+
+  // Hook per gestire chiusura modal con ESC e click fuori
+  useModal(showNewRequest, () => setShowNewRequest(false));
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,9 +68,9 @@ const LeaveRequests = () => {
     setRequests(prev => [newRequest, ...prev]);
     setFormData({
       type: 'permission',
-      startDate: '',
-      endDate: '',
-      reason: '',
+      permissionDate: '',
+      permissionType: 'entrata_dopo',
+      hours: '',
       notes: ''
     });
     setShowNewRequest(false);
@@ -75,9 +79,9 @@ const LeaveRequests = () => {
   const handleCancel = () => {
     setFormData({
       type: 'permission',
-      startDate: '',
-      endDate: '',
-      reason: '',
+      permissionDate: '',
+      permissionType: 'entrata_dopo',
+      hours: '',
       notes: ''
     });
     setShowNewRequest(false);
@@ -120,7 +124,7 @@ const LeaveRequests = () => {
     // Filtro per mese/anno (solo admin)
     if (user?.role === 'admin') {
       filtered = filtered.filter(request => {
-        const requestDate = new Date(request.startDate);
+        const requestDate = new Date(request.permissionDate || request.startDate);
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
@@ -130,10 +134,10 @@ const LeaveRequests = () => {
       filtered = filtered.filter(request => {
         const searchLower = searchTerm.toLowerCase();
         return (
-          request.reason?.toLowerCase().includes(searchLower) ||
-          request.submittedBy?.toLowerCase().includes(searchLower) ||
           request.notes?.toLowerCase().includes(searchLower) ||
-          request.status?.toLowerCase().includes(searchLower)
+          request.submittedBy?.toLowerCase().includes(searchLower) ||
+          request.status?.toLowerCase().includes(searchLower) ||
+          request.permissionType?.toLowerCase().includes(searchLower)
         );
       });
     }
@@ -316,7 +320,10 @@ const LeaveRequests = () => {
 
       {/* New Request Modal */}
       {showNewRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
+        >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
@@ -352,12 +359,12 @@ const LeaveRequests = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Data Inizio *
+                    Data Permesso *
                   </label>
                   <input
                     type="date"
-                    name="startDate"
-                    value={formData.startDate}
+                    name="permissionDate"
+                    value={formData.permissionDate}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -365,40 +372,40 @@ const LeaveRequests = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Data Fine *
+                    Tipo Permesso *
                   </label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
+                  <select
+                    name="permissionType"
+                    value={formData.permissionType}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  >
+                    <option value="entrata_dopo">Entrata dopo</option>
+                    <option value="uscita_prima">Uscita prima</option>
+                  </select>
                 </div>
               </div>
 
-              {formData.startDate && formData.endDate && (
-                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
-                  <p className="text-indigo-300 text-sm">
-                    <strong>Durata richiesta:</strong> {calculateDays(formData.startDate, formData.endDate)} giorni
-                  </p>
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Motivo del Permesso *
+                  Ore di Permesso *
                 </label>
                 <input
-                  type="text"
-                  name="reason"
-                  value={formData.reason}
+                  type="number"
+                  name="hours"
+                  value={formData.hours}
                   onChange={handleInputChange}
-                  placeholder="Es. Visita medica, motivi familiari, formazione..."
+                  placeholder="Es. 2.5 (per 2 ore e 30 minuti)"
+                  min="0.5"
+                  max="8"
+                  step="0.5"
                   required
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                <p className="text-slate-400 text-xs mt-1">
+                  Inserisci le ore di permesso (es. 2.5 per 2 ore e 30 minuti)
+                </p>
               </div>
 
               <div>

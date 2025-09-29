@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useModal } from '../hooks/useModal';
 import { 
   Heart, 
   Plus, 
@@ -45,6 +46,9 @@ const SickLeave = () => {
 
   // Array vuoto per le richieste di malattia
   const [sickRequests, setSickRequests] = useState([]);
+
+  // Hook per gestire chiusura modal con ESC e click fuori
+  useModal(showNewRequest, () => setShowNewRequest(false));
 
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -225,7 +229,10 @@ const SickLeave = () => {
 
       {/* New Request Modal */}
       {showNewRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
+        >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">

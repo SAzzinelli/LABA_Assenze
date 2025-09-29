@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useModal } from '../hooks/useModal';
 import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
 
 const Employees = () => {
@@ -11,6 +12,11 @@ const Employees = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Hook per gestire chiusura modal con ESC e click fuori
+  useModal(showAddModal, () => setShowAddModal(false));
+  useModal(showEditModal, () => setShowEditModal(false));
+  useModal(showDetailsModal, () => setShowDetailsModal(false));
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [detailActiveTab, setDetailActiveTab] = useState('details');
   const [formData, setFormData] = useState({
@@ -391,7 +397,10 @@ const Employees = () => {
 
       {/* Modal Aggiungi Dipendente */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowAddModal(false)}
+        >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Aggiungi Dipendente</h3>
@@ -526,7 +535,10 @@ const Employees = () => {
 
       {/* Modal Modifica Dipendente */}
       {showEditModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowEditModal(false)}
+        >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Modifica Dipendente</h3>
@@ -656,7 +668,10 @@ const Employees = () => {
 
       {/* Modal Dettagli Dipendente */}
       {showDetailsModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => e.target === e.currentTarget && setShowDetailsModal(false)}
+        >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Dettagli Dipendente - {selectedEmployee.name}</h3>

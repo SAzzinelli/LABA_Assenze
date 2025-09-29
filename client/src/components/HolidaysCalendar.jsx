@@ -1,11 +1,12 @@
 import React from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 
 const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
   const { apiCall } = useAuthStore();
   const [holidays, setHolidays] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [isCollapsed, setIsCollapsed] = React.useState(true);
 
   React.useEffect(() => {
     const loadHolidays = async () => {
@@ -50,12 +51,24 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
 
   return (
     <div className="bg-slate-800 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-        <Calendar className="h-6 w-6 mr-3 text-green-400" />
-        Giorni Festivi {year}
-      </h3>
+      <div 
+        className="flex items-center justify-between cursor-pointer mb-4"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        <h3 className="text-xl font-bold text-white flex items-center">
+          <Calendar className="h-6 w-6 mr-3 text-green-400" />
+          Giorni Festivi {year}
+        </h3>
+        {isCollapsed ? (
+          <ChevronDown className="h-5 w-5 text-slate-400" />
+        ) : (
+          <ChevronUp className="h-5 w-5 text-slate-400" />
+        )}
+      </div>
 
-      {upcomingHolidays.length === 0 ? (
+      {!isCollapsed && (
+        <>
+          {upcomingHolidays.length === 0 ? (
         <div className="text-center text-slate-400">
           <p>Nessun giorno festivo programmato</p>
         </div>
@@ -107,12 +120,14 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
         </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-slate-600">
-        <div className="flex items-center justify-between text-sm text-slate-400">
-          <span>Totale giorni festivi {year}:</span>
-          <span className="font-semibold text-white">{holidays.length} giorni</span>
-        </div>
-      </div>
+          <div className="mt-4 pt-4 border-t border-slate-600">
+            <div className="flex items-center justify-between text-sm text-slate-400">
+              <span>Totale giorni festivi {year}:</span>
+              <span className="font-semibold text-white">{holidays.length} giorni</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
