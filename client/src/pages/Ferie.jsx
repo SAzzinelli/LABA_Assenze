@@ -56,13 +56,13 @@ const Vacation = () => {
 
   // Sistema basato su ore
   const [vacationBalance, setVacationBalance] = useState({
-    totalHours: 208, // 26 giorni * 8h per FT
+    totalHours: 160, // 20 giorni * 8h per FT
     usedHours: 0,
-    remainingHours: 208,
+    remainingHours: 160,
     pendingHours: 0,
-    totalDays: 26,
+    totalDays: 20,
     usedDays: 0,
-    remainingDays: 26,
+    remainingDays: 20,
     pendingDays: 0,
     bonusHours: 0, // Bonus per anzianità
     has104: user?.has104 || false // Bonus legge 104
@@ -148,9 +148,9 @@ const Vacation = () => {
         // Fallback con dati di default
         setVacationBalance(prev => ({
           ...prev,
-          totalHours: 208, // 26 giorni * 8h
+          totalHours: 160, // 20 giorni * 8h
           usedHours: 0,
-          remainingHours: 208,
+          remainingHours: 160,
           pendingHours: 0,
           totalDays: 26,
           usedDays: 0,
