@@ -235,8 +235,8 @@ const MonteOre = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Monte Ore</h1>
-          <p className="text-gray-600 mt-2">Gestisci straordinari e permessi di recupero</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white">Monte Ore</h1>
+          <p className="text-gray-600 dark:text-gray-300 dark:text-gray-300 mt-2">Gestisci straordinari e permessi di recupero</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -266,40 +266,40 @@ const MonteOre = () => {
 
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Totale Maturate</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300 dark:text-gray-300">Totale Maturate</p>
               <p className="text-2xl font-bold text-green-600">{formatHours(overtimeBalance.total_accrued)}</p>
             </div>
             <TrendingUp className="w-8 h-8 text-green-500" />
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Totale Usate</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Totale Usate</p>
               <p className="text-2xl font-bold text-red-600">{formatHours(overtimeBalance.total_used)}</p>
             </div>
             <TrendingDown className="w-8 h-8 text-red-500" />
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Saldo Attuale</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Saldo Attuale</p>
               <p className="text-2xl font-bold text-blue-600">{formatHours(overtimeBalance.current_balance)}</p>
             </div>
             <Target className="w-8 h-8 text-blue-500" />
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">In Attesa</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">In Attesa</p>
               <p className="text-2xl font-bold text-yellow-600">{formatHours(overtimeBalance.pending_requests)}</p>
             </div>
             <AlertCircle className="w-8 h-8 text-yellow-500" />
@@ -309,18 +309,18 @@ const MonteOre = () => {
 
       {/* Monthly Stats */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiche Mensili</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Statistiche Mensili</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <p className="text-sm text-gray-600">Ore Maturate</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Ore Maturate</p>
             <p className="text-xl font-bold text-green-600">{formatHours(monthlyStats.accrued)}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-600">Ore Usate</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Ore Usate</p>
             <p className="text-xl font-bold text-red-600">{formatHours(monthlyStats.used)}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-600">Bilancio Netto</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Bilancio Netto</p>
             <p className={`text-xl font-bold ${monthlyStats.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatHours(monthlyStats.net)}
             </p>
@@ -380,7 +380,7 @@ const MonteOre = () => {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Movimenti Monte Ore</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Movimenti Monte Ore</h3>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <History className="w-4 h-4" />
               <span>{transactions.length} movimenti</span>
@@ -392,7 +392,7 @@ const MonteOre = () => {
           {transactions.length === 0 ? (
             <div className="p-8 text-center">
               <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun movimento trovato</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nessun movimento trovato</h3>
               <p className="text-gray-500 mb-4">Inizia aggiungendo ore di straordinario</p>
               <button
                 onClick={() => {
@@ -420,9 +420,9 @@ const MonteOre = () => {
                           {formatDate(transaction.transaction_date)}
                         </span>
                       </div>
-                      <p className="text-gray-900 font-medium mt-1">{transaction.reason}</p>
+                      <p className="text-gray-900 dark:text-white font-medium mt-1">{transaction.reason}</p>
                       {transaction.notes && (
-                        <p className="text-sm text-gray-600 mt-1">{transaction.notes}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{transaction.notes}</p>
                       )}
                     </div>
                   </div>
@@ -513,7 +513,7 @@ const MonteOre = () => {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Annulla
                 </button>

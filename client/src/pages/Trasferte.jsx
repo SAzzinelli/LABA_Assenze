@@ -235,8 +235,8 @@ const Trasferte = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Trasferte</h1>
-          <p className="text-gray-600 mt-2">Gestisci le trasferte e i viaggi per eventi</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Trasferte</h1>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">Gestisci le trasferte e i viaggi per eventi</p>
         </div>
         <button
           onClick={() => {
@@ -252,7 +252,7 @@ const Trasferte = () => {
       </div>
 
       {/* Filtri */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
         <div className="flex gap-4 items-center">
           <Filter className="w-5 h-5 text-gray-500" />
           <select
@@ -319,18 +319,18 @@ const Trasferte = () => {
           </div>
         ) : (
           trips.map((trip) => (
-            <div key={trip.id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+            <div key={trip.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700 hover:shadow-md transition-shadow">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     {getTransportIcon(trip.destination)}
-                    <h3 className="text-lg font-semibold text-gray-900">{trip.destination}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{trip.destination}</h3>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(trip.status)}`}>
                       {trip.status}
                     </span>
                   </div>
                   
-                  <p className="text-gray-600 mb-3">{trip.purpose}</p>
+                  <p className="text-gray-600 dark:text-gray-300 mb-3">{trip.purpose}</p>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div className="flex items-center gap-2">
