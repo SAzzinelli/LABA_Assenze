@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../utils/store';
 import { 
   Clock, 
   Plus, 
@@ -12,25 +13,13 @@ import {
 
 // Hook per ottenere i dati utente
 const useUser = () => {
-  const [user, setUser] = useState(null);
-  
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser(payload);
-      } catch (error) {
-        console.error('Errore parsing token:', error);
-      }
-    }
-  }, []);
-  
+  const { user } = useAuthStore();
   return user;
 };
 
 const OrariLavoro = () => {
   const user = useUser();
+  const { apiCall } = useAuthStore();
   const [employees, setEmployees] = useState([]);
   const [workPatterns, setWorkPatterns] = useState({});
   const [loading, setLoading] = useState(true);
@@ -55,14 +44,8 @@ const OrariLavoro = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const response = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiCall('/api/users');
 
       if (response.ok) {
         const data = await response.json();
@@ -96,7 +79,6 @@ const OrariLavoro = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
       const workPatternData = {
         user_id: editingEmployee.id,
         contract_type: formData.contract_type,
@@ -110,12 +92,8 @@ const OrariLavoro = () => {
         effective_from: new Date().toISOString().split('T')[0]
       };
 
-      const response = await fetch('/api/hours/work-patterns', {
+      const response = await apiCall('/api/hours/work-patterns', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(workPatternData)
       });
 

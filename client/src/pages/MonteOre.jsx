@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../utils/store';
 import { 
   Clock, 
   Plus, 
@@ -19,25 +20,13 @@ import {
 
 // Hook per ottenere i dati utente
 const useUser = () => {
-  const [user, setUser] = useState(null);
-  
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser(payload);
-      } catch (error) {
-        console.error('Errore parsing token:', error);
-      }
-    }
-  }, []);
-  
+  const { user } = useAuthStore();
   return user;
 };
 
 const MonteOre = () => {
   const user = useUser();
+  const { apiCall } = useAuthStore();
   const [overtimeBalance, setOvertimeBalance] = useState({
     total_accrued: 0,
     total_used: 0,
@@ -69,15 +58,9 @@ const MonteOre = () => {
   const fetchOvertimeData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       // Fetch current balance
-      const balanceResponse = await fetch(`/api/hours/current-balances?year=${filters.year}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const balanceResponse = await apiCall(`/api/hours/current-balances?year=${filters.year}`);
 
       if (balanceResponse.ok) {
         const balances = await balanceResponse.json();
@@ -118,7 +101,6 @@ const MonteOre = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
       const transactionData = {
         category: 'overtime',
         transaction_type: modalType === 'add' ? 'accrual' : 'usage',
@@ -130,12 +112,8 @@ const MonteOre = () => {
         period_month: new Date(formData.date).getMonth() + 1
       };
 
-      const response = await fetch('/api/hours/hours-ledger', {
+      const response = await apiCall('/api/hours/hours-ledger', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(transactionData)
       });
 

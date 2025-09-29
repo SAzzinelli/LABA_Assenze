@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../utils/store';
 import { 
   Calendar, 
   MapPin, 
@@ -19,25 +20,13 @@ import {
 
 // Hook per ottenere i dati utente
 const useUser = () => {
-  const [user, setUser] = useState(null);
-  
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser(payload);
-      } catch (error) {
-        console.error('Errore parsing token:', error);
-      }
-    }
-  }, []);
-  
+  const { user } = useAuthStore();
   return user;
 };
 
 const Trasferte = () => {
   const user = useUser();
+  const { apiCall } = useAuthStore();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -65,19 +54,13 @@ const Trasferte = () => {
   const fetchTrips = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const queryParams = new URLSearchParams();
       
       if (filters.status) queryParams.append('status', filters.status);
       if (filters.year) queryParams.append('year', filters.year);
       if (filters.month) queryParams.append('month', filters.month);
 
-      const response = await fetch(`/api/hours/business-trips?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiCall(`/api/hours/business-trips?${queryParams}`);
 
       if (response.ok) {
         const data = await response.json();
@@ -97,7 +80,6 @@ const Trasferte = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
       const url = editingTrip ? `/api/hours/business-trips/${editingTrip.id}` : '/api/hours/business-trips';
       const method = editingTrip ? 'PUT' : 'POST';
       
@@ -106,12 +88,8 @@ const Trasferte = () => {
         total_hours: parseFloat(formData.travel_hours) + parseFloat(formData.event_hours)
       };
 
-      const response = await fetch(url, {
+      const response = await apiCall(url, {
         method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(tripData)
       });
 
@@ -145,12 +123,8 @@ const Trasferte = () => {
   const handleDelete = async (tripId) => {
     if (window.confirm('Sei sicuro di voler eliminare questa trasferta?')) {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/hours/business-trips/${tripId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const response = await apiCall(`/api/hours/business-trips/${tripId}`, {
+          method: 'DELETE'
         });
 
         if (response.ok) {
