@@ -11,25 +11,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
-// Rate limiting middleware
-const rateLimit = require('express-rate-limit');
-
-// Create rate limiters
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  message: { error: 'Troppi tentativi di login. Riprova tra 15 minuti.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: { error: 'Troppe richieste. Riprova tra 15 minuti.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting rimosso per facilitare i test
 
 const app = express();
 const server = http.createServer(app);
@@ -139,7 +121,7 @@ const authenticateToken = async (req, res, next) => {
 // ==================== AUTH ENDPOINTS ====================
 
 // Login
-app.post('/api/auth/login', authLimiter, async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -258,7 +240,7 @@ app.put('/api/user', authenticateToken, async (req, res) => {
 });
 
 // Registration
-app.post('/api/auth/register', authLimiter, async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   try {
     const { 
       email, 
@@ -372,7 +354,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 // ==================== EMPLOYEES ENDPOINTS ====================
 
 // Get all employees
-app.get('/api/employees', apiLimiter, authenticateToken, async (req, res) => {
+app.get('/api/employees', authenticateToken, async (req, res) => {
   try {
     const { data: employees, error } = await supabase
       .from('users')
