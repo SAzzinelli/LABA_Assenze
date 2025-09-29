@@ -59,32 +59,40 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       if (user?.role === 'admin') {
-        // Fetch real stats from database per admin
-        const statsResponse = await apiCall('/api/dashboard/stats');
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats({
-            presentToday: statsData.presentToday || 0,
-            pendingRequests: statsData.pendingRequests || 0
-          });
-        } else {
-          // Fallback to 0 if no data
-          setStats({
-            presentToday: 0,
-            pendingRequests: 0
-          });
+        // Fetch pending requests directly
+        const requestsResponse = await apiCall('/api/leave-requests');
+        let pendingRequests = 0;
+        if (requestsResponse.ok) {
+          const requestsData = await requestsResponse.json();
+          pendingRequests = requestsData.filter(req => req.status === 'pending').length;
         }
 
-        // Fetch real weekly attendance from database
-        const attendanceResponse = await apiCall('/api/dashboard/attendance');
+        // Fetch present today from attendance
+        const attendanceResponse = await apiCall('/api/attendance/current');
+        let presentToday = 0;
         if (attendanceResponse.ok) {
           const attendanceData = await attendanceResponse.json();
-          if (attendanceData && attendanceData.length > 0) {
-            setWeeklyAttendance(attendanceData);
+          presentToday = attendanceData.length;
+        }
+
+        setStats({
+          presentToday: presentToday,
+          pendingRequests: pendingRequests
+        });
+
+        // Fetch weekly attendance data
+        const weeklyResponse = await apiCall('/api/dashboard/attendance');
+        if (weeklyResponse.ok) {
+          const weeklyData = await weeklyResponse.json();
+          if (weeklyData && weeklyData.length > 0) {
+            setWeeklyAttendance(weeklyData);
           } else {
             // No real data available - show empty array
             setWeeklyAttendance([]);
           }
+        } else {
+          // Fallback: create empty weekly data
+          setWeeklyAttendance([]);
         }
       } else {
         // Fetch KPI utente
