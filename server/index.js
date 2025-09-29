@@ -360,7 +360,8 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       .from('users')
       .select(`
         *,
-        work_patterns!left(*)
+        work_patterns!left(*),
+        work_schedules!left(*)
       `)
       .eq('is_active', true)
       .order('last_name');
@@ -375,6 +376,29 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       const activeWorkPattern = emp.work_patterns?.find(pattern => pattern.is_active) || 
                                emp.work_patterns?.[0] || null;
 
+      // Formatta gli orari dettagliati
+      const detailedWorkSchedule = {};
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      if (emp.work_schedules && emp.work_schedules.length > 0) {
+        emp.work_schedules.forEach(schedule => {
+          const dayName = dayNames[schedule.day_of_week];
+          if (dayName) {
+            detailedWorkSchedule[dayName] = {
+              active: schedule.is_working_day,
+              workType: schedule.work_type,
+              startTime: schedule.start_time,
+              endTime: schedule.end_time,
+              breakDuration: schedule.break_duration,
+              // Calcola ore totali per il giorno
+              totalHours: schedule.is_working_day ? 
+                (schedule.start_time && schedule.end_time ? 
+                  Math.abs(new Date(`2000-01-01T${schedule.end_time}`) - new Date(`2000-01-01T${schedule.start_time}`)) / (1000 * 60 * 60) - (schedule.break_duration || 0) / 60 : 0) : 0
+            };
+          }
+        });
+      }
+
       return {
         id: emp.id,
         firstName: emp.first_name,
@@ -388,16 +412,17 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         has104: emp.has_104,
         phone: emp.phone || '',
         birthDate: emp.date_of_birth || '',
-        // Aggiungi dati orario di lavoro
-        workSchedule: activeWorkPattern ? {
-          monday: { hours: activeWorkPattern.monday_hours, active: activeWorkPattern.monday_hours > 0 },
-          tuesday: { hours: activeWorkPattern.tuesday_hours, active: activeWorkPattern.tuesday_hours > 0 },
-          wednesday: { hours: activeWorkPattern.wednesday_hours, active: activeWorkPattern.wednesday_hours > 0 },
-          thursday: { hours: activeWorkPattern.thursday_hours, active: activeWorkPattern.thursday_hours > 0 },
-          friday: { hours: activeWorkPattern.friday_hours, active: activeWorkPattern.friday_hours > 0 },
-          saturday: { hours: activeWorkPattern.saturday_hours, active: activeWorkPattern.saturday_hours > 0 },
-          sunday: { hours: activeWorkPattern.sunday_hours, active: activeWorkPattern.sunday_hours > 0 }
-        } : null,
+        // Aggiungi dati orario di lavoro dettagliati
+        workSchedule: Object.keys(detailedWorkSchedule).length > 0 ? detailedWorkSchedule : 
+          (activeWorkPattern ? {
+            monday: { hours: activeWorkPattern.monday_hours, active: activeWorkPattern.monday_hours > 0 },
+            tuesday: { hours: activeWorkPattern.tuesday_hours, active: activeWorkPattern.tuesday_hours > 0 },
+            wednesday: { hours: activeWorkPattern.wednesday_hours, active: activeWorkPattern.wednesday_hours > 0 },
+            thursday: { hours: activeWorkPattern.thursday_hours, active: activeWorkPattern.thursday_hours > 0 },
+            friday: { hours: activeWorkPattern.friday_hours, active: activeWorkPattern.friday_hours > 0 },
+            saturday: { hours: activeWorkPattern.saturday_hours, active: activeWorkPattern.saturday_hours > 0 },
+            sunday: { hours: activeWorkPattern.sunday_hours, active: activeWorkPattern.sunday_hours > 0 }
+          } : null),
         contractType: activeWorkPattern?.contract_type || 'full_time',
         weeklyHours: activeWorkPattern ? 
           (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours + 

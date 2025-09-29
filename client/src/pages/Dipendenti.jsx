@@ -814,14 +814,61 @@ const Employees = () => {
                         
                         {daySchedule.active ? (
                           <div className="space-y-2">
-                            <div className="flex items-center text-sm">
-                              <Clock className="h-3 w-3 text-blue-400 mr-2" />
-                              <span className="text-slate-300">{daySchedule.hours}h</span>
-                            </div>
-                            
-                            <div className="text-xs text-slate-400">
-                              Giornata lavorativa
-                            </div>
+                            {/* Mostra dettagli orari se disponibili */}
+                            {daySchedule.startTime && daySchedule.endTime ? (
+                              <>
+                                <div className="flex items-center text-sm">
+                                  <Clock className="h-3 w-3 text-blue-400 mr-2" />
+                                  <span className="text-slate-300">{daySchedule.startTime} - {daySchedule.endTime}</span>
+                                </div>
+                                
+                                {daySchedule.workType === 'full_day' && (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center text-xs">
+                                      <Sun className="h-3 w-3 text-yellow-400 mr-1" />
+                                      <span className="text-slate-400">Mattina: {daySchedule.startTime} - 13:00</span>
+                                    </div>
+                                    <div className="flex items-center text-xs">
+                                      <Coffee className="h-3 w-3 text-amber-400 mr-1" />
+                                      <span className="text-slate-400">Pausa: 13:00 - 14:00</span>
+                                    </div>
+                                    <div className="flex items-center text-xs">
+                                      <Moon className="h-3 w-3 text-blue-400 mr-1" />
+                                      <span className="text-slate-400">Pomeriggio: 14:00 - {daySchedule.endTime}</span>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {daySchedule.workType === 'morning' && (
+                                  <div className="flex items-center text-xs">
+                                    <Sun className="h-3 w-3 text-yellow-400 mr-1" />
+                                    <span className="text-slate-400">Solo Mattina</span>
+                                  </div>
+                                )}
+                                
+                                {daySchedule.workType === 'afternoon' && (
+                                  <div className="flex items-center text-xs">
+                                    <Moon className="h-3 w-3 text-blue-400 mr-1" />
+                                    <span className="text-slate-400">Solo Pomeriggio</span>
+                                  </div>
+                                )}
+                                
+                                <div className="text-xs text-slate-500 mt-1">
+                                  Totale: {daySchedule.totalHours ? daySchedule.totalHours.toFixed(1) : '8'}h
+                                </div>
+                              </>
+                            ) : (
+                              /* Fallback per dati vecchi */
+                              <>
+                                <div className="flex items-center text-sm">
+                                  <Clock className="h-3 w-3 text-blue-400 mr-2" />
+                                  <span className="text-slate-300">{daySchedule.hours}h</span>
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  Giornata lavorativa
+                                </div>
+                              </>
+                            )}
                           </div>
                         ) : (
                           <p className="text-slate-400 text-sm">Non lavorativo</p>
@@ -835,7 +882,12 @@ const Employees = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="bg-slate-800 rounded-lg p-3">
                         <div className="text-slate-400 text-sm">Ore Settimanali</div>
-                        <div className="text-2xl font-bold text-white">{selectedEmployee.weeklyHours}h</div>
+                        <div className="text-2xl font-bold text-white">
+                          {selectedEmployee.workSchedule ? 
+                            Object.values(selectedEmployee.workSchedule)
+                              .reduce((total, day) => total + (day.totalHours || day.hours || 0), 0).toFixed(1) : 
+                            selectedEmployee.weeklyHours}h
+                        </div>
                         <div className="text-slate-400 text-xs">Totale settimana</div>
                       </div>
                       <div className="bg-slate-800 rounded-lg p-3">
