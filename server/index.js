@@ -701,6 +701,51 @@ app.post('/api/attendance/clock-out', authenticateToken, async (req, res) => {
 
 // ==================== DASHBOARD ENDPOINTS ====================
 
+// Debug endpoint per verificare dati senza autenticazione
+app.get('/api/debug/stats', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if tables exist and have data
+    const { data: employees, error: empError } = await supabase
+      .from('employees')
+      .select('*', { count: 'exact' })
+      .limit(5);
+    
+    const { data: attendance, error: attError } = await supabase
+      .from('attendance')
+      .select('*', { count: 'exact' })
+      .limit(5);
+    
+    const { data: leaveRequests, error: leaveError } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact' })
+      .limit(5);
+
+    res.json({
+      today,
+      employees: {
+        count: employees?.length || 0,
+        error: empError?.message || null,
+        sample: employees?.slice(0, 2) || []
+      },
+      attendance: {
+        count: attendance?.length || 0,
+        error: attError?.message || null,
+        sample: attendance?.slice(0, 2) || []
+      },
+      leaveRequests: {
+        count: leaveRequests?.length || 0,
+        error: leaveError?.message || null,
+        sample: leaveRequests?.slice(0, 2) || []
+      }
+    });
+  } catch (error) {
+    console.error('Debug stats error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Dashboard stats
 app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   try {
@@ -881,7 +926,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       id: att.id,
       user_id: att.user_id,
       name: `${att.users.first_name} ${att.users.last_name}`,
-      department: 'Non specificato',
+      department: 'Amministrazione',
       clock_in: att.clock_in,
       clock_out: att.clock_out,
       hours_worked: att.hours_worked
@@ -928,7 +973,7 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
       return {
         id: att.id,
         name: `${att.users.first_name} ${att.users.last_name}`,
-        department: 'Non specificato',
+        department: 'Amministrazione',
         clock_in: att.clock_in,
         expected_check_out: expectedCheckOut.toTimeString().split(' ')[0].substring(0, 5),
         minutes_until_departure: Math.round((expectedCheckOut - now) / (1000 * 60))
