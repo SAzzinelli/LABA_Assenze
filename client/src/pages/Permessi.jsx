@@ -43,6 +43,7 @@ const LeaveRequests = () => {
 
   // Array vuoto per le richieste di permessi
   const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [permissions104, setPermissions104] = useState({
     usedThisMonth: 0,
     maxPerMonth: 3,
@@ -51,6 +52,36 @@ const LeaveRequests = () => {
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
+
+  // Funzione per recuperare le richieste dal backend
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/leave-requests', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRequests(data);
+      } else {
+        console.error('Errore nel recupero delle richieste');
+      }
+    } catch (error) {
+      console.error('Errore:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carica le richieste al mount
+  useEffect(() => {
+    fetchRequests();
+  }, []);
 
   // Carica permessi 104 se l'utente li ha
   useEffect(() => {
@@ -104,7 +135,7 @@ const LeaveRequests = () => {
     return `${h}h ${m}m`;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Calcola automaticamente le ore di permesso
@@ -115,27 +146,46 @@ const LeaveRequests = () => {
       return;
     }
     
-    const newRequest = {
-      type: formData.type,
-      permissionDate: formData.permissionDate,
-      permissionType: formData.type === 'uscita_anticipata' ? 'uscita_prima' : 'entrata_dopo',
-      hours: calculatedHours,
-      notes: formData.notes,
-      id: Date.now(),
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-      submittedBy: user?.firstName + ' ' + user?.lastName
-    };
-    
-    setRequests(prev => [newRequest, ...prev]);
-    setFormData({
-      type: 'uscita_anticipata',
-      permissionDate: '',
-      exitTime: '',
-      entryTime: '',
-      notes: ''
-    });
-    setShowNewRequest(false);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/leave-requests', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'permission',
+          startDate: formData.permissionDate,
+          endDate: formData.permissionDate,
+          reason: formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata',
+          notes: formData.notes,
+          permissionType: formData.type,
+          hours: calculatedHours,
+          exitTime: formData.exitTime,
+          entryTime: formData.entryTime
+        })
+      });
+      
+      if (response.ok) {
+        // Ricarica le richieste dal backend
+        await fetchRequests();
+        setFormData({
+          type: 'uscita_anticipata',
+          permissionDate: '',
+          exitTime: '',
+          entryTime: '',
+          notes: ''
+        });
+        setShowNewRequest(false);
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
+      }
+    } catch (error) {
+      console.error('Errore:', error);
+      alert('Errore nel salvataggio della richiesta');
+    }
   };
 
   const handleCancel = () => {
@@ -615,12 +665,9 @@ const LeaveRequests = () => {
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
                       {getStatusIcon(request.status)}
-                      <h3 className="text-lg font-semibold text-white ml-2">{request.reason || getPermissionTypeText(request)}</h3>
+                      <h3 className="text-lg font-semibold text-white ml-2">{getPermissionTypeText(request)}</h3>
                       <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
                         {getStatusText(request.status)}
-                      </span>
-                      <span className="ml-2 px-2 py-1 bg-slate-600 rounded text-xs text-slate-300">
-                        {getPermissionTypeText(request)}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
@@ -633,17 +680,14 @@ const LeaveRequests = () => {
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-slate-400" />
                         <span>
-                          {request.startDate === request.endDate 
-                            ? formatDate(request.startDate)
-                            : `Dal ${formatDate(request.startDate)} al ${formatDate(request.endDate)}`
-                          }
+                          {request.permissionDate ? formatDate(request.permissionDate) : 'Data non disponibile'}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
                         <span>
                           {request.hours ? 
-                            formatHoursWithTime(request.hours, request.permissionDate ? new Date(request.permissionDate).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : null) :
+                            formatHoursReadable(request.hours) :
                             `${calculateDays(request.startDate, request.endDate)} giorni`
                           }
                         </span>

@@ -446,15 +446,20 @@ const Dashboard = () => {
           {currentAttendance.length > 0 ? (
             <div className="space-y-3">
               {currentAttendance.map((person) => {
-                const clockInTime = new Date(person.clock_in);
+                const isPresent = person.clock_in && !person.clock_out;
+                const clockInTime = person.clock_in ? new Date(person.clock_in) : null;
                 const now = new Date();
-                const hoursWorked = ((now - clockInTime) / (1000 * 60 * 60)).toFixed(1);
+                const hoursWorked = isPresent && clockInTime ? 
+                  ((now - clockInTime) / (1000 * 60 * 60)).toFixed(1) : 
+                  person.hours_worked || 0;
                 
                 return (
-                  <div key={person.id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
+                  <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                          isPresent ? 'bg-green-500' : 'bg-slate-500'
+                        }`}>
                           <span className="text-white font-semibold text-sm">
                             {person.name.split(' ').map(n => n[0]).join('')}
                           </span>
@@ -465,12 +470,25 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-green-400 font-semibold">
-                          Entrato: {clockInTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        <div className="text-slate-400 text-sm">
-                          Ore lavorate: {hoursWorked}h
-                        </div>
+                        {isPresent ? (
+                          <>
+                            <div className="text-green-400 font-semibold">
+                              Entrato: {clockInTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            <div className="text-slate-400 text-sm">
+                              Ore lavorate: {hoursWorked}h
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-slate-400 font-semibold">
+                              Non presente
+                            </div>
+                            <div className="text-slate-500 text-sm">
+                              Non ha fatto entrata
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

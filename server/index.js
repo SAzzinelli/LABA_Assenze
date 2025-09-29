@@ -905,27 +905,46 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
 
     const today = new Date().toISOString().split('T')[0];
     
-    // Get people who checked in today but haven't checked out
-    const { data: currentAttendance, error } = await supabase
-      .from('attendance')
-      .select(`
-        *,
-        users!inner(first_name, last_name, department)
-      `)
-      .eq('date', today)
-      .not('clock_in', 'is', null)
-      .is('clock_out', null)
-      .order('clock_in');
-
-    if (error) {
-      console.error('Current attendance error:', error);
-      return res.status(500).json({ error: 'Errore nel recupero delle presenze attuali' });
+    // Get all users and their attendance status for today
+    const { data: allUsers, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, department')
+      .neq('role', 'admin');
+    
+    if (usersError) {
+      console.error('Users error:', usersError);
+      return res.status(500).json({ error: 'Errore nel recupero degli utenti' });
     }
 
+    // Get attendance records for today
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('date', today);
+    
+    if (attendanceError) {
+      console.error('Attendance error:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
+    }
+
+    // Combine users with their attendance status
+    const currentAttendance = allUsers.map(user => {
+      const attendance = attendanceRecords.find(att => att.user_id === user.id);
+      return {
+        id: attendance?.id || null,
+        user_id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        department: user.department || 'Non specificato',
+        clock_in: attendance?.clock_in || null,
+        clock_out: attendance?.clock_out || null,
+        hours_worked: attendance?.hours_worked || 0
+      };
+    });
+
+    // Calcola ore lavorate per chi ha fatto clock-in
     const formatted = currentAttendance.map(att => {
-      // Calcola ore lavorate se non presente
       let hoursWorked = att.hours_worked;
-      if (!hoursWorked && att.clock_in) {
+      if (att.clock_in && !att.clock_out) {
         const clockInTime = new Date(att.clock_in);
         const now = new Date();
         const diffMs = now - clockInTime;
@@ -933,12 +952,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       }
 
       return {
-        id: att.id,
-        user_id: att.user_id,
-        name: `${att.users.first_name} ${att.users.last_name}`,
-        department: att.users.department || 'Non specificato',
-        clock_in: att.clock_in,
-        clock_out: att.clock_out,
+        ...att,
         hours_worked: hoursWorked
       };
     });
