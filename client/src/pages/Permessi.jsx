@@ -24,10 +24,10 @@ const LeaveRequests = () => {
   const { user } = useAuthStore();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
-    type: 'permission',
+    type: 'uscita_anticipata', // USCITA ANTICIPATA o ENTRATA_POSTICIPATA
     permissionDate: '',
-    permissionType: 'entrata_dopo', // entrata_dopo, uscita_prima
-    hours: '',
+    exitTime: '', // Orario di uscita per uscita anticipata
+    entryTime: '', // Orario di entrata per entrata posticipata
     notes: ''
   });
 
@@ -79,18 +79,42 @@ const LeaveRequests = () => {
     }));
   };
 
+  // Calcola automaticamente le ore di permesso
+  const calculatePermissionHours = () => {
+    if (formData.type === 'uscita_anticipata' && formData.exitTime) {
+      // Orario normale: 9-18, se esce prima calcola la differenza
+      const normalExitTime = 18; // 18:00
+      const exitTime = parseFloat(formData.exitTime.replace(':', '.'));
+      const hoursDiff = normalExitTime - exitTime;
+      return Math.max(0, hoursDiff);
+    } else if (formData.type === 'entrata_posticipata' && formData.entryTime) {
+      // Orario normale: 9-18, se entra dopo calcola la differenza
+      const normalEntryTime = 9; // 9:00
+      const entryTime = parseFloat(formData.entryTime.replace(':', '.'));
+      const hoursDiff = entryTime - normalEntryTime;
+      return Math.max(0, hoursDiff);
+    }
+    return 0;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Controlla limite permessi 104
-    if (formData.type === 'permission_104' && permissions104.remaining <= 0) {
-      alert('Hai raggiunto il limite massimo di 3 permessi 104 al mese');
+    // Calcola automaticamente le ore di permesso
+    const calculatedHours = calculatePermissionHours();
+    
+    if (calculatedHours <= 0) {
+      alert('Inserisci un orario valido per calcolare le ore di permesso');
       return;
     }
     
     const newRequest = {
+      type: formData.type,
+      permissionDate: formData.permissionDate,
+      permissionType: formData.type === 'uscita_anticipata' ? 'uscita_prima' : 'entrata_dopo',
+      hours: calculatedHours,
+      notes: formData.notes,
       id: Date.now(),
-      ...formData,
       status: 'pending',
       submittedAt: new Date().toISOString(),
       submittedBy: user?.firstName + ' ' + user?.lastName
@@ -98,26 +122,21 @@ const LeaveRequests = () => {
     
     setRequests(prev => [newRequest, ...prev]);
     setFormData({
-      type: 'permission',
+      type: 'uscita_anticipata',
       permissionDate: '',
-      permissionType: 'entrata_dopo',
-      hours: '',
+      exitTime: '',
+      entryTime: '',
       notes: ''
     });
     setShowNewRequest(false);
-    
-    // Aggiorna i permessi 104 se necessario
-    if (formData.type === 'permission_104') {
-      fetchPermissions104();
-    }
   };
 
   const handleCancel = () => {
     setFormData({
-      type: 'permission',
+      type: 'uscita_anticipata',
       permissionDate: '',
-      permissionType: 'entrata_dopo',
-      hours: '',
+      exitTime: '',
+      entryTime: '',
       notes: ''
     });
     setShowNewRequest(false);
@@ -386,66 +405,77 @@ const LeaveRequests = () => {
                   required
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="permission">Permesso</option>
-                  <option value="leave">Congedo</option>
-                  <option value="emergency">Emergenza</option>
+                  <option value="uscita_anticipata">USCITA ANTICIPATA</option>
+                  <option value="entrata_posticipata">ENTRATA POSTICIPATA</option>
                   {user?.has104 && (
                     <option value="permission_104">Permesso 104</option>
                   )}
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Data Permesso *
+                </label>
+                <input
+                  type="date"
+                  name="permissionDate"
+                  value={formData.permissionDate}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {formData.type === 'uscita_anticipata' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Data Permesso *
+                    Orario di Uscita *
                   </label>
                   <input
-                    type="date"
-                    name="permissionDate"
-                    value={formData.permissionDate}
+                    type="time"
+                    name="exitTime"
+                    value={formData.exitTime}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                  <p className="text-slate-400 text-xs mt-1">
+                    Orario normale di uscita: 18:00. Le ore di permesso verranno calcolate automaticamente.
+                  </p>
                 </div>
+              )}
+
+              {formData.type === 'entrata_posticipata' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Tipo Permesso *
+                    Orario di Entrata *
                   </label>
-                  <select
-                    name="permissionType"
-                    value={formData.permissionType}
+                  <input
+                    type="time"
+                    name="entryTime"
+                    value={formData.entryTime}
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="entrata_dopo">Entrata dopo</option>
-                    <option value="uscita_prima">Uscita prima</option>
-                  </select>
+                  />
+                  <p className="text-slate-400 text-xs mt-1">
+                    Orario normale di entrata: 09:00. Le ore di permesso verranno calcolate automaticamente.
+                  </p>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ore di Permesso *
-                </label>
-                <input
-                  type="number"
-                  name="hours"
-                  value={formData.hours}
-                  onChange={handleInputChange}
-                  placeholder="Es. 2.5 (per 2 ore e 30 minuti)"
-                  min="0.5"
-                  max="8"
-                  step="0.5"
-                  required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="text-slate-400 text-xs mt-1">
-                  Inserisci le ore di permesso (es. 2.5 per 2 ore e 30 minuti)
-                </p>
-              </div>
+              {/* Mostra ore calcolate automaticamente */}
+              {calculatePermissionHours() > 0 && (
+                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 text-indigo-400 mr-2" />
+                    <span className="text-indigo-300 font-medium">
+                      Ore di permesso calcolate: {calculatePermissionHours().toFixed(1)}h
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Avviso permessi 104 */}
               {formData.type === 'permission_104' && user?.has104 && (
