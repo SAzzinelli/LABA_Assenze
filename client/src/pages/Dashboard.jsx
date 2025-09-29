@@ -45,6 +45,14 @@ const Dashboard = () => {
       }, 30000); // 30 secondi
       
       return () => clearInterval(interval);
+    } else {
+      // Per utenti: carica KPI iniziali e aggiorna ogni minuto
+      fetchUserKPIs();
+      const interval = setInterval(() => {
+        fetchUserKPIs();
+      }, 60000); // 1 minuto
+      
+      return () => clearInterval(interval);
     }
   }, [user?.role]);
 
