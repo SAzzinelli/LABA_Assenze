@@ -262,41 +262,41 @@ const MonteOre = () => {
 
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Totale Maturate</p>
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatHours(overtimeBalance.total_accrued)}</p>
+              <p className="text-sm font-medium text-gray-300">Totale Maturate</p>
+              <p className="text-2xl font-bold text-green-400">{formatHours(overtimeBalance.total_accrued)}</p>
             </div>
             <TrendingUp className="w-8 h-8 text-green-500" />
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Totale Usate</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatHours(overtimeBalance.total_used)}</p>
+              <p className="text-sm font-medium text-gray-300">Totale Usate</p>
+              <p className="text-2xl font-bold text-red-400">{formatHours(overtimeBalance.total_used)}</p>
             </div>
             <TrendingDown className="w-8 h-8 text-red-500" />
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Saldo Attuale</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatHours(overtimeBalance.current_balance)}</p>
+              <p className="text-sm font-medium text-gray-300">Saldo Attuale</p>
+              <p className="text-2xl font-bold text-blue-400">{formatHours(overtimeBalance.current_balance)}</p>
             </div>
             <Target className="w-8 h-8 text-blue-500" />
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">In Attesa</p>
-              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{formatHours(overtimeBalance.pending_requests)}</p>
+              <p className="text-sm font-medium text-gray-300">In Attesa</p>
+              <p className="text-2xl font-bold text-yellow-400">{formatHours(overtimeBalance.pending_requests)}</p>
             </div>
             <AlertCircle className="w-8 h-8 text-yellow-500" />
           </div>
@@ -304,20 +304,20 @@ const MonteOre = () => {
       </div>
 
       {/* Monthly Stats */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Statistiche Mensili</h3>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Statistiche Mensili</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Ore Maturate</p>
-            <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatHours(monthlyStats.accrued)}</p>
+            <p className="text-sm text-gray-300">Ore Maturate</p>
+            <p className="text-xl font-bold text-green-400">{formatHours(monthlyStats.accrued)}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Ore Usate</p>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatHours(monthlyStats.used)}</p>
+            <p className="text-sm text-gray-300">Ore Usate</p>
+            <p className="text-xl font-bold text-red-400">{formatHours(monthlyStats.used)}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-300">Bilancio Netto</p>
-            <p className={`text-xl font-bold ${monthlyStats.net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <p className="text-sm text-gray-300">Bilancio Netto</p>
+            <p className={`text-xl font-bold ${monthlyStats.net >= 0 ? 'text-green-400' : 'text-red-400'}`}>
               {formatHours(monthlyStats.net)}
             </p>
           </div>
@@ -325,7 +325,7 @@ const MonteOre = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
+      <div className="bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-700">
         <div className="flex gap-4 items-center">
           <Filter className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           <select
@@ -373,23 +373,23 @@ const MonteOre = () => {
       </div>
 
       {/* Transactions List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-gray-800 rounded-lg shadow-sm border border-gray-700">
+        <div className="p-6 border-b border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Movimenti Monte Ore</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <h3 className="text-lg font-semibold text-white">Movimenti Monte Ore</h3>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
               <History className="w-4 h-4" />
               <span>{transactions.length} movimenti</span>
             </div>
           </div>
         </div>
         
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="divide-y divide-gray-700">
           {transactions.length === 0 ? (
             <div className="p-8 text-center">
-              <Clock className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Nessun movimento trovato</h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">Inizia aggiungendo ore di straordinario</p>
+              <Clock className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">Nessun movimento trovato</h3>
+              <p className="text-gray-400 mb-4">Inizia aggiungendo ore di straordinario</p>
               <button
                 onClick={() => {
                   setModalType('add');

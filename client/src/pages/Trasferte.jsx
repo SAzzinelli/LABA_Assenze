@@ -255,7 +255,7 @@ const Trasferte = () => {
       </div>
 
       {/* Filtri */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
+      <div className="bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-700">
         <div className="flex gap-4 items-center">
           <Filter className="w-5 h-5 text-gray-500" />
           <select
