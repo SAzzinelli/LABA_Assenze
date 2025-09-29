@@ -160,7 +160,7 @@ const LeaveRequests = () => {
           endDate: formData.permissionDate,
           reason: formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata',
           notes: formData.notes,
-          permissionType: formData.type,
+          permissionType: formData.type === 'uscita_anticipata' ? 'uscita_anticipata' : 'entrata_posticipata',
           hours: calculatedHours,
           exitTime: formData.exitTime,
           entryTime: formData.entryTime
@@ -312,10 +312,12 @@ const LeaveRequests = () => {
   // Ottieni il tipo di richiesta dettagliato per i permessi
   const getPermissionTypeText = (request) => {
     if (request.type === 'permission' || request.type === 'permission_104') {
-      if (request.permissionType === 'uscita_prima') {
+      if (request.permissionType === 'uscita_anticipata') {
         return 'Uscita Anticipata';
-      } else if (request.permissionType === 'entrata_dopo') {
+      } else if (request.permissionType === 'entrata_posticipata') {
         return 'Entrata Posticipata';
+      } else if (request.permissionType === 'permesso_104') {
+        return 'Permesso 104';
       }
     }
     return getTypeText(request.type);

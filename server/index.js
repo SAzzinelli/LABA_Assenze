@@ -1217,6 +1217,12 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       approvedAt: req.approved_at,
       approvedBy: req.approved_by,
       notes: req.notes,
+      // Campi specifici per permessi
+      permissionType: req.permission_type,
+      hours: req.hours,
+      exitTime: req.exit_time,
+      entryTime: req.entry_time,
+      permissionDate: req.start_date, // Per compatibilità
       user: {
         id: req.users.id,
         name: `${req.users.first_name} ${req.users.last_name}`,
@@ -1235,7 +1241,7 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
 // Create leave request
 app.post('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
-    const { type, startDate, endDate, reason, notes } = req.body;
+    const { type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime } = req.body;
 
     // Validation
     if (!type || !startDate || !endDate) {
@@ -1243,7 +1249,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     }
     
     // Reason is required only for certain types
-    if (type !== 'vacation' && !reason) {
+    if (type !== 'vacation' && type !== 'permission' && !reason) {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
@@ -1257,7 +1263,12 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           end_date: endDate,
           reason: reason || (type === 'vacation' ? 'Ferie' : ''),
           notes: notes || '',
-          status: 'pending'
+          status: 'pending',
+          // Campi specifici per permessi
+          permission_type: permissionType,
+          hours: hours,
+          exit_time: exitTime,
+          entry_time: entryTime
         }
       ])
       .select()
@@ -1956,21 +1967,32 @@ app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res)
     // Get attendance records for current week
     const { data: weeklyAttendance, error } = await supabase
       .from('attendance')
-      .select('hours_worked')
+      .select('hours_worked, clock_in, clock_out, date')
       .eq('user_id', userId)
       .gte('date', startOfWeek.toISOString().split('T')[0])
-      .lte('date', endOfWeek.toISOString().split('T')[0])
-      .not('hours_worked', 'is', null);
+      .lte('date', endOfWeek.toISOString().split('T')[0]);
     
     if (error) {
       console.error('Weekly hours error:', error);
       return res.status(500).json({ error: 'Errore nel calcolo delle ore settimanali' });
     }
     
-    // Calculate total hours
-    const totalHours = weeklyAttendance.reduce((sum, record) => {
-      return sum + (parseFloat(record.hours_worked) || 0);
-    }, 0);
+    // Calculate total hours including current session
+    let totalHours = 0;
+    const today = new Date().toISOString().split('T')[0];
+    
+    weeklyAttendance.forEach(record => {
+      if (record.hours_worked) {
+        // Use saved hours
+        totalHours += parseFloat(record.hours_worked) || 0;
+      } else if (record.clock_in && !record.clock_out && record.date === today) {
+        // Calculate current session hours
+        const clockInTime = new Date(record.clock_in);
+        const now = new Date();
+        const currentHours = (now - clockInTime) / (1000 * 60 * 60);
+        totalHours += currentHours;
+      }
+    });
     
     res.json({ 
       success: true, 
