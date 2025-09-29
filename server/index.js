@@ -1168,8 +1168,13 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     const { type, startDate, endDate, reason, notes } = req.body;
 
     // Validation
-    if (!type || !startDate || !endDate || !reason) {
+    if (!type || !startDate || !endDate) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+    
+    // Reason is required only for certain types
+    if (type !== 'vacation' && !reason) {
+      return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
     const { data: newRequest, error } = await supabase
@@ -1180,7 +1185,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           type: type, // 'permission', 'sick', 'vacation'
           start_date: startDate,
           end_date: endDate,
-          reason: reason,
+          reason: reason || (type === 'vacation' ? 'Ferie' : ''),
           notes: notes || '',
           status: 'pending'
         }
