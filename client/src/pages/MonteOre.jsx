@@ -79,44 +79,11 @@ const MonteOre = () => {
         const data = await transactionsResponse.json();
         setTransactions(data);
       } else {
-        // Dati di esempio per demo
-        setTransactions([
-          {
-            id: 1,
-            transaction_type: 'accrual',
-            hours: 4,
-            transaction_date: '2025-01-15',
-            reason: 'Straordinario progetto urgente',
-            period_year: 2025,
-            period_month: 1
-          },
-          {
-            id: 2,
-            transaction_type: 'usage',
-            hours: 2,
-            transaction_date: '2025-01-20',
-            reason: 'Permesso recupero ore',
-            period_year: 2025,
-            period_month: 1
-          },
-          {
-            id: 3,
-            transaction_type: 'accrual',
-            hours: 6,
-            transaction_date: '2025-02-10',
-            reason: 'Straordinario fine settimana',
-            period_year: 2025,
-            period_month: 2
-          }
-        ]);
-        
-        // Calcola saldo di esempio
-        const totalAccrued = transactions.reduce((sum, t) => t.transaction_type === 'accrual' ? sum + t.hours : sum, 0);
-        const totalUsed = transactions.reduce((sum, t) => t.transaction_type === 'usage' ? sum + t.hours : sum, 0);
+        setTransactions([]);
         setOvertimeBalance({
-          total_accrued: totalAccrued,
-          total_used: totalUsed,
-          current_balance: totalAccrued - totalUsed,
+          total_accrued: 0,
+          total_used: 0,
+          current_balance: 0,
           pending_requests: 0
         });
       }

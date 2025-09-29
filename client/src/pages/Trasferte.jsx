@@ -64,33 +64,7 @@ const Trasferte = () => {
         setTrips(data);
       } else {
         console.error('Errore nel recupero delle trasferte');
-        // Dati di esempio per demo
-        setTrips([
-          {
-            id: 1,
-            destination: 'Milano - Fiera del Mobile',
-            purpose: 'Partecipazione fiera commerciale',
-            departure_date: '2025-03-15',
-            return_date: '2025-03-17',
-            travel_hours: 8,
-            event_hours: 16,
-            total_hours: 24,
-            status: 'pending',
-            notes: 'Trasferta per fiera del mobile'
-          },
-          {
-            id: 2,
-            destination: 'Roma - Meeting cliente',
-            purpose: 'Presentazione progetto',
-            departure_date: '2025-04-10',
-            return_date: '2025-04-10',
-            travel_hours: 4,
-            event_hours: 4,
-            total_hours: 8,
-            status: 'approved',
-            notes: 'Meeting con cliente importante'
-          }
-        ]);
+        setTrips([]);
       }
     } catch (error) {
       console.error('Errore:', error);
