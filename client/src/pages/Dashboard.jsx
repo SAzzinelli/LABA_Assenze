@@ -185,67 +185,28 @@ const Dashboard = () => {
     }
   };
 
-  const handleClockIn = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await apiCall('/api/attendance/clock-in', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
+      const response = await apiCall('/api/dashboard/stats');
       if (response.ok) {
         const data = await response.json();
-        alert(data.message);
-        fetchDashboardData(); // Aggiorna i dati della dashboard
-        fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
-        fetchUserStats(); // Aggiorna stato timbratura
-        fetchAttendance(); // Aggiorna cronologia presenze
-      } else {
-        const error = await response.json();
-        alert(error.error);
+        setStats(data);
       }
     } catch (error) {
-      console.error('Clock in error:', error);
-      alert('Errore durante la timbratura di entrata');
+      console.error('Error fetching dashboard stats:', error);
     }
   };
 
-  const handleClockOut = async () => {
+  const fetchCurrentAttendance = async () => {
     try {
-      const response = await apiCall('/api/attendance/clock-out', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiCall(`/api/attendance?date=${today}`);
       if (response.ok) {
         const data = await response.json();
-        alert(data.message);
-        fetchDashboardData(); // Aggiorna i dati della dashboard
-        fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
-        fetchUserStats(); // Aggiorna stato timbratura
-        fetchAttendance(); // Aggiorna cronologia presenze
-      } else {
-        const error = await response.json();
-        alert(error.error);
+        setCurrentAttendance(data);
       }
     } catch (error) {
-      console.error('Clock out error:', error);
-      alert('Errore durante la timbratura di uscita');
-    }
-  };
-
-  const fetchUserStats = async () => {
-    try {
-      const response = await apiCall('/api/attendance/user-stats');
-      if (response.ok) {
-        const data = await response.json();
-        setUserStats(data);
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('Error fetching current attendance:', error);
     }
   };
 
@@ -326,12 +287,12 @@ const Dashboard = () => {
     },
     {
       title: 'Saldo Ore',
-      value: userKPIs.overtimeBalance,
+      value: stats.monthlyBalance ? `${stats.monthlyBalance > 0 ? '+' : ''}${stats.monthlyBalance}h` : '0h',
       icon: Activity,
-      color: 'green',
+      color: stats.monthlyBalance > 0 ? 'green' : stats.monthlyBalance < 0 ? 'red' : 'blue',
       change: '+0h 0m',
       changeType: 'positive',
-      subtitle: 'Straordinari'
+      subtitle: 'Monte ore mensile'
     },
     {
       title: 'Permessi Rimanenti',
@@ -434,12 +395,9 @@ const Dashboard = () => {
           {currentAttendance.length > 0 ? (
             <div className="space-y-3">
               {currentAttendance.map((person) => {
-                const isPresent = person.clock_in && !person.clock_out;
-                const clockInTime = person.clock_in ? new Date(person.clock_in) : null;
-                const now = new Date();
-                const hoursWorked = isPresent && clockInTime ? 
-                  ((now - clockInTime) / (1000 * 60 * 60)).toFixed(1) : 
-                  person.hours_worked || 0;
+                const isPresent = !person.is_absent && person.expected_hours > 0;
+                const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
+                                   person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
                 
                 return (
                   <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
@@ -449,31 +407,38 @@ const Dashboard = () => {
                           isPresent ? 'bg-green-500' : 'bg-slate-500'
                         }`}>
                           <span className="text-white font-semibold text-sm">
-                            {person.name.split(' ').map(n => n[0]).join('')}
+                            {person.users ? person.users.first_name[0] + person.users.last_name[0] : 'N/A'}
                           </span>
                         </div>
                         <div>
-                          <h4 className="text-white font-semibold">{person.name}</h4>
-                          <p className="text-slate-400 text-sm">{person.department}</p>
+                          <h4 className="text-white font-semibold">
+                            {person.users ? `${person.users.first_name} ${person.users.last_name}` : 'N/A'}
+                          </h4>
+                          <p className="text-slate-400 text-sm">
+                            {person.users ? person.users.email : 'N/A'}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
                         {isPresent ? (
                           <>
                             <div className="text-green-400 font-semibold">
-                              Entrato: {clockInTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                              Presente
                             </div>
                             <div className="text-slate-400 text-sm">
-                              Ore lavorate: {hoursWorked}h
+                              Ore attese: {person.expected_hours}h
+                            </div>
+                            <div className={`text-sm font-semibold ${balanceColor}`}>
+                              Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
                             </div>
                           </>
                         ) : (
                           <>
                             <div className="text-slate-400 font-semibold">
-                              Non presente
+                              {person.is_absent ? 'Assente' : 'Non lavorativo'}
                             </div>
                             <div className="text-slate-500 text-sm">
-                              Non ha fatto entrata
+                              {person.absence_reason || 'Giorno non lavorativo'}
                             </div>
                           </>
                         )}
@@ -486,7 +451,7 @@ const Dashboard = () => {
           ) : (
             <div className="text-center py-8">
               <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400">Nessuno presente in ufficio al momento</p>
+              <p className="text-slate-400">Nessun record di presenza per oggi</p>
             </div>
           )}
           </div>

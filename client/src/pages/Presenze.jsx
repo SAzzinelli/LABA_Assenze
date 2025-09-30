@@ -1,34 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, MapPin } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
   const [attendance, setAttendance] = useState([]);
-  const [userStats, setUserStats] = useState({
-    isClockedIn: false,
-    todayHours: '0h 0m',
-    monthlyPresences: 0,
-    expectedMonthlyPresences: 20,
-    workplace: 'LABA Firenze - Sede Via Vecchietti'
+  const [hoursBalance, setHoursBalance] = useState({
+    total_balance: 0,
+    overtime_hours: 0,
+    deficit_hours: 0,
+    working_days: 0,
+    absent_days: 0
   });
+  const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedLocation, setSelectedLocation] = useState('');
-
-  // Opzioni sedi disponibili
-  const locationOptions = [
-    { value: 'badia', label: 'Piazza di Badia a Ripoli 1/A' },
-    { value: 'vecchietti', label: 'Via de\' Vecchietti 6' }
-  ];
 
   useEffect(() => {
     fetchAttendance();
-    fetchUserStats();
+    fetchHoursBalance();
+    fetchWorkSchedules();
+    
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-      fetchUserStats(); // Update stats every second for real-time hours
     }, 1000);
+    
     return () => clearInterval(timer);
   }, []);
 
@@ -49,319 +45,313 @@ const Attendance = () => {
     }
   };
 
-  const fetchUserStats = async () => {
+  const fetchHoursBalance = async () => {
     try {
-      const response = await apiCall('/api/attendance/user-stats');
+      const currentDate = new Date();
+      const response = await apiCall(`/api/attendance/hours-balance?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
       if (response.ok) {
         const data = await response.json();
-        setUserStats(data);
-        
-        // Imposta la sede predefinita basata sul workplace dell'utente
-        const defaultLocation = getDefaultLocationFromWorkplace(data.workplace);
-        setSelectedLocation(defaultLocation);
+        setHoursBalance(data);
       }
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('Error fetching hours balance:', error);
     }
   };
 
-  const handleClockIn = async () => {
+  const fetchWorkSchedules = async () => {
     try {
-      const response = await apiCall('/api/attendance/clock-in', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
+      const response = await apiCall('/api/work-schedules');
       if (response.ok) {
         const data = await response.json();
-        alert(data.message);
-        fetchUserStats(); // Aggiorna le statistiche
-        fetchAttendance(); // Aggiorna la lista presenze
-      } else {
-        const error = await response.json();
-        alert(error.error);
+        setWorkSchedules(data);
       }
     } catch (error) {
-      console.error('Clock in error:', error);
-      alert('Errore durante la timbratura di entrata');
+      console.error('Error fetching work schedules:', error);
     }
   };
 
-  const handleClockOut = async () => {
-    try {
-      const response = await apiCall('/api/attendance/clock-out', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        alert(data.message);
-        fetchUserStats(); // Aggiorna le statistiche
-        fetchAttendance(); // Aggiorna la lista presenze
-      } else {
-        const error = await response.json();
-        alert(error.error);
-      }
-    } catch (error) {
-      console.error('Clock out error:', error);
-      alert('Errore durante la timbratura di uscita');
-    }
-  };
-
-  // Funzione per determinare la sede predefinita dal workplace
-  const getDefaultLocationFromWorkplace = (workplace) => {
-    if (!workplace) return 'vecchietti'; // Default
-    
-    // Se workplace è già un valore (badia/vecchietti)
-    if (workplace === 'badia' || workplace === 'vecchietti') {
-      return workplace;
-    }
-    
-    // Se workplace è una stringa completa, convertila
-    const workplaceLower = workplace.toLowerCase();
-    if (workplaceLower.includes('badia') || workplaceLower.includes('ripoli')) {
-      return 'badia';
-    } else if (workplaceLower.includes('vecchietti')) {
-      return 'vecchietti';
-    }
-    
-    return 'vecchietti'; // Default fallback
-  };
-
-  // Funzione per ottenere il label della sede selezionata
-  const getSelectedLocationLabel = () => {
-    const location = locationOptions.find(loc => loc.value === selectedLocation);
-    return location ? location.label : 'Seleziona sede';
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('it-IT', { 
+  const formatTime = (time) => {
+    return time ? new Date(time).toLocaleTimeString('it-IT', { 
       hour: '2-digit', 
       minute: '2-digit' 
-    });
+    }) : '--:--';
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', { 
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  const formatHours = (hours) => {
+    if (hours === null || hours === undefined) return '0h 0m';
+    const h = Math.floor(Math.abs(hours));
+    const m = Math.round((Math.abs(hours) - h) * 60);
+    return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
   };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'present': return 'text-green-400';
+      case 'absent': return 'text-red-400';
+      case 'holiday': return 'text-blue-400';
+      case 'non_working_day': return 'text-gray-400';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'present': return 'Presente';
+      case 'absent': return 'Assente';
+      case 'holiday': return 'Festivo';
+      case 'non_working_day': return 'Non lavorativo';
+      default: return 'Sconosciuto';
+    }
+  };
+
+  const getBalanceColor = (balance) => {
+    if (balance > 0) return 'text-green-400';
+    if (balance < 0) return 'text-red-400';
+    return 'text-gray-400';
+  };
+
+  const getBalanceIcon = (balance) => {
+    if (balance > 0) return <TrendingUp className="h-4 w-4" />;
+    if (balance < 0) return <TrendingDown className="h-4 w-4" />;
+    return <Clock className="h-4 w-4" />;
+  };
+
+  const getTodaySchedule = () => {
+    const today = new Date().getDay();
+    return workSchedules.find(schedule => schedule.day_of_week === today);
+  };
+
+  const todaySchedule = getTodaySchedule();
+  const todayAttendance = attendance.find(record => 
+    new Date(record.date).toDateString() === new Date().toDateString()
+  );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-white text-xl">Caricamento...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center">
-              <Clock className="h-8 w-8 mr-3 text-green-400" />
-              Presenze
-            </h1>
-            <p className="text-slate-400 mt-2">
-              Gestisci le tue presenze e timbrature
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-white">
-              {formatTime(currentTime)}
+    <div className="min-h-screen bg-slate-900 text-white p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Presenze</h1>
+          <p className="text-slate-400">
+            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(hoursBalance.total_balance)}
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Monte Ore Mensile */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Monte Ore Mensile</p>
+                <p className={`text-2xl font-bold ${getBalanceColor(hoursBalance.total_balance)}`}>
+                  {formatHours(hoursBalance.total_balance)}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${getBalanceColor(hoursBalance.total_balance)}`}>
+                {getBalanceIcon(hoursBalance.total_balance)}
+              </div>
             </div>
-            <div className="text-slate-400 text-sm">
-              {currentTime.toLocaleDateString('it-IT')}
+          </div>
+
+          {/* Ore Straordinario */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Straordinari</p>
+                <p className="text-2xl font-bold text-green-400">
+                  {formatHours(hoursBalance.overtime_hours)}
+                </p>
+              </div>
+              <div className="p-3 rounded-full text-green-400">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Ore Deficit */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Deficit</p>
+                <p className="text-2xl font-bold text-red-400">
+                  {formatHours(hoursBalance.deficit_hours)}
+                </p>
+              </div>
+              <div className="p-3 rounded-full text-red-400">
+                <TrendingDown className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Giorni Lavorativi */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Giorni Lavorativi</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {hoursBalance.working_days}
+                </p>
+              </div>
+              <div className="p-3 rounded-full text-blue-400">
+                <Calendar className="h-4 w-4" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Timbratura</h3>
+        {/* Today's Status */}
+        <div className="bg-slate-800 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-bold mb-4 flex items-center">
+            <Clock className="h-5 w-5 mr-2" />
+            Stato Oggi
+          </h2>
           
-          {/* Dropdown Selezione Sede */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-              <MapPin className="h-4 w-4 mr-2 text-indigo-400" />
-              Sede di Lavoro
-            </label>
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {locationOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Orario di Lavoro */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Orario di Lavoro</h3>
+              {todaySchedule && todaySchedule.is_working_day ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Inizio:</span>
+                    <span className="font-mono">{todaySchedule.start_time}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Fine:</span>
+                    <span className="font-mono">{todaySchedule.end_time}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Pausa:</span>
+                    <span className="font-mono">{todaySchedule.break_duration} min</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-700 pt-2">
+                    <span className="text-slate-400">Ore Attese:</span>
+                    <span className="font-bold text-green-400">
+                      {formatHours(todaySchedule.expected_hours || 8)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-slate-400">
+                  <p>Giorno non lavorativo</p>
+                </div>
+              )}
+            </div>
 
-          {/* Pulsanti Timbratura */}
-          <div className="space-y-4">
-            <button 
-              onClick={handleClockIn}
-              disabled={userStats.isClockedIn}
-              className={`w-full font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
-                userStats.isClockedIn 
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <CheckCircle className="h-5 w-5 mr-2" />
-              {userStats.isClockedIn ? 'Già Entrato' : 'Timbra Entrata'}
-            </button>
-            <button 
-              onClick={handleClockOut}
-              disabled={!userStats.isClockedIn}
-              className={`w-full font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center ${
-                !userStats.isClockedIn 
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-              }`}
-            >
-              <XCircle className="h-5 w-5 mr-2" />
-              {!userStats.isClockedIn ? 'Non Entrato' : 'Timbra Uscita'}
-            </button>
+            {/* Stato Presenza */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Stato Presenza</h3>
+              {todayAttendance ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Stato:</span>
+                    <span className={`font-semibold ${getStatusColor(todayAttendance.status)}`}>
+                      {getStatusText(todayAttendance.status)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Ore Attese:</span>
+                    <span className="font-mono">{formatHours(todayAttendance.expected_hours)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Ore Effettive:</span>
+                    <span className="font-mono">{formatHours(todayAttendance.actual_hours)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-700 pt-2">
+                    <span className="text-slate-400">Saldo Ore:</span>
+                    <span className={`font-bold ${getBalanceColor(todayAttendance.balance_hours)}`}>
+                      {formatHours(todayAttendance.balance_hours)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-slate-400">
+                  <p>Nessun record per oggi</p>
+                </div>
+              )}
+            </div>
           </div>
-
         </div>
 
+        {/* Attendance History */}
         <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Stato Attuale</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Oggi</span>
-              <span className={`font-medium ${userStats.isClockedIn ? 'text-green-400' : 'text-red-400'}`}>
-                {userStats.isClockedIn ? 'Timbrato' : 'Non timbrato'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Ore lavorate</span>
-              <span className="text-white font-medium">{userStats.todayHours}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-slate-300">Presenze questo mese</span>
-              <span className="text-white font-medium">
-                {userStats.monthlyPresences}/{userStats.expectedMonthlyPresences}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Attendance History */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <div className="p-6 border-b border-slate-700">
-          <h3 className="text-lg font-semibold text-white flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-indigo-400" />
+          <h2 className="text-xl font-bold mb-4 flex items-center">
+            <Calendar className="h-5 w-5 mr-2" />
             Cronologia Presenze
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-700">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Data
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Entrata
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Uscita
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Ore Lavorate
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Stato
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {attendance.length > 0 ? (
-                attendance.map((record) => (
-                  <tr key={record.id} className="hover:bg-slate-700/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">
-                        {formatDate(record.date)}
-                      </div>
+          </h2>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-left py-3 px-4">Data</th>
+                  <th className="text-left py-3 px-4">Stato</th>
+                  <th className="text-left py-3 px-4">Ore Attese</th>
+                  <th className="text-left py-3 px-4">Ore Effettive</th>
+                  <th className="text-left py-3 px-4">Saldo Ore</th>
+                  <th className="text-left py-3 px-4">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attendance.slice(0, 10).map((record) => (
+                  <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                    <td className="py-3 px-4">
+                      {new Date(record.date).toLocaleDateString('it-IT')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-300 flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                        {record.clock_in ? formatTime(record.clock_in) : '-'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-300 flex items-center">
-                        {record.clock_out ? (
-                          <>
-                            <XCircle className="h-4 w-4 mr-2 text-red-400" />
-                            {formatTime(record.clock_out)}
-                          </>
-                        ) : (
-                          <span className="text-slate-500">Non timbrato</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-300">
-                        {record.hours_worked ? `${record.hours_worked.toFixed(1)}h` : '-'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        record.clock_in && record.clock_out 
-                          ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
-                          : 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
-                      }`}>
-                        {record.clock_in && record.clock_out ? 'Completato' : 'Incompleto'}
+                    <td className="py-3 px-4">
+                      <span className={`font-semibold ${getStatusColor(record.status)}`}>
+                        {getStatusText(record.status)}
                       </span>
                     </td>
+                    <td className="py-3 px-4 font-mono">
+                      {formatHours(record.expected_hours)}
+                    </td>
+                    <td className="py-3 px-4 font-mono">
+                      {formatHours(record.actual_hours)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`font-bold ${getBalanceColor(record.balance_hours)}`}>
+                        {formatHours(record.balance_hours)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-slate-400">
+                      {record.notes || '-'}
+                    </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-4">
-                      <Calendar className="h-12 w-12 text-slate-500" />
-                      <div className="text-slate-400">
-                        <h3 className="text-lg font-medium text-slate-300 mb-2">
-                          Nessuna presenza registrata
-                        </h3>
-                        <p className="text-sm">
-                          Le tue presenze appariranno qui dopo aver effettuato le prime timbrature.
-                        </p>
-                        <p className="text-xs text-slate-500 mt-2">
-                          Usa i pulsanti "Timbra Entrata" e "Timbra Uscita" per iniziare a tracciare le tue ore di lavoro.
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {attendance.length === 0 && (
+            <div className="text-center py-8 text-slate-400">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nessun record di presenza trovato</p>
+            </div>
+          )}
+        </div>
+
+        {/* Info Box */}
+        <div className="mt-8 bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-300 mb-3 flex items-center">
+            <Users className="h-5 w-5 mr-2" />
+            Come Funziona il Sistema
+          </h3>
+          <div className="text-slate-300 space-y-2">
+            <p>• <strong>Presenza Automatica:</strong> Sei considerato presente in base al tuo orario di lavoro</p>
+            <p>• <strong>Monte Ore:</strong> Parti da 0 ore e accumuli ore positive (straordinari) o negative (deficit)</p>
+            <p>• <strong>Assenze:</strong> Solo quando hai richieste di permesso/malattia/ferie approvate</p>
+            <p>• <strong>Gestione Admin:</strong> Gli amministratori possono modificare ore effettive e contrassegnare straordinari</p>
+          </div>
         </div>
       </div>
     </div>

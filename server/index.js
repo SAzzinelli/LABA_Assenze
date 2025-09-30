@@ -665,7 +665,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   }
 });
 
-// ==================== ATTENDANCE ENDPOINTS ====================
+// ==================== ATTENDANCE ENDPOINTS (NUOVO SISTEMA SENZA TIMBRATURA) ====================
 
 // Get attendance records
 app.get('/api/attendance', authenticateToken, async (req, res) => {
@@ -674,7 +674,10 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     
     let query = supabase
       .from('attendance')
-      .select('*')
+      .select(`
+        *,
+        users!inner(first_name, last_name, email)
+      `)
       .order('date', { ascending: false });
 
     if (date) {
@@ -706,132 +709,220 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
   }
 });
 
-// Clock in
-app.post('/api/attendance/clock-in', authenticateToken, async (req, res) => {
+// Get monthly hours balance for a user
+app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'employee') {
-      return res.status(403).json({ error: 'Solo i dipendenti possono timbrare' });
+    const { year, month, userId } = req.query;
+    const targetUserId = userId || req.user.id;
+    
+    // Verifica permessi
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Check if already clocked in today
-    const { data: existingRecord } = await supabase
-      .from('attendance')
-      .select('id, clock_in, clock_out')
-      .eq('user_id', req.user.id)
-      .eq('date', today)
+    const { data: balance, error } = await supabase
+      .from('hours_balance')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('year', year || new Date().getFullYear())
+      .eq('month', month || new Date().getMonth() + 1)
       .single();
 
-    if (existingRecord && existingRecord.clock_in && !existingRecord.clock_out) {
-      return res.status(400).json({ error: 'Sei già entrato oggi' });
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('Hours balance fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero del monte ore' });
     }
 
-    const clockInTime = new Date().toISOString();
-    
-    if (existingRecord) {
-      // Update existing record
-      const { error } = await supabase
-        .from('attendance')
-        .update({
-          clock_in: clockInTime,
-          status: 'present'
-        })
-        .eq('id', existingRecord.id);
-
-      if (error) {
-        console.error('Clock in update error:', error);
-        return res.status(500).json({ error: 'Errore nel salvataggio' });
-      }
-    } else {
-      // Create new record
-      const { error } = await supabase
-        .from('attendance')
-        .insert([
-          {
-            user_id: req.user.id,
-            clock_in: clockInTime,
-            date: today,
-            status: 'present'
-          }
-        ]);
-
-      if (error) {
-        console.error('Clock in create error:', error);
-        return res.status(500).json({ error: 'Errore nel salvataggio' });
-      }
-    }
-
-    res.json({
-      success: true,
-      message: 'Entrata registrata',
-      clockInTime: clockInTime
+    res.json(balance || {
+      total_balance: 0,
+      overtime_hours: 0,
+      deficit_hours: 0,
+      working_days: 0,
+      absent_days: 0
     });
   } catch (error) {
-    console.error('Clock in error:', error);
+    console.error('Hours balance fetch error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
-// Clock out
-app.post('/api/attendance/clock-out', authenticateToken, async (req, res) => {
+// Update attendance record (for admin to mark overtime, early departure, etc.)
+app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'employee') {
-      return res.status(403).json({ error: 'Solo i dipendenti possono timbrare' });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Find today's record
-    const { data: record } = await supabase
+    const { id } = req.params;
+    const { 
+      actual_hours, 
+      is_overtime, 
+      is_early_departure, 
+      is_late_arrival, 
+      notes 
+    } = req.body;
+
+    // Calcola il saldo ore automaticamente
+    const { data: attendance } = await supabase
       .from('attendance')
-      .select('id, clock_in, clock_out')
-      .eq('user_id', req.user.id)
-      .eq('date', today)
+      .select('user_id, date, expected_hours')
+      .eq('id', id)
       .single();
 
-    if (!record || !record.clock_in || record.clock_out !== null) {
-      return res.status(400).json({ error: 'Non puoi uscire senza essere entrato' });
+    if (!attendance) {
+      return res.status(404).json({ error: 'Record di presenza non trovato' });
     }
 
-    const clockOutTime = new Date().toISOString();
-    const clockInTime = new Date(record.clock_in);
-    
-    // Calcola ore totali tra entrata e uscita
-    const totalHours = ((new Date(clockOutTime) - clockInTime) / (1000 * 60 * 60));
-    
-    // Calcola automaticamente la pausa pranzo
-    let lunchBreakHours = 0;
-    
-    // Se le ore totali sono >= 6 ore, applica automaticamente 1 ora di pausa pranzo
-    if (totalHours >= 6) {
-      lunchBreakHours = 1; // Pausa pranzo standard di 1 ora
-    }
-    
-    // Calcola ore lavorate sottraendo la pausa pranzo
-    const hoursWorked = (totalHours - lunchBreakHours).toFixed(2);
+    const balance_hours = actual_hours - attendance.expected_hours;
 
-    const { error } = await supabase
+    const { data: updatedAttendance, error } = await supabase
       .from('attendance')
       .update({
-        clock_out: clockOutTime,
-        hours_worked: parseFloat(hoursWorked)
+        actual_hours,
+        balance_hours,
+        is_overtime,
+        is_early_departure,
+        is_late_arrival,
+        notes
       })
-      .eq('id', record.id);
+      .eq('id', id)
+      .select()
+      .single();
 
     if (error) {
-      console.error('Clock out error:', error);
-      return res.status(500).json({ error: 'Errore nel salvataggio' });
+      console.error('Attendance update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+    }
+
+    // Aggiorna il monte ore mensile
+    const date = new Date(attendance.date);
+    await supabase.rpc('update_monthly_hours_balance', {
+      p_user_id: attendance.user_id,
+      p_year: date.getFullYear(),
+      p_month: date.getMonth() + 1
+    });
+
+    res.json({
+      success: true,
+      message: 'Presenza aggiornata con successo',
+      attendance: updatedAttendance
+    });
+  } catch (error) {
+    console.error('Attendance update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Generate automatic attendance for a period (admin only)
+app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { userId, startDate, endDate } = req.body;
+
+    if (!userId || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
+
+    // Genera presenze automatiche usando la funzione del database
+    const { error } = await supabase.rpc('generate_automatic_attendance', {
+      p_user_id: userId,
+      p_start_date: startDate,
+      p_end_date: endDate
+    });
+
+    if (error) {
+      console.error('Generate attendance error:', error);
+      return res.status(500).json({ error: 'Errore nella generazione delle presenze' });
     }
 
     res.json({
       success: true,
-      message: 'Uscita registrata',
-      clockOutTime: clockOutTime,
-      hoursWorked: hoursWorked
+      message: 'Presenze generate con successo'
     });
   } catch (error) {
-    console.error('Clock out error:', error);
+    console.error('Generate attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== WORK SCHEDULES ENDPOINTS ====================
+
+// Get work schedules for a user
+app.get('/api/work-schedules', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const targetUserId = userId || req.user.id;
+    
+    // Verifica permessi
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { data: schedules, error } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .order('day_of_week');
+
+    if (error) {
+      console.error('Work schedules fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero degli orari' });
+    }
+
+    res.json(schedules);
+  } catch (error) {
+    console.error('Work schedules fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Create or update work schedule
+app.post('/api/work-schedules', authenticateToken, async (req, res) => {
+  try {
+    const { userId, schedules } = req.body;
+    const targetUserId = userId || req.user.id;
+    
+    // Verifica permessi
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    if (!schedules || !Array.isArray(schedules)) {
+      return res.status(400).json({ error: 'Orari non validi' });
+    }
+
+    // Elimina orari esistenti per questo utente
+    await supabase
+      .from('work_schedules')
+      .delete()
+      .eq('user_id', targetUserId);
+
+    // Inserisci nuovi orari
+    const schedulesWithUserId = schedules.map(schedule => ({
+      ...schedule,
+      user_id: targetUserId
+    }));
+
+    const { data: newSchedules, error } = await supabase
+      .from('work_schedules')
+      .insert(schedulesWithUserId)
+      .select();
+
+    if (error) {
+      console.error('Work schedules create error:', error);
+      return res.status(500).json({ error: 'Errore nel salvataggio degli orari' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Orari di lavoro salvati con successo',
+      schedules: newSchedules
+    });
+  } catch (error) {
+    console.error('Work schedules create error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -887,6 +978,8 @@ app.get('/api/debug/stats', async (req, res) => {
 app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
     
     // Total employees
     const { count: totalEmployees } = await supabase
@@ -894,19 +987,43 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
 
-    // Present today - count only those who clocked in and haven't clocked out
+    // Present today - count those who are not absent and have expected hours > 0
     const { count: presentToday } = await supabase
       .from('attendance')
       .select('*', { count: 'exact', head: true })
       .eq('date', today)
-      .not('clock_in', 'is', null)
-      .is('clock_out', null);
+      .eq('is_absent', false)
+      .gt('expected_hours', 0);
 
     // Pending requests
     const { count: pendingRequests } = await supabase
       .from('leave_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
+
+    // Calculate monthly hours balance for current month
+    let monthlyBalance = 0;
+    if (req.user.role === 'admin') {
+      // Admin vede il totale di tutti i dipendenti
+      const { data: balances } = await supabase
+        .from('hours_balance')
+        .select('total_balance')
+        .eq('year', currentYear)
+        .eq('month', currentMonth);
+      
+      monthlyBalance = balances?.reduce((sum, balance) => sum + (balance.total_balance || 0), 0) || 0;
+    } else {
+      // Employee vede solo il proprio
+      const { data: balance } = await supabase
+        .from('hours_balance')
+        .select('total_balance')
+        .eq('user_id', req.user.id)
+        .eq('year', currentYear)
+        .eq('month', currentMonth)
+        .single();
+      
+      monthlyBalance = balance?.total_balance || 0;
+    }
 
     // Calculate attendance rate
     const attendanceRate = totalEmployees > 0 ? ((presentToday / totalEmployees) * 100).toFixed(1) : 0;
@@ -915,7 +1032,8 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       totalEmployees: totalEmployees || 0,
       presentToday: presentToday || 0,
       pendingRequests: pendingRequests || 0,
-      attendanceRate: parseFloat(attendanceRate)
+      attendanceRate: parseFloat(attendanceRate),
+      monthlyBalance: parseFloat(monthlyBalance.toFixed(2))
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);
@@ -941,14 +1059,15 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
         .from('attendance')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr)
-        .not('check_in', 'is', null);
+        .eq('is_absent', false)
+        .gt('expected_hours', 0);
       
-      // Calcola assenze: chi non ha check_in MA non è in permesso/malattia/ferie
+      // Calcola assenze: chi è marcato come assente
       let assenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr)
-        .is('check_in', null);
+        .eq('is_absent', true);
       
       // Se è employee, mostra solo i propri dati
       if (req.user.role === 'employee') {
@@ -957,19 +1076,7 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
       }
       
       const { count: presenze } = await presenzeQuery;
-      const { count: totalAssenze } = await assenzeQuery;
-      
-      // Conta quanti sono in permesso/malattia/ferie approvati in questa data
-      const { count: inPermessi } = await supabase
-        .from('leave_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved')
-        .lte('start_date', dateStr)
-        .gte('end_date', dateStr)
-        .in('type', ['permission', 'sick', 'vacation']);
-      
-      // Assenze reali = Totali assenze - Quelli in permesso/malattia/ferie
-      const assenze = Math.max(0, (totalAssenze || 0) - (inPermessi || 0));
+      const { count: assenze } = await assenzeQuery;
       
       weekData.push({
         name: date.toLocaleDateString('it-IT', { weekday: 'short' }),
