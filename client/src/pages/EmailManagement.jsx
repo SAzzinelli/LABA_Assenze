@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../utils/store';
 import { 
   Mail, 
   Send, 
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 
 const EmailManagement = () => {
+  const { token, user, apiCall } = useAuthStore();
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [emailType, setEmailType] = useState('attendance');
@@ -29,33 +31,33 @@ const EmailManagement = () => {
 
   const fetchSchedulerStatus = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/email/scheduler/status', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      if (!token) {
+        console.error('❌ No token found for scheduler status');
+        return;
+      }
+      
+      const response = await apiCall('/api/email/scheduler/status');
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSchedulerStatus(data.scheduler);
         }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSchedulerStatus(data.scheduler);
+      } else {
+        console.error('❌ Error fetching scheduler status:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching scheduler status:', error);
+      console.error('❌ Error fetching scheduler status:', error);
     }
   };
 
   const toggleScheduler = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const endpoint = schedulerStatus?.isRunning ? '/api/email/scheduler/stop' : '/api/email/scheduler/start';
       
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await apiCall(endpoint, {
+        method: 'POST'
       });
       
       const data = await response.json();
@@ -75,14 +77,16 @@ const EmailManagement = () => {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem('token');
       console.log('🔍 Fetching employees with token:', token ? 'present' : 'missing');
+      console.log('👤 Current user:', user);
       
-      const response = await fetch('/api/employees', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      if (!token) {
+        console.error('❌ No token found - user not authenticated');
+        setResult({ type: 'error', message: 'Utente non autenticato. Effettua il login.' });
+        return;
+      }
+      
+      const response = await apiCall('/api/employees');
 
       console.log('📡 Response status:', response.status);
       
@@ -93,6 +97,15 @@ const EmailManagement = () => {
       } else {
         const errorData = await response.json();
         console.error('❌ Error response:', errorData);
+        
+        if (response.status === 401) {
+          console.error('❌ Unauthorized - token expired or invalid');
+          setResult({ type: 'error', message: 'Sessione scaduta. Effettua nuovamente il login.' });
+          // Redirect to login
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching employees:', error);
@@ -109,13 +122,8 @@ const EmailManagement = () => {
     setResult(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/email/reminder', {
+      const response = await apiCall('/api/email/reminder', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           type: emailType,
           userId: selectedEmployee,
@@ -149,13 +157,8 @@ const EmailManagement = () => {
     setResult(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/email/weekly-report', {
+      const response = await apiCall('/api/email/weekly-report', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           userId: selectedEmployee,
           weekNumber: new Date().getWeek()
@@ -187,13 +190,8 @@ const EmailManagement = () => {
     setResult(null);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/employees/${selectedEmployee}`, {
+      const response = await apiCall(`/api/employees/${selectedEmployee}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({
           personalEmail: personalEmail
         })
