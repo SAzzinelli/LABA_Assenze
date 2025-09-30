@@ -48,9 +48,15 @@ const emailTemplates = {
             </div>
             
             <div class="request-card">
-              <h3>⚡ Azione Richiesta</h3>
-              <p>È necessaria la tua approvazione per questa richiesta. Accedi al sistema per gestirla.</p>
-              <a href="https://hr.laba.biz/permessi" class="btn">👨‍💼 Gestisci Richiesta</a>
+              <h3>📝 Azione Richiesta</h3>
+              <p>È stata inviata una nuova richiesta che richiede la tua attenzione.</p>
+              <p>Accedi al sistema per visualizzare i dettagli completi e gestire la richiesta.</p>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/dashboard" class="btn">
+                📊 Gestisci Richiesta
+              </a>
             </div>
             
             <div class="footer">
@@ -64,50 +70,52 @@ const emailTemplates = {
     `
   }),
 
-  // Notifica utente per risposta richiesta
+  // Risposta richiesta per dipendente
   requestResponse: (requestType, status, startDate, endDate, notes, requestId) => ({
-    subject: `✅ Richiesta ${requestType} ${status === 'approved' ? 'Approvata' : 'Rifiutata'} - LABA`,
+    subject: `📋 Aggiornamento Richiesta ${requestType}: ${status}`,
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Risposta Richiesta</title>
+        <title>Aggiornamento Richiesta</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, ${status === 'approved' ? '#4caf50' : '#f44336'} 0%, ${status === 'approved' ? '#2e7d32' : '#c62828'} 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
           .status-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+          .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
           .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: ${status === 'approved' ? '#e8f5e8' : '#ffebee'}; padding: 15px; border-left: 4px solid ${status === 'approved' ? '#4caf50' : '#f44336'}; margin: 15px 0; }
+          .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #27ae60; margin: 15px 0; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
-            <h1>${status === 'approved' ? '✅' : '❌'} Richiesta ${status === 'approved' ? 'Approvata' : 'Rifiutata'}</h1>
+            <h1>📋 Aggiornamento Richiesta</h1>
             <p>Sistema HR LABA</p>
           </div>
           <div class="content">
             <div class="highlight">
-              <h2>📋 Dettagli Richiesta</h2>
+              <h2>📝 Dettagli Richiesta</h2>
               <p><strong>Tipo:</strong> ${requestType}</p>
               <p><strong>Periodo:</strong> ${startDate} - ${endDate}</p>
-              <p><strong>Stato:</strong> ${status === 'approved' ? '✅ Approvata' : '❌ Rifiutata'}</p>
+              <p><strong>Stato:</strong> ${status}</p>
               <p><strong>ID Richiesta:</strong> #${requestId}</p>
-              ${notes ? `<p><strong>Note:</strong> ${notes}</p>` : ''}
             </div>
             
             <div class="status-card">
-              <h3>📊 Prossimi Passi</h3>
-              ${status === 'approved' ? 
-                '<p>La tua richiesta è stata approvata. Puoi procedere secondo il piano concordato.</p>' :
-                '<p>La tua richiesta è stata rifiutata. Contatta l\'amministrazione per maggiori informazioni.</p>'
-              }
-              <a href="https://hr.laba.biz/dashboard" class="btn">📱 Vai al Dashboard</a>
+              <h3>✅ Risposta</h3>
+              <p>La tua richiesta è stata <strong>${status}</strong>.</p>
+              ${notes ? `<p><strong>Note:</strong> ${notes}</p>` : ''}
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/dashboard" class="btn">
+                📊 Visualizza Dettagli
+              </a>
             </div>
             
             <div class="footer">
@@ -121,9 +129,9 @@ const emailTemplates = {
     `
   }),
 
-  // Promemoria presenze
-  attendanceReminder: (userName, workplace) => ({
-    subject: `⏰ Promemoria Timbratura - ${workplace}`,
+  // Promemoria timbratura
+  attendanceReminder: (userName, department) => ({
+    subject: `⏰ Promemoria Timbratura - LABA Firenze`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -134,32 +142,41 @@ const emailTemplates = {
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
           .reminder-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #ff9800; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+          .btn { display: inline-block; background: #f39c12; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
           .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 15px 0; }
+          .highlight { background: #fef9e7; padding: 15px; border-left: 4px solid #f39c12; margin: 15px 0; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>⏰ Promemoria Timbratura</h1>
-            <p>Sistema HR LABA</p>
+            <p>Ciao ${userName}</p>
           </div>
           <div class="content">
             <div class="highlight">
-              <h2>👋 Ciao ${userName}!</h2>
-              <p>Ricordati di timbrare l'entrata oggi!</p>
-              <p><strong>Sede:</strong> ${workplace}</p>
-              <p><strong>Orario consigliato:</strong> 09:00</p>
+              <h2>📅 Ricorda di Timbrare</h2>
+              <p>Non dimenticare di registrare la tua presenza oggi!</p>
+              <p><strong>Dipartimento:</strong> ${department}</p>
             </div>
             
             <div class="reminder-card">
-              <h3>📱 Timbra Ora</h3>
-              <p>Accedi al sistema per timbrare l'entrata e iniziare la tua giornata lavorativa.</p>
-              <a href="https://hr.laba.biz/presenze" class="btn">⏰ Timbra Entrata</a>
+              <h3>⏰ Azione Richiesta</h3>
+              <p>Assicurati di timbrare correttamente:</p>
+              <ul>
+                <li>✅ Entrata al mattino</li>
+                <li>✅ Uscita alla sera</li>
+                <li>✅ Pausa pranzo (se applicabile)</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
+                ⏰ Vai alla Timbratura
+              </a>
             </div>
             
             <div class="footer">
@@ -199,145 +216,36 @@ const emailTemplates = {
         <div class="container">
           <div class="header">
             <h1>📊 Report Settimanale</h1>
-            <p>Settimana ${weekData.weekNumber} - Sistema HR LABA</p>
-          </div>
-          <div class="content">
-            <div class="highlight">
-              <h2>👋 Ciao ${userName}!</h2>
-              <p>Ecco il tuo report settimanale delle presenze.</p>
-            </div>
-            
-            <div class="stats-card">
-              <h3>📈 Statistiche Settimana</h3>
-              <div class="stat-row">
-                <span><strong>Ore Lavorate:</strong></span>
-                <span>${weekData.totalHours}h</span>
-              </div>
-              <div class="stat-row">
-                <span><strong>Giorni Presenti:</strong></span>
-                <span>${weekData.daysPresent}/5</span>
-              </div>
-              <div class="stat-row">
-                <span><strong>Ore Straordinario:</strong></span>
-                <span>${weekData.overtimeHours}h</span>
-              </div>
-              <div class="stat-row">
-                <span><strong>Saldo Ore:</strong></span>
-                <span>${weekData.balanceHours}h</span>
-              </div>
-            </div>
-            
-            <div class="stats-card">
-              <h3>📱 Dettagli Completi</h3>
-              <p>Accedi al sistema per vedere tutti i dettagli delle tue presenze.</p>
-              <a href="https://hr.laba.biz/presenze" class="btn">📊 Vedi Dettagli</a>
-            </div>
-            
-            <div class="footer">
-              <p>Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
-              <p>LABA Firenze - Libera Accademia di Belle Arti</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  })
-};
-
-// Funzione per inviare email
-const sendEmail = async (to, template, data) => {
-  try {
-    const emailTemplate = emailTemplates[template](...data);
-    
-    const mailOptions = {
-      from: 'LABA HR <hr@labafirenze.com>',
-      to: to,
-      subject: emailTemplate.subject,
-      html: emailTemplate.html
-    };
-
-    const result = await transporter.sendMail(mailOptions);
-    console.log('Email inviata:', result.messageId);
-    return { success: true, messageId: result.messageId };
-  } catch (error) {
-    console.error('Errore invio email:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Funzione per inviare email a tutti gli admin
-const sendEmailToAdmins = async (template, data) => {
-  try {
-    // SOLO email reali degli admin
-    const realAdminEmails = ['hr@labafirenze.com'];
-    
-    const results = [];
-    for (const email of realAdminEmails) {
-      const result = await sendEmail(email, template, data);
-      results.push({ email, ...result });
-    }
-    
-    return results;
-  } catch (error) {
-    console.error('Errore invio email admin:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-const emailTemplates = {
-  welcome: (userName, department) => ({
-    subject: `🎉 Benvenuto in LABA Firenze!`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Benvenuto in LABA</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #27ae60; margin: 15px 0; }
-          .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎉 Benvenuto in LABA!</h1>
-            <p>Ciao ${userName}, il tuo account è stato approvato</p>
+            <p>Settimana ${weekData.weekNumber}</p>
           </div>
           
           <div class="content">
-            <div class="highlight">
-              <h3>✅ Account Attivato</h3>
-              <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema HR di LABA Firenze.</p>
-            </div>
+            <p>Ciao ${userName},</p>
+            <p>Ecco il riepilogo delle tue presenze e ore lavorate per la settimana:</p>
             
-            <div class="steps">
-              <h3>📋 Prossimi Passi</h3>
-              <ul>
-                <li>Accedi al sistema con le tue credenziali</li>
-                <li>Completa il tuo profilo</li>
-                <li>Configura il tuo orario di lavoro</li>
-                <li>Inizia a timbrare le presenze</li>
-              </ul>
+            <div class="stats-card">
+              <div class="stat-row">
+                <strong>Ore Lavorate Totali:</strong> <span>${weekData.totalHours}h</span>
+              </div>
+              <div class="stat-row">
+                <strong>Giorni di Presenza:</strong> <span>${weekData.daysPresent}</span>
+              </div>
+              <div class="stat-row">
+                <strong>Ore Straordinario:</strong> <span>${weekData.overtimeHours}h</span>
+              </div>
+              <div class="stat-row">
+                <strong>Saldo Ore:</strong> <span>${weekData.balanceHours}h</span>
+              </div>
             </div>
             
             <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/login" class="btn">
-                🚀 Accedi al Sistema
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
+                Visualizza Dettagli Completi
               </a>
             </div>
             
             <div class="footer">
-              <p>© LABA Firenze 2025 - Sistema HR<br>
-              Dipartimento: ${department}</p>
+              <p>© LABA Firenze 2025 - Sistema HR</p>
             </div>
           </div>
         </div>
@@ -405,6 +313,70 @@ const emailTemplates = {
       </html>
     `
   })
+};
+
+// Funzione per inviare email
+const sendEmail = async (to, template, data) => {
+  try {
+    const emailTemplate = emailTemplates[template](...data);
+    
+    const mailOptions = {
+      from: 'LABA HR <hr@labafirenze.com>',
+      to: to,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email inviata: %s', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Errore invio email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Funzione per inviare email a tutti gli admin
+const sendEmailToAdmins = async (template, data) => {
+  try {
+    // Recupera tutti gli admin reali dal database
+    const { createClient } = require('@supabase/supabase-js');
+    require('dotenv').config();
+    
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: admins, error } = await supabase
+      .from('users')
+      .select('email')
+      .eq('role', 'admin')
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Errore nel recupero admin per email:', error);
+      return { success: false, error: error.message };
+    }
+
+    const realAdminEmails = admins.map(admin => admin.email).filter(email => isRealEmail(email));
+    
+    const results = [];
+    for (const email of realAdminEmails) {
+      const result = await sendEmail(email, template, data);
+      results.push({ email, ...result });
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Errore invio email admin:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Helper function to check if email is real
+const isRealEmail = (email) => {
+  const realEmails = ['hr@labafirenze.com', 'simone.azzinelli@labafirenze.com', 'marco.rossi@labafirenze.com', 'anna.bianchi@labafirenze.com'];
+  return realEmails.includes(email);
 };
 
 module.exports = {
