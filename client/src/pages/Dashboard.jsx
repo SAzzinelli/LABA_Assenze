@@ -152,12 +152,11 @@ const Dashboard = () => {
 
   const fetchCurrentAttendance = async () => {
     try {
-      if (user?.role === 'admin') {
-        const response = await apiCall('/api/attendance/current');
-        if (response.ok) {
-          const data = await response.json();
-          setCurrentAttendance(data);
-        }
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiCall(`/api/attendance?date=${today}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentAttendance(data);
       }
     } catch (error) {
       console.error('Error fetching current attendance:', error);
@@ -194,19 +193,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-    }
-  };
-
-  const fetchCurrentAttendance = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await apiCall(`/api/attendance?date=${today}`);
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentAttendance(data);
-      }
-    } catch (error) {
-      console.error('Error fetching current attendance:', error);
     }
   };
 
