@@ -538,7 +538,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
 // Get attendance records
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
-    const { date, userId } = req.query;
+    const { date, userId, month, year } = req.query;
     
     let query = supabase
       .from('attendance')
@@ -547,6 +547,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 
     if (date) {
       query = query.eq('date', date);
+    } else if (month && year) {
+      // Filtra per mese e anno specifici
+      const startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      query = query.gte('date', startDate).lte('date', endDate);
     }
     
     if (userId) {

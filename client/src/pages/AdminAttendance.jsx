@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Users, AlertCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Clock, Users, AlertCircle, ArrowRight, RefreshCw, Calendar, ArrowLeft } from 'lucide-react';
 
 const AdminAttendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -17,6 +17,7 @@ const AdminAttendance = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [employees, setEmployees] = useState([]);
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
 
   useEffect(() => {
     fetchAttendanceData();
@@ -30,7 +31,7 @@ const AdminAttendance = () => {
     if (activeTab === 'history') {
       fetchAttendanceHistory();
     }
-  }, [activeTab, selectedMonth, selectedYear, selectedEmployee]);
+  }, [activeTab, selectedMonth, selectedYear, selectedEmployee, showTodayOnly]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -76,8 +77,17 @@ const AdminAttendance = () => {
       
       // Costruisci i parametri della query
       const params = new URLSearchParams();
-      if (selectedMonth) params.append('month', selectedMonth);
-      if (selectedYear) params.append('year', selectedYear);
+      
+      if (showTodayOnly) {
+        // Se "oggi" è selezionato, filtra solo per oggi
+        const today = new Date().toISOString().split('T')[0];
+        params.append('date', today);
+      } else {
+        // Altrimenti usa i filtri mese/anno
+        if (selectedMonth) params.append('month', selectedMonth);
+        if (selectedYear) params.append('year', selectedYear);
+      }
+      
       if (selectedEmployee) params.append('userId', selectedEmployee);
       
       const response = await apiCall(`/api/attendance?${params.toString()}`);
@@ -94,7 +104,11 @@ const AdminAttendance = () => {
 
   const formatTime = (timeString) => {
     if (!timeString) return '-';
-    return timeString.substring(0, 5);
+    const date = new Date(timeString);
+    return date.toLocaleTimeString('it-IT', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
   };
 
   const getHoursWorked = (checkIn) => {
@@ -287,56 +301,81 @@ const AdminAttendance = () => {
               Filtri Cronologia
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value={1}>Gennaio</option>
-                  <option value={2}>Febbraio</option>
-                  <option value={3}>Marzo</option>
-                  <option value={4}>Aprile</option>
-                  <option value={5}>Maggio</option>
-                  <option value={6}>Giugno</option>
-                  <option value={7}>Luglio</option>
-                  <option value={8}>Agosto</option>
-                  <option value={9}>Settembre</option>
-                  <option value={10}>Ottobre</option>
-                  <option value={11}>Novembre</option>
-                  <option value={12}>Dicembre</option>
-                </select>
+            {/* Filtro per periodo */}
+            <div className="mb-6">
+              <div className="flex items-center mb-3">
+                <Calendar className="h-4 w-4 mr-2 text-blue-400" />
+                <span className="text-white font-medium">Filtro per periodo:</span>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => {
+                    setShowTodayOnly(true);
+                    setSelectedMonth(new Date().getMonth() + 1);
+                    setSelectedYear(new Date().getFullYear());
+                  }}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    showTodayOnly
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
                 >
-                  <option value={2024}>2024</option>
-                  <option value={2025}>2025</option>
-                </select>
+                  OGGI
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      const newMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+                      const newYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+                      setSelectedMonth(newMonth);
+                      setSelectedYear(newYear);
+                      setShowTodayOnly(false);
+                    }}
+                    className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  
+                  <span className="text-white font-medium min-w-[120px] text-center">
+                    {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('it-IT', { 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      const newMonth = selectedMonth === 12 ? 1 : selectedMonth + 1;
+                      const newYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear;
+                      setSelectedMonth(newMonth);
+                      setSelectedYear(newYear);
+                      setShowTodayOnly(false);
+                    }}
+                    className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Tutti i dipendenti</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            </div>
+
+            {/* Filtro dipendente */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Tutti i dipendenti</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -389,8 +428,8 @@ const AdminAttendance = () => {
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             record.clock_in && record.clock_out 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                              : 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
                           }`}>
                             {record.clock_in && record.clock_out ? 'Completo' : 'Incompleto'}
                           </span>
