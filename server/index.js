@@ -256,7 +256,8 @@ app.post('/api/auth/register', async (req, res) => {
       hireDate,
       workplace,
       contractType,
-      has104 = false 
+      has104 = false,
+      personalEmail = null // Email personale opzionale
     } = req.body;
     
     // Validazione email dominio
@@ -301,7 +302,8 @@ app.post('/api/auth/register', async (req, res) => {
           hire_date: hireDate,
           workplace: workplace,
           contract_type: contractType,
-          department: department
+          department: department,
+          personal_email: personalEmail // Aggiungi email personale
         }
       ])
       .select()
@@ -336,6 +338,34 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('Employee creation error:', employeeError);
     }
 
+    // Invia notifica agli admin per nuovo dipendente
+    try {
+      const { data: admins } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('is_active', true);
+
+      if (admins && admins.length > 0) {
+        for (const admin of admins) {
+          await supabase
+            .from('notifications')
+            .insert([
+              {
+                user_id: admin.id,
+                title: 'Nuovo Dipendente Registrato',
+                message: `${firstName} ${lastName} si è registrato nel sistema`,
+                type: 'info',
+                is_read: false,
+                created_at: new Date().toISOString()
+              }
+            ]);
+        }
+      }
+    } catch (notificationError) {
+      console.error('Notification error:', notificationError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Utente registrato con successo',
@@ -365,7 +395,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         work_patterns!left(*),
         work_schedules!left(*)
       `)
-      .eq('is_active', true)
+      .eq('role', 'employee') // Include tutti i dipendenti, non solo attivi
       .order('last_name');
 
     if (error) {
@@ -442,6 +472,50 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   }
 });
 
+// Auto-approve new employee (Admin only)
+app.post('/api/employees/approve/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data: updatedEmployee, error } = await supabase
+      .from('users')
+      .update({
+        is_active: true,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('role', 'employee')
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Employee approval error:', error);
+      return res.status(500).json({ error: 'Errore nell\'approvazione del dipendente' });
+    }
+
+    // Invia email di benvenuto se ha email personale
+    if (updatedEmployee.personal_email) {
+      try {
+        await sendEmail(updatedEmployee.personal_email, 'welcome', [
+          `${updatedEmployee.first_name} ${updatedEmployee.last_name}`,
+          updatedEmployee.department || 'Ufficio'
+        ]);
+      } catch (emailError) {
+        console.error('Welcome email error:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Dipendente approvato con successo',
+      employee: updatedEmployee
+    });
+  } catch (error) {
+    console.error('Employee approval error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Update employee personal email
 app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -477,7 +551,7 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
   }
 });
 
-// Add new employee
+// Add new employee (Admin only)
 app.post('/api/employees', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {

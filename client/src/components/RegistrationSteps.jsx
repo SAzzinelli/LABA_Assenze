@@ -13,6 +13,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     birthDate: '',
     phone: '',
     has104: false,
+    personalEmail: '', // Email personale opzionale
     
     // Step 2: Informazioni Lavorative
     department: '',
@@ -129,6 +130,21 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             placeholder="+39 333 123 4567"
             required
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Email Personale</label>
+          <input
+            type="email"
+            name="personalEmail"
+            value={formData.personalEmail}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="esempio@gmail.com (opzionale)"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Per ricevere notifiche email personali
+          </p>
         </div>
 
         <div>
@@ -303,6 +319,10 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           <div>
             <span className="text-slate-400 text-sm">Legge 104:</span>
             <p className="text-white font-medium">{formData.has104 ? 'Sì' : 'No'}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Email Personale:</span>
+            <p className="text-white font-medium">{formData.personalEmail || 'Non configurata'}</p>
           </div>
         </div>
 

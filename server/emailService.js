@@ -282,7 +282,67 @@ const sendEmailToAdmins = async (template, data) => {
   } catch (error) {
     console.error('Errore invio email admin:', error);
     return { success: false, error: error.message };
-  }
+  },
+
+  welcome: (userName, department) => ({
+    subject: `🎉 Benvenuto in LABA Firenze!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Benvenuto in LABA</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+          .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #27ae60; margin: 15px 0; }
+          .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Benvenuto in LABA!</h1>
+            <p>Ciao ${userName}, il tuo account è stato approvato</p>
+          </div>
+          
+          <div class="content">
+            <div class="highlight">
+              <h3>✅ Account Attivato</h3>
+              <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema HR di LABA Firenze.</p>
+            </div>
+            
+            <div class="steps">
+              <h3>📋 Prossimi Passi</h3>
+              <ul>
+                <li>Accedi al sistema con le tue credenziali</li>
+                <li>Completa il tuo profilo</li>
+                <li>Configura il tuo orario di lavoro</li>
+                <li>Inizia a timbrare le presenze</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/login" class="btn">
+                🚀 Accedi al Sistema
+              </a>
+            </div>
+            
+            <div class="footer">
+              <p>© LABA Firenze 2025 - Sistema HR<br>
+              Dipartimento: ${department}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  })
 };
 
 module.exports = {
