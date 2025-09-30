@@ -84,24 +84,16 @@ const Attendance = () => {
     return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'present': return 'text-green-400';
-      case 'absent': return 'text-red-400';
-      case 'holiday': return 'text-blue-400';
-      case 'non_working_day': return 'text-gray-400';
-      default: return 'text-gray-400';
-    }
+  const getStatusColor = (record) => {
+    if (record.is_absent) return 'text-red-400';
+    if (record.expected_hours === 0) return 'text-gray-400';
+    return 'text-green-400';
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'present': return 'Presente';
-      case 'absent': return 'Assente';
-      case 'holiday': return 'Festivo';
-      case 'non_working_day': return 'Non lavorativo';
-      default: return 'Sconosciuto';
-    }
+  const getStatusText = (record) => {
+    if (record.is_absent) return 'Assente';
+    if (record.expected_hours === 0) return 'Non lavorativo';
+    return 'Presente';
   };
 
   const getBalanceColor = (balance) => {
@@ -254,8 +246,8 @@ const Attendance = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Stato:</span>
-                    <span className={`font-semibold ${getStatusColor(todayAttendance.status)}`}>
-                      {getStatusText(todayAttendance.status)}
+                    <span className={`font-semibold ${getStatusColor(todayAttendance)}`}>
+                      {getStatusText(todayAttendance)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -308,8 +300,8 @@ const Attendance = () => {
                       {new Date(record.date).toLocaleDateString('it-IT')}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`font-semibold ${getStatusColor(record.status)}`}>
-                        {getStatusText(record.status)}
+                      <span className={`font-semibold ${getStatusColor(record)}`}>
+                        {getStatusText(record)}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-mono">
