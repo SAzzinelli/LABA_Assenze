@@ -388,5 +388,5 @@ const isRealEmail = (email) => {
 module.exports = {
   sendEmail,
   sendEmailToAdmins,
-  transporter
+  resend
 };
