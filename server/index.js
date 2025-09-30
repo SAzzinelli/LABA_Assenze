@@ -923,6 +923,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .select('*')
       .eq('date', today);
     
+    console.log('Today attendance records:', attendanceRecords);
+    
     if (attendanceError) {
       console.error('Attendance error:', attendanceError);
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
@@ -958,6 +960,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       };
     });
 
+    console.log('Formatted current attendance:', formatted);
     res.json(formatted);
   } catch (error) {
     console.error('Current attendance error:', error);

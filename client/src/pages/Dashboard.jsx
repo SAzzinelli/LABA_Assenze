@@ -184,6 +184,7 @@ const Dashboard = () => {
         const data = await response.json();
         alert(data.message);
         fetchDashboardData(); // Aggiorna i dati della dashboard
+        fetchUserStats(); // Aggiorna lo stato dei pulsanti
       } else {
         const error = await response.json();
         alert(error.error);
