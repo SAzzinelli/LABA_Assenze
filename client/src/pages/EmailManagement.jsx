@@ -76,18 +76,26 @@ const EmailManagement = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('🔍 Fetching employees with token:', token ? 'present' : 'missing');
+      
       const response = await fetch('/api/employees', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📋 Employees data received:', data);
         setEmployees(data);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Error response:', errorData);
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error('❌ Error fetching employees:', error);
     }
   };
 

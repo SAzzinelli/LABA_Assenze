@@ -393,6 +393,8 @@ app.post('/api/auth/register', async (req, res) => {
 // Get all employees
 app.get('/api/employees', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 Fetching employees for user:', req.user.id, 'role:', req.user.role);
+    
     const { data: employees, error } = await supabase
       .from('users')
       .select(`
@@ -404,8 +406,10 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       .neq('department', 'System Owner') // Nascondi System Owner
       .order('last_name');
 
+    console.log('📋 Raw employees from DB:', employees?.length || 0, 'employees');
+
     if (error) {
-      console.error('Employees fetch error:', error);
+      console.error('❌ Employees fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
@@ -471,9 +475,12 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
       };
     });
 
+    console.log('✅ Formatted employees:', formattedEmployees.length, 'employees');
+    console.log('📋 First employee:', formattedEmployees[0] ? `${formattedEmployees[0].firstName} ${formattedEmployees[0].lastName}` : 'none');
+
     res.json(formattedEmployees);
   } catch (error) {
-    console.error('Employees fetch error:', error);
+    console.error('❌ Employees fetch error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
