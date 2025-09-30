@@ -27,6 +27,7 @@ const Dashboard = () => {
   const [currentAttendance, setCurrentAttendance] = useState([]);
   const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [attendance, setAttendance] = useState([]);
   
   // Stati per KPI utente
   const [userKPIs, setUserKPIs] = useState({
@@ -60,9 +61,11 @@ const Dashboard = () => {
       // Per utenti: carica KPI iniziali e aggiorna ogni minuto
       fetchUserKPIs();
       fetchUserStats(); // Carica stato timbratura
+      fetchAttendance(); // Carica cronologia presenze
       const interval = setInterval(() => {
         fetchUserKPIs();
         fetchUserStats(); // Aggiorna stato timbratura
+        fetchAttendance(); // Aggiorna cronologia presenze
       }, 60000); // 1 minuto
       
       return () => clearInterval(interval);
@@ -197,6 +200,7 @@ const Dashboard = () => {
         fetchDashboardData(); // Aggiorna i dati della dashboard
         fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
         fetchUserStats(); // Aggiorna stato timbratura
+        fetchAttendance(); // Aggiorna cronologia presenze
       } else {
         const error = await response.json();
         alert(error.error);
@@ -222,6 +226,7 @@ const Dashboard = () => {
         fetchDashboardData(); // Aggiorna i dati della dashboard
         fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
         fetchUserStats(); // Aggiorna stato timbratura
+        fetchAttendance(); // Aggiorna cronologia presenze
       } else {
         const error = await response.json();
         alert(error.error);
@@ -241,6 +246,21 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const fetchAttendance = async () => {
+    try {
+      const response = await apiCall('/api/attendance');
+      if (response.ok) {
+        const data = await response.json();
+        setAttendance(data);
+      } else {
+        setAttendance([]);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      setAttendance([]);
     }
   };
 
