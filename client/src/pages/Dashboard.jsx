@@ -184,6 +184,7 @@ const Dashboard = () => {
         const data = await response.json();
         alert(data.message);
         fetchDashboardData(); // Aggiorna i dati della dashboard
+        fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
       } else {
         const error = await response.json();
         alert(error.error);
@@ -207,6 +208,7 @@ const Dashboard = () => {
         const data = await response.json();
         alert(data.message);
         fetchDashboardData(); // Aggiorna i dati della dashboard
+        fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
       } else {
         const error = await response.json();
         alert(error.error);
