@@ -155,6 +155,7 @@ const EmailManagement = () => {
     setResult(null);
 
     try {
+      console.log('📊 Sending weekly report for employee:', selectedEmployee);
       const response = await apiCall('/api/email/weekly-report', {
         method: 'POST',
         body: JSON.stringify({
@@ -163,7 +164,9 @@ const EmailManagement = () => {
         })
       });
 
+      console.log('📡 Weekly report response status:', response.status);
       const data = await response.json();
+      console.log('📊 Weekly report response data:', data);
 
       if (data.success) {
         setResult({ type: 'success', message: data.message });
@@ -171,7 +174,7 @@ const EmailManagement = () => {
         setResult({ type: 'error', message: data.error || 'Errore nell\'invio' });
       }
     } catch (error) {
-      console.error('Error sending weekly report:', error);
+      console.error('❌ Error sending weekly report:', error);
       setResult({ type: 'error', message: 'Errore di connessione' });
     } finally {
       setLoading(false);

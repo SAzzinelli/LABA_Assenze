@@ -2191,12 +2191,15 @@ app.post('/api/email/scheduler/stop', authenticateToken, requireAdmin, async (re
 // Endpoint per inviare report settimanali
 app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req, res) => {
   try {
+    console.log('📊 Weekly report request received:', req.body);
     const { userId, weekNumber } = req.body;
     
     if (!userId) {
+      console.log('❌ Missing userId');
       return res.status(400).json({ error: 'UserId richiesto' });
     }
 
+    console.log('🔍 Fetching user data for userId:', userId);
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('email, first_name, last_name')
@@ -2204,16 +2207,21 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       .single();
 
     if (userError || !user) {
+      console.log('❌ User not found:', userError);
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
+    console.log('👤 User found:', user.email);
+
     // SOLO email reali per privacy
     if (!isRealEmail(user.email)) {
+      console.log('❌ Email not authorized:', user.email);
       return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
     }
     
     // Usa sempre l'email aziendale
     if (!user.email) {
+      console.log('❌ No email configured');
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
@@ -2263,18 +2271,25 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       balanceHours: Math.round(balanceHours * 10) / 10
     };
 
+    console.log('📊 Week data calculated:', weekData);
+
+         console.log('📧 Sending email to:', user.email);
          const emailResult = await sendEmail(user.email, 'weeklyReport', [
            `${user.first_name} ${user.last_name}`,
            weekData
          ]);
 
+    console.log('📧 Email result:', emailResult);
+
     if (emailResult.success) {
+      console.log('✅ Email sent successfully');
       res.json({
         success: true,
         message: 'Report settimanale inviato con successo',
         messageId: emailResult.messageId
       });
     } else {
+      console.log('❌ Email failed:', emailResult.error);
       res.status(500).json({
         success: false,
         error: 'Errore nell\'invio del report',
