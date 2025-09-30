@@ -269,12 +269,11 @@ const sendEmail = async (to, template, data) => {
 // Funzione per inviare email a tutti gli admin
 const sendEmailToAdmins = async (template, data) => {
   try {
-    // Qui dovresti recuperare gli admin dal database
-    // Per ora uso un array statico
-    const adminEmails = ['hr@labafirenze.com']; // Aggiungi altri admin se necessario
+    // SOLO email reali degli admin
+    const realAdminEmails = ['hr@labafirenze.com'];
     
     const results = [];
-    for (const email of adminEmails) {
+    for (const email of realAdminEmails) {
       const result = await sendEmail(email, template, data);
       results.push({ email, ...result });
     }

@@ -1351,14 +1351,19 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           .from('notifications')
           .insert(notifications);
 
-        // Invia email agli admin
+        // Invia email agli admin (SOLO email reali)
         try {
           const userName = `${req.user.first_name} ${req.user.last_name}`;
           const requestType = typeLabels[type] || type;
           const requestId = newRequest[0].id;
           
-          await sendEmailToAdmins('newRequest', [userName, requestType, startDate, endDate, requestId]);
-          console.log('Email inviata agli admin per nuova richiesta');
+          // Verifica che l'utente abbia un'email reale
+          if (isRealEmail(req.user.email)) {
+            await sendEmailToAdmins('newRequest', [userName, requestType, startDate, endDate, requestId]);
+            console.log('Email inviata agli admin per nuova richiesta');
+          } else {
+            console.log('Email non inviata: utente con email non reale');
+          }
         } catch (emailError) {
           console.error('Errore invio email:', emailError);
           // Non bloccare la risposta se l'email fallisce
@@ -1444,10 +1449,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .single();
 
           if (!userError && user) {
-            // Usa email personale se disponibile, altrimenti email aziendale
+            // SOLO email reali per privacy
             const emailToUse = user.personal_email || user.email;
             
-            if (emailToUse) {
+            // Verifica che l'email sia reale prima di inviare
+            if (emailToUse && isRealEmail(user.email)) {
               const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
               const requestId = updatedRequest.id;
               
@@ -1461,7 +1467,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               ]);
               console.log(`Email inviata a ${emailToUse} per risposta richiesta`);
             } else {
-              console.log('Nessuna email configurata per il dipendente');
+              console.log('Email non inviata: privacy - email non reale o non autorizzata');
             }
           }
         } catch (emailError) {
@@ -1974,6 +1980,12 @@ app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
 // ==================== NOTIFICATIONS ENDPOINTS ====================
 
 // Get notifications for user
+// Helper per verificare email reali (privacy)
+const isRealEmail = (email) => {
+  const realEmails = ['hr@labafirenze.com', 'simone.azzinelli@labafirenze.com'];
+  return realEmails.includes(email);
+};
+
 // Endpoint per inviare promemoria email
 app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -1993,6 +2005,11 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
+    // SOLO email reali per privacy
+    if (!isRealEmail(user.email)) {
+      return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
+    }
+    
     // Usa email personale se disponibile, altrimenti email aziendale
     const emailToUse = user.personal_email || user.email;
     
@@ -2060,6 +2077,11 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
+    // SOLO email reali per privacy
+    if (!isRealEmail(user.email)) {
+      return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
+    }
+    
     // Usa email personale se disponibile, altrimenti email aziendale
     const emailToUse = user.personal_email || user.email;
     
