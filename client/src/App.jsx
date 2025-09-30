@@ -12,6 +12,7 @@ import AdminAttendance from './pages/AdminAttendance';
 import Permessi from './pages/Permessi';
 import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
+import EmailManagement from './pages/EmailManagement';
 import Impostazioni from './pages/Impostazioni';
 import Layout from './components/Layout';
 
@@ -107,6 +108,22 @@ function App() {
                     <Layout>
                       <Ferie />
                     </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/email-management"
+                element={
+                  isAuthenticated ? (
+                    user?.role === 'admin' ? (
+                      <Layout>
+                        <EmailManagement />
+                      </Layout>
+                    ) : (
+                      <Navigate to="/dashboard" replace />
+                    )
                   ) : (
                     <Navigate to="/login" replace />
                   )

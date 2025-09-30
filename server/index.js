@@ -7,6 +7,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
@@ -1313,6 +1314,19 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         await supabase
           .from('notifications')
           .insert(notifications);
+
+        // Invia email agli admin
+        try {
+          const userName = `${req.user.first_name} ${req.user.last_name}`;
+          const requestType = typeLabels[type] || type;
+          const requestId = newRequest[0].id;
+          
+          await sendEmailToAdmins('newRequest', [userName, requestType, startDate, endDate, requestId]);
+          console.log('Email inviata agli admin per nuova richiesta');
+        } catch (emailError) {
+          console.error('Errore invio email:', emailError);
+          // Non bloccare la risposta se l'email fallisce
+        }
       }
     } catch (notificationError) {
       console.error('Notification creation error:', notificationError);
@@ -1370,20 +1384,47 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         'rejected': 'rifiutata'
       };
 
-      await supabase
-        .from('notifications')
-        .insert([
-          {
-            user_id: updatedRequest.user_id,
-            title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
-            message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} dal ${updatedRequest.start_date} al ${updatedRequest.end_date} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
-            type: 'response',
-            request_id: updatedRequest.id,
-            request_type: updatedRequest.type,
-            is_read: false,
-            created_at: new Date().toISOString()
+        await supabase
+          .from('notifications')
+          .insert([
+            {
+              user_id: updatedRequest.user_id,
+              title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
+              message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} dal ${updatedRequest.start_date} al ${updatedRequest.end_date} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
+              type: 'response',
+              request_id: updatedRequest.id,
+              request_type: updatedRequest.type,
+              is_read: false,
+              created_at: new Date().toISOString()
+            }
+          ]);
+
+        // Invia email al dipendente
+        try {
+          const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('email, first_name, last_name')
+            .eq('id', updatedRequest.user_id)
+            .single();
+
+          if (!userError && user && user.email) {
+            const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
+            const requestId = updatedRequest.id;
+            
+            await sendEmail(user.email, 'requestResponse', [
+              requestType, 
+              status, 
+              updatedRequest.start_date, 
+              updatedRequest.end_date, 
+              notes || '', 
+              requestId
+            ]);
+            console.log('Email inviata al dipendente per risposta richiesta');
           }
-        ]);
+        } catch (emailError) {
+          console.error('Errore invio email dipendente:', emailError);
+          // Non bloccare la risposta se l'email fallisce
+        }
     } catch (notificationError) {
       console.error('Notification creation error:', notificationError);
       // Non bloccare l'aggiornamento se le notifiche falliscono
@@ -1890,6 +1931,126 @@ app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
 // ==================== NOTIFICATIONS ENDPOINTS ====================
 
 // Get notifications for user
+// Endpoint per inviare promemoria email
+app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { type, userId, customMessage } = req.body;
+    
+    if (!type || !userId) {
+      return res.status(400).json({ error: 'Tipo e userId richiesti' });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('email, first_name, last_name, department')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    if (!user.email) {
+      return res.status(400).json({ error: 'Email non configurata per questo utente' });
+    }
+
+    let emailResult;
+    switch (type) {
+      case 'attendance':
+        emailResult = await sendEmail(user.email, 'attendanceReminder', [
+          `${user.first_name} ${user.last_name}`,
+          user.department || 'Ufficio'
+        ]);
+        break;
+      case 'custom':
+        if (!customMessage) {
+          return res.status(400).json({ error: 'Messaggio personalizzato richiesto' });
+        }
+        // Per ora invio un'email generica, potresti creare un template personalizzato
+        emailResult = await sendEmail(user.email, 'attendanceReminder', [
+          `${user.first_name} ${user.last_name}`,
+          customMessage
+        ]);
+        break;
+      default:
+        return res.status(400).json({ error: 'Tipo di promemoria non valido' });
+    }
+
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        message: 'Promemoria inviato con successo',
+        messageId: emailResult.messageId
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Errore nell\'invio del promemoria',
+        details: emailResult.error
+      });
+    }
+  } catch (error) {
+    console.error('Email reminder error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Endpoint per inviare report settimanali
+app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, weekNumber } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'UserId richiesto' });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('email, first_name, last_name')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    if (!user.email) {
+      return res.status(400).json({ error: 'Email non configurata per questo utente' });
+    }
+
+    // Recupera dati settimanali (implementazione semplificata)
+    const weekData = {
+      weekNumber: weekNumber || new Date().getWeek(),
+      totalHours: 40, // Dovresti calcolare questo dal database
+      daysPresent: 5,
+      overtimeHours: 0,
+      balanceHours: 0
+    };
+
+    const emailResult = await sendEmail(user.email, 'weeklyReport', [
+      `${user.first_name} ${user.last_name}`,
+      weekData
+    ]);
+
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        message: 'Report settimanale inviato con successo',
+        messageId: emailResult.messageId
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Errore nell\'invio del report',
+        details: emailResult.error
+      });
+    }
+  } catch (error) {
+    console.error('Weekly report error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
     const { limit = 50, unread_only = false } = req.query;

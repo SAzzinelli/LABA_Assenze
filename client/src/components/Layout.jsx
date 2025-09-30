@@ -15,7 +15,10 @@ import {
   Sparkles,
   Heart,
   Plane,
-  DollarSign
+  DollarSign,
+  Mail,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -124,6 +127,7 @@ const Layout = ({ children }) => {
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
+    { name: 'Email Management', href: '/email-management', icon: Mail, roles: ['admin'] },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
