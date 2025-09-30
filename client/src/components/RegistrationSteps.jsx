@@ -24,7 +24,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
 
   const steps = [
     { id: 1, title: 'Informazioni Personali', icon: User },
-    { id: 2, title: 'Informazioni Lavorative', icon: Building2 }
+    { id: 2, title: 'Informazioni Lavorative', icon: Building2 },
+    { id: 3, title: 'Verifica Dati', icon: CheckCircle }
   ];
 
   const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
@@ -268,32 +269,118 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     </div>
   );
 
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-white mb-2">Verifica Dati</h3>
+        <p className="text-slate-400">Controlla i tuoi dati prima di completare la registrazione</p>
+      </div>
+
+      <div className="bg-slate-700/50 rounded-lg p-6 space-y-4">
+        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <User className="h-5 w-5 mr-2 text-indigo-400" />
+          Informazioni Personali
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="text-slate-400 text-sm">Nome:</span>
+            <p className="text-white font-medium">{formData.firstName} {formData.lastName}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Email:</span>
+            <p className="text-white font-medium">{formData.email}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Telefono:</span>
+            <p className="text-white font-medium">{formData.phone}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Data di Nascita:</span>
+            <p className="text-white font-medium">{formData.birthDate}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Legge 104:</span>
+            <p className="text-white font-medium">{formData.has104 ? 'Sì' : 'No'}</p>
+          </div>
+        </div>
+
+        <h4 className="text-lg font-semibold text-white mt-6 mb-4 flex items-center">
+          <Building2 className="h-5 w-5 mr-2 text-indigo-400" />
+          Informazioni Lavorative
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="text-slate-400 text-sm">Dipartimento:</span>
+            <p className="text-white font-medium">{formData.department}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Posizione:</span>
+            <p className="text-white font-medium">{formData.position}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Data Assunzione:</span>
+            <p className="text-white font-medium">{formData.hireDate}</p>
+          </div>
+          <div>
+            <span className="text-slate-400 text-sm">Sede:</span>
+            <p className="text-white font-medium">
+              {workplaces.find(w => w.value === formData.workplace)?.label || formData.workplace}
+            </p>
+          </div>
+          <div className="md:col-span-2">
+            <span className="text-slate-400 text-sm">Tipo Contratto:</span>
+            <p className="text-white font-medium">{formData.contractType}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
+        <p className="text-blue-300 text-sm">
+          <strong>Nota:</strong> Una volta completata la registrazione, riceverai le credenziali per accedere al sistema HR.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto">
       {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="mb-10">
+        <div className="flex items-center justify-center space-x-8">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
             const isCompleted = currentStep > step.id;
             
             return (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  isCompleted ? 'bg-indigo-600 border-indigo-600 text-white' :
-                  isActive ? 'border-indigo-600 text-indigo-600' :
+              <div key={step.id} className="flex flex-col items-center">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                  isCompleted ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' :
+                  isActive ? 'border-indigo-600 text-indigo-600 bg-indigo-600/20' :
                   'border-slate-600 text-slate-400'
                 }`}>
-                  {isCompleted ? <CheckCircle className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                  {isCompleted ? <CheckCircle className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
                 </div>
-                <div className="ml-3">
-                  <p className={`text-sm font-medium ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                <div className="mt-3 text-center">
+                  <p className={`text-sm font-semibold transition-colors duration-300 ${
+                    isActive ? 'text-white' : 
+                    isCompleted ? 'text-indigo-400' : 'text-slate-400'
+                  }`}>
                     {step.title}
+                  </p>
+                  <p className={`text-xs mt-1 transition-colors duration-300 ${
+                    isActive ? 'text-slate-300' : 'text-slate-500'
+                  }`}>
+                    Step {step.id}
                   </p>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${isCompleted ? 'bg-indigo-600' : 'bg-slate-600'}`} />
+                  <div className={`absolute top-6 left-full w-16 h-0.5 transition-colors duration-300 ${
+                    isCompleted ? 'bg-indigo-600' : 'bg-slate-600'
+                  }`} style={{ transform: 'translateX(50%)' }} />
                 )}
               </div>
             );
@@ -302,23 +389,24 @@ const RegistrationSteps = ({ onRegister, loading }) => {
       </div>
 
       {/* Form Content */}
-      <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg p-8">
+      <form onSubmit={handleSubmit} className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-8 border border-slate-700/50 shadow-2xl">
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-10 pt-6 border-t border-slate-700/50">
           <button
             type="button"
             onClick={prevStep}
             disabled={currentStep === 1}
-            className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
               currentStep === 1 
-                ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
-                : 'bg-slate-600 text-white hover:bg-slate-500'
+                ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/30' 
+                : 'bg-slate-600/80 text-white hover:bg-slate-500/80 border border-slate-500/30 hover:border-slate-400/50'
             }`}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-5 w-5 mr-2" />
             Indietro
           </button>
 
@@ -326,18 +414,28 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             <button
               type="button"
               onClick={nextStep}
-              className="flex items-center px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex items-center px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl border border-indigo-500/30"
             >
               Avanti
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <ArrowRight className="h-5 w-5 ml-2" />
             </button>
           ) : (
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              className="flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed border border-green-500/30"
             >
-              {loading ? 'Registrazione...' : 'Completa Registrazione'}
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Registrazione...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Completa Registrazione
+                </>
+              )}
             </button>
           )}
         </div>
