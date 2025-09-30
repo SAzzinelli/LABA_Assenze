@@ -139,7 +139,9 @@ const Attendance = () => {
     return location ? location.label : 'Seleziona sede';
   };
 
-  const formatTime = (date) => {
+  const formatTime = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
     return date.toLocaleTimeString('it-IT', { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -307,15 +309,15 @@ const Attendance = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-slate-300 flex items-center">
                         <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                        {record.checkIn}
+                        {record.clock_in ? formatTime(record.clock_in) : '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-slate-300 flex items-center">
-                        {record.checkOut ? (
+                        {record.clock_out ? (
                           <>
                             <XCircle className="h-4 w-4 mr-2 text-red-400" />
-                            {record.checkOut}
+                            {formatTime(record.clock_out)}
                           </>
                         ) : (
                           <span className="text-slate-500">Non timbrato</span>
@@ -324,16 +326,16 @@ const Attendance = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-slate-300">
-                        {record.hours || '-'}
+                        {record.hours_worked ? `${record.hours_worked.toFixed(1)}h` : '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        record.status === 'completed' 
+                        record.clock_in && record.clock_out 
                           ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
                           : 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
                       }`}>
-                        {record.status === 'completed' ? 'Completato' : 'Incompleto'}
+                        {record.clock_in && record.clock_out ? 'Completato' : 'Incompleto'}
                       </span>
                     </td>
                   </tr>
