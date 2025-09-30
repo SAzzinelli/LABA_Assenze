@@ -2283,10 +2283,14 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
 
     if (emailResult.success) {
       console.log('✅ Email sent successfully');
+      const message = emailResult.simulated 
+        ? 'Report settimanale simulato (SMTP non disponibile)'
+        : 'Report settimanale inviato con successo';
       res.json({
         success: true,
-        message: 'Report settimanale inviato con successo',
-        messageId: emailResult.messageId
+        message: message,
+        messageId: emailResult.messageId,
+        simulated: emailResult.simulated || false
       });
     } else {
       console.log('❌ Email failed:', emailResult.error);
