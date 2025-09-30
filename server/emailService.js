@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
 // Configurazione SMTP Gmail
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: 'hr@labafirenze.com',
