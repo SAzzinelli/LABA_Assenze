@@ -757,12 +757,13 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
 
-    // Present today
+    // Present today - count only those who clocked in and haven't clocked out
     const { count: presentToday } = await supabase
       .from('attendance')
       .select('*', { count: 'exact', head: true })
       .eq('date', today)
-      .eq('status', 'present');
+      .not('clock_in', 'is', null)
+      .is('clock_out', null);
 
     // Pending requests
     const { count: pendingRequests } = await supabase
@@ -927,7 +928,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    // Combine users with their attendance status
+    // Combine users with their attendance status - only show those who are actually present
     const currentAttendance = allUsers.map(user => {
       const attendance = attendanceRecords.find(att => att.user_id === user.id);
       return {
@@ -939,7 +940,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         clock_out: attendance?.clock_out || null,
         hours_worked: attendance?.hours_worked || 0
       };
-    });
+    }).filter(att => att.clock_in && !att.clock_out); // Only show users who are actually present
 
     // Calcola ore lavorate per chi ha fatto clock-in
     const formatted = currentAttendance.map(att => {
