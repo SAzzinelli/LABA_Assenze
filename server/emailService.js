@@ -1,70 +1,18 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Configurazione email con fallback SendGrid
-let transporter;
+// Configurazione Resend
+let resend;
 
-// Prova prima con SendGrid (più compatibile con Railway)
-if (process.env.SENDGRID_API_KEY) {
-  console.log('📧 Using SendGrid for email delivery');
-  transporter = nodemailer.createTransport({
-    service: 'SendGrid',
-    auth: {
-      user: 'apikey',
-      pass: process.env.SENDGRID_API_KEY
-    }
-  });
+if (process.env.RESEND_API_KEY) {
+  console.log('📧 Using Resend for email delivery');
+  resend = new Resend(process.env.RESEND_API_KEY);
 } else {
-  console.log('📧 Using Gmail SMTP (may have connection issues on Railway)');
-  // Configurazione SMTP Gmail con opzioni avanzate per Railway
-  transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true per 465, false per altri porti
-    auth: {
-      user: 'hr@labafirenze.com',
-      pass: 'ktof ruov fcit mzvg'
-    },
-    // Opzioni per Railway e debugging
-    debug: true,
-    logger: true,
-    // Timeout più lunghi per Railway
-    connectionTimeout: 60000, // 60 secondi
-    greetingTimeout: 30000,   // 30 secondi
-    socketTimeout: 60000,     // 60 secondi
-    // Retry automatico
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateLimit: 14, // max 14 emails per secondo
-    // TLS options per Railway
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
+  console.log('📧 Using Resend with provided API key');
+  resend = new Resend('re_ScLMo29m_7NSht5w8Ruu5ST8VHPnPiPWh');
 }
 
-// Verifica connessione al transporter
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ SMTP Connection Error:', error);
-    console.log('🔧 Tentativo di riconnessione in corso...');
-  } else {
-    console.log('✅ SMTP Server ready to send emails');
-  }
-});
-
-// Funzione di fallback per testare connessione
-const testSMTPConnection = async () => {
-  try {
-    console.log('🔍 Testing SMTP connection...');
-    await transporter.verify();
-    console.log('✅ SMTP connection verified successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ SMTP verification failed:', error.message);
-    return false;
-  }
-};
+// Resend è pronto per l'uso
+console.log('✅ Resend configured and ready to send emails');
 
 // Template email per notifiche
 const emailTemplates = {
@@ -372,45 +320,25 @@ const emailTemplates = {
   })
 };
 
-// Funzione per inviare email con fallback e test connessione
+// Funzione per inviare email con Resend
 const sendEmail = async (to, template, data) => {
   try {
     console.log(`📧 Attempting to send ${template} email to: ${to}`);
     
-    // Testa la connessione prima di inviare
-    const connectionOk = await testSMTPConnection();
-    if (!connectionOk) {
-      console.log('❌ SMTP connection failed, using fallback simulation');
-      // Fallback: simula l'invio per non bloccare l'app
-      console.log(`📧 [SIMULATED] Email ${template} would be sent to: ${to}`);
-      console.log(`📧 [SIMULATED] Subject: ${emailTemplates[template](...data).subject}`);
-      return { success: true, messageId: `simulated-${Date.now()}`, simulated: true };
-    }
-    
     const emailTemplate = emailTemplates[template](...data);
     
-    const mailOptions = {
+    const result = await resend.emails.send({
       from: 'LABA HR <hr@labafirenze.com>',
       to: to,
       subject: emailTemplate.subject,
       html: emailTemplate.html
-    };
-
-    // Aggiungi timeout di 60 secondi (più lungo per Railway)
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email timeout after 60 seconds')), 60000);
     });
 
-    const sendPromise = transporter.sendMail(mailOptions);
-    
-    const info = await Promise.race([sendPromise, timeoutPromise]);
-    console.log('✅ Email inviata con successo: %s', info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log('✅ Email inviata con successo:', result.data?.id);
+    return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Errore invio email:', error);
-    // Fallback: simula l'invio anche in caso di errore
-    console.log(`📧 [FALLBACK] Email ${template} simulated for: ${to}`);
-    return { success: true, messageId: `fallback-${Date.now()}`, simulated: true };
+    return { success: false, error: error.message };
   }
 };
 
