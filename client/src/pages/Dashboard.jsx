@@ -47,7 +47,49 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    fetchDashboardData();
+    const loadDashboardData = async () => {
+      setLoading(true);
+      try {
+        // Fetch dashboard stats
+        await fetchDashboardData();
+        
+        // Fetch current attendance
+        await fetchCurrentAttendance();
+        
+        // Fetch recent requests for admin
+        await fetchRecentRequests();
+        
+        // Fetch weekly attendance data
+        const weeklyResponse = await apiCall('/api/dashboard/attendance');
+        if (weeklyResponse.ok) {
+          const weeklyData = await weeklyResponse.json();
+          setWeeklyAttendance(weeklyData || []);
+        }
+        
+        // Fetch departments data
+        const departmentsResponse = await apiCall('/api/departments');
+        if (departmentsResponse.ok) {
+          const departmentsData = await departmentsResponse.json();
+          if (departmentsData && departmentsData.length > 0) {
+            const chartData = departmentsData.map((dept, index) => ({
+              name: dept.name,
+              value: dept.employee_count || 0,
+              color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
+              employees: dept.employee_count || 0
+            }));
+            setDepartments(chartData);
+          } else {
+            setDepartments([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDashboardData();
     
     // Aggiornamento live ogni 30 secondi per admin
     if (user?.role === 'admin') {
@@ -57,98 +99,8 @@ const Dashboard = () => {
       }, 30000); // 30 secondi
       
       return () => clearInterval(interval);
-    } else {
-      // Per utenti: carica KPI iniziali e aggiorna ogni minuto
-      fetchUserKPIs();
-      fetchUserStats(); // Carica stato timbratura
-      fetchAttendance(); // Carica cronologia presenze
-      const interval = setInterval(() => {
-        fetchUserKPIs();
-        fetchUserStats(); // Aggiorna stato timbratura
-        fetchAttendance(); // Aggiorna cronologia presenze
-      }, 60000); // 1 minuto
-      
-      return () => clearInterval(interval);
     }
   }, [user?.role]);
-
-  const fetchDashboardData = async () => {
-    try {
-      if (user?.role === 'admin') {
-        // Fetch pending requests directly
-        const requestsResponse = await apiCall('/api/leave-requests');
-        let pendingRequests = 0;
-        if (requestsResponse.ok) {
-          const requestsData = await requestsResponse.json();
-          pendingRequests = requestsData.filter(req => req.status === 'pending').length;
-        }
-
-        // Fetch present today from attendance
-        const attendanceResponse = await apiCall('/api/attendance/current');
-        let presentToday = 0;
-        if (attendanceResponse.ok) {
-          const attendanceData = await attendanceResponse.json();
-          presentToday = attendanceData.length;
-        }
-
-        setStats({
-          presentToday: presentToday,
-          pendingRequests: pendingRequests
-        });
-
-        // Fetch weekly attendance data
-        const weeklyResponse = await apiCall('/api/dashboard/attendance');
-        if (weeklyResponse.ok) {
-          const weeklyData = await weeklyResponse.json();
-          if (weeklyData && weeklyData.length > 0) {
-            setWeeklyAttendance(weeklyData);
-          } else {
-            // No real data available - show empty array
-            setWeeklyAttendance([]);
-          }
-        } else {
-          // Fallback: create empty weekly data
-          setWeeklyAttendance([]);
-        }
-      } else {
-        // Fetch KPI utente
-        await fetchUserKPIs();
-      }
-
-        // Fetch current attendance for admin
-        await fetchCurrentAttendance();
-        
-        // Fetch recent requests for admin
-        await fetchRecentRequests();
-        
-        // Fetch departments from new API
-        const departmentsResponse = await apiCall('/api/departments');
-        if (departmentsResponse.ok) {
-          const departmentsData = await departmentsResponse.json();
-          if (departmentsData && departmentsData.length > 0) {
-            // Convert API data to chart format with real employee counts
-            const chartData = departmentsData.map((dept, index) => ({
-              name: dept.name,
-              value: dept.employee_count || 0, // Use real employee count
-              color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
-              employees: dept.employee_count || 0
-            }));
-            setDepartments(chartData);
-          } else {
-            // No departments data - show empty
-            setDepartments([]);
-          }
-        }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      // No fallback data - show empty state
-      setStats({ presentToday: 0, pendingRequests: 0 });
-      setWeeklyAttendance([]);
-      setDepartments([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchCurrentAttendance = async () => {
     try {
