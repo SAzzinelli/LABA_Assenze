@@ -20,7 +20,8 @@ const Dashboard = () => {
   const { user, apiCall } = useAuthStore();
   const [stats, setStats] = useState({
     presentToday: 0,
-    pendingRequests: 0
+    pendingRequests: 0,
+    monthlyBalance: 0
   });
   const [weeklyAttendance, setWeeklyAttendance] = useState([]);
   const [departments, setDepartments] = useState([]);
