@@ -5,13 +5,11 @@ import {
   Clock,
   FileText,
   CheckCircle,
-  XCircle,
   ArrowUpRight,
   ArrowDownRight,
   Activity,
   Target,
-  Calendar,
-  MapPin
+  Calendar
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -28,7 +26,6 @@ const Dashboard = () => {
   const [currentAttendance, setCurrentAttendance] = useState([]);
   const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [attendance, setAttendance] = useState([]);
   
   // Stati per KPI utente
   const [userKPIs, setUserKPIs] = useState({
@@ -38,14 +35,6 @@ const Dashboard = () => {
     monthlyPresences: '0/20'
   });
 
-  // Stato per timbratura
-  const [userStats, setUserStats] = useState({
-    isClockedIn: false,
-    todayHours: '0h 0m',
-    monthlyPresences: 0,
-    expectedMonthlyPresences: 20,
-    workplace: 'LABA Firenze - Sede Via Vecchietti'
-  });
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -146,54 +135,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-    }
-  };
-
-  const fetchAttendance = async () => {
-    try {
-      const response = await apiCall('/api/attendance');
-      if (response.ok) {
-        const data = await response.json();
-        setAttendance(data);
-      } else {
-        setAttendance([]);
-      }
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-      setAttendance([]);
-    }
-  };
-
-  const fetchUserKPIs = async () => {
-    try {
-      // 1. Ore lavorate questa settimana
-      const weeklyHoursResponse = await apiCall('/api/attendance/user-weekly-hours');
-      const weeklyHoursData = weeklyHoursResponse.ok ? await weeklyHoursResponse.json() : { success: false };
-      const weeklyHours = weeklyHoursData.success ? weeklyHoursData.data.totalHours || 0 : 0;
-      
-      // 2. Saldo ore (straordinari)
-      const overtimeResponse = await apiCall('/api/attendance/user-overtime');
-      const overtimeData = overtimeResponse.ok ? await overtimeResponse.json() : { success: false };
-      const overtimeHours = overtimeData.success ? overtimeData.data.overtimeHours || 0 : 0;
-      
-      // 3. Permessi rimanenti
-      const permissionsResponse = await apiCall('/api/leave-balances');
-      const permissionsData = permissionsResponse.ok ? await permissionsResponse.json() : { success: false };
-      const remainingPermissions = permissionsData.success ? permissionsData.data.permission?.remaining || 0 : 0;
-      
-      // 4. Presenze mese
-      const monthlyPresencesResponse = await apiCall('/api/attendance/user-stats');
-      const monthlyPresencesData = monthlyPresencesResponse.ok ? await monthlyPresencesResponse.json() : { success: false };
-      const monthlyPresences = monthlyPresencesData.success ? monthlyPresencesData.monthlyPresences || 0 : 0;
-      
-      setUserKPIs({
-        weeklyHours: formatHours(weeklyHours),
-        overtimeBalance: formatOvertime(overtimeHours),
-        remainingPermissions: `${remainingPermissions}h`,
-        monthlyPresences: `${monthlyPresences}/20`
-      });
-    } catch (error) {
-      console.error('Error fetching user KPIs:', error);
     }
   };
 
@@ -447,57 +388,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Timbratura - Solo per Utenti */}
-      {user?.role !== 'admin' && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Clock className="h-6 w-6 mr-3 text-green-400" />
-            Timbratura
-          </h3>
-          
-          {/* Selezione Sede di Lavoro */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-300 mb-3 flex items-center">
-              <MapPin className="h-4 w-4 mr-2" />
-              Sede di Lavoro
-            </label>
-            <select 
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              <option value="badia">Piazza di Badia a Ripoli 1/A</option>
-              <option value="vecchietti">Via de' Vecchietti 6</option>
-            </select>
-          </div>
-
-          {/* Pulsanti Timbratura */}
-          <div className="flex gap-4">
-            <button 
-              onClick={handleClockIn}
-              disabled={userStats.isClockedIn}
-              className={`flex-1 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center ${
-                userStats.isClockedIn 
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
-            >
-              <CheckCircle className="h-5 w-5 mr-2" />
-              {userStats.isClockedIn ? 'Già Entrato' : 'Timbra Entrata'}
-            </button>
-            <button 
-              onClick={handleClockOut}
-              disabled={!userStats.isClockedIn}
-              className={`flex-1 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center ${
-                !userStats.isClockedIn 
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-              }`}
-            >
-              <XCircle className="h-5 w-5 mr-2" />
-              {!userStats.isClockedIn ? 'Non Entrato' : 'Timbra Uscita'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />
