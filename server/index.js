@@ -564,13 +564,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const { department } = req.body;
-    
-    // Validazione dipartimento protetto
-    if (department === 'System Owner') {
-      return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
-    }
-
     const { 
       firstName, 
       lastName, 
@@ -579,8 +572,16 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       position, 
       phone, 
       birthDate, 
+      hireDate, 
+      workplace, 
+      contractType, 
       has104 = false 
     } = req.body;
+    
+    // Validazione dipartimento protetto
+    if (department === 'System Owner') {
+      return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
+    }
 
     // Validazione
     if (!firstName || !lastName || !email || !department) {
