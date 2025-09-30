@@ -328,7 +328,7 @@ const sendEmail = async (to, template, data) => {
     const emailTemplate = emailTemplates[template](...data);
     
     const result = await resend.emails.send({
-      from: 'LABA HR <hr@labafirenze.com>',
+      from: 'LABA HR <onboarding@resend.dev>',
       to: to,
       subject: emailTemplate.subject,
       html: emailTemplate.html
