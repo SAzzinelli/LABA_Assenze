@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { sendEmail, sendEmailToAdmins } = require('./emailService');
+const emailScheduler = require('./emailScheduler');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
@@ -2058,6 +2059,46 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
   }
 });
 
+// Endpoint per gestire impostazioni automazione email
+app.get('/api/email/scheduler/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const status = emailScheduler.getStatus();
+    res.json({
+      success: true,
+      scheduler: status
+    });
+  } catch (error) {
+    console.error('Scheduler status error:', error);
+    res.status(500).json({ error: 'Errore nel recupero stato scheduler' });
+  }
+});
+
+app.post('/api/email/scheduler/start', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    emailScheduler.start();
+    res.json({
+      success: true,
+      message: 'Email Scheduler avviato con successo'
+    });
+  } catch (error) {
+    console.error('Scheduler start error:', error);
+    res.status(500).json({ error: 'Errore nell\'avvio scheduler' });
+  }
+});
+
+app.post('/api/email/scheduler/stop', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    emailScheduler.stop();
+    res.json({
+      success: true,
+      message: 'Email Scheduler fermato con successo'
+    });
+  } catch (error) {
+    console.error('Scheduler stop error:', error);
+    res.status(500).json({ error: 'Errore nella fermata scheduler' });
+  }
+});
+
 // Endpoint per inviare report settimanali
 app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -2089,13 +2130,50 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
-    // Recupera dati settimanali (implementazione semplificata)
+    // Recupera dati settimanali REALI dal database
+    const currentDate = new Date();
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay() + 1); // Lunedì
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Domenica
+
+    // Calcola ore lavorate settimanali
+    const { data: weeklyAttendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('hours_worked, date')
+      .eq('user_id', userId)
+      .gte('date', startOfWeek.toISOString().split('T')[0])
+      .lte('date', endOfWeek.toISOString().split('T')[0])
+      .not('hours_worked', 'is', null);
+
+    let totalHours = 0;
+    let daysPresent = 0;
+    let overtimeHours = 0;
+
+    if (!attendanceError && weeklyAttendance) {
+      weeklyAttendance.forEach(record => {
+        if (record.hours_worked) {
+          totalHours += record.hours_worked;
+          daysPresent++;
+          
+          // Calcola straordinario (oltre 8 ore al giorno)
+          if (record.hours_worked > 8) {
+            overtimeHours += (record.hours_worked - 8);
+          }
+        }
+      });
+    }
+
+    // Calcola saldo ore (ore lavorate - ore previste)
+    const expectedHours = daysPresent * 8; // 8 ore al giorno
+    const balanceHours = totalHours - expectedHours;
+
     const weekData = {
-      weekNumber: weekNumber || new Date().getWeek(),
-      totalHours: 40, // Dovresti calcolare questo dal database
-      daysPresent: 5,
-      overtimeHours: 0,
-      balanceHours: 0
+      weekNumber: weekNumber || Math.ceil((currentDate.getDate() - currentDate.getDay() + 1) / 7),
+      totalHours: Math.round(totalHours * 10) / 10,
+      daysPresent: daysPresent,
+      overtimeHours: Math.round(overtimeHours * 10) / 10,
+      balanceHours: Math.round(balanceHours * 10) / 10
     };
 
     const emailResult = await sendEmail(emailToUse, 'weeklyReport', [
@@ -2312,6 +2390,9 @@ server.listen(PORT, () => {
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
   console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
+  
+  // Avvia Email Scheduler
+  emailScheduler.start();
 });
 
 module.exports = app;

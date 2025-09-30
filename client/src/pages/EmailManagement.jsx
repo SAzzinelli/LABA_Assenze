@@ -20,10 +20,58 @@ const EmailManagement = () => {
   const [result, setResult] = useState(null);
   const [showEmailConfig, setShowEmailConfig] = useState(false);
   const [personalEmail, setPersonalEmail] = useState('');
+  const [schedulerStatus, setSchedulerStatus] = useState(null);
 
   useEffect(() => {
     fetchEmployees();
+    fetchSchedulerStatus();
   }, []);
+
+  const fetchSchedulerStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/email/scheduler/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSchedulerStatus(data.scheduler);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduler status:', error);
+    }
+  };
+
+  const toggleScheduler = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const endpoint = schedulerStatus?.isRunning ? '/api/email/scheduler/stop' : '/api/email/scheduler/start';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setResult({ type: 'success', message: data.message });
+        fetchSchedulerStatus(); // Refresh status
+      } else {
+        setResult({ type: 'error', message: data.error });
+      }
+    } catch (error) {
+      console.error('Error toggling scheduler:', error);
+      setResult({ type: 'error', message: 'Errore di connessione' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -430,6 +478,60 @@ const EmailManagement = () => {
           </div>
         )}
 
+        {/* Impostazioni Automazione */}
+        <div className="mt-8 bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-white flex items-center mb-4">
+            <Clock className="h-5 w-5 mr-2 text-purple-400" />
+            Automazione Email
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
+              <div>
+                <h3 className="text-lg font-medium text-white">Scheduler Email</h3>
+                <p className="text-slate-400 text-sm">
+                  {schedulerStatus?.isRunning ? 'Attivo' : 'Disattivo'}
+                </p>
+              </div>
+              <button
+                onClick={toggleScheduler}
+                disabled={loading}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  schedulerStatus?.isRunning
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                } disabled:opacity-50`}
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  schedulerStatus?.isRunning ? 'Ferma' : 'Avvia'
+                )}
+              </button>
+            </div>
+
+            {schedulerStatus?.isRunning && (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
+                <h4 className="text-green-300 font-semibold mb-2">Task Attivi:</h4>
+                <ul className="text-green-200 text-sm space-y-1">
+                  <li>📅 Report settimanali: ogni lunedì alle 9:00</li>
+                  <li>⏰ Promemoria timbratura: ogni giorno alle 8:30 (lun-ven)</li>
+                </ul>
+              </div>
+            )}
+
+            <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
+              <h4 className="text-blue-300 font-semibold mb-2">Funzionalità Automatiche:</h4>
+              <ul className="text-blue-200 text-sm space-y-1">
+                <li>• Report settimanali inviati automaticamente a tutti i dipendenti</li>
+                <li>• Promemoria timbratura giornalieri</li>
+                <li>• Notifiche automatiche per nuove richieste</li>
+                <li>• Email di risposta per approvazioni/rifiuti</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Info Email */}
         <div className="mt-8 bg-slate-800 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white flex items-center mb-4">
@@ -443,14 +545,16 @@ const EmailManagement = () => {
                 <li>• Notifiche nuove richieste → Admin</li>
                 <li>• Risposte approvazione → Dipendenti</li>
                 <li>• Promemoria timbratura → Dipendenti</li>
+                <li>• Report settimanali → Dipendenti</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium text-white mb-2">Email Manuali</h4>
+              <h4 className="font-medium text-white mb-2">Configurazione</h4>
               <ul className="space-y-1">
-                <li>• Promemoria personalizzati</li>
-                <li>• Report settimanali</li>
-                <li>• Comunicazioni urgenti</li>
+                <li>• SMTP: Gmail (hr@labafirenze.com)</li>
+                <li>• Privacy: Solo email reali</li>
+                <li>• Template: Professionali</li>
+                <li>• Scheduler: Cron automatico</li>
               </ul>
             </div>
           </div>
