@@ -1304,6 +1304,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           title: `Nuova richiesta ${typeLabels[type] || type}`,
           message: `${req.user.first_name} ${req.user.last_name} ha richiesto ${typeLabels[type] || type} dal ${startDate} al ${endDate}`,
           type: 'request',
+          request_id: newRequest[0].id,
+          request_type: type,
           is_read: false,
           created_at: new Date().toISOString()
         }));
@@ -1376,6 +1378,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
             message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} dal ${updatedRequest.start_date} al ${updatedRequest.end_date} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
             type: 'response',
+            request_id: updatedRequest.id,
+            request_type: updatedRequest.type,
             is_read: false,
             created_at: new Date().toISOString()
           }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
 import {
   LogOut,
@@ -25,9 +25,36 @@ const Layout = ({ children }) => {
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  // Funzione per gestire il click sulle notifiche
+  const handleNotificationClick = (notification) => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+    
+    // Naviga alla pagina corretta basata sul tipo di richiesta
+    if (notification.request_id && notification.request_type) {
+      switch (notification.request_type) {
+        case 'permission':
+          navigate('/permessi');
+          break;
+        case 'vacation':
+          navigate('/ferie');
+          break;
+        case 'sick':
+          navigate('/malattia');
+          break;
+        default:
+          navigate('/dashboard');
+      }
+    }
+    
+    setNotificationsOpen(false);
   };
 
   // Funzione per tradurre i ruoli in italiano
@@ -308,11 +335,7 @@ const Layout = ({ children }) => {
                               {notifications.map((notification, index) => (
                                 <div
                                   key={notification.id}
-                                  onClick={() => {
-                                    if (!notification.is_read) {
-                                      markAsRead(notification.id);
-                                    }
-                                  }}
+                                  onClick={() => handleNotificationClick(notification)}
                                   className={`p-4 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
                                     !notification.is_read 
                                       ? 'bg-blue-900/30 border border-blue-500/30 shadow-lg' 
@@ -342,6 +365,11 @@ const Layout = ({ children }) => {
                                           hour: '2-digit',
                                           minute: '2-digit'
                                         })}
+                                        {notification.request_id && (
+                                          <span className="ml-2 text-blue-400 text-xs">
+                                            Clicca per vedere la richiesta →
+                                          </span>
+                                        )}
                                       </p>
                                     </div>
                                   </div>

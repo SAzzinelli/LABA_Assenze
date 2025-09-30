@@ -102,6 +102,63 @@ const LeaveRequests = () => {
     }
   };
 
+  // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
+  const handleApproveRequest = async (requestId, notes = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/leave-requests/${requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'approved',
+          notes: notes
+        })
+      });
+
+      if (response.ok) {
+        alert('Richiesta approvata con successo');
+        fetchRequests(); // Ricarica le richieste
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error approving request:', error);
+      alert('Errore durante l\'approvazione della richiesta');
+    }
+  };
+
+  const handleRejectRequest = async (requestId, notes = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/leave-requests/${requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'rejected',
+          notes: notes
+        })
+      });
+
+      if (response.ok) {
+        alert('Richiesta rifiutata');
+        fetchRequests(); // Ricarica le richieste
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      alert('Errore durante il rifiuto della richiesta');
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -727,6 +784,32 @@ const LeaveRequests = () => {
                         <p className="text-red-300 text-sm">
                           <strong>Motivo rifiuto:</strong> {request.rejectionReason}
                         </p>
+                      </div>
+                    )}
+                    
+                    {/* Pulsanti di approvazione per admin - solo per richieste pending */}
+                    {user?.role === 'admin' && request.status === 'pending' && (
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          onClick={() => {
+                            const notes = prompt('Note per l\'approvazione (opzionale):');
+                            handleApproveRequest(request.id, notes || '');
+                          }}
+                          className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approva
+                        </button>
+                        <button
+                          onClick={() => {
+                            const notes = prompt('Motivo del rifiuto (opzionale):');
+                            handleRejectRequest(request.id, notes || '');
+                          }}
+                          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Rifiuta
+                        </button>
                       </div>
                     )}
                   </div>
