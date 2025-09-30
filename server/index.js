@@ -406,6 +406,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         lastName: emp.last_name,
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
+        personalEmail: emp.personal_email,
         department: emp.department || 'Amministrazione',
         position: emp.position || 'Dipendente',
         hireDate: emp.hire_date || emp.created_at?.split('T')[0],
@@ -436,6 +437,41 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
     res.json(formattedEmployees);
   } catch (error) {
     console.error('Employees fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Update employee personal email
+app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { personalEmail } = req.body;
+
+    if (!personalEmail) {
+      return res.status(400).json({ error: 'Email personale richiesta' });
+    }
+
+    const { data: updatedEmployee, error } = await supabase
+      .from('users')
+      .update({
+        personal_email: personalEmail
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Employee update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento del dipendente' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Email personale aggiornata con successo',
+      employee: updatedEmployee
+    });
+  } catch (error) {
+    console.error('Employee update error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -1403,23 +1439,30 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         try {
           const { data: user, error: userError } = await supabase
             .from('users')
-            .select('email, first_name, last_name')
+            .select('email, personal_email, first_name, last_name')
             .eq('id', updatedRequest.user_id)
             .single();
 
-          if (!userError && user && user.email) {
-            const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
-            const requestId = updatedRequest.id;
+          if (!userError && user) {
+            // Usa email personale se disponibile, altrimenti email aziendale
+            const emailToUse = user.personal_email || user.email;
             
-            await sendEmail(user.email, 'requestResponse', [
-              requestType, 
-              status, 
-              updatedRequest.start_date, 
-              updatedRequest.end_date, 
-              notes || '', 
-              requestId
-            ]);
-            console.log('Email inviata al dipendente per risposta richiesta');
+            if (emailToUse) {
+              const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
+              const requestId = updatedRequest.id;
+              
+              await sendEmail(emailToUse, 'requestResponse', [
+                requestType, 
+                status, 
+                updatedRequest.start_date, 
+                updatedRequest.end_date, 
+                notes || '', 
+                requestId
+              ]);
+              console.log(`Email inviata a ${emailToUse} per risposta richiesta`);
+            } else {
+              console.log('Nessuna email configurata per il dipendente');
+            }
           }
         } catch (emailError) {
           console.error('Errore invio email dipendente:', emailError);
@@ -1942,7 +1985,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, first_name, last_name, department')
+      .select('email, personal_email, first_name, last_name, department')
       .eq('id', userId)
       .single();
 
@@ -1950,14 +1993,17 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
-    if (!user.email) {
+    // Usa email personale se disponibile, altrimenti email aziendale
+    const emailToUse = user.personal_email || user.email;
+    
+    if (!emailToUse) {
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
     let emailResult;
     switch (type) {
       case 'attendance':
-        emailResult = await sendEmail(user.email, 'attendanceReminder', [
+        emailResult = await sendEmail(emailToUse, 'attendanceReminder', [
           `${user.first_name} ${user.last_name}`,
           user.department || 'Ufficio'
         ]);
@@ -1967,7 +2013,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
           return res.status(400).json({ error: 'Messaggio personalizzato richiesto' });
         }
         // Per ora invio un'email generica, potresti creare un template personalizzato
-        emailResult = await sendEmail(user.email, 'attendanceReminder', [
+        emailResult = await sendEmail(emailToUse, 'attendanceReminder', [
           `${user.first_name} ${user.last_name}`,
           customMessage
         ]);
@@ -2006,7 +2052,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, first_name, last_name')
+      .select('email, personal_email, first_name, last_name')
       .eq('id', userId)
       .single();
 
@@ -2014,7 +2060,10 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       return res.status(404).json({ error: 'Utente non trovato' });
     }
 
-    if (!user.email) {
+    // Usa email personale se disponibile, altrimenti email aziendale
+    const emailToUse = user.personal_email || user.email;
+    
+    if (!emailToUse) {
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
@@ -2027,7 +2076,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       balanceHours: 0
     };
 
-    const emailResult = await sendEmail(user.email, 'weeklyReport', [
+    const emailResult = await sendEmail(emailToUse, 'weeklyReport', [
       `${user.first_name} ${user.last_name}`,
       weekData
     ]);

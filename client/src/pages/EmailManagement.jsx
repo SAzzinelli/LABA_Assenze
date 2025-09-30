@@ -18,6 +18,8 @@ const EmailManagement = () => {
   const [customMessage, setCustomMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [showEmailConfig, setShowEmailConfig] = useState(false);
+  const [personalEmail, setPersonalEmail] = useState('');
 
   useEffect(() => {
     fetchEmployees();
@@ -119,6 +121,46 @@ const EmailManagement = () => {
     }
   };
 
+  const updatePersonalEmail = async () => {
+    if (!selectedEmployee || !personalEmail) {
+      setResult({ type: 'error', message: 'Seleziona un dipendente e inserisci un\'email' });
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/employees/${selectedEmployee}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          personalEmail: personalEmail
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setResult({ type: 'success', message: 'Email personale aggiornata con successo' });
+        setPersonalEmail('');
+        setShowEmailConfig(false);
+        fetchEmployees(); // Ricarica la lista dipendenti
+      } else {
+        setResult({ type: 'error', message: data.error || 'Errore nell\'aggiornamento' });
+      }
+    } catch (error) {
+      console.error('Error updating personal email:', error);
+      setResult({ type: 'error', message: 'Errore di connessione' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const selectedEmployeeData = employees.find(emp => emp.id === selectedEmployee);
 
   return (
@@ -133,6 +175,88 @@ const EmailManagement = () => {
           <p className="text-slate-400 mt-2">
             Invia promemoria e report via email ai dipendenti
           </p>
+        </div>
+
+        {/* Configurazione Email Personali */}
+        <div className="mb-8 bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-white flex items-center mb-4">
+            <User className="h-5 w-5 mr-2 text-purple-400" />
+            Configurazione Email Personali
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Dipendente
+              </label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => {
+                  setSelectedEmployee(e.target.value);
+                  const emp = employees.find(emp => emp.id === e.target.value);
+                  setPersonalEmail(emp?.personalEmail || '');
+                }}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleziona un dipendente</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.firstName} {emp.lastName} - {emp.department}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Email Personale
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={personalEmail}
+                  onChange={(e) => setPersonalEmail(e.target.value)}
+                  placeholder="esempio@gmail.com"
+                  className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={updatePersonalEmail}
+                  disabled={loading || !selectedEmployee || !personalEmail}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    'Salva'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {selectedEmployeeData && (
+            <div className="mt-4 bg-slate-700 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-slate-300 mb-2">Email Configurate</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Email Aziendale:</span>
+                  <span className="text-white">{selectedEmployeeData.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Email Personale:</span>
+                  <span className="text-white">
+                    {selectedEmployeeData.personalEmail || 'Non configurata'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Email per Notifiche:</span>
+                  <span className="text-green-400">
+                    {selectedEmployeeData.personalEmail || selectedEmployeeData.email}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Email Forms */}
