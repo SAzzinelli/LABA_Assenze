@@ -156,7 +156,36 @@ const AdminAttendance = () => {
         </div>
       </div>
 
-      {/* Current Attendance */}
+      {/* Tab Navigation */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <div className="flex space-x-1 bg-slate-700 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('current')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'current'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Presenze Attuali
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'history'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Cronologia Presenze
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'current' ? (
+        <div className="space-y-6">
+          {/* Current Attendance Content */}
       <div className="bg-slate-800 rounded-lg p-6">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center">
           <Clock className="h-6 w-6 mr-3 text-green-400" />
@@ -248,6 +277,138 @@ const AdminAttendance = () => {
           </div>
         )}
       </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* History Filters */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-blue-400" />
+              Filtri Cronologia
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value={1}>Gennaio</option>
+                  <option value={2}>Febbraio</option>
+                  <option value={3}>Marzo</option>
+                  <option value={4}>Aprile</option>
+                  <option value={5}>Maggio</option>
+                  <option value={6}>Giugno</option>
+                  <option value={7}>Luglio</option>
+                  <option value={8}>Agosto</option>
+                  <option value={9}>Settembre</option>
+                  <option value={10}>Ottobre</option>
+                  <option value={11}>Novembre</option>
+                  <option value={12}>Dicembre</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Tutti i dipendenti</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* History Table */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-blue-400" />
+              Cronologia Presenze
+            </h2>
+            
+            {historyLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : attendanceHistory.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-600">
+                      <th className="text-left py-3 px-4 text-slate-300">Data</th>
+                      <th className="text-left py-3 px-4 text-slate-300">Dipendente</th>
+                      <th className="text-left py-3 px-4 text-slate-300">Entrata</th>
+                      <th className="text-left py-3 px-4 text-slate-300">Uscita</th>
+                      <th className="text-left py-3 px-4 text-slate-300">Ore Lavorate</th>
+                      <th className="text-left py-3 px-4 text-slate-300">Stato</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attendanceHistory.map((record) => (
+                      <tr key={record.id} className="border-b border-slate-700 hover:bg-slate-700">
+                        <td className="py-3 px-4 text-white">
+                          {new Date(record.date).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="py-3 px-4 text-white">
+                          {record.user_id ? 
+                            employees.find(emp => emp.id === record.user_id)?.first_name + ' ' + 
+                            employees.find(emp => emp.id === record.user_id)?.last_name : 
+                            'N/A'
+                          }
+                        </td>
+                        <td className="py-3 px-4 text-white">
+                          {record.clock_in ? formatTime(record.clock_in) : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-white">
+                          {record.clock_out ? formatTime(record.clock_out) : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-white">
+                          {record.hours_worked ? `${record.hours_worked.toFixed(1)}h` : '-'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            record.clock_in && record.clock_out 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {record.clock_in && record.clock_out ? 'Completo' : 'Incompleto'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+                <p className="text-slate-400">Nessun record trovato per i filtri selezionati</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
