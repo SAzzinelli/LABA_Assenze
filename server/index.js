@@ -265,6 +265,11 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Solo email @labafirenze.com sono accettate' });
     }
     
+    // Validazione dipartimento protetto
+    if (department === 'System Owner') {
+      return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
+    }
+    
     // Validazione campi obbligatori
     if (!email || !password || !firstName || !lastName || !department || !position || !hireDate || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
@@ -396,6 +401,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         work_schedules!left(*)
       `)
       .eq('role', 'employee') // Include tutti i dipendenti, non solo attivi
+      .neq('department', 'System Owner') // Nascondi System Owner
       .order('last_name');
 
     if (error) {
@@ -556,6 +562,13 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { department } = req.body;
+    
+    // Validazione dipartimento protetto
+    if (department === 'System Owner') {
+      return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
     }
 
     const { 

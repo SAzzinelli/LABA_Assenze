@@ -29,7 +29,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     { id: 3, title: 'Verifica Dati', icon: CheckCircle }
   ];
 
-  const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
+  const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT']; // System Owner nascosto
   const workplaces = [
     { value: 'badia', label: 'Piazza di Badia a Ripoli 1/A' },
     { value: 'vecchietti', label: 'Via de\' Vecchietti 6' }
