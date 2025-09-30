@@ -159,7 +159,7 @@ const EmailManagement = () => {
         method: 'POST',
         body: JSON.stringify({
           userId: selectedEmployee,
-          weekNumber: new Date().getWeek()
+          weekNumber: Math.ceil((new Date().getDate() - new Date().getDay() + 1) / 7)
         })
       });
 
