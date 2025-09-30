@@ -6,6 +6,18 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: 'hr@labafirenze.com',
     pass: 'ktof ruov fcit mzvg'
+  },
+  // Aggiungi opzioni per debugging
+  debug: true,
+  logger: true
+});
+
+// Verifica connessione al transporter
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ SMTP Connection Error:', error);
+  } else {
+    console.log('✅ SMTP Server ready to send emails');
   }
 });
 
@@ -315,9 +327,11 @@ const emailTemplates = {
   })
 };
 
-// Funzione per inviare email
+// Funzione per inviare email con timeout
 const sendEmail = async (to, template, data) => {
   try {
+    console.log(`📧 Attempting to send ${template} email to: ${to}`);
+    
     const emailTemplate = emailTemplates[template](...data);
     
     const mailOptions = {
@@ -327,11 +341,18 @@ const sendEmail = async (to, template, data) => {
       html: emailTemplate.html
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email inviata: %s', info.messageId);
+    // Aggiungi timeout di 30 secondi
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email timeout after 30 seconds')), 30000);
+    });
+
+    const sendPromise = transporter.sendMail(mailOptions);
+    
+    const info = await Promise.race([sendPromise, timeoutPromise]);
+    console.log('✅ Email inviata con successo: %s', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Errore invio email:', error);
+    console.error('❌ Errore invio email:', error);
     return { success: false, error: error.message };
   }
 };
