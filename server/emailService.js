@@ -1,25 +1,54 @@
 const nodemailer = require('nodemailer');
 
-// Configurazione SMTP Gmail
+// Configurazione SMTP Gmail con opzioni avanzate per Railway
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true per 465, false per altri porti
   auth: {
     user: 'hr@labafirenze.com',
     pass: 'ktof ruov fcit mzvg'
   },
-  // Aggiungi opzioni per debugging
+  // Opzioni per Railway e debugging
   debug: true,
-  logger: true
+  logger: true,
+  // Timeout più lunghi per Railway
+  connectionTimeout: 60000, // 60 secondi
+  greetingTimeout: 30000,   // 30 secondi
+  socketTimeout: 60000,     // 60 secondi
+  // Retry automatico
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateLimit: 14, // max 14 emails per secondo
+  // TLS options per Railway
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 // Verifica connessione al transporter
 transporter.verify((error, success) => {
   if (error) {
     console.error('❌ SMTP Connection Error:', error);
+    console.log('🔧 Tentativo di riconnessione in corso...');
   } else {
     console.log('✅ SMTP Server ready to send emails');
   }
 });
+
+// Funzione di fallback per testare connessione
+const testSMTPConnection = async () => {
+  try {
+    console.log('🔍 Testing SMTP connection...');
+    await transporter.verify();
+    console.log('✅ SMTP connection verified successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ SMTP verification failed:', error.message);
+    return false;
+  }
+};
 
 // Template email per notifiche
 const emailTemplates = {
@@ -327,10 +356,17 @@ const emailTemplates = {
   })
 };
 
-// Funzione per inviare email con timeout
+// Funzione per inviare email con timeout e test connessione
 const sendEmail = async (to, template, data) => {
   try {
     console.log(`📧 Attempting to send ${template} email to: ${to}`);
+    
+    // Testa la connessione prima di inviare
+    const connectionOk = await testSMTPConnection();
+    if (!connectionOk) {
+      console.log('❌ SMTP connection failed, skipping email send');
+      return { success: false, error: 'SMTP connection failed' };
+    }
     
     const emailTemplate = emailTemplates[template](...data);
     
@@ -341,9 +377,9 @@ const sendEmail = async (to, template, data) => {
       html: emailTemplate.html
     };
 
-    // Aggiungi timeout di 30 secondi
+    // Aggiungi timeout di 60 secondi (più lungo per Railway)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email timeout after 30 seconds')), 30000);
+      setTimeout(() => reject(new Error('Email timeout after 60 seconds')), 60000);
     });
 
     const sendPromise = transporter.sendMail(mailOptions);
