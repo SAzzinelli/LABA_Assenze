@@ -313,27 +313,7 @@ const Dashboard = () => {
   const departmentData = departments;
 
   // Statistiche diverse per admin e utenti
-  const statCards = user?.role === 'admin' ? [
-    // Admin: statistiche aziendali
-    {
-      title: 'Presenti Oggi',
-      value: stats.presentToday || 0,
-      icon: CheckCircle,
-      color: 'green',
-      change: '+5%',
-      changeType: 'positive',
-      subtitle: 'In ufficio oggi'
-    },
-    {
-      title: 'Richieste in Sospeso',
-      value: stats.pendingRequests || 0,
-      icon: FileText,
-      color: 'yellow',
-      change: '-3',
-      changeType: 'negative',
-      subtitle: 'Da approvare'
-    }
-  ] : [
+  const statCards = user?.role === 'admin' ? [] : [
     // Utente: KPI personali REALI
     {
       title: 'Ore Lavorate',
@@ -395,57 +375,61 @@ const Dashboard = () => {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className={`grid grid-cols-1 gap-6 ${user?.role === 'admin' ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-4'}`}>
-        {statCards.map((stat, index) => {
-          const IconComponent = stat.icon;
-          const colorClasses = {
-            blue: 'bg-blue-500',
-            green: 'bg-green-500',
-            yellow: 'bg-yellow-500',
-            purple: 'bg-purple-500'
-          };
-          return (
-            <div key={index} className="bg-slate-800 rounded-lg p-6 hover:bg-slate-700 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-sm font-medium">{stat.title}</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
-                  <p className="text-slate-400 text-xs mt-1">{stat.subtitle}</p>
+      {/* Stats Cards - Solo per Utenti */}
+      {user?.role !== 'admin' && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {statCards.map((stat, index) => {
+            const IconComponent = stat.icon;
+            const colorClasses = {
+              blue: 'bg-blue-500',
+              green: 'bg-green-500',
+              yellow: 'bg-yellow-500',
+              purple: 'bg-purple-500'
+            };
+            return (
+              <div key={index} className="bg-slate-800 rounded-lg p-6 hover:bg-slate-700 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-400 text-sm font-medium">{stat.title}</p>
+                    <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
+                    <p className="text-slate-400 text-xs mt-1">{stat.subtitle}</p>
+                  </div>
+                  <div className={`p-3 rounded-lg ${colorClasses[stat.color]}`}>
+                    <IconComponent className="h-6 w-6 text-white" />
+                  </div>
                 </div>
-                <div className={`p-3 rounded-lg ${colorClasses[stat.color]}`}>
-                  <IconComponent className="h-6 w-6 text-white" />
+                <div className="flex items-center mt-4">
+                  <div className={`flex items-center text-sm ${
+                    stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {stat.changeType === 'positive' ? (
+                      <ArrowUpRight className="h-4 w-4 mr-1" />
+                    ) : (
+                      <ArrowDownRight className="h-4 w-4 mr-1" />
+                    )}
+                    <span className="font-semibold">{stat.change}</span>
+                  </div>
+                  <span className="text-slate-500 text-xs ml-2">vs mese scorso</span>
                 </div>
               </div>
-              <div className="flex items-center mt-4">
-                <div className={`flex items-center text-sm ${
-                  stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {stat.changeType === 'positive' ? (
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-4 w-4 mr-1" />
-                  )}
-                  <span className="font-semibold">{stat.change}</span>
-                </div>
-                <span className="text-slate-500 text-xs ml-2">vs mese scorso</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Presenti Attualmente - Full Width */}
+      {/* Admin Dashboard - Layout a 2 colonne */}
       {user?.role === 'admin' && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <CheckCircle className="h-6 w-6 mr-3 text-green-400" />
-            Presenti Attualmente
-            <div className="ml-auto flex items-center text-sm text-slate-400">
-              <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-              Live
-            </div>
-          </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Presenti Attualmente */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <CheckCircle className="h-6 w-6 mr-3 text-green-400" />
+              Presenti Attualmente
+              <div className="ml-auto flex items-center text-sm text-slate-400">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                Live
+              </div>
+            </h3>
           
           {currentAttendance.length > 0 ? (
             <div className="space-y-3">
@@ -505,20 +489,18 @@ const Dashboard = () => {
               <p className="text-slate-400">Nessuno presente in ufficio al momento</p>
             </div>
           )}
-        </div>
-      )}
+          </div>
 
-      {/* Richieste Recenti - Solo per Admin */}
-      {user?.role === 'admin' && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <FileText className="h-6 w-6 mr-3 text-yellow-400" />
-            Richieste Recenti
-            <div className="ml-auto flex items-center text-sm text-slate-400">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
-              In attesa
-            </div>
-          </h3>
+          {/* Richieste Recenti */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+              <FileText className="h-6 w-6 mr-3 text-yellow-400" />
+              Richieste Recenti
+              <div className="ml-auto flex items-center text-sm text-slate-400">
+                <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                In attesa
+              </div>
+            </h3>
           
           <div className="space-y-3">
             {recentRequests.length > 0 ? (
@@ -556,6 +538,7 @@ const Dashboard = () => {
                 <p className="text-slate-500 text-sm mt-2">Le richieste dei dipendenti appariranno qui</p>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}
