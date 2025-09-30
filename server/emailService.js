@@ -6,7 +6,7 @@ let transporter;
 // Prova prima con SendGrid (più compatibile con Railway)
 if (process.env.SENDGRID_API_KEY) {
   console.log('📧 Using SendGrid for email delivery');
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     service: 'SendGrid',
     auth: {
       user: 'apikey',
@@ -16,7 +16,7 @@ if (process.env.SENDGRID_API_KEY) {
 } else {
   console.log('📧 Using Gmail SMTP (may have connection issues on Railway)');
   // Configurazione SMTP Gmail con opzioni avanzate per Railway
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 587,
     secure: false, // true per 465, false per altri porti
