@@ -78,7 +78,7 @@ class EmailScheduler {
     try {
       const { data: employees, error } = await supabase
         .from('users')
-        .select('id, email, personal_email, first_name, last_name')
+        .select('id, email, first_name, last_name')
         .eq('role', 'employee')
         .eq('is_active', true);
 
@@ -88,13 +88,11 @@ class EmailScheduler {
       }
 
       for (const emp of employees) {
-        const emailToUse = emp.personal_email || emp.email;
-        
-        if (emailToUse) {
+        if (isRealEmail(emp.email)) {
           // Calcola dati settimanali reali
           const weekData = await this.calculateWeeklyData(emp.id);
           
-          await sendEmail(emailToUse, 'weeklyReport', [
+          await sendEmail(emp.email, 'weeklyReport', [
             `${emp.first_name} ${emp.last_name}`,
             weekData
           ]);
@@ -124,10 +122,8 @@ class EmailScheduler {
       }
 
       for (const emp of employees) {
-        const emailToUse = emp.personal_email || emp.email;
-        
-        if (emailToUse) {
-          await sendEmail(emailToUse, 'attendanceReminder', [
+        if (isRealEmail(emp.email)) {
+          await sendEmail(emp.email, 'attendanceReminder', [
             `${emp.first_name} ${emp.last_name}`,
             emp.department || 'Ufficio'
           ]);

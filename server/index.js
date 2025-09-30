@@ -447,7 +447,6 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         lastName: emp.last_name,
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
-        personalEmail: emp.personal_email,
         department: emp.department || 'Amministrazione',
         position: emp.position || 'Dipendente',
         hireDate: emp.hire_date || emp.created_at?.split('T')[0],
@@ -1540,20 +1539,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         try {
           const { data: user, error: userError } = await supabase
             .from('users')
-            .select('email, personal_email, first_name, last_name')
+            .select('email, first_name, last_name')
             .eq('id', updatedRequest.user_id)
             .single();
 
           if (!userError && user) {
-            // SOLO email reali per privacy
-            const emailToUse = user.personal_email || user.email;
-            
-            // Verifica che l'email sia reale prima di inviare
-            if (emailToUse && isRealEmail(user.email)) {
+            // Usa sempre l'email aziendale
+            if (isRealEmail(user.email)) {
               const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
               const requestId = updatedRequest.id;
               
-              await sendEmail(emailToUse, 'requestResponse', [
+              await sendEmail(user.email, 'requestResponse', [
                 requestType, 
                 status, 
                 updatedRequest.start_date, 
@@ -1561,7 +1557,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                 notes || '', 
                 requestId
               ]);
-              console.log(`Email inviata a ${emailToUse} per risposta richiesta`);
+              console.log(`Email inviata a ${user.email} per risposta richiesta`);
             } else {
               console.log('Email non inviata: privacy - email non reale o non autorizzata');
             }
@@ -2093,7 +2089,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, personal_email, first_name, last_name, department')
+      .select('email, first_name, last_name, department')
       .eq('id', userId)
       .single();
 
@@ -2106,17 +2102,15 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
       return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
     }
     
-    // Usa email personale se disponibile, altrimenti email aziendale
-    const emailToUse = user.personal_email || user.email;
-    
-    if (!emailToUse) {
+    // Usa sempre l'email aziendale
+    if (!user.email) {
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
     let emailResult;
     switch (type) {
       case 'attendance':
-        emailResult = await sendEmail(emailToUse, 'attendanceReminder', [
+        emailResult = await sendEmail(user.email, 'attendanceReminder', [
           `${user.first_name} ${user.last_name}`,
           user.department || 'Ufficio'
         ]);
@@ -2126,7 +2120,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
           return res.status(400).json({ error: 'Messaggio personalizzato richiesto' });
         }
         // Per ora invio un'email generica, potresti creare un template personalizzato
-        emailResult = await sendEmail(emailToUse, 'attendanceReminder', [
+        emailResult = await sendEmail(user.email, 'attendanceReminder', [
           `${user.first_name} ${user.last_name}`,
           customMessage
         ]);
@@ -2205,7 +2199,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
 
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, personal_email, first_name, last_name')
+      .select('email, first_name, last_name')
       .eq('id', userId)
       .single();
 
@@ -2218,10 +2212,8 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
     }
     
-    // Usa email personale se disponibile, altrimenti email aziendale
-    const emailToUse = user.personal_email || user.email;
-    
-    if (!emailToUse) {
+    // Usa sempre l'email aziendale
+    if (!user.email) {
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
@@ -2271,10 +2263,10 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       balanceHours: Math.round(balanceHours * 10) / 10
     };
 
-    const emailResult = await sendEmail(emailToUse, 'weeklyReport', [
-      `${user.first_name} ${user.last_name}`,
-      weekData
-    ]);
+         const emailResult = await sendEmail(user.email, 'weeklyReport', [
+           `${user.first_name} ${user.last_name}`,
+           weekData
+         ]);
 
     if (emailResult.success) {
       res.json({
