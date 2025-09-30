@@ -341,7 +341,7 @@ const AdminAttendance = () => {
                 <option value="">Tutti i dipendenti</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name}
+                    {emp.firstName} {emp.lastName}
                   </option>
                 ))}
               </select>
@@ -383,10 +383,10 @@ const AdminAttendance = () => {
                             if (!record.user_id) return 'N/A';
                             const employee = employees.find(emp => emp.id === record.user_id);
                             if (!employee) {
-                              console.log('Employee not found for user_id:', record.user_id, 'Available employees:', employees.map(e => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })));
+                              console.log('Employee not found for user_id:', record.user_id, 'Available employees:', employees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}` })));
                               return 'N/A';
                             }
-                            return `${employee.first_name} ${employee.last_name}`;
+                            return `${employee.firstName} ${employee.lastName}`;
                           })()}
                         </td>
                         <td className="py-3 px-4 text-white">
