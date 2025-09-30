@@ -268,19 +268,23 @@ const Dashboard = () => {
     try {
       // 1. Ore lavorate questa settimana
       const weeklyHoursResponse = await apiCall('/api/attendance/user-weekly-hours');
-      const weeklyHours = weeklyHoursResponse.success ? weeklyHoursResponse.data.totalHours : 0;
+      const weeklyHoursData = weeklyHoursResponse.ok ? await weeklyHoursResponse.json() : { success: false };
+      const weeklyHours = weeklyHoursData.success ? weeklyHoursData.data.totalHours || 0 : 0;
       
       // 2. Saldo ore (straordinari)
       const overtimeResponse = await apiCall('/api/attendance/user-overtime');
-      const overtimeHours = overtimeResponse.success ? overtimeResponse.data.overtimeHours : 0;
+      const overtimeData = overtimeResponse.ok ? await overtimeResponse.json() : { success: false };
+      const overtimeHours = overtimeData.success ? overtimeData.data.overtimeHours || 0 : 0;
       
       // 3. Permessi rimanenti
       const permissionsResponse = await apiCall('/api/leave-balances');
-      const remainingPermissions = permissionsResponse.success ? permissionsResponse.data.permission?.remaining || 0 : 0;
+      const permissionsData = permissionsResponse.ok ? await permissionsResponse.json() : { success: false };
+      const remainingPermissions = permissionsData.success ? permissionsData.data.permission?.remaining || 0 : 0;
       
       // 4. Presenze mese
       const monthlyPresencesResponse = await apiCall('/api/attendance/user-stats');
-      const monthlyPresences = monthlyPresencesResponse.success ? monthlyPresencesResponse.data.monthlyPresences || 0 : 0;
+      const monthlyPresencesData = monthlyPresencesResponse.ok ? await monthlyPresencesResponse.json() : { success: false };
+      const monthlyPresences = monthlyPresencesData.success ? monthlyPresencesData.monthlyPresences || 0 : 0;
       
       setUserKPIs({
         weeklyHours: formatHours(weeklyHours),

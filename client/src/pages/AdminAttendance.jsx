@@ -8,13 +8,29 @@ const AdminAttendance = () => {
   const [upcomingDepartures, setUpcomingDepartures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('current');
+  
+  // Stati per cronologia
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
     fetchAttendanceData();
+    fetchEmployees();
     // Aggiorna ogni 30 secondi
     const interval = setInterval(fetchAttendanceData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchAttendanceHistory();
+    }
+  }, [activeTab, selectedMonth, selectedYear, selectedEmployee]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -39,6 +55,40 @@ const AdminAttendance = () => {
       console.error('Error fetching attendance data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchAttendanceHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      
+      // Costruisci i parametri della query
+      const params = new URLSearchParams();
+      if (selectedMonth) params.append('month', selectedMonth);
+      if (selectedYear) params.append('year', selectedYear);
+      if (selectedEmployee) params.append('userId', selectedEmployee);
+      
+      const response = await apiCall(`/api/attendance?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceHistory(data);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance history:', error);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -82,10 +132,10 @@ const AdminAttendance = () => {
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
               <Users className="h-8 w-8 mr-3 text-green-400" />
-              Presenze Attuali
+              Presenze
             </h1>
             <p className="text-slate-400 mt-2">
-              Monitoraggio in tempo reale delle presenze in ufficio
+              Gestione presenze e monitoraggio dipendenti
             </p>
           </div>
           <div className="flex items-center space-x-4">
