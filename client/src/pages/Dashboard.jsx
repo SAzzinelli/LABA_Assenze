@@ -36,6 +36,15 @@ const Dashboard = () => {
     monthlyPresences: '0/20'
   });
 
+  // Stato per timbratura
+  const [userStats, setUserStats] = useState({
+    isClockedIn: false,
+    todayHours: '0h 0m',
+    monthlyPresences: 0,
+    expectedMonthlyPresences: 20,
+    workplace: 'LABA Firenze - Sede Via Vecchietti'
+  });
+
   useEffect(() => {
     fetchDashboardData();
     
@@ -50,8 +59,10 @@ const Dashboard = () => {
     } else {
       // Per utenti: carica KPI iniziali e aggiorna ogni minuto
       fetchUserKPIs();
+      fetchUserStats(); // Carica stato timbratura
       const interval = setInterval(() => {
         fetchUserKPIs();
+        fetchUserStats(); // Aggiorna stato timbratura
       }, 60000); // 1 minuto
       
       return () => clearInterval(interval);
@@ -185,6 +196,7 @@ const Dashboard = () => {
         alert(data.message);
         fetchDashboardData(); // Aggiorna i dati della dashboard
         fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
+        fetchUserStats(); // Aggiorna stato timbratura
       } else {
         const error = await response.json();
         alert(error.error);
@@ -209,6 +221,7 @@ const Dashboard = () => {
         alert(data.message);
         fetchDashboardData(); // Aggiorna i dati della dashboard
         fetchCurrentAttendance(); // Aggiorna immediatamente le presenze
+        fetchUserStats(); // Aggiorna stato timbratura
       } else {
         const error = await response.json();
         alert(error.error);
@@ -216,6 +229,18 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Clock out error:', error);
       alert('Errore durante la timbratura di uscita');
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await apiCall('/api/attendance/user-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setUserStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
   };
 
@@ -537,17 +562,27 @@ const Dashboard = () => {
           <div className="flex gap-4">
             <button 
               onClick={handleClockIn}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+              disabled={userStats.isClockedIn}
+              className={`flex-1 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center ${
+                userStats.isClockedIn 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
               <CheckCircle className="h-5 w-5 mr-2" />
-              Timbra Entrata
+              {userStats.isClockedIn ? 'Già Entrato' : 'Timbra Entrata'}
             </button>
             <button 
               onClick={handleClockOut}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+              disabled={!userStats.isClockedIn}
+              className={`flex-1 font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center ${
+                !userStats.isClockedIn 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
             >
               <XCircle className="h-5 w-5 mr-2" />
-              Timbra Uscita
+              {!userStats.isClockedIn ? 'Non Entrato' : 'Timbra Uscita'}
             </button>
           </div>
         </div>
