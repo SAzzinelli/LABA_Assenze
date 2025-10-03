@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
+import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
+import VacationCalendar from '../components/VacationCalendar';
 import { 
   Plane, 
   Plus, 
@@ -22,7 +24,9 @@ import {
   Filter,
   Search,
   Calculator,
-  TrendingUp
+  TrendingUp,
+  CalendarDays,
+  List
 } from 'lucide-react';
 import { 
   calculateVacationHoursForDay, 
@@ -54,8 +58,23 @@ const Vacation = () => {
   // Array vuoto per le richieste di ferie
   const [vacationRequests, setVacationRequests] = useState([]);
 
+  // Vista attiva (calendar o list)
+  const [activeView, setActiveView] = useState('list');
+
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
+
+  // Real-time updates
+  const { emitUpdate } = useRealTimeUpdates({
+    onLeaveRequestUpdate: (data) => {
+      console.log('📋 Nuova richiesta ferie ricevuta:', data);
+      fetchVacationData(); // Ricarica i dati
+    },
+    onRequestDecision: (data) => {
+      console.log('✅ Decisione richiesta ricevuta:', data);
+      fetchVacationData(); // Ricarica i dati
+    }
+  });
 
   // Sistema basato su ore
   const [vacationBalance, setVacationBalance] = useState({
@@ -185,7 +204,17 @@ const Vacation = () => {
       });
 
       if (response.ok) {
+        const result = await response.json();
         alert('Richiesta approvata con successo');
+        
+        // Emetti aggiornamento real-time
+        emitUpdate('request_decision', {
+          requestId,
+          status: 'approved',
+          userId: result.userId,
+          message: 'La tua richiesta di ferie è stata approvata'
+        });
+        
         fetchVacationData(); // Ricarica le richieste
       } else {
         const error = await response.json();
@@ -213,7 +242,17 @@ const Vacation = () => {
       });
 
       if (response.ok) {
+        const result = await response.json();
         alert('Richiesta rifiutata');
+        
+        // Emetti aggiornamento real-time
+        emitUpdate('request_decision', {
+          requestId,
+          status: 'rejected',
+          userId: result.userId,
+          message: 'La tua richiesta di ferie è stata rifiutata'
+        });
+        
         fetchVacationData(); // Ricarica le richieste
       } else {
         const error = await response.json();
@@ -336,6 +375,18 @@ const Vacation = () => {
           notes: ''
         });
         setShowNewRequest(false);
+        
+        // Emetti aggiornamento real-time per admin
+        emitUpdate('leave_request_update', {
+          type: 'vacation',
+          requestId: result.id || Date.now(),
+          userId: user?.id,
+          userName: user?.firstName + ' ' + user?.lastName,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          hours: totalHours,
+          message: `Nuova richiesta ferie da ${user?.firstName} ${user?.lastName}`
+        });
         
         // Refresh data
         fetchVacationData();
@@ -489,15 +540,43 @@ const Vacation = () => {
               }
             </p>
           </div>
-          {user?.role !== 'admin' && (
-            <button
-              onClick={() => setShowNewRequest(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Nuova Richiesta
-            </button>
-          )}
+          <div className="flex items-center space-x-4">
+            {/* Toggle Vista */}
+            <div className="flex bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setActiveView('list')}
+                className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+                  activeView === 'list' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <List className="h-4 w-4 mr-2" />
+                Lista
+              </button>
+              <button
+                onClick={() => setActiveView('calendar')}
+                className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+                  activeView === 'calendar' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Calendario
+              </button>
+            </div>
+            
+            {user?.role !== 'admin' && (
+              <button
+                onClick={() => setShowNewRequest(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Nuova Richiesta
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -782,7 +861,19 @@ const Vacation = () => {
         )}
       </div>
 
+      {/* Vista Calendario */}
+      {activeView === 'calendar' && (
+        <VacationCalendar 
+          vacationRequests={vacationRequests}
+          onDateClick={(date, requests) => {
+            console.log('Data selezionata:', date, 'Richieste:', requests);
+            // Qui puoi aggiungere logica per mostrare dettagli della data
+          }}
+        />
+      )}
+
       {/* Requests List */}
+      {activeView === 'list' && (
       <div className="bg-slate-800 rounded-lg p-6">
         <h2 className="text-xl font-bold text-white mb-6 flex items-center">
           <FileText className="h-6 w-6 mr-3 text-slate-400" />
@@ -881,6 +972,7 @@ const Vacation = () => {
           );
         })()}
       </div>
+      )}
     </div>
   );
 };

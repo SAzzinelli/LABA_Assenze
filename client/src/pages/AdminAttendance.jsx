@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import { 
   Clock, 
   Users, 
@@ -75,12 +76,29 @@ const AdminAttendance = () => {
     averageHours: 0
   });
 
+  // Real-time updates
+  const { emitUpdate } = useRealTimeUpdates({
+    onAttendanceUpdate: (data) => {
+      console.log('📊 Aggiornamento presenze ricevuto:', data);
+      fetchAttendanceData();
+      fetchStats();
+    },
+    onEmployeeUpdate: (data) => {
+      console.log('👤 Aggiornamento dipendenti ricevuto:', data);
+      fetchEmployees();
+      fetchStats();
+    }
+  });
+
   useEffect(() => {
     fetchAttendanceData();
     fetchEmployees();
     fetchStats();
-    // Aggiorna ogni 60 secondi
-    const interval = setInterval(fetchAttendanceData, 60000);
+    // Aggiorna ogni 60 secondi come fallback
+    const interval = setInterval(() => {
+      fetchAttendanceData();
+      fetchStats();
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
