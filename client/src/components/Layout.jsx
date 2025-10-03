@@ -122,8 +122,8 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Profilo', href: '/profilo', icon: User, hideForAdmin: true },
-    { name: 'Dipendenti', href: '/dipendenti', icon: Users, roles: ['admin'] },
-    { name: 'Presenze', href: user?.role === 'admin' ? '/admin-attendance' : '/presenze', icon: Clock },
+    { name: 'Dipendenti', href: '/dipendenti', icon: Users, roles: ['admin', 'supervisor'] },
+    { name: 'Presenze', href: (user?.role === 'admin' || user?.role === 'supervisor') ? '/admin-attendance' : '/presenze', icon: Clock },
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
@@ -131,8 +131,8 @@ const Layout = ({ children }) => {
   ];
 
   const filteredNavigation = navigation.filter(item => {
-    // Nascondi profilo per admin
-    if (item.hideForAdmin && user?.role === 'admin') {
+    // Nascondi profilo per admin e supervisori
+    if (item.hideForAdmin && (user?.role === 'admin' || user?.role === 'supervisor')) {
       return false;
     }
     

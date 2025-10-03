@@ -20,7 +20,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
     position: '',
     hireDate: '',
     workplace: '',
-    contractType: ''
+    contractType: '',
+    role: 'employee' // Nuovo campo per il ruolo
   });
 
   const steps = [
@@ -88,7 +89,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
       position: '',
       hireDate: '',
       workplace: '',
-      contractType: ''
+      contractType: '',
+      role: 'employee'
     });
     setCurrentStep(1);
   };
@@ -302,6 +304,23 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
             ))}
           </select>
         </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">Ruolo *</label>
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          >
+            <option value="employee">Dipendente</option>
+            <option value="supervisor">Supervisore</option>
+          </select>
+          <p className="text-xs text-slate-400 mt-1">
+            I Supervisori hanno gli stessi privilegi degli amministratori
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -344,6 +363,11 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
               <p><span className="text-slate-400">Data Assunzione:</span> <span className="text-white">{formData.hireDate}</span></p>
               <p><span className="text-slate-400">Sede:</span> <span className="text-white">{workplaces.find(w => w.value === formData.workplace)?.label}</span></p>
               <p><span className="text-slate-400">Contratto:</span> <span className="text-white">{formData.contractType}</span></p>
+              <p><span className="text-slate-400">Ruolo:</span> <span className={`font-semibold ${
+                formData.role === 'supervisor' ? 'text-purple-400' : 'text-white'
+              }`}>
+                {formData.role === 'supervisor' ? 'SUPERVISORE' : 'Dipendente'}
+              </span></p>
             </div>
           </div>
         </div>

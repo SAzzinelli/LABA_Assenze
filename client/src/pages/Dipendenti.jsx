@@ -247,10 +247,10 @@ const Employees = () => {
     emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'admin' && user?.role !== 'supervisor') {
     return (
       <div className="flex items-center justify-center h-96 text-white text-2xl font-bold">
-        Accesso negato. Solo gli amministratori possono visualizzare questa pagina.
+        Accesso negato. Solo gli amministratori e supervisori possono visualizzare questa pagina.
       </div>
     );
   }
@@ -372,13 +372,20 @@ const Employees = () => {
                     {employee.position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${
-                      employee.status === 'active' 
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' 
-                        : 'bg-red-500/20 text-red-300 border border-red-400/30'
-                    }`}>
-                      {employee.status === 'active' ? 'Attivo' : 'Inattivo'}
-                    </span>
+                    <div className="flex flex-col space-y-1">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${
+                        employee.status === 'active' 
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' 
+                          : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                      }`}>
+                        {employee.status === 'active' ? 'Attivo' : 'Inattivo'}
+                      </span>
+                      {employee.role === 'supervisor' && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
+                          SUPERVISORE
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
