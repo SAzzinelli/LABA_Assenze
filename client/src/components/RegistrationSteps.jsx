@@ -5,12 +5,13 @@ const RegistrationSteps = ({ onRegister, loading }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Informazioni Personali
-    email: '',
-    password: '',
-    confirmPassword: '',
     firstName: '',
     lastName: '',
     birthDate: '',
+    email: '',
+    confirmEmail: '',
+    password: '',
+    confirmPassword: '',
     phone: '',
     has104: false,
     personalEmail: '', // Email personale opzionale
@@ -52,8 +53,31 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     }));
   };
 
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        return formData.firstName && 
+               formData.lastName && 
+               formData.birthDate && 
+               formData.email && 
+               formData.confirmEmail &&
+               formData.password && 
+               formData.confirmPassword &&
+               formData.email === formData.confirmEmail &&
+               formData.password === formData.confirmPassword;
+      case 2:
+        return formData.department && 
+               formData.position && 
+               formData.hireDate && 
+               formData.workplace && 
+               formData.contractType;
+      default:
+        return true;
+    }
+  };
+
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    if (currentStep < steps.length && validateCurrentStep()) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -70,6 +94,10 @@ const RegistrationSteps = ({ onRegister, loading }) => {
       alert('Le password non corrispondono');
       return;
     }
+    if (formData.email !== formData.confirmEmail) {
+      alert('Le email non corrispondono');
+      return;
+    }
     onRegister(formData);
   };
 
@@ -82,6 +110,46 @@ const RegistrationSteps = ({ onRegister, loading }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Nome */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Nome *</label>
+          <input
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Cognome */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome *</label>
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Data di Nascita */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita *</label>
+          <input
+            type="date"
+            name="birthDate"
+            value={formData.birthDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Email */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Email *</label>
           <input
@@ -95,6 +163,21 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           />
         </div>
 
+        {/* Conferma Email */}
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Conferma Email *</label>
+          <input
+            type="email"
+            name="confirmEmail"
+            value={formData.confirmEmail}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="conferma la tua email"
+            required
+          />
+        </div>
+
+        {/* Password */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Password *</label>
           <input
@@ -107,6 +190,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           />
         </div>
 
+        {/* Conferma Password */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Conferma Password *</label>
           <input
@@ -119,6 +203,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           />
         </div>
 
+        {/* Telefono */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Telefono *</label>
           <input
@@ -132,6 +217,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           />
         </div>
 
+        {/* Email Personale */}
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Email Personale</label>
           <input
@@ -146,56 +232,19 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             Per ricevere notifiche email personali
           </p>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Nome *</label>
-          <input
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome *</label>
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita *</label>
-          <input
-            type="date"
-            name="birthDate"
-            value={formData.birthDate}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="has104"
-            name="has104"
-            checked={formData.has104}
-            onChange={handleInputChange}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-600 rounded bg-slate-700"
-          />
-          <label htmlFor="has104" className="ml-2 block text-sm text-slate-300">
-            Beneficiario Legge 104
-          </label>
-        </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          name="has104"
+          checked={formData.has104}
+          onChange={handleInputChange}
+          className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+        />
+        <label className="ml-2 text-sm text-slate-300">
+          Beneficiario Legge 104
+        </label>
       </div>
     </div>
   );
@@ -211,18 +260,25 @@ const RegistrationSteps = ({ onRegister, loading }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento *</label>
-          <select
-            name="department"
-            value={formData.department}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona dipartimento</option>
-            {departments.map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="department"
+              value={formData.department}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              required
+            >
+              <option value="">Seleziona dipartimento</option>
+              {departments.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -252,34 +308,48 @@ const RegistrationSteps = ({ onRegister, loading }) => {
 
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Sede di Lavoro *</label>
-          <select
-            name="workplace"
-            value={formData.workplace}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona sede</option>
-            {workplaces.map(workplace => (
-              <option key={workplace.value} value={workplace.value}>{workplace.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="workplace"
+              value={formData.workplace}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              required
+            >
+              <option value="">Seleziona sede</option>
+              {workplaces.map(workplace => (
+                <option key={workplace.value} value={workplace.value}>{workplace.label}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-300 mb-2">Tipo di Contratto *</label>
-          <select
-            name="contractType"
-            value={formData.contractType}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona tipo contratto</option>
-            {contractTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Tipo Contratto *</label>
+          <div className="relative">
+            <select
+              name="contractType"
+              value={formData.contractType}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              required
+            >
+              <option value="">Seleziona tipo contratto</option>
+              {contractTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -290,69 +360,40 @@ const RegistrationSteps = ({ onRegister, loading }) => {
       <div className="text-center mb-8">
         <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Verifica Dati</h3>
-        <p className="text-slate-400">Controlla i tuoi dati prima di completare la registrazione</p>
+        <p className="text-slate-400">Controlla i dati inseriti prima di procedere</p>
       </div>
 
-      <div className="bg-slate-700/50 rounded-lg p-6 space-y-4">
-        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <User className="h-5 w-5 mr-2 text-indigo-400" />
-          Informazioni Personali
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-slate-700 rounded-lg p-6 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <span className="text-slate-400 text-sm">Nome:</span>
-            <p className="text-white font-medium">{formData.firstName} {formData.lastName}</p>
+            <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+              <User className="h-5 w-5 mr-2 text-indigo-400" />
+              Informazioni Personali
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-slate-400">Nome:</span> <span className="text-white">{formData.firstName} {formData.lastName}</span></p>
+              <p><span className="text-slate-400">Email:</span> <span className="text-white">{formData.email}</span></p>
+              <p><span className="text-slate-400">Telefono:</span> <span className="text-white">{formData.phone}</span></p>
+              <p><span className="text-slate-400">Data Nascita:</span> <span className="text-white">{formData.birthDate}</span></p>
+              {formData.personalEmail && (
+                <p><span className="text-slate-400">Email Personale:</span> <span className="text-white">{formData.personalEmail}</span></p>
+              )}
+              <p><span className="text-slate-400">Legge 104:</span> <span className="text-white">{formData.has104 ? 'Sì' : 'No'}</span></p>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-400 text-sm">Email:</span>
-            <p className="text-white font-medium">{formData.email}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Telefono:</span>
-            <p className="text-white font-medium">{formData.phone}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Data di Nascita:</span>
-            <p className="text-white font-medium">{formData.birthDate}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Legge 104:</span>
-            <p className="text-white font-medium">{formData.has104 ? 'Sì' : 'No'}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Email Personale:</span>
-            <p className="text-white font-medium">{formData.personalEmail || 'Non configurata'}</p>
-          </div>
-        </div>
 
-        <h4 className="text-lg font-semibold text-white mt-6 mb-4 flex items-center">
-          <Building2 className="h-5 w-5 mr-2 text-indigo-400" />
-          Informazioni Lavorative
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <span className="text-slate-400 text-sm">Dipartimento:</span>
-            <p className="text-white font-medium">{formData.department}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Posizione:</span>
-            <p className="text-white font-medium">{formData.position}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Data Assunzione:</span>
-            <p className="text-white font-medium">{formData.hireDate}</p>
-          </div>
-          <div>
-            <span className="text-slate-400 text-sm">Sede:</span>
-            <p className="text-white font-medium">
-              {workplaces.find(w => w.value === formData.workplace)?.label || formData.workplace}
-            </p>
-          </div>
-          <div className="md:col-span-2">
-            <span className="text-slate-400 text-sm">Tipo Contratto:</span>
-            <p className="text-white font-medium">{formData.contractType}</p>
+            <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+              <Building2 className="h-5 w-5 mr-2 text-indigo-400" />
+              Informazioni Lavorative
+            </h4>
+            <div className="space-y-2 text-sm">
+              <p><span className="text-slate-400">Dipartimento:</span> <span className="text-white">{formData.department}</span></p>
+              <p><span className="text-slate-400">Posizione:</span> <span className="text-white">{formData.position}</span></p>
+              <p><span className="text-slate-400">Data Assunzione:</span> <span className="text-white">{formData.hireDate}</span></p>
+              <p><span className="text-slate-400">Sede:</span> <span className="text-white">{workplaces.find(w => w.value === formData.workplace)?.label}</span></p>
+              <p><span className="text-slate-400">Contratto:</span> <span className="text-white">{formData.contractType}</span></p>
+            </div>
           </div>
         </div>
       </div>
@@ -434,7 +475,12 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             <button
               type="button"
               onClick={nextStep}
-              className="flex items-center px-8 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl border border-indigo-500/30"
+              disabled={!validateCurrentStep()}
+              className={`flex items-center px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg border ${
+                validateCurrentStep()
+                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700 hover:shadow-xl border-indigo-500/30'
+                  : 'bg-slate-700/50 text-slate-500 cursor-not-allowed border-slate-600/30'
+              }`}
             >
               Avanti
               <ArrowRight className="h-5 w-5 ml-2" />
