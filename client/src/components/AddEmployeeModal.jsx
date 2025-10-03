@@ -53,8 +53,32 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
     }));
   };
 
+  const validateCurrentStep = () => {
+    switch (currentStep) {
+      case 1:
+        return formData.firstName && 
+               formData.lastName && 
+               formData.birthDate && 
+               formData.email && 
+               formData.confirmEmail &&
+               formData.password && 
+               formData.confirmPassword &&
+               formData.email === formData.confirmEmail &&
+               formData.password === formData.confirmPassword;
+      case 2:
+        return formData.department && 
+               formData.position && 
+               formData.hireDate && 
+               formData.workplace && 
+               formData.contractType &&
+               formData.role;
+      default:
+        return true;
+    }
+  };
+
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    if (currentStep < steps.length && validateCurrentStep()) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -234,18 +258,25 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento *</label>
-          <select
-            name="department"
-            value={formData.department}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona dipartimento</option>
-            {departments.map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="department"
+              value={formData.department}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              required
+            >
+              <option value="">Seleziona dipartimento</option>
+              {departments.map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -275,48 +306,69 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
 
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Sede di Lavoro *</label>
-          <select
-            name="workplace"
-            value={formData.workplace}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona sede</option>
-            {workplaces.map(workplace => (
-              <option key={workplace.value} value={workplace.value}>{workplace.label}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="workplace"
+              value={formData.workplace}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              required
+            >
+              <option value="">Seleziona sede</option>
+              {workplaces.map(workplace => (
+                <option key={workplace.value} value={workplace.value}>{workplace.label}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-300 mb-2">Tipo Contratto *</label>
-          <select
-            name="contractType"
-            value={formData.contractType}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Seleziona tipo contratto</option>
-            {contractTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="contractType"
+              value={formData.contractType}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              required
+            >
+              <option value="">Seleziona tipo contratto</option>
+              {contractTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-300 mb-2">Ruolo *</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="employee">Dipendente</option>
-            <option value="supervisor">Supervisore</option>
-          </select>
+          <div className="relative">
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              required
+            >
+              <option value="employee">Dipendente</option>
+              <option value="supervisor">Supervisore</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
             I Supervisori hanno gli stessi privilegi degli amministratori
           </p>
@@ -456,7 +508,12 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center"
+                disabled={!validateCurrentStep()}
+                className={`px-6 py-2 rounded-lg transition-colors flex items-center ${
+                  validateCurrentStep()
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    : 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                }`}
               >
                 Avanti
                 <ArrowRight className="h-4 w-4 ml-2" />
