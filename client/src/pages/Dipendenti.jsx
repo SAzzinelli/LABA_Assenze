@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
+import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
+import AddEmployeeModal from '../components/AddEmployeeModal';
 import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
 
 const Employees = () => {
@@ -17,6 +19,14 @@ const Employees = () => {
   useModal(showAddModal, () => setShowAddModal(false));
   useModal(showEditModal, () => setShowEditModal(false));
   useModal(showDetailsModal, () => setShowDetailsModal(false));
+
+  // Real-time updates
+  const { emitUpdate } = useRealTimeUpdates({
+    onEmployeeUpdate: (data) => {
+      console.log('👤 Aggiornamento dipendenti ricevuto:', data);
+      fetchEmployees();
+    }
+  });
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [detailActiveTab, setDetailActiveTab] = useState('details');
   const [formData, setFormData] = useState({
@@ -105,48 +115,39 @@ const Employees = () => {
     }
   };
 
-  const handleAddEmployee = () => {
-    // TODO: Sostituire con chiamata API POST /api/employees
-    // const response = await fetch('/api/employees', {
-    //   method: 'POST',
-    //   headers: { 
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${token}` 
-    //   },
-    //   body: JSON.stringify(formData)
-    // });
-    
-    const newEmployee = {
-      id: Date.now(),
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      name: `${formData.firstName} ${formData.lastName}`,
-      email: formData.email,
-      phone: formData.phone,
-      birthDate: formData.birthDate,
-      department: formData.department,
-      position: formData.position,
-      status: 'active',
-      has104: formData.has104,
-      hireDate: new Date().toISOString().split('T')[0],
-      weeklyHours: 40,
-      usedVacationDays: 0,
-      totalVacationDays: 26,
-      // TODO: Aggiungere workSchedule dal form o default
-      workSchedule: {
-        monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-        tuesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-        wednesday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-        thursday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-        friday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
-        saturday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' },
-        sunday: { active: false, morning: '', afternoon: '', lunchBreak: '', workType: 'none' }
+  const handleAddEmployee = async (employeeData) => {
+    try {
+      const response = await apiCall('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(employeeData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Emetti aggiornamento real-time
+        emitUpdate('employee_updated', {
+          type: 'created',
+          employeeId: result.id,
+          employeeName: `${employeeData.firstName} ${employeeData.lastName}`,
+          department: employeeData.department,
+          message: `Nuovo dipendente aggiunto: ${employeeData.firstName} ${employeeData.lastName}`
+        });
+        
+        // Ricarica la lista dipendenti
+        fetchEmployees();
+        setShowAddModal(false);
+        
+        alert(`Dipendente ${employeeData.firstName} ${employeeData.lastName} aggiunto con successo!`);
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
       }
-    };
-    
-    setEmployees(prev => [...prev, newEmployee]);
-    setShowAddModal(false);
-    resetForm();
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      alert('Errore durante l\'aggiunta del dipendente');
+    }
   };
 
   const handleEditEmployee = (employee) => {
@@ -412,142 +413,12 @@ const Employees = () => {
       </div>
 
       {/* Modal Aggiungi Dipendente */}
-      {showAddModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={(e) => e.target === e.currentTarget && setShowAddModal(false)}
-        >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Aggiungi Dipendente</h3>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Nome</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Nome"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Cognome</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Cognome"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="email@labafirenze.com"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Telefono</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="+39 333 123 4567"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita</label>
-                <input
-                  type="date"
-                  name="birthDate"
-                  value={formData.birthDate}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento</label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Seleziona dipartimento</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.name}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Posizione</label>
-                <input
-                  type="text"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Es. Manager, Sviluppatore, Segretaria"
-                />
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="has104"
-                  checked={formData.has104}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                />
-                <label className="ml-2 text-sm text-slate-300">Beneficiario Legge 104</label>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleAddEmployee}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Salva
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddEmployeeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddEmployee={handleAddEmployee}
+        loading={false}
+      />
 
       {/* Modal Modifica Dipendente */}
       {showEditModal && selectedEmployee && (
