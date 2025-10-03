@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { 
   Settings as SettingsIcon, 
@@ -24,7 +24,11 @@ import {
   Upload,
   Trash2,
   Edit,
-  Plus
+  Plus,
+  Send,
+  Users,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 
 const Settings = () => {
@@ -56,7 +60,13 @@ const Settings = () => {
       showSchedule: true,
       showSalary: false,
       dataRetention: '2 years',
-      analytics: false
+      analytics: false,
+      cookieConsent: true,
+      dataSharing: false,
+      marketingEmails: false,
+      locationTracking: false,
+      biometricData: false,
+      thirdPartyAccess: false
     },
     security: {
       twoFactorAuth: false,
@@ -75,12 +85,16 @@ const Settings = () => {
       maintenanceWindow: '02:00-04:00',
       logLevel: 'info'
     },
-    integrations: {
-      googleCalendar: false,
-      slack: false,
-      teams: false,
-      attendance: true,
-      documents: true
+    emailManagement: {
+      employees: [],
+      selectedEmployee: '',
+      emailType: 'attendance',
+      customMessage: '',
+      schedulerStatus: null,
+      autoReminders: true,
+      weeklyReports: true,
+      monthlyReports: true,
+      attendanceAlerts: true
     }
   });
 
@@ -168,8 +182,7 @@ const Settings = () => {
     { id: 'security', name: 'Sicurezza', icon: Lock },
     ...(user?.role === 'admin' ? [
       { id: 'system', name: 'Sistema', icon: SettingsIcon },
-      { id: 'integrations', name: 'Integrazioni', icon: Network },
-      { id: 'backup', name: 'Backup', icon: Database }
+      { id: 'emailManagement', name: 'Mail Management', icon: Mail }
     ] : [])
   ];
 
@@ -373,56 +386,377 @@ const Settings = () => {
     </div>
   );
 
-  const renderBackupTab = () => (
+  const renderPrivacyTab = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-700 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Download className="h-5 w-5 mr-2 text-green-400" />
-            Esporta Dati
-          </h3>
-          <p className="text-slate-400 mb-4">Scarica tutti i tuoi dati in formato JSON</p>
-          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-            <Download className="h-4 w-4 mr-2 inline" />
-            Scarica Backup
-          </button>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">Visibilità Profilo</h3>
+        <div className="space-y-3">
+          {[
+            { key: 'showProfile', label: 'Mostra Profilo', description: 'Consenti ad altri di vedere il tuo profilo' },
+            { key: 'showAttendance', label: 'Mostra Presenze', description: 'Consenti la visualizzazione delle tue presenze' },
+            { key: 'showSchedule', label: 'Mostra Orari', description: 'Consenti la visualizzazione dei tuoi orari' },
+            { key: 'showSalary', label: 'Mostra Stipendio', description: 'Consenti la visualizzazione delle informazioni salariali' }
+          ].map(item => (
+            <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
+              <div>
+                <h4 className="text-white font-medium">{item.label}</h4>
+                <p className="text-slate-400 text-sm">{item.description}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.privacy[item.key]}
+                  onChange={(e) => handleSettingChange('privacy', item.key, e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+          ))}
         </div>
-        
-        <div className="bg-slate-700 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Upload className="h-5 w-5 mr-2 text-blue-400" />
-            Ripristina Dati
-          </h3>
-          <p className="text-slate-400 mb-4">Carica un file di backup per ripristinare i dati</p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-            <Upload className="h-4 w-4 mr-2 inline" />
-            Carica Backup
-          </button>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">Consenso Dati</h3>
+        <div className="space-y-3">
+          {[
+            { key: 'cookieConsent', label: 'Consenso Cookie', description: 'Accetta l\'uso di cookie per migliorare l\'esperienza' },
+            { key: 'dataSharing', label: 'Condivisione Dati', description: 'Consenti la condivisione di dati con terze parti' },
+            { key: 'marketingEmails', label: 'Email Marketing', description: 'Ricevi email promozionali e newsletter' },
+            { key: 'locationTracking', label: 'Tracciamento Posizione', description: 'Consenti il tracciamento della posizione' },
+            { key: 'biometricData', label: 'Dati Biometrici', description: 'Consenti l\'uso di dati biometrici per l\'autenticazione' },
+            { key: 'thirdPartyAccess', label: 'Accesso Terze Parti', description: 'Consenti l\'accesso ai tuoi dati da parte di terze parti' }
+          ].map(item => (
+            <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
+              <div>
+                <h4 className="text-white font-medium">{item.label}</h4>
+                <p className="text-slate-400 text-sm">{item.description}</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.privacy[item.key]}
+                  onChange={(e) => handleSettingChange('privacy', item.key, e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white">Gestione Dati</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Conservazione Dati</label>
+            <select
+              value={settings.privacy.dataRetention}
+              onChange={(e) => handleSettingChange('privacy', 'dataRetention', e.target.value)}
+              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="1 year">1 Anno</option>
+              <option value="2 years">2 Anni</option>
+              <option value="5 years">5 Anni</option>
+              <option value="indefinite">Indefinito</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
+            <div>
+              <h4 className="text-white font-medium">Analisi Dati</h4>
+              <p className="text-slate-400 text-sm">Consenti l\'analisi dei dati per migliorare il servizio</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.privacy.analytics}
+                onChange={(e) => handleSettingChange('privacy', 'analytics', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
         </div>
       </div>
 
       <div className="bg-slate-700 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <Trash2 className="h-5 w-5 mr-2 text-red-400" />
-          Cancellazione Dati
+          <Download className="h-5 w-5 mr-2 text-blue-400" />
+          Esporta Dati Personali
         </h3>
         <p className="text-slate-400 mb-4">
-          Attenzione: Questa azione eliminerà permanentemente tutti i tuoi dati e non può essere annullata.
+          Scarica una copia di tutti i tuoi dati personali in formato JSON.
         </p>
-        <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
-          <Trash2 className="h-4 w-4 mr-2 inline" />
-          Elimina Tutti i Dati
+        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+          <Download className="h-4 w-4 mr-2 inline" />
+          Scarica Dati
         </button>
       </div>
     </div>
   );
 
+  const renderEmailManagementTab = () => {
+    const [emailLoading, setEmailLoading] = useState(false);
+    const [emailResult, setEmailResult] = useState(null);
+
+    const fetchEmployees = async () => {
+      try {
+        const response = await apiCall('/api/employees');
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prev => ({
+            ...prev,
+            emailManagement: {
+              ...prev.emailManagement,
+              employees: data.employees || []
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+    };
+
+    const fetchSchedulerStatus = async () => {
+      try {
+        const response = await apiCall('/api/email/scheduler/status');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setSettings(prev => ({
+              ...prev,
+              emailManagement: {
+                ...prev.emailManagement,
+                schedulerStatus: data.scheduler
+              }
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching scheduler status:', error);
+      }
+    };
+
+    useEffect(() => {
+      fetchEmployees();
+      fetchSchedulerStatus();
+    }, []);
+
+    const sendEmail = async () => {
+      setEmailLoading(true);
+      setEmailResult(null);
+      
+      try {
+        const response = await apiCall('/api/email/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            employeeId: settings.emailManagement.selectedEmployee,
+            type: settings.emailManagement.emailType,
+            message: settings.emailManagement.customMessage
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setEmailResult({ success: true, message: data.message });
+        } else {
+          setEmailResult({ success: false, message: 'Errore nell\'invio dell\'email' });
+        }
+      } catch (error) {
+        setEmailResult({ success: false, message: 'Errore di connessione' });
+      } finally {
+        setEmailLoading(false);
+      }
+    };
+
+    const toggleScheduler = async () => {
+      setEmailLoading(true);
+      try {
+        const response = await apiCall('/api/email/scheduler/toggle', {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prev => ({
+            ...prev,
+            emailManagement: {
+              ...prev.emailManagement,
+              schedulerStatus: data.scheduler
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('Error toggling scheduler:', error);
+      } finally {
+        setEmailLoading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Email Forms */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Promemoria Email */}
+          <div className="bg-slate-700 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white flex items-center mb-4">
+              <Clock className="h-5 w-5 mr-2 text-orange-400" />
+              Promemoria Email
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
+                <select
+                  value={settings.emailManagement.selectedEmployee}
+                  onChange={(e) => handleSettingChange('emailManagement', 'selectedEmployee', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Seleziona dipendente</option>
+                  {settings.emailManagement.employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName} ({emp.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Tipo Email</label>
+                <select
+                  value={settings.emailManagement.emailType}
+                  onChange={(e) => handleSettingChange('emailManagement', 'emailType', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="attendance">Promemoria Presenze</option>
+                  <option value="leave">Richiesta Permessi</option>
+                  <option value="report">Report Settimanale</option>
+                  <option value="custom">Messaggio Personalizzato</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Messaggio Personalizzato</label>
+                <textarea
+                  value={settings.emailManagement.customMessage}
+                  onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  rows="3"
+                  placeholder="Inserisci un messaggio personalizzato..."
+                />
+              </div>
+
+              <button
+                onClick={sendEmail}
+                disabled={emailLoading || !settings.emailManagement.selectedEmployee}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
+              >
+                {emailLoading ? (
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                {emailLoading ? 'Invio...' : 'Invia Email'}
+              </button>
+
+              {emailResult && (
+                <div className={`p-3 rounded-lg flex items-center ${
+                  emailResult.success ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'
+                }`}>
+                  {emailResult.success ? (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                  )}
+                  {emailResult.message}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Scheduler Status */}
+          <div className="bg-slate-700 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white flex items-center mb-4">
+              <Calendar className="h-5 w-5 mr-2 text-green-400" />
+              Scheduler Email
+            </h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">Stato Scheduler:</span>
+                <span className={`px-2 py-1 rounded text-sm ${
+                  settings.emailManagement.schedulerStatus?.active 
+                    ? 'bg-green-900 text-green-300' 
+                    : 'bg-red-900 text-red-300'
+                }`}>
+                  {settings.emailManagement.schedulerStatus?.active ? 'Attivo' : 'Inattivo'}
+                </span>
+              </div>
+
+              <button
+                onClick={toggleScheduler}
+                disabled={emailLoading}
+                className={`w-full px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
+                  settings.emailManagement.schedulerStatus?.active
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                {emailLoading ? (
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Calendar className="h-4 w-4 mr-2" />
+                )}
+                {settings.emailManagement.schedulerStatus?.active ? 'Disattiva' : 'Attiva'} Scheduler
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Email Settings */}
+        <div className="bg-slate-700 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Impostazioni Email Automatiche</h3>
+          <div className="space-y-3">
+            {[
+              { key: 'autoReminders', label: 'Promemoria Automatici', description: 'Invia automaticamente promemoria per le presenze' },
+              { key: 'weeklyReports', label: 'Report Settimanali', description: 'Invia automaticamente report settimanali' },
+              { key: 'monthlyReports', label: 'Report Mensili', description: 'Invia automaticamente report mensili' },
+              { key: 'attendanceAlerts', label: 'Avvisi Presenze', description: 'Invia avvisi per presenze anomale' }
+            ].map(item => (
+              <div key={item.key} className="flex items-center justify-between p-4 bg-slate-600 rounded-lg">
+                <div>
+                  <h4 className="text-white font-medium">{item.label}</h4>
+                  <p className="text-slate-400 text-sm">{item.description}</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.emailManagement[item.key]}
+                    onChange={(e) => handleSettingChange('emailManagement', item.key, e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-500 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'company': return renderCompanyTab();
       case 'notifications': return renderNotificationsTab();
+      case 'privacy': return renderPrivacyTab();
+      case 'security': return <div className="text-slate-400">Sezione Sicurezza in sviluppo...</div>;
       case 'system': return renderSystemTab();
-      case 'backup': return renderBackupTab();
+      case 'emailManagement': return renderEmailManagementTab();
       default: return <div className="text-slate-400">Sezione in sviluppo...</div>;
     }
   };

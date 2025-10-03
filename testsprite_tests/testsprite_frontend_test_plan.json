@@ -1,0 +1,475 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration Success",
+    "description": "Verify that a new user can successfully register with valid credentials and all required fields filled correctly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid information into all required fields (e.g. username, email, password)."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that the registration is successful and the user is redirected to the login page or dashboard."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Registration with Missing Required Fields",
+    "description": "Verify the system handles attempts to register without filling mandatory fields and displays appropriate validation errors.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit the registration form leaving mandatory fields blank."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that error messages are shown for each missing required field and registration is prevented."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Successful Login with Correct Credentials",
+    "description": "Verify that a registered user can log in using correct username/email and password.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid username/email and corresponding password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is authenticated, a JWT token is received, and is redirected to the user dashboard."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Login Failure with Invalid Credentials",
+    "description": "Verify the system blocks login attempts with wrong username/email or password and displays appropriate error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter incorrect username/email or password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that login is denied and a clear error message about invalid credentials is shown."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Logout Functionality",
+    "description": "Verify that an authenticated user can successfully logout and the session is invalidated.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with valid credentials."
+      },
+      {
+        "type": "action",
+        "description": "Click the logout button or link."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the user session is terminated and the user is redirected to login page."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access a protected route."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm access is denied and user is redirected to login."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "View Personal Dashboard with Active Reservations",
+    "description": "Verify that a logged-in user can view their active and past reservations correctly on the dashboard.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user with existing reservations."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the personal user dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that active, upcoming, and past reservations are displayed with correct details."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that statistics related to bookings are accurate and consistent."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Create New Table Reservation with Valid Details",
+    "description": "Verify that users can create a new reservation by selecting valid date, time, table, number of guests, and special requests.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the reservation creation page."
+      },
+      {
+        "type": "action",
+        "description": "Select an available date and time."
+      },
+      {
+        "type": "action",
+        "description": "Choose an available table."
+      },
+      {
+        "type": "action",
+        "description": "Enter number of people and any special requests."
+      },
+      {
+        "type": "action",
+        "description": "Submit the reservation form."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate that the reservation is successfully created and confirmation is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Prevent Reservation on Closed Days or Outside Operating Hours",
+    "description": "Verify that the system prevents making reservations on days or times when the bistrot is closed or outside configured operating hours.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login and navigate to the reservation page."
+      },
+      {
+        "type": "action",
+        "description": "Select a date for a closed day or time outside opening hours."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to submit the reservation."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the reservation is blocked and a meaningful error is displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Admin Dashboard Displays Correct Statistics and KPIs",
+    "description": "Verify that the administrator dashboard loads and shows accurate statistics, KPIs, and graphical data about the bistrot's activity.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as an administrator."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the admin dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify KPIs such as total reservations, occupancy rates, and revenue are displayed correctly."
+      },
+      {
+        "type": "assertion",
+        "description": "Check graphical charts and data visualizations are rendered and correspond to backend data."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Admin Filtering and Managing Reservations",
+    "description": "Verify administrators can filter reservations by date, status, or customer detail and can modify or cancel reservations.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin and open reservations management page."
+      },
+      {
+        "type": "action",
+        "description": "Apply filters on date range, reservation state, or customer name/email."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the displayed reservations match the filter criteria."
+      },
+      {
+        "type": "action",
+        "description": "Select a reservation and perform update on details or cancel the reservation."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm changes are saved and reflected in the list."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Admin Creates, Edits and Deactivates Menu Items",
+    "description": "Verify that administrators can create new menu dishes, modify existing ones, and deactivate dishes that should no longer appear.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as administrator."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to menu management interface."
+      },
+      {
+        "type": "action",
+        "description": "Create a new dish providing all mandatory fields like name, category, price, description."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the new dish is added and visible in the menu list."
+      },
+      {
+        "type": "action",
+        "description": "Edit details of an existing dish."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the updates are saved and reflected in the menu."
+      },
+      {
+        "type": "action",
+        "description": "Deactivate a selected dish."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that deactivated dishes no longer appear on active menus."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "User Profile Update and Settings Management",
+    "description": "Verify that both users and administrators can update their personal profile and system preferences successfully.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user or administrator."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to profile or settings page."
+      },
+      {
+        "type": "action",
+        "description": "Change profile information such as name, email, or password."
+      },
+      {
+        "type": "action",
+        "description": "Adjust any configurable preferences available."
+      },
+      {
+        "type": "action",
+        "description": "Save the changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updates are saved, persisted and visible on next login or navigation."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Ensure Password Hashing and JWT Authentication Security",
+    "description": "Verify password data is hashed correctly before storage and JWT tokens are issued, validated, and revoked correctly for authentication and authorization.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Register a new user and inspect backend database entries for password storage."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm stored passwords are hashed and salted, not in plain text."
+      },
+      {
+        "type": "action",
+        "description": "Login and capture the JWT token issued."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that API endpoints require a valid JWT for protected resources."
+      },
+      {
+        "type": "action",
+        "description": "Attempt accessing protected features without or with invalid token."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied for missing or invalid tokens."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Responsive Interface on Mobile and Desktop",
+    "description": "Verify that all user and admin interfaces render correctly and are fully usable on various screen sizes and device types.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the application on desktop viewport."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm proper layout, navigation, and content visibility."
+      },
+      {
+        "type": "action",
+        "description": "Repeat UI verification on mobile and tablet viewport sizes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all functionality is accessible, menus are usable, and text/images are correctly sized without overflow."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "REST API Endpoints Functional and Error Handling",
+    "description": "Verify all backend RESTful API endpoints respond correctly to valid requests and handle invalid or unauthorized requests gracefully with proper error codes and messages.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Make valid GET, POST, PUT, DELETE requests to API endpoints with valid authentication."
+      },
+      {
+        "type": "assertion",
+        "description": "Check responses have correct data, HTTP status codes, and headers."
+      },
+      {
+        "type": "action",
+        "description": "Make requests with invalid data payloads or malformed requests."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify API returns appropriate 4xx error codes and descriptive error messages."
+      },
+      {
+        "type": "action",
+        "description": "Make requests without authentication or with expired/invalid JWT token."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm the API responds with 401 Unauthorized and does not expose sensitive data."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Database Initialization on Application Start",
+    "description": "Verify that the PostgreSQL database and Supabase schema initialize correctly during the application startup or deployment, creating required tables and relations.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Deploy or restart the application with a fresh database."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that all expected database tables, indices, and relations are created as per schema."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify initial configuration data is inserted if applicable."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Email Notification Sent After Reservation",
+    "description": "Verify that the system sends confirmation email notifications to users after successful reservation creation using the automated email service.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create a valid reservation as an authenticated user."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that the email service is triggered and sends the confirmation email."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the email content matches the template with correct reservation details."
+      }
+    ]
+  }
+]
