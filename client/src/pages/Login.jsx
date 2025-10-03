@@ -73,21 +73,23 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-center">
-            <div className="h-16 w-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 p-2">
-              <img src="/logoSito.svg" alt="LABA Logo" className="h-12 w-12" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
+            
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-center">
+              <div className="h-16 w-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 p-2">
+                <img src="/logoSito.svg" alt="LABA Logo" className="h-12 w-12" />
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">Gestione Personale</h1>
+              <p className="text-blue-100">Sistema HR per il personale LABA</p>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Gestione Personale</h1>
-            <p className="text-blue-100">Sistema HR per il personale LABA</p>
-          </div>
 
-          {/* Content */}
-          <div className="p-8">
+            {/* Content */}
+            <div className="p-8">
             {/* Tab Switcher */}
             <div className="flex bg-slate-700/50 rounded-xl p-1 mb-8">
               <button
@@ -187,12 +189,13 @@ const Login = () => {
               /* Registration Form */
               <RegistrationSteps onRegister={handleRegistration} loading={loading} />
             )}
+            </div>
           </div>
         </div>
       </div>
       
       {/* Footer */}
-      <div className="absolute bottom-4 left-0 right-0 text-center">
+      <div className="text-center py-4">
         <p className="text-slate-500 text-sm">
           © LABA Firenze 2025 - Sviluppato con 💙 da Simone Azzinelli
         </p>
