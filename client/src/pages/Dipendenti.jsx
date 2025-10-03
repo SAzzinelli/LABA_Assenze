@@ -335,7 +335,11 @@ const Employees = () => {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {filteredEmployees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-slate-700/50 transition-colors">
+                <tr 
+                  key={employee.id} 
+                  className="hover:bg-slate-700/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
+                  onClick={() => handleViewDetails(employee)}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-8 w-8 bg-indigo-500 rounded-full flex items-center justify-center">
@@ -344,7 +348,7 @@ const Employees = () => {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-white cursor-pointer hover:text-indigo-400" onClick={() => handleViewDetails(employee)}>
+                        <div className="text-sm font-medium text-white">
                           {employee.name}
                         </div>
                       </div>
@@ -390,21 +394,30 @@ const Employees = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
                       <button 
-                        onClick={() => handleEditEmployee(employee)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditEmployee(employee);
+                        }}
                         className="text-indigo-400 hover:text-indigo-300"
                         title="Modifica"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button 
-                        onClick={() => handleViewDetails(employee)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(employee);
+                        }}
                         className="text-green-400 hover:text-green-300"
                         title="Visualizza dettagli"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       <button 
-                        onClick={() => handleDeleteEmployee(employee.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEmployee(employee.id);
+                        }}
                         className="text-red-400 hover:text-red-300"
                         title="Elimina"
                       >
