@@ -146,6 +146,13 @@ const Settings = () => {
     setEmailResult(null);
     
     try {
+      // Validazione per messaggio personalizzato
+      if (settings.emailManagement.emailType === 'custom' && !settings.emailManagement.customMessage.trim()) {
+        setEmailResult({ success: false, message: 'Inserisci un messaggio personalizzato' });
+        setEmailLoading(false);
+        return;
+      }
+
       const response = await apiCall('/api/email/send', {
         method: 'POST',
         headers: {
@@ -154,7 +161,7 @@ const Settings = () => {
         body: JSON.stringify({
           employeeId: settings.emailManagement.selectedEmployee,
           type: settings.emailManagement.emailType,
-          message: settings.emailManagement.customMessage
+          message: settings.emailManagement.emailType === 'custom' ? settings.emailManagement.customMessage : ''
         })
       });
 
@@ -162,7 +169,8 @@ const Settings = () => {
         const data = await response.json();
         setEmailResult({ success: true, message: data.message });
       } else {
-        setEmailResult({ success: false, message: 'Errore nell\'invio dell\'email' });
+        const errorData = await response.json();
+        setEmailResult({ success: false, message: errorData.error || 'Errore nell\'invio dell\'email' });
       }
     } catch (error) {
       setEmailResult({ success: false, message: 'Errore di connessione' });
@@ -645,16 +653,18 @@ const Settings = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Messaggio Personalizzato</label>
-                <textarea
-                  value={settings.emailManagement.customMessage}
-                  onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  rows="3"
-                  placeholder="Inserisci un messaggio personalizzato..."
-                />
-              </div>
+              {settings.emailManagement.emailType === 'custom' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Messaggio Personalizzato</label>
+                  <textarea
+                    value={settings.emailManagement.customMessage}
+                    onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    rows="3"
+                    placeholder="Inserisci un messaggio personalizzato..."
+                  />
+                </div>
+              )}
 
               <button
                 onClick={sendEmail}

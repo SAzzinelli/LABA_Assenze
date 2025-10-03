@@ -122,11 +122,35 @@ const AdminAttendance = () => {
   const fetchStats = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await apiCall(`/api/attendance/stats?date=${today}`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+      
+      // Fetch employees count
+      const employeesResponse = await apiCall('/api/employees');
+      let totalEmployees = 0;
+      if (employeesResponse.ok) {
+        const employeesData = await employeesResponse.json();
+        totalEmployees = employeesData.employees ? employeesData.employees.length : employeesData.length || 0;
       }
+
+      // Fetch today's attendance
+      const attendanceResponse = await apiCall(`/api/attendance?date=${today}`);
+      let presentToday = 0;
+      let absentToday = 0;
+      let totalHours = 0;
+      
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        presentToday = attendanceData.filter(record => record.status === 'present').length;
+        absentToday = attendanceData.filter(record => record.status === 'absent').length;
+        totalHours = attendanceData.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+      }
+
+      setStats({
+        totalEmployees,
+        presentToday,
+        absentToday,
+        totalHours,
+        averageHours: totalEmployees > 0 ? totalHours / totalEmployees : 0
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
@@ -702,12 +726,13 @@ const AdminAttendance = () => {
 
         {/* Modale Genera Presenze */}
         {showGenerateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
-              <div className="flex items-center justify-between mb-6">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Genera Presenze</h3>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <h3 className="text-lg font-semibold text-gray-900">Genera Presenze</h3>
+                  <p className="text-sm text-gray-500 mt-1">
                     Step {generateStep} di 2
                   </p>
                 </div>
@@ -721,30 +746,30 @@ const AdminAttendance = () => {
                       employeeId: ''
                     });
                   }}
-                  className="text-slate-400 hover:text-white"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-6">
+              <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    generateStep >= 1 ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300'
+                    generateStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
                   }`}>
                     1
                   </div>
                   <div className={`flex-1 h-1 mx-2 ${
-                    generateStep >= 2 ? 'bg-indigo-600' : 'bg-slate-600'
+                    generateStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'
                   }`}></div>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    generateStep >= 2 ? 'bg-indigo-600 text-white' : 'bg-slate-600 text-slate-300'
+                    generateStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
                   }`}>
                     2
                   </div>
                 </div>
-                <div className="flex justify-between mt-2 text-xs text-slate-400">
+                <div className="flex justify-between mt-2 text-xs text-gray-500">
                   <span>Seleziona Dipendente</span>
                   <span>Seleziona Date</span>
                 </div>
@@ -752,15 +777,15 @@ const AdminAttendance = () => {
               
               {/* Step 1: Selezione Dipendente */}
               {generateStep === 1 && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                <div className="p-6">
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Seleziona Dipendente
                     </label>
                     <select
                       value={generateForm.employeeId}
                       onChange={(e) => setGenerateForm({...generateForm, employeeId: e.target.value})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Seleziona dipendente</option>
                       {employees.map((emp) => (
@@ -771,7 +796,7 @@ const AdminAttendance = () => {
                     </select>
                   </div>
                   
-                  <div className="flex justify-end gap-3 mt-6">
+                  <div className="flex justify-end gap-3">
                     <button
                       onClick={() => {
                         setShowGenerateModal(false);
@@ -782,7 +807,7 @@ const AdminAttendance = () => {
                           employeeId: ''
                         });
                       }}
-                      className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                      className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       Annulla
                     </button>
@@ -794,7 +819,7 @@ const AdminAttendance = () => {
                           alert('Seleziona un dipendente per continuare');
                         }
                       }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
                     >
                       Avanti
                     </button>
@@ -804,43 +829,45 @@ const AdminAttendance = () => {
 
               {/* Step 2: Selezione Date */}
               {generateStep === 2 && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Data Inizio</label>
-                    <input
-                      type="date"
-                      value={generateForm.startDate}
-                      onChange={(e) => setGenerateForm({...generateForm, startDate: e.target.value})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Data Fine</label>
-                    <input
-                      type="date"
-                      value={generateForm.endDate}
-                      onChange={(e) => setGenerateForm({...generateForm, endDate: e.target.value})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                <div className="p-6">
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Inizio</label>
+                      <input
+                        type="date"
+                        value={generateForm.startDate}
+                        onChange={(e) => setGenerateForm({...generateForm, startDate: e.target.value})}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Fine</label>
+                      <input
+                        type="date"
+                        value={generateForm.endDate}
+                        onChange={(e) => setGenerateForm({...generateForm, endDate: e.target.value})}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
                   </div>
 
                   {/* Riepilogo */}
-                  <div className="bg-slate-700 rounded-lg p-4 mt-4">
-                    <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
-                    <div className="text-sm text-slate-300 space-y-1">
-                      <p><span className="text-slate-400">Dipendente:</span> {
+                  <div className="bg-gray-50 rounded-md p-4 mb-6">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Riepilogo</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p><span className="text-gray-500">Dipendente:</span> {
                         employees.find(emp => emp.id === generateForm.employeeId)?.firstName + ' ' + 
                         employees.find(emp => emp.id === generateForm.employeeId)?.lastName
                       }</p>
-                      <p><span className="text-slate-400">Periodo:</span> {generateForm.startDate} - {generateForm.endDate}</p>
+                      <p><span className="text-gray-500">Periodo:</span> {generateForm.startDate} - {generateForm.endDate}</p>
                     </div>
                   </div>
                   
-                  <div className="flex justify-between gap-3 mt-6">
+                  <div className="flex justify-between gap-3">
                     <button
                       onClick={() => setGenerateStep(1)}
-                      className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                      className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                     >
                       Indietro
                     </button>
@@ -852,7 +879,7 @@ const AdminAttendance = () => {
                           alert('Seleziona entrambe le date per continuare');
                         }
                       }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
                       Genera Presenze
