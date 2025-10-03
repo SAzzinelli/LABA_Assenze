@@ -665,6 +665,88 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete employee (Admin only)
+app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+
+    // Verifica che l'utente esista e sia un dipendente
+    const { data: employee, error: fetchError } = await supabase
+      .from('users')
+      .select('id, role, first_name, last_name')
+      .eq('id', id)
+      .eq('role', 'employee')
+      .single();
+
+    if (fetchError || !employee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    // Non permettere l'eliminazione dell'admin corrente
+    if (id === req.user.id) {
+      return res.status(400).json({ error: 'Non puoi eliminare te stesso' });
+    }
+
+    // Elimina prima i record correlati (attendance, requests, etc.)
+    const tablesToClean = [
+      'attendance',
+      'leave_requests', 
+      'sick_leave_requests',
+      'vacation_requests',
+      'business_trips',
+      'work_patterns',
+      'work_schedules'
+    ];
+
+    for (const table of tablesToClean) {
+      const { error: deleteError } = await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', id);
+      
+      if (deleteError) {
+        console.warn(`Warning: Could not clean ${table} for user ${id}:`, deleteError);
+      }
+    }
+
+    // Elimina il record dalla tabella employees se esiste
+    const { error: employeeDeleteError } = await supabase
+      .from('employees')
+      .delete()
+      .eq('user_id', id);
+
+    if (employeeDeleteError) {
+      console.warn('Warning: Could not delete from employees table:', employeeDeleteError);
+    }
+
+    // Infine elimina l'utente
+    const { error: userDeleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (userDeleteError) {
+      console.error('User deletion error:', userDeleteError);
+      return res.status(500).json({ error: 'Errore nell\'eliminazione del dipendente' });
+    }
+
+    console.log(`✅ Employee ${employee.first_name} ${employee.last_name} (${id}) deleted successfully`);
+
+    res.json({
+      success: true,
+      message: `Dipendente ${employee.first_name} ${employee.last_name} eliminato con successo`
+    });
+
+  } catch (error) {
+    console.error('Delete employee error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== ATTENDANCE ENDPOINTS (NUOVO SISTEMA SENZA TIMBRATURA) ====================
 
 // Get attendance records

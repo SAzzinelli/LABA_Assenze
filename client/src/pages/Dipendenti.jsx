@@ -196,15 +196,28 @@ const Employees = () => {
     resetForm();
   };
 
-  const handleDeleteEmployee = (employeeId) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo dipendente?')) {
-      // TODO: Sostituire con chiamata API DELETE /api/employees/:id
-      // const response = await fetch(`/api/employees/${employeeId}`, {
-      //   method: 'DELETE',
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // });
-      
-      setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+  const handleDeleteEmployee = async (employeeId) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'questo dipendente';
+    
+    if (window.confirm(`Sei sicuro di voler eliminare ${employeeName}?\n\nQuesta azione eliminerà:\n• Tutti i record di presenza\n• Tutte le richieste di permesso\n• Tutti i dati associati\n\nL'azione è IRREVERSIBILE!`)) {
+      try {
+        const response = await apiCall(`/api/employees/${employeeId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          alert(data.message || 'Dipendente eliminato con successo!');
+          setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+        } else {
+          const error = await response.json();
+          alert(error.error || 'Errore durante l\'eliminazione del dipendente');
+        }
+      } catch (error) {
+        console.error('Error deleting employee:', error);
+        alert('Errore di connessione durante l\'eliminazione');
+      }
     }
   };
 
