@@ -98,6 +98,103 @@ const Settings = () => {
     }
   });
 
+  // Stati per Email Management
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailResult, setEmailResult] = useState(null);
+
+  // Funzioni per Email Management
+  const fetchEmployees = async () => {
+    try {
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(prev => ({
+          ...prev,
+          emailManagement: {
+            ...prev.emailManagement,
+            employees: data.employees || data || []
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchSchedulerStatus = async () => {
+    try {
+      const response = await apiCall('/api/email/scheduler/status');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSettings(prev => ({
+            ...prev,
+            emailManagement: {
+              ...prev.emailManagement,
+              schedulerStatus: data.scheduler
+            }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching scheduler status:', error);
+    }
+  };
+
+  const sendEmail = async () => {
+    setEmailLoading(true);
+    setEmailResult(null);
+    
+    try {
+      const response = await apiCall('/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          employeeId: settings.emailManagement.selectedEmployee,
+          type: settings.emailManagement.emailType,
+          message: settings.emailManagement.customMessage
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmailResult({ success: true, message: data.message });
+      } else {
+        setEmailResult({ success: false, message: 'Errore nell\'invio dell\'email' });
+      }
+    } catch (error) {
+      setEmailResult({ success: false, message: 'Errore di connessione' });
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const toggleScheduler = async () => {
+    setEmailLoading(true);
+    try {
+      const response = await apiCall('/api/email/scheduler/toggle', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(prev => ({
+          ...prev,
+          emailManagement: {
+            ...prev.emailManagement,
+            schedulerStatus: data.scheduler
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling scheduler:', error);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   // Carica impostazioni dal database al mount
   React.useEffect(() => {
     const loadSettings = async () => {
@@ -133,6 +230,14 @@ const Settings = () => {
 
     loadSettings();
   }, [apiCall]);
+
+  // Carica dati Email Management quando si apre il tab
+  React.useEffect(() => {
+    if (activeTab === 'emailManagement') {
+      fetchEmployees();
+      fetchSchedulerStatus();
+    }
+  }, [activeTab]);
 
   const handleSettingChange = (category, setting, value) => {
     setSettings(prev => ({
@@ -497,105 +602,6 @@ const Settings = () => {
   );
 
   const renderEmailManagementTab = () => {
-    const [emailLoading, setEmailLoading] = useState(false);
-    const [emailResult, setEmailResult] = useState(null);
-
-    const fetchEmployees = async () => {
-      try {
-        const response = await apiCall('/api/employees');
-        if (response.ok) {
-          const data = await response.json();
-          setSettings(prev => ({
-            ...prev,
-            emailManagement: {
-              ...prev.emailManagement,
-              employees: data.employees || []
-            }
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching employees:', error);
-      }
-    };
-
-    const fetchSchedulerStatus = async () => {
-      try {
-        const response = await apiCall('/api/email/scheduler/status');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setSettings(prev => ({
-              ...prev,
-              emailManagement: {
-                ...prev.emailManagement,
-                schedulerStatus: data.scheduler
-              }
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching scheduler status:', error);
-      }
-    };
-
-    useEffect(() => {
-      fetchEmployees();
-      fetchSchedulerStatus();
-    }, []);
-
-    const sendEmail = async () => {
-      setEmailLoading(true);
-      setEmailResult(null);
-      
-      try {
-        const response = await apiCall('/api/email/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            employeeId: settings.emailManagement.selectedEmployee,
-            type: settings.emailManagement.emailType,
-            message: settings.emailManagement.customMessage
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setEmailResult({ success: true, message: data.message });
-        } else {
-          setEmailResult({ success: false, message: 'Errore nell\'invio dell\'email' });
-        }
-      } catch (error) {
-        setEmailResult({ success: false, message: 'Errore di connessione' });
-      } finally {
-        setEmailLoading(false);
-      }
-    };
-
-    const toggleScheduler = async () => {
-      setEmailLoading(true);
-      try {
-        const response = await apiCall('/api/email/scheduler/toggle', {
-          method: 'POST'
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setSettings(prev => ({
-            ...prev,
-            emailManagement: {
-              ...prev.emailManagement,
-              schedulerStatus: data.scheduler
-            }
-          }));
-        }
-      } catch (error) {
-        console.error('Error toggling scheduler:', error);
-      } finally {
-        setEmailLoading(false);
-      }
-    };
 
     return (
       <div className="space-y-6">
