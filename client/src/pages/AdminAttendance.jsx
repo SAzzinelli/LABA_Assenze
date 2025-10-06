@@ -331,6 +331,15 @@ const AdminAttendance = () => {
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
     
+    console.log('🔍 Debug calculateRealTimeHoursForRecord:', {
+      recordUserId: record.user_id,
+      dayOfWeek,
+      currentHour,
+      currentMinute,
+      workSchedulesCount: workSchedules.length,
+      workSchedules: workSchedules
+    });
+    
     // Trova l'orario di lavoro per questo dipendente
     const workSchedule = workSchedules.find(schedule => 
       schedule.user_id === record.user_id && 
@@ -338,7 +347,10 @@ const AdminAttendance = () => {
       schedule.is_working_day
     );
     
+    console.log('📋 Found work schedule:', workSchedule);
+    
     if (!workSchedule) {
+      console.log('❌ No work schedule found for user', record.user_id, 'day', dayOfWeek);
       return {
         expectedHours: 0,
         actualHours: 0,
@@ -373,12 +385,16 @@ const AdminAttendance = () => {
     const balanceHours = actualHours - expectedHours;
     const isPresent = actualHours > 0;
     
-    return {
+    const result = {
       expectedHours: Math.round(expectedHours * 10) / 10,
       actualHours: Math.round(actualHours * 10) / 10,
       balanceHours: Math.round(balanceHours * 10) / 10,
       isPresent
     };
+    
+    console.log('✅ Calculated real-time hours:', result);
+    
+    return result;
   };
 
   const getStatusIcon = (status) => {
