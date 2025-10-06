@@ -445,11 +445,10 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         work_patterns!left(*),
         work_schedules!left(*)
       `)
-      .neq('email', 'admin@laba.com') // Escludi solo admin
+      .neq('role', 'admin') // Escludi tutti gli admin
       .order('last_name');
 
     console.log('📋 Raw employees from DB:', employees?.length || 0, 'employees');
-    console.log('📋 Employee roles:', employees?.map(emp => ({ email: emp.email, role: emp.role })));
 
     if (error) {
       console.error('❌ Employees fetch error:', error);
@@ -718,16 +717,20 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
 
     const { id } = req.params;
 
-    // Verifica che l'utente esista e sia un dipendente
+    // Verifica che l'utente esista e non sia un admin
     const { data: employee, error: fetchError } = await supabase
       .from('users')
       .select('id, role, first_name, last_name')
       .eq('id', id)
-      .eq('role', 'employee')
       .single();
 
     if (fetchError || !employee) {
-      return res.status(404).json({ error: 'Dipendente non trovato' });
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Non permettere l'eliminazione di admin
+    if (employee.role === 'admin') {
+      return res.status(403).json({ error: 'Non è possibile eliminare un amministratore' });
     }
 
     // Non permettere l'eliminazione dell'admin corrente

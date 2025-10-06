@@ -39,7 +39,7 @@ const ConfirmModal = ({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
             {message}
           </p>
         </div>

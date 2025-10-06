@@ -9,6 +9,10 @@ export const useRealTimeUpdates = (callbacks = {}) => {
   useEffect(() => {
     if (!user) return;
 
+    // WebSocket temporaneamente disabilitato per evitare errori in produzione
+    console.log('🔌 WebSocket disabilitato temporaneamente');
+    return;
+
     // Initialize WebSocket connection
     const initializeSocket = () => {
       try {
