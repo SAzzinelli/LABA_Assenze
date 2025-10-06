@@ -39,8 +39,11 @@ const Attendance = () => {
         fetchWorkSchedules()
       ]);
       
-      // 2. Calcola le ore in tempo reale lato frontend
-      calculateRealTimeHours();
+      // 2. Aspetta un momento per assicurarsi che i dati siano caricati
+      setTimeout(() => {
+        console.log('🔄 Forcing real-time calculation...');
+        calculateRealTimeHours();
+      }, 1000);
       
       console.log('✅ Data loaded with real-time calculation');
     };
@@ -177,6 +180,9 @@ const Attendance = () => {
 
   // Calcolo DINAMICO delle ore in tempo reale per ogni dipendente
   const calculateRealTimeHours = () => {
+    console.log('🔄 calculateRealTimeHours called');
+    console.log('📋 workSchedules:', workSchedules);
+    
     if (!workSchedules || workSchedules.length === 0) {
       console.log('⚠️ No work schedules available');
       return;
@@ -563,12 +569,12 @@ const Attendance = () => {
                     
                     <button
                       onClick={() => {
-                        console.log('🔄 Manual refresh triggered');
-                        updateCurrentAttendance();
+                        console.log('🔄 Manual recalculation triggered');
+                        calculateRealTimeHours();
                       }}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
                     >
-                      🔄 Debug
+                      🔄 Ricalcola
                     </button>
                     <button
                       onClick={() => handleViewAttendanceDetails(todayAttendance)}
