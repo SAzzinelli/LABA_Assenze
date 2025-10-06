@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye } from 'lucide-react';
+import AttendanceDetails from '../components/AttendanceDetails';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -15,6 +16,8 @@ const Attendance = () => {
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
+  const [selectedAttendanceDetails, setSelectedAttendanceDetails] = useState(null);
 
   useEffect(() => {
     fetchAttendance();
@@ -68,6 +71,15 @@ const Attendance = () => {
     } catch (error) {
       console.error('Error fetching work schedules:', error);
     }
+  };
+
+  const handleViewAttendanceDetails = (record) => {
+    setSelectedAttendanceDetails({
+      userId: user.id,
+      date: record.date,
+      employeeName: `${user.first_name} ${user.last_name}`
+    });
+    setShowAttendanceDetails(true);
   };
 
   const formatTime = (time) => {
@@ -264,6 +276,15 @@ const Attendance = () => {
                       {formatHours(todayAttendance.balance_hours)}
                     </span>
                   </div>
+                  <div className="flex justify-center pt-3">
+                    <button
+                      onClick={() => handleViewAttendanceDetails(todayAttendance)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Visualizza Dettagli
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-slate-400">
@@ -291,6 +312,7 @@ const Attendance = () => {
                   <th className="text-left py-3 px-4">Ore Effettive</th>
                   <th className="text-left py-3 px-4">Saldo Ore</th>
                   <th className="text-left py-3 px-4">Note</th>
+                  <th className="text-left py-3 px-4">Azioni</th>
                 </tr>
               </thead>
               <tbody>
@@ -317,6 +339,15 @@ const Attendance = () => {
                     </td>
                     <td className="py-3 px-4 text-sm text-slate-400">
                       {record.notes || '-'}
+                    </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => handleViewAttendanceDetails(record)}
+                        className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                        title="Visualizza dettagli presenze"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -345,6 +376,18 @@ const Attendance = () => {
             <p>• <strong>Gestione Admin:</strong> Gli amministratori possono modificare ore effettive e contrassegnare straordinari</p>
           </div>
         </div>
+
+        {/* Modal Dettagli Presenze */}
+        {showAttendanceDetails && selectedAttendanceDetails && (
+          <AttendanceDetails
+            userId={selectedAttendanceDetails.userId}
+            date={selectedAttendanceDetails.date}
+            onClose={() => {
+              setShowAttendanceDetails(false);
+              setSelectedAttendanceDetails(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );
