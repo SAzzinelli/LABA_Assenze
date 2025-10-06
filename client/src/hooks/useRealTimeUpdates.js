@@ -19,10 +19,18 @@ export const useRealTimeUpdates = (callbacks = {}) => {
     const startPolling = () => {
       pollingIntervalRef.current = setInterval(async () => {
         try {
+          // Solo se l'utente ha un token
+          if (!user.token) {
+            return;
+          }
+          
           // Controlla se ci sono aggiornamenti
           const response = await fetch('/api/updates/check', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`
+            },
             credentials: 'include',
             body: JSON.stringify({ 
               userId: user.id, 
