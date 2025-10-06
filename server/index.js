@@ -2497,9 +2497,14 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           created_at: new Date().toISOString()
         }));
 
-        await supabase
-          .from('notifications')
-          .insert(notifications);
+        try {
+          await supabase
+            .from('notifications')
+            .insert(notifications);
+          console.log('✅ Notifiche create con successo');
+        } catch (notificationInsertError) {
+          console.log('⚠️ Notifiche non create (tabella notifications potrebbe non avere tutte le colonne):', notificationInsertError.message);
+        }
 
         // Invia email agli admin (SOLO email reali)
         try {
