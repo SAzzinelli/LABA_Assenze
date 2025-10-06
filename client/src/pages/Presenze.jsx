@@ -175,34 +175,56 @@ const Attendance = () => {
     });
   };
 
-  // Calcolo SEMPLICE delle ore in tempo reale
+  // Calcolo DINAMICO delle ore in tempo reale per ogni dipendente
   const calculateRealTimeHours = () => {
+    if (!workSchedules || workSchedules.length === 0) {
+      console.log('⚠️ No work schedules available');
+      return;
+    }
+
     const now = new Date();
     const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
     
-    console.log(`🕐 Calcolo semplice: ora attuale ${currentTime}`);
+    console.log(`🕐 Calcolo dinamico: ora attuale ${currentTime}, giorno ${dayOfWeek}`);
 
-    // ORARIO FISSO SIMONE: 9-18 con pausa 13-14 = 8 ore totali
-    const workStart = 9; // 09:00
-    const workEnd = 18;   // 18:00
-    const breakStart = 13; // 13:00
-    const breakEnd = 14;   // 14:00
-    const expectedHours = 8; // 9 ore - 1 ora pausa = 8 ore
+    // Trova l'orario di lavoro per oggi
+    const todaySchedule = workSchedules.find(schedule => 
+      schedule.day_of_week === dayOfWeek && schedule.is_working_day
+    );
+
+    if (!todaySchedule) {
+      console.log('⚠️ No working schedule for today');
+      return;
+    }
+
+    const { start_time, end_time, break_duration } = todaySchedule;
+    console.log(`📋 Orario dipendente: ${start_time} - ${end_time}, pausa: ${break_duration}min`);
+
+    // Converte orari in numeri per calcoli
+    const [startHour, startMin] = start_time.split(':').map(Number);
+    const [endHour, endMin] = end_time.split(':').map(Number);
+    const breakDuration = break_duration || 60; // minuti
+
+    // Calcola ore attese totali
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    const workMinutes = totalMinutes - breakDuration;
+    const expectedHours = workMinutes / 60;
 
     let actualHours = 0;
     let status = 'not_started';
     let remainingHours = 0;
 
-    // Se è prima delle 9:00
-    if (currentHour < workStart) {
+    // Se è prima dell'inizio
+    if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
       actualHours = 0;
       status = 'not_started';
       remainingHours = expectedHours;
     }
-    // Se è dopo le 18:00
-    else if (currentHour >= workEnd) {
+    // Se è dopo la fine
+    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
       actualHours = expectedHours;
       status = 'completed';
       remainingHours = 0;
@@ -212,41 +234,46 @@ const Attendance = () => {
       // Calcola ore lavorate fino ad ora
       let totalMinutesWorked = 0;
       
-      // Ore mattina (9:00 - 13:00) = 4 ore
-      if (currentHour >= workStart && currentHour < breakStart) {
-        totalMinutesWorked = (currentHour - workStart) * 60 + currentMinute;
-      }
-      // Durante la pausa pranzo (13:00 - 14:00)
-      else if (currentHour >= breakStart && currentHour < breakEnd) {
-        totalMinutesWorked = (breakStart - workStart) * 60; // Solo ore mattina
+      // Calcola minuti dall'inizio
+      const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+      
+      // Calcola l'orario di pausa (metà giornata)
+      const halfDayMinutes = workMinutes / 2;
+      const breakStartMinutes = halfDayMinutes;
+      const breakEndMinutes = halfDayMinutes + breakDuration;
+      
+      if (minutesFromStart < breakStartMinutes) {
+        // Prima della pausa
+        totalMinutesWorked = minutesFromStart;
+        status = 'working';
+      } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+        // Durante la pausa
+        totalMinutesWorked = breakStartMinutes;
         status = 'on_break';
-      }
-      // Ore pomeriggio (14:00 - 18:00)
-      else if (currentHour >= breakEnd && currentHour < workEnd) {
-        const morningMinutes = (breakStart - workStart) * 60; // 4 ore = 240 min
-        const afternoonMinutes = (currentHour - breakEnd) * 60 + currentMinute;
+      } else {
+        // Dopo la pausa
+        const morningMinutes = breakStartMinutes;
+        const afternoonMinutes = minutesFromStart - breakEndMinutes;
         totalMinutesWorked = morningMinutes + afternoonMinutes;
         status = 'working';
       }
       
       actualHours = totalMinutesWorked / 60;
       remainingHours = expectedHours - actualHours;
-      
-      if (status === 'not_started') status = 'working';
     }
 
-    console.log(`📊 Calcolo: ${actualHours.toFixed(1)}h lavorate, ${remainingHours.toFixed(1)}h rimanenti, status: ${status}`);
+    console.log(`📊 Calcolo dipendente: ${actualHours.toFixed(1)}h lavorate, ${remainingHours.toFixed(1)}h rimanenti, status: ${status}`);
 
     // Aggiorna lo stato
     setCurrentHours({
       isWorkingDay: true,
       schedule: {
-        start_time: '09:00',
-        end_time: '18:00',
-        break_duration: 60
+        start_time,
+        end_time,
+        break_duration: breakDuration
       },
       currentTime,
-      expectedHours: expectedHours,
+      expectedHours: Math.round(expectedHours * 10) / 10,
       actualHours: Math.round(actualHours * 10) / 10,
       balanceHours: Math.round((actualHours - expectedHours) * 10) / 10,
       status,
