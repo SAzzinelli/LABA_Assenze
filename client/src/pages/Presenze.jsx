@@ -28,14 +28,11 @@ const Attendance = () => {
   });
 
   useEffect(() => {
-    // PRIMA aggiorna le ore nel database, POI carica i dati
+    // Carica prima i dati esistenti, poi aggiorna se necessario
     const initializeData = async () => {
-      console.log('🔄 Initializing with real-time calculation...');
+      console.log('🔄 Initializing data...');
       
-      // 1. Aggiorna le ore nel database con calcolo real-time
-      await updateCurrentAttendance();
-      
-      // 2. Poi carica tutti i dati aggiornati
+      // 1. Carica prima i dati esistenti
       await Promise.all([
         fetchAttendance(),
         fetchHoursBalance(),
@@ -43,7 +40,15 @@ const Attendance = () => {
         fetchCurrentHours()
       ]);
       
-      console.log('✅ All data loaded with real-time calculation');
+      // 2. Poi aggiorna le ore nel database (solo una volta)
+      try {
+        console.log('🔄 Updating attendance once...');
+        await updateCurrentAttendance();
+      } catch (error) {
+        console.error('❌ Update failed, but continuing with existing data:', error);
+      }
+      
+      console.log('✅ Data loaded');
     };
     
     initializeData();
@@ -52,10 +57,11 @@ const Attendance = () => {
       setCurrentTime(new Date());
     }, 1000);
     
-    // Aggiorna le ore ogni minuto nel database
+    // Aggiorna le ore ogni 5 minuti nel database (meno frequente)
     const updateTimer = setInterval(() => {
+      console.log('🔄 Scheduled update...');
       updateCurrentAttendance();
-    }, 60000);
+    }, 300000); // 5 minuti invece di 1
     
     // Aggiorna tutti i dati ogni 5 minuti per evitare problemi di refresh
     const refreshTimer = setInterval(() => {
@@ -63,15 +69,24 @@ const Attendance = () => {
       fetchHoursBalance();
     }, 300000); // 5 minuti
     
-    // Aggiorna quando la finestra torna in focus (navigazione)
+    // Aggiorna quando la finestra torna in focus (navigazione) - solo se non è già in aggiornamento
     const handleFocus = async () => {
-      console.log('🔄 Window focused - recalculating attendance');
-      await updateCurrentAttendance();
-      await Promise.all([
-        fetchAttendance(),
-        fetchHoursBalance(),
-        fetchCurrentHours()
-      ]);
+      if (updatingHours) {
+        console.log('🔄 Update already in progress, skipping...');
+        return;
+      }
+      
+      console.log('🔄 Window focused - refreshing data...');
+      try {
+        await Promise.all([
+          fetchAttendance(),
+          fetchHoursBalance(),
+          fetchCurrentHours()
+        ]);
+        console.log('✅ Data refreshed on focus');
+      } catch (error) {
+        console.error('❌ Error refreshing on focus:', error);
+      }
     };
     
     window.addEventListener('focus', handleFocus);
@@ -208,12 +223,15 @@ const Attendance = () => {
         ]);
         
         console.log('✅ All data refreshed after update');
+        return true;
       } else {
         const error = await response.json();
-        console.error('❌ Update failed:', error);
+        console.error('❌ Update failed:', response.status, error);
+        return false;
       }
     } catch (error) {
       console.error('❌ Update error:', error);
+      return false;
     } finally {
       setUpdatingHours(false);
     }
