@@ -18,7 +18,16 @@ const Attendance = () => {
   const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
   const [selectedAttendanceDetails, setSelectedAttendanceDetails] = useState(null);
 
-  const [currentHours, setCurrentHours] = useState(null);
+  const [currentHours, setCurrentHours] = useState({
+    isWorkingDay: false,
+    schedule: { start_time: '09:00', end_time: '18:00', break_duration: 60 },
+    currentTime: '00:00',
+    expectedHours: 0,
+    actualHours: 0,
+    balanceHours: 0,
+    status: 'not_started',
+    progress: 0
+  });
   const [updatingHours, setUpdatingHours] = useState(false);
   const [kpiData, setKpiData] = useState({
     monthlyHours: 0,
@@ -433,7 +442,7 @@ const Attendance = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Presenze</h1>
           <p className="text-slate-400">
-            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(currentHours.balanceHours || 0)}
+            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(currentHours?.balanceHours || 0)}
           </p>
         </div>
 
@@ -445,7 +454,7 @@ const Attendance = () => {
               <div>
                 <p className="text-slate-400 text-sm">TOTALE ORE LAVORATE</p>
                 <p className="text-2xl font-bold text-blue-400">
-                  {formatHours(currentHours.actualHours || 0)}
+                  {formatHours(currentHours?.actualHours || 0)}
                 </p>
               </div>
               <div className="p-3 rounded-full text-blue-400">
@@ -459,15 +468,15 @@ const Attendance = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">MONTE ORE</p>
-                <p className={`text-2xl font-bold ${(currentHours.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {(currentHours.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours.balanceHours || 0)}
+                <p className={`text-2xl font-bold ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(currentHours?.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours?.balanceHours || 0)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {(currentHours.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
+                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${(currentHours.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(currentHours.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              <div className={`p-3 rounded-full ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(currentHours?.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               </div>
             </div>
           </div>
@@ -523,7 +532,7 @@ const Attendance = () => {
                     <div className="flex justify-between border-t border-slate-700 pt-2">
                       <span className="text-slate-400">Ore Correnti:</span>
                       <span className="font-bold text-blue-400">
-                        {formatHours(currentHours.actualHours)}
+                        {formatHours(currentHours?.actualHours || 0)}
                       </span>
                     </div>
                   )}

@@ -840,10 +840,15 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       .from('attendance')
       .select(`
         *,
-        users!inner(first_name, last_name, email)
+        users(first_name, last_name, email)
       `)
       .order('date', { ascending: false });
 
+    // Filtra per utente se è un employee
+    if (req.user.role === 'employee') {
+      query = query.eq('user_id', req.user.id);
+    }
+    
     if (date) {
       query = query.eq('date', date);
     } else if (month && year) {
