@@ -137,9 +137,8 @@ const Attendance = () => {
 
   // Calcola KPI quando cambiano i dati di attendance
   useEffect(() => {
-    if (attendance.length > 0) {
-      calculateKPIs();
-    }
+    // Calcola sempre i KPI, anche se non ci sono record (per il sistema ibrido)
+    calculateKPIs(attendance);
   }, [attendance]);
 
   // Ricalcola le ore real-time quando cambiano i work schedules
@@ -192,13 +191,15 @@ const Attendance = () => {
     }
   };
 
-  const calculateKPIs = () => {
+  const calculateKPIs = (attendanceData = attendance) => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     
+    console.log('🔄 Calculating KPIs with data:', attendanceData?.length || 0, 'records');
+    
     // Filtra i record del mese corrente
-    const monthlyRecords = attendance.filter(record => {
+    const monthlyRecords = (attendanceData || []).filter(record => {
       const recordDate = new Date(record.date);
       return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
     });
@@ -220,6 +221,13 @@ const Attendance = () => {
     
     // Calcola giorni lavorativi (giorni con ore effettive > 0)
     const workingDays = monthlyRecords.filter(record => (record.actual_hours || 0) > 0).length;
+
+    console.log('📊 KPIs calculated:', {
+      monthlyHours: totalMonthlyHours,
+      overtime,
+      deficit,
+      workingDays
+    });
 
     setKpiData({
       monthlyHours: totalMonthlyHours,
@@ -351,8 +359,11 @@ const Attendance = () => {
 
     // Aggiorna anche i dati di attendance per oggi
     const today = now.toISOString().split('T')[0];
+    let updatedAttendance;
+    
     if (attendance.length > 0) {
-      const updatedAttendance = attendance.map(record => 
+      // Se ci sono già record, aggiorna quello di oggi
+      updatedAttendance = attendance.map(record => 
         record.date === today 
           ? { 
               ...record, 
@@ -361,12 +372,26 @@ const Attendance = () => {
             }
           : record
       );
-      setAttendance(updatedAttendance);
-      
-      // Ricalcola i KPI dopo aver aggiornato le ore
-      console.log('🔄 Recalculating KPIs after hour update...');
-      calculateKPIs(updatedAttendance);
+    } else {
+      // Se non ci sono record, crea un record virtuale per oggi
+      updatedAttendance = [{
+        id: `virtual-${today}`,
+        user_id: user?.id,
+        date: today,
+        expected_hours: finalExpectedHours,
+        actual_hours: finalActualHours,
+        balance_hours: finalBalanceHours,
+        notes: 'Presenza automatica per orario',
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
+      }];
     }
+    
+    setAttendance(updatedAttendance);
+    
+    // Ricalcola i KPI dopo aver aggiornato le ore
+    console.log('🔄 Recalculating KPIs after hour update...');
+    calculateKPIs(updatedAttendance);
 
     // Controlla se è il momento di salvare (ogni ora in punto)
     if (now.getMinutes() === 0 && finalActualHours > 0) {
