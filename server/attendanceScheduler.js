@@ -74,9 +74,10 @@ class AttendanceScheduler {
   async generateDailyAttendance() {
     try {
       const today = new Date().toISOString().split('T')[0];
-      console.log(`📊 Generazione presenze per ${today}...`);
+      const dayOfWeek = new Date().getDay(); // 0=domenica, 1=lunedì, etc.
+      console.log(`📊 Generazione presenze per ${today} (giorno: ${dayOfWeek})...`);
 
-      // Ottieni tutti i dipendenti attivi
+      // Ottieni tutti i dipendenti attivi con i loro orari di lavoro per oggi
       const { data: employees, error: employeesError } = await supabase
         .from('users')
         .select(`
@@ -89,21 +90,38 @@ class AttendanceScheduler {
             position,
             workplace,
             contract_type
+          ),
+          work_schedules!inner(
+            day_of_week,
+            is_working_day,
+            work_type,
+            start_time,
+            end_time,
+            break_duration
           )
         `)
         .eq('is_active', true)
-        .eq('role', 'employee');
+        .eq('role', 'employee')
+        .eq('work_schedules.day_of_week', dayOfWeek)
+        .eq('work_schedules.is_working_day', true);
 
       if (employeesError) {
         console.error('❌ Errore nel recupero dipendenti:', employeesError);
         return;
       }
 
-      console.log(`👥 Trovati ${employees.length} dipendenti attivi`);
+      if (!employees || employees.length === 0) {
+        console.log('👥 Nessun dipendente con orario di lavoro per oggi');
+        return;
+      }
 
-      // Per ogni dipendente, genera la presenza automatica
+      console.log(`👥 Trovati ${employees.length} dipendenti con orario per oggi`);
+
+      // Per ogni dipendente, genera la presenza automatica basata sul suo orario
       for (const employee of employees) {
-        await this.generateEmployeeAttendance(employee, today);
+        const schedule = employee.work_schedules[0]; // Dovrebbe essere uno solo per giorno
+        console.log(`   👤 ${employee.first_name} ${employee.last_name}: ${schedule.start_time}-${schedule.end_time} (${schedule.work_type})`);
+        await this.generateEmployeeAttendance(employee, schedule, today);
       }
 
       console.log('✅ Presenze automatiche generate con successo');
@@ -112,9 +130,16 @@ class AttendanceScheduler {
     }
   }
 
-  // Genera presenza per un singolo dipendente
-  async generateEmployeeAttendance(employee, date) {
+  // Genera presenza per un singolo dipendente basata sul suo orario
+  async generateEmployeeAttendance(employee, schedule, date) {
     try {
+      const { start_time, end_time, work_type, break_duration } = schedule;
+      
+      if (!start_time || !end_time) {
+        console.log(`   ⚠️  Orario non definito per ${employee.first_name} ${employee.last_name}`);
+        return;
+      }
+
       // Verifica se esiste già una presenza per oggi
       const { data: existingAttendance } = await supabase
         .from('attendance')
@@ -128,10 +153,10 @@ class AttendanceScheduler {
         return;
       }
 
-      // Determina l'orario di lavoro basato sul contratto
-      const workHours = this.getWorkHours(employee.employees.contract_type);
-      const startTime = '09:00';
-      const endTime = '18:00';
+      // Calcola ore di lavoro basate sull'orario specifico
+      const workHours = this.calculateWorkHours(start_time, end_time, break_duration);
+      
+      console.log(`   📊 Ore calcolate: ${workHours}h per ${employee.first_name}`);
 
       // Crea la presenza automatica
       const { data: newAttendance, error: attendanceError } = await supabase
@@ -143,13 +168,13 @@ class AttendanceScheduler {
           expected_hours: workHours,
           actual_hours: workHours,
           balance_hours: 0,
-          clock_in: `${date} ${startTime}:00`,
-          clock_out: `${date} ${endTime}:00`,
+          clock_in: `${date} ${start_time}:00`,
+          clock_out: `${date} ${end_time}:00`,
           is_absent: false,
           is_overtime: false,
           is_early_departure: false,
           is_late_arrival: false,
-          notes: 'Presenza automatica generata dal sistema',
+          notes: `Presenza automatica per orario ${start_time}-${end_time} (${work_type})`,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -163,65 +188,127 @@ class AttendanceScheduler {
 
       console.log(`   ✅ Presenza creata per ${employee.first_name} ${employee.last_name} (${workHours}h)`);
 
-      // Crea i dettagli della presenza (mattina, pausa pranzo, pomeriggio)
-      await this.createAttendanceDetails(newAttendance.id, employee.id, date);
+      // Crea i dettagli della presenza basati sull'orario specifico
+      await this.createAttendanceDetails(newAttendance.id, employee.id, date, schedule);
 
     } catch (error) {
       console.error(`❌ Errore generazione presenza per ${employee.first_name}:`, error);
     }
   }
 
-  // Crea i dettagli della presenza (mattina, pausa pranzo, pomeriggio)
-  async createAttendanceDetails(attendanceId, userId, date) {
+  // Crea i dettagli della presenza basati sull'orario specifico del dipendente
+  async createAttendanceDetails(attendanceId, userId, date, schedule) {
     try {
-      const details = [
-        {
-          attendance_id: attendanceId,
-          user_id: userId,
-          date: date,
-          period: 'mattina',
-          start_time: `${date} 09:00:00`,
-          end_time: `${date} 13:00:00`,
-          hours: 4,
-          status: 'completed',
-          notes: 'Turno mattutino'
-        },
-        {
-          attendance_id: attendanceId,
-          user_id: userId,
-          date: date,
-          period: 'pausa_pranzo',
-          start_time: `${date} 13:00:00`,
-          end_time: `${date} 14:00:00`,
-          hours: 1,
-          status: 'break',
-          notes: 'Pausa pranzo'
-        },
-        {
-          attendance_id: attendanceId,
-          user_id: userId,
-          date: date,
-          period: 'pomeriggio',
-          start_time: `${date} 14:00:00`,
-          end_time: `${date} 18:00:00`,
-          hours: 4,
-          status: 'completed',
-          notes: 'Turno pomeridiano'
-        }
-      ];
+      const { start_time, end_time, work_type, break_duration } = schedule;
+      const breakMinutes = break_duration || 60;
+      
+      let details = [];
 
-      const { error } = await supabase
-        .from('attendance_details')
-        .insert(details);
-
-      if (error) {
-        console.error('❌ Errore creazione dettagli presenza:', error);
-        return;
+      if (work_type === 'full_day') {
+        // Giornata completa con pausa pranzo
+        const startTime = new Date(`2000-01-01T${start_time}`);
+        const endTime = new Date(`2000-01-01T${end_time}`);
+        
+        // Calcola la pausa pranzo (metà giornata)
+        const totalMinutes = (endTime - startTime) / (1000 * 60);
+        const workMinutes = totalMinutes - breakMinutes;
+        const morningMinutes = Math.floor(workMinutes / 2);
+        const afternoonMinutes = workMinutes - morningMinutes;
+        
+        const breakStart = new Date(startTime.getTime() + (morningMinutes * 60 * 1000));
+        const breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
+        
+        details = [
+          {
+            attendance_id: attendanceId,
+            user_id: userId,
+            date: date,
+            segment: 'morning',
+            start_time: start_time,
+            end_time: breakStart.toTimeString().substring(0, 5),
+            status: 'completed',
+            notes: 'Periodo mattutino completato'
+          },
+          {
+            attendance_id: attendanceId,
+            user_id: userId,
+            date: date,
+            segment: 'lunch_break',
+            start_time: breakStart.toTimeString().substring(0, 5),
+            end_time: breakEnd.toTimeString().substring(0, 5),
+            status: 'completed',
+            notes: 'Pausa pranzo'
+          },
+          {
+            attendance_id: attendanceId,
+            user_id: userId,
+            date: date,
+            segment: 'afternoon',
+            start_time: breakEnd.toTimeString().substring(0, 5),
+            end_time: end_time,
+            status: 'completed',
+            notes: 'Periodo pomeridiano completato'
+          }
+        ];
+      } else if (work_type === 'morning') {
+        // Solo mattina
+        details = [
+          {
+            attendance_id: attendanceId,
+            user_id: userId,
+            date: date,
+            segment: 'morning',
+            start_time: start_time,
+            end_time: end_time,
+            status: 'completed',
+            notes: 'Turno mattutino completato'
+          }
+        ];
+      } else if (work_type === 'afternoon') {
+        // Solo pomeriggio
+        details = [
+          {
+            attendance_id: attendanceId,
+            user_id: userId,
+            date: date,
+            segment: 'afternoon',
+            start_time: start_time,
+            end_time: end_time,
+            status: 'completed',
+            notes: 'Turno pomeridiano completato'
+          }
+        ];
       }
 
-      console.log(`   📋 Dettagli presenza creati per ${date}`);
+      // Inserisci i dettagli
+      if (details.length > 0) {
+        const { error } = await supabase
+          .from('attendance_details')
+          .insert(details);
+
+        if (error) {
+          console.error('❌ Errore creazione dettagli presenza:', error);
+          return;
+        }
+
+        console.log(`   📋 Dettagli presenza creati (${details.length} periodi) per ${date}`);
+      }
     } catch (error) {
       console.error('❌ Errore creazione dettagli presenza:', error);
+    }
+  }
+
+  // Calcola le ore di lavoro basate sull'orario specifico
+  calculateWorkHours(startTime, endTime, breakDuration = 60) {
+    try {
+      const start = new Date(`2000-01-01T${startTime}`);
+      const end = new Date(`2000-01-01T${endTime}`);
+      const totalMinutes = (end - start) / (1000 * 60);
+      const workMinutes = totalMinutes - breakDuration;
+      return workMinutes / 60;
+    } catch (error) {
+      console.error('Errore calcolo ore:', error);
+      return 8; // Default
     }
   }
 
@@ -323,7 +410,22 @@ class AttendanceScheduler {
 
       // Genera presenze per ogni data
       for (const date of dates) {
-        await this.generateEmployeeAttendance(employee, date);
+        // Ottieni l'orario per questo giorno della settimana
+        const dayOfWeek = new Date(date).getDay();
+        const { data: schedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+
+        if (scheduleError || !schedule) {
+          console.log(`   ⚠️  Nessun orario definito per ${date} (giorno ${dayOfWeek})`);
+          continue;
+        }
+
+        await this.generateEmployeeAttendance(employee, schedule, date);
       }
 
       console.log(`✅ Presenze generate per ${dates.length} giorni lavorativi`);
