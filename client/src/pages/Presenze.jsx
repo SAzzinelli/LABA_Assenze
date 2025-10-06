@@ -21,6 +21,12 @@ const Attendance = () => {
 
   const [currentHours, setCurrentHours] = useState(null);
   const [updatingHours, setUpdatingHours] = useState(false);
+  const [kpiData, setKpiData] = useState({
+    monthlyHours: 0,
+    overtime: 0,
+    deficit: 0,
+    workingDays: 0
+  });
 
   useEffect(() => {
     fetchAttendance();
@@ -42,6 +48,13 @@ const Attendance = () => {
       clearInterval(updateTimer);
     };
   }, []);
+
+  // Calcola KPI quando cambiano i dati di attendance
+  useEffect(() => {
+    if (attendance.length > 0) {
+      calculateKPIs();
+    }
+  }, [attendance]);
 
   const fetchAttendance = async () => {
     try {
@@ -84,6 +97,43 @@ const Attendance = () => {
     } catch (error) {
       console.error('Error fetching work schedules:', error);
     }
+  };
+
+  const calculateKPIs = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Filtra i record del mese corrente
+    const monthlyRecords = attendance.filter(record => {
+      const recordDate = new Date(record.date);
+      return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+    });
+
+    // Calcola ore totali del mese
+    const totalMonthlyHours = monthlyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+    
+    // Calcola straordinari (ore positive)
+    const overtime = monthlyRecords.reduce((sum, record) => {
+      const balance = record.balance_hours || 0;
+      return balance > 0 ? sum + balance : sum;
+    }, 0);
+    
+    // Calcola deficit (ore negative)
+    const deficit = monthlyRecords.reduce((sum, record) => {
+      const balance = record.balance_hours || 0;
+      return balance < 0 ? sum + Math.abs(balance) : sum;
+    }, 0);
+    
+    // Calcola giorni lavorativi (giorni con ore effettive > 0)
+    const workingDays = monthlyRecords.filter(record => (record.actual_hours || 0) > 0).length;
+
+    setKpiData({
+      monthlyHours: totalMonthlyHours,
+      overtime: overtime,
+      deficit: deficit,
+      workingDays: workingDays
+    });
   };
 
   const fetchCurrentHours = async () => {
@@ -328,14 +378,14 @@ const Attendance = () => {
                     <span className="font-mono">{formatHours(todayAttendance.actual_hours)}</span>
                   </div>
                   <div className="flex justify-between border-t border-slate-700 pt-2">
-                    <span className="text-slate-400">Saldo Ore:</span>
+                    <span className="text-slate-400">Ore Mancanti:</span>
                     <span className={`font-bold ${getBalanceColor(todayAttendance.balance_hours)}`}>
-                      {formatHours(todayAttendance.balance_hours)}
+                      {todayAttendance.balance_hours < 0 ? formatHours(Math.abs(todayAttendance.balance_hours)) : '0h 0m'}
                     </span>
                   </div>
                   {todayAttendance.balance_hours < 0 && (
                     <div className="text-xs text-slate-400 mt-2 p-2 bg-slate-800 rounded">
-                      💡 Saldo negativo: non hai ancora completato l'orario di lavoro di oggi
+                      💡 Mancano {formatHours(Math.abs(todayAttendance.balance_hours))} per completare la giornata
                     </div>
                   )}
                   <div className="flex justify-center gap-3 pt-3">
@@ -380,7 +430,7 @@ const Attendance = () => {
                   <th className="text-left py-3 px-4">Stato</th>
                   <th className="text-left py-3 px-4">Ore Attese</th>
                   <th className="text-left py-3 px-4">Ore Effettive</th>
-                  <th className="text-left py-3 px-4">Saldo Ore</th>
+                  <th className="text-left py-3 px-4">Ore Mancanti</th>
                   <th className="text-left py-3 px-4">Note</th>
                   <th className="text-left py-3 px-4">Azioni</th>
                 </tr>
@@ -404,7 +454,7 @@ const Attendance = () => {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`font-bold ${getBalanceColor(record.balance_hours)}`}>
-                        {formatHours(record.balance_hours)}
+                        {record.balance_hours < 0 ? formatHours(Math.abs(record.balance_hours)) : '0h 0m'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm text-slate-400">

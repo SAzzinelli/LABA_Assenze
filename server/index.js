@@ -884,25 +884,48 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const { data: balance, error } = await supabase
-      .from('hours_balance')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .eq('year', year || new Date().getFullYear())
-      .eq('month', month || new Date().getMonth() + 1)
-      .single();
+    // Calcola il balance dalle presenze del mese
+    const targetYear = year || new Date().getFullYear();
+    const targetMonth = month || new Date().getMonth() + 1;
+    const startDate = new Date(targetYear, targetMonth - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(targetYear, targetMonth, 0).toISOString().split('T')[0];
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error('Hours balance fetch error:', error);
-      return res.status(500).json({ error: 'Errore nel recupero del monte ore' });
+    const { data: attendance, error } = await supabase
+      .from('attendance')
+      .select('actual_hours, balance_hours, expected_hours')
+      .eq('user_id', targetUserId)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (error) {
+      console.error('Attendance fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    res.json(balance || {
-      total_balance: 0,
-      overtime_hours: 0,
-      deficit_hours: 0,
-      working_days: 0,
-      absent_days: 0
+    // Calcola le statistiche
+    const totalActualHours = attendance.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+    const totalExpectedHours = attendance.reduce((sum, record) => sum + (record.expected_hours || 8), 0);
+    const totalBalance = totalActualHours - totalExpectedHours;
+    
+    const overtimeHours = attendance.reduce((sum, record) => {
+      const balance = record.balance_hours || 0;
+      return balance > 0 ? sum + balance : sum;
+    }, 0);
+    
+    const deficitHours = attendance.reduce((sum, record) => {
+      const balance = record.balance_hours || 0;
+      return balance < 0 ? sum + Math.abs(balance) : sum;
+    }, 0);
+    
+    const workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
+    const absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
+
+    res.json({
+      total_balance: totalBalance,
+      overtime_hours: overtimeHours,
+      deficit_hours: deficitHours,
+      working_days: workingDays,
+      absent_days: absentDays
     });
   } catch (error) {
     console.error('Hours balance fetch error:', error);
