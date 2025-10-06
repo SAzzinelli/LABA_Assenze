@@ -94,15 +94,35 @@ const AdminAttendance = () => {
   });
 
   useEffect(() => {
-    fetchAttendanceData();
-    fetchEmployees();
-    fetchStats();
-    // Aggiorna ogni 60 secondi come fallback
-    const interval = setInterval(() => {
+    const initializeData = async () => {
+      await fetchAttendanceData();
+      await fetchEmployees();
+      await fetchStats();
+      
+      // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
+      setTimeout(() => {
+        console.log('🔄 Secondary admin data update...');
+        fetchStats();
+      }, 1000);
+    };
+    
+    initializeData();
+    
+    // Aggiorna i dati ogni 30 secondi per admin
+    const dataInterval = setInterval(() => {
       fetchAttendanceData();
+    }, 30000);
+    
+    // Aggiorna i KPI ogni 10 secondi per admin
+    const kpiInterval = setInterval(() => {
+      console.log('🔄 Auto-updating admin KPIs...');
       fetchStats();
-    }, 60000);
-    return () => clearInterval(interval);
+    }, 10000);
+    
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(kpiInterval);
+    };
   }, []);
 
   useEffect(() => {

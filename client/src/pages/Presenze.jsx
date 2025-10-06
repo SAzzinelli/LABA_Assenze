@@ -39,11 +39,15 @@ const Attendance = () => {
         fetchWorkSchedules()
       ]);
       
-      // 2. Aspetta un momento per assicurarsi che i dati siano caricati
+      // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
+      console.log('🔄 Forcing immediate real-time calculation...');
+      calculateRealTimeHours();
+      
+      // 3. Ricalcola anche dopo un breve delay per sicurezza
       setTimeout(() => {
-        console.log('🔄 Forcing real-time calculation...');
+        console.log('🔄 Secondary real-time calculation...');
         calculateRealTimeHours();
-      }, 1000);
+      }, 500);
       
       console.log('✅ Data loaded with real-time calculation');
     };

@@ -52,6 +52,14 @@ const Dashboard = () => {
         // Fetch user KPIs for employees
         await fetchUserKPIs();
         
+        // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
+        setTimeout(() => {
+          if (user?.role === 'employee') {
+            console.log('🔄 Secondary KPI update...');
+            fetchUserKPIs();
+          }
+        }, 1000);
+        
         // Fetch weekly attendance data
         const weeklyResponse = await apiCall('/api/dashboard/attendance');
         if (weeklyResponse.ok) {
@@ -94,12 +102,12 @@ const Dashboard = () => {
       return () => clearInterval(interval);
     }
     
-    // Aggiornamento KPI ogni minuto per utenti
+    // Aggiornamento KPI ogni 15 secondi per utenti
     if (user?.role === 'employee') {
       const kpiInterval = setInterval(() => {
         console.log('🔄 Updating user KPIs...');
         fetchUserKPIs();
-      }, 60000); // Ogni minuto
+      }, 15000); // Ogni 15 secondi
       
       return () => clearInterval(kpiInterval);
     }
