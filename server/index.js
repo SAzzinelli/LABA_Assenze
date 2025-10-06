@@ -445,11 +445,11 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         work_patterns!left(*),
         work_schedules!left(*)
       `)
-      .eq('role', 'employee') // Include tutti i dipendenti, non solo attivi
-      .neq('department', 'System Owner') // Nascondi System Owner
+      .neq('email', 'admin@laba.com') // Escludi solo admin
       .order('last_name');
 
     console.log('📋 Raw employees from DB:', employees?.length || 0, 'employees');
+    console.log('📋 Employee roles:', employees?.map(emp => ({ email: emp.email, role: emp.role })));
 
     if (error) {
       console.error('❌ Employees fetch error:', error);
