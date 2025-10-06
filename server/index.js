@@ -11,14 +11,15 @@ const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
-const { Server } = require('socket.io');
+const WebSocket = require('ws');
 require('dotenv').config();
 
 // Rate limiting rimosso per facilitare i test
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+const wss = new WebSocket.Server({ 
+  server,
   cors: {
     origin: process.env.NODE_ENV === 'production' 
       ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
@@ -2111,50 +2112,62 @@ app.post('/api/updates/check', authenticateToken, async (req, res) => {
 // ==================== WEBSOCKET REAL-TIME ====================
 
 // WebSocket connection handling
-io.on('connection', (socket) => {
-  console.log(`🔌 Client connesso: ${socket.id}`);
+wss.on('connection', (ws) => {
+  console.log(`🔌 Client connesso: ${ws._socket.remoteAddress}`);
 
-  // Join user to their room
-  socket.on('join', (userData) => {
-    if (userData.userId) {
-      socket.join(`user_${userData.userId}`);
-      console.log(`👤 Utente ${userData.userId} si è unito alla stanza`);
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      console.log('📨 Messaggio WebSocket ricevuto:', data);
+
+      // Handle join message
+      if (data.type === 'join') {
+        ws.userId = data.userId;
+        ws.role = data.role;
+        console.log(`👤 Utente ${data.userId} (${data.role}) si è unito`);
+      }
+    } catch (error) {
+      console.error('Errore parsing messaggio WebSocket:', error);
     }
-    if (userData.role === 'admin') {
-      socket.join('admin_room');
-      console.log(`👑 Admin si è unito alla stanza admin`);
-    }
   });
 
-  // Handle attendance updates
-  socket.on('attendance_update', (data) => {
-    // Broadcast to admin room
-    io.to('admin_room').emit('attendance_changed', data);
-    console.log(`📊 Aggiornamento presenze: ${JSON.stringify(data)}`);
-  });
-
-  // Handle leave request updates
-  socket.on('leave_request_update', (data) => {
-    // Broadcast to admin room
-    io.to('admin_room').emit('new_leave_request', data);
-    console.log(`📋 Nuova richiesta permessi: ${JSON.stringify(data)}`);
-  });
-
-  // Handle request approval/rejection
-  socket.on('request_decision', (data) => {
-    // Notify the specific user
-    io.to(`user_${data.userId}`).emit('request_updated', data);
-    console.log(`✅ Decisione richiesta: ${JSON.stringify(data)}`);
-  });
-
-  // Handle disconnect
-  socket.on('disconnect', () => {
-    console.log(`🔌 Client disconnesso: ${socket.id}`);
+  ws.on('close', () => {
+    console.log(`🔌 Client disconnesso: ${ws._socket.remoteAddress}`);
   });
 });
 
-// Make io available to routes
-app.set('io', io);
+// Helper function to broadcast to all connected clients
+const broadcastToAll = (data) => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify(data));
+    }
+  });
+};
+
+// Helper function to broadcast to admins
+const broadcastToAdmins = (data) => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && client.role === 'admin') {
+      client.send(JSON.stringify(data));
+    }
+  });
+};
+
+// Helper function to broadcast to specific user
+const broadcastToUser = (userId, data) => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && client.userId === userId) {
+      client.send(JSON.stringify(data));
+    }
+  });
+};
+
+// Make WebSocket server available to routes
+app.set('wss', wss);
+app.set('broadcastToAll', broadcastToAll);
+app.set('broadcastToAdmins', broadcastToAdmins);
+app.set('broadcastToUser', broadcastToUser);
 
 // ==================== ERROR HANDLING ====================
 

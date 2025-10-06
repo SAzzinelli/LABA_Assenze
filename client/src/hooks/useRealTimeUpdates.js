@@ -14,71 +14,69 @@ export const useRealTimeUpdates = (callbacks = {}) => {
     // Initialize WebSocket connection with fallback
     const initializeSocket = () => {
       try {
-        // Per Railway, usiamo Socket.IO invece di WebSocket nativi
-        const socketUrl = window.location.origin;
+        // Prima prova WebSocket nativi (come nel repository plot)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}`;
         
-        // Import Socket.IO dinamicamente
-        import('socket.io-client').then(({ io }) => {
-          socketRef.current = io(socketUrl, {
-            transports: ['websocket', 'polling'], // Fallback automatico
-            upgrade: true,
-            rememberUpgrade: true,
-            timeout: 20000,
-            forceNew: true
-          });
+        socketRef.current = new WebSocket(wsUrl);
 
-          socketRef.current.on('connect', () => {
-            console.log('🔌 Socket.IO connesso');
-            
-            // Join user to their room
-            socketRef.current.emit('join', {
-              userId: user.id,
-              role: user.role
-            });
-          });
+        socketRef.current.onopen = () => {
+          console.log('🔌 WebSocket connesso');
+          
+          // Join user to their room
+          socketRef.current.send(JSON.stringify({
+            type: 'join',
+            userId: user.id,
+            role: user.role
+          }));
+        };
 
-          socketRef.current.on('attendance_changed', (data) => {
-            console.log('📨 Aggiornamento presenze ricevuto:', data);
-            callbacks.onAttendanceUpdate?.(data);
-          });
+        socketRef.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log('📨 Messaggio WebSocket ricevuto:', data);
 
-          socketRef.current.on('new_leave_request', (data) => {
-            console.log('📨 Nuova richiesta permesso ricevuta:', data);
-            callbacks.onLeaveRequestUpdate?.(data);
-          });
+            // Handle different types of updates
+            switch (data.type) {
+              case 'attendance_changed':
+                callbacks.onAttendanceUpdate?.(data);
+                break;
+              case 'new_leave_request':
+                callbacks.onLeaveRequestUpdate?.(data);
+                break;
+              case 'request_updated':
+                callbacks.onRequestDecision?.(data);
+                break;
+              case 'employee_updated':
+                callbacks.onEmployeeUpdate?.(data);
+                break;
+              case 'stats_updated':
+                callbacks.onStatsUpdate?.(data);
+                break;
+              default:
+                console.log('📨 Messaggio WebSocket non gestito:', data);
+            }
+          } catch (error) {
+            console.error('Errore parsing messaggio WebSocket:', error);
+          }
+        };
 
-          socketRef.current.on('request_updated', (data) => {
-            console.log('📨 Richiesta aggiornata ricevuta:', data);
-            callbacks.onRequestDecision?.(data);
-          });
-
-          socketRef.current.on('employee_updated', (data) => {
-            console.log('📨 Dipendente aggiornato ricevuto:', data);
-            callbacks.onEmployeeUpdate?.(data);
-          });
-
-          socketRef.current.on('stats_updated', (data) => {
-            console.log('📨 Statistiche aggiornate ricevute:', data);
-            callbacks.onStatsUpdate?.(data);
-          });
-
-          socketRef.current.on('disconnect', (reason) => {
-            console.log('🔌 Socket.IO disconnesso:', reason);
-            
-            // Riconnessione automatica
+        socketRef.current.onclose = (event) => {
+          console.log('🔌 WebSocket disconnesso:', event.code, event.reason);
+          
+          // Solo se non è una chiusura normale, riprova dopo 5 secondi
+          if (event.code !== 1000) {
             reconnectTimeoutRef.current = setTimeout(() => {
-              console.log('🔄 Tentativo di riconnessione Socket.IO...');
+              console.log('🔄 Tentativo di riconnessione WebSocket...');
               initializeSocket();
             }, 5000);
-          });
+          }
+        };
 
-          socketRef.current.on('connect_error', (error) => {
-            console.log('⚠️ Errore connessione Socket.IO:', error.message);
-          });
-
-        }).catch((error) => {
-          console.log('⚠️ Socket.IO non disponibile, usando polling fallback');
-        });
+        socketRef.current.onerror = (error) => {
+          console.log('⚠️ WebSocket non disponibile, usando polling fallback');
+          // Non loggare come errore, è normale in produzione
+        };
       } catch (error) {
         console.log('⚠️ Errore inizializzazione Socket.IO, usando polling fallback');
       }
@@ -139,14 +137,17 @@ export const useRealTimeUpdates = (callbacks = {}) => {
 
   // Function to emit updates
   const emitUpdate = (type, data) => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit(type, data);
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type,
+        ...data
+      }));
     }
   };
 
   return {
     emitUpdate,
-    isConnected: socketRef.current?.connected || false
+    isConnected: socketRef.current?.readyState === WebSocket.OPEN
   };
 };
 
