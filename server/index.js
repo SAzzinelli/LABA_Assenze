@@ -2432,29 +2432,37 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
+    // Prepara i dati per l'inserimento, escludendo i campi che potrebbero non esistere
+    const insertData = {
+      user_id: req.user.id,
+      type: type, // 'permission', 'sick', 'vacation'
+      start_date: startDate,
+      end_date: endDate,
+      reason: reason || (type === 'vacation' ? 'Ferie' : ''),
+      status: 'pending',
+      submitted_at: new Date().toISOString()
+    };
+
+    // Aggiungi campi opzionali solo se sono definiti
+    if (notes !== undefined) insertData.notes = notes;
+    if (doctor !== undefined) insertData.doctor = doctor;
+    if (permissionType !== undefined) insertData.permission_type = permissionType;
+    if (hours !== undefined) insertData.hours = hours;
+    if (exitTime !== undefined) insertData.exit_time = exitTime;
+    if (entryTime !== undefined) insertData.entry_time = entryTime;
+
+    console.log('🔧 Inserting leave request with data:', insertData);
+
     const { data: newRequest, error } = await supabase
       .from('leave_requests')
-      .insert([
-        {
-          user_id: req.user.id,
-          type: type, // 'permission', 'sick', 'vacation'
-          start_date: startDate,
-          end_date: endDate,
-          reason: reason || (type === 'vacation' ? 'Ferie' : ''),
-          notes: notes || '',
-          status: 'pending',
-          // Campi specifici per permessi
-          permission_type: permissionType,
-          hours: hours,
-          exit_time: exitTime,
-          entry_time: entryTime
-        }
-      ])
+      .insert([insertData])
       .select()
       .single();
 
     if (error) {
       console.error('Leave request creation error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Insert data that failed:', JSON.stringify(insertData, null, 2));
       return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
     }
 
