@@ -31,20 +31,55 @@ const Attendance = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const fetchAttendance = async () => {
+  const [currentHours, setCurrentHours] = useState(null);
+  const [updatingHours, setUpdatingHours] = useState(false);
+
+  useEffect(() => {
+    fetchAttendance();
+    fetchHoursBalance();
+    fetchWorkSchedules();
+    fetchCurrentHours();
+    
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+
+  const fetchCurrentHours = async () => {
     try {
-      const response = await apiCall('/api/attendance');
+      const response = await apiCall('/api/attendance/current-hours');
       if (response.ok) {
         const data = await response.json();
-        setAttendance(data);
-      } else {
-        setAttendance([]);
+        setCurrentHours(data);
       }
     } catch (error) {
-      console.error('Error fetching attendance:', error);
-      setAttendance([]);
+      console.error('Error fetching current hours:', error);
+    }
+  };
+
+  const updateCurrentAttendance = async () => {
+    setUpdatingHours(true);
+    try {
+      const response = await apiCall('/api/attendance/update-current', {
+        method: 'PUT'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentHours(data.hours);
+        fetchAttendance(); // Refresh attendance data
+        fetchHoursBalance(); // Refresh balance
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante l\'aggiornamento');
+      }
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      alert('Errore durante l\'aggiornamento');
     } finally {
-      setLoading(false);
+      setUpdatingHours(false);
     }
   };
 
@@ -243,6 +278,14 @@ const Attendance = () => {
                       {formatHours(todaySchedule.expected_hours || 8)}
                     </span>
                   </div>
+                  {currentHours && (
+                    <div className="flex justify-between border-t border-slate-700 pt-2">
+                      <span className="text-slate-400">Ore Correnti:</span>
+                      <span className="font-bold text-blue-400">
+                        {formatHours(currentHours.actualHours)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-slate-400">
@@ -276,7 +319,15 @@ const Attendance = () => {
                       {formatHours(todayAttendance.balance_hours)}
                     </span>
                   </div>
-                  <div className="flex justify-center pt-3">
+                  <div className="flex justify-center gap-3 pt-3">
+                    <button
+                      onClick={updateCurrentAttendance}
+                      disabled={updatingHours}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Clock className="h-4 w-4" />
+                      {updatingHours ? 'Aggiornando...' : 'Aggiorna Ore'}
+                    </button>
                     <button
                       onClick={() => handleViewAttendanceDetails(todayAttendance)}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
