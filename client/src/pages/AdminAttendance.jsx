@@ -324,6 +324,63 @@ const AdminAttendance = () => {
     }
   };
 
+  // Calcola le ore real-time per un record
+  const calculateRealTimeHoursForRecord = (record) => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+    
+    // Trova l'orario di lavoro per questo dipendente
+    const workSchedule = workSchedules.find(schedule => 
+      schedule.user_id === record.user_id && 
+      schedule.day_of_week === dayOfWeek && 
+      schedule.is_working_day
+    );
+    
+    if (!workSchedule) {
+      return {
+        expectedHours: 0,
+        actualHours: 0,
+        balanceHours: 0,
+        isPresent: false
+      };
+    }
+    
+    const { start_time, end_time, break_duration } = workSchedule;
+    const [startHour, startMin] = start_time.split(':').map(Number);
+    const [endHour, endMin] = end_time.split(':').map(Number);
+    const breakDuration = break_duration || 60;
+    
+    // Calcola ore attese totali
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    const workMinutes = totalMinutes - breakDuration;
+    const expectedHours = workMinutes / 60;
+    
+    // Calcola ore effettive real-time
+    let actualHours = 0;
+    if (currentHour >= startHour && currentHour <= endHour) {
+      const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+      if (currentHour >= 13) {
+        actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+      } else {
+        actualHours = workedMinutes / 60;
+      }
+    } else if (currentHour > endHour) {
+      actualHours = expectedHours;
+    }
+    
+    const balanceHours = actualHours - expectedHours;
+    const isPresent = actualHours > 0;
+    
+    return {
+      expectedHours: Math.round(expectedHours * 10) / 10,
+      actualHours: Math.round(actualHours * 10) / 10,
+      balanceHours: Math.round(balanceHours * 10) / 10,
+      isPresent
+    };
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'present': return <CheckCircle className="h-4 w-4" />;
@@ -459,8 +516,9 @@ const AdminAttendance = () => {
         }
         return false;
       } else if (activeTab === 'today') {
-        // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi)
-        return record.actual_hours && record.actual_hours > 0;
+        // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi) - calcolo real-time
+        const realTimeData = calculateRealTimeHoursForRecord(record);
+        return realTimeData.actualHours > 0;
       }
       
       return true;
@@ -687,57 +745,61 @@ const AdminAttendance = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.map((record) => (
-                  <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center">
-                        <div className="h-8 w-8 bg-slate-600 rounded-full flex items-center justify-center mr-3">
-                          <User className="h-4 w-4 text-slate-300" />
+                {filteredData.map((record) => {
+                  // Calcola le ore real-time per questo record
+                  const realTimeData = calculateRealTimeHoursForRecord(record);
+                  
+                  return (
+                    <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 bg-slate-600 rounded-full flex items-center justify-center mr-3">
+                            <User className="h-4 w-4 text-slate-300" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">
+                              {record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A'}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {record.users?.email || ''}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-white">
-                            {record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A'}
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            {record.users?.email || ''}
-                          </p>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 text-slate-400 mr-2" />
+                          <span className="text-slate-300">
+                            {new Date(record.date).toLocaleDateString('it-IT')}
+                          </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-slate-400 mr-2" />
-                        <span className="text-slate-300">
-                          {new Date(record.date).toLocaleDateString('it-IT')}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(realTimeData.isPresent ? 'present' : 'absent')}`}>
+                          {getStatusIcon(realTimeData.isPresent ? 'present' : 'absent')}
+                          <span className="ml-1">{getStatusText(realTimeData.isPresent ? 'present' : 'absent')}</span>
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}`}>
-                        {getStatusIcon(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}
-                        <span className="ml-1">{getStatusText(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}</span>
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="font-mono text-slate-300">
-                        {formatHours(record.expected_hours)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="font-mono text-slate-300">
-                        {formatHours(record.actual_hours)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(record.balance_hours || 0)}`}>
-                        {(record.balance_hours || 0) > 0 ? (
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                        ) : (record.balance_hours || 0) < 0 ? (
-                          <TrendingDown className="h-3 w-3 mr-1" />
-                        ) : null}
-                        {formatHours(record.balance_hours || 0)}
-                      </span>
-                    </td>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="font-mono text-slate-300">
+                          {formatHours(realTimeData.expectedHours)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="font-mono text-slate-300">
+                          {formatHours(realTimeData.actualHours)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(realTimeData.balanceHours)}`}>
+                          {realTimeData.balanceHours > 0 ? (
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                          ) : realTimeData.balanceHours < 0 ? (
+                            <TrendingDown className="h-3 w-3 mr-1" />
+                          ) : null}
+                          {formatHours(realTimeData.balanceHours)}
+                        </span>
+                      </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
                         <button
@@ -756,8 +818,9 @@ const AdminAttendance = () => {
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
