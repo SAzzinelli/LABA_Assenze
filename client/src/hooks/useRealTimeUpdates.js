@@ -14,10 +14,12 @@ export const useRealTimeUpdates = (callbacks = {}) => {
     // Initialize WebSocket connection with fallback
     const initializeSocket = () => {
       try {
-        // Prima prova WebSocket nativi (come nel repository plot)
+        // WebSocket nativi come nel repository plot
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}`;
+        const wsPort = process.env.NODE_ENV === 'production' ? '' : ':8080';
+        const wsUrl = `${protocol}//${window.location.hostname}${wsPort}`;
         
+        console.log('🔌 Tentativo connessione WebSocket a:', wsUrl);
         socketRef.current = new WebSocket(wsUrl);
 
         socketRef.current.onopen = () => {

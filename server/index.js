@@ -11,23 +11,14 @@ const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
-const WebSocket = require('ws');
+const WebSocketManager = require('./websocket');
 require('dotenv').config();
 
 // Rate limiting rimosso per facilitare i test
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ 
-  server,
-  cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
-      : ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    methods: ['GET', 'POST'],
-    credentials: true
-  }
-});
+const wsManager = new WebSocketManager(server);
 const PORT = process.env.PORT || 3000;
 
 // Supabase configuration
@@ -2111,63 +2102,12 @@ app.post('/api/updates/check', authenticateToken, async (req, res) => {
 
 // ==================== WEBSOCKET REAL-TIME ====================
 
-// WebSocket connection handling
-wss.on('connection', (ws) => {
-  console.log(`🔌 Client connesso: ${ws._socket.remoteAddress}`);
-
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message);
-      console.log('📨 Messaggio WebSocket ricevuto:', data);
-
-      // Handle join message
-      if (data.type === 'join') {
-        ws.userId = data.userId;
-        ws.role = data.role;
-        console.log(`👤 Utente ${data.userId} (${data.role}) si è unito`);
-      }
-    } catch (error) {
-      console.error('Errore parsing messaggio WebSocket:', error);
-    }
-  });
-
-  ws.on('close', () => {
-    console.log(`🔌 Client disconnesso: ${ws._socket.remoteAddress}`);
-  });
-});
-
-// Helper function to broadcast to all connected clients
-const broadcastToAll = (data) => {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data));
-    }
-  });
-};
-
-// Helper function to broadcast to admins
-const broadcastToAdmins = (data) => {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN && client.role === 'admin') {
-      client.send(JSON.stringify(data));
-    }
-  });
-};
-
-// Helper function to broadcast to specific user
-const broadcastToUser = (userId, data) => {
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN && client.userId === userId) {
-      client.send(JSON.stringify(data));
-    }
-  });
-};
-
-// Make WebSocket server available to routes
-app.set('wss', wss);
-app.set('broadcastToAll', broadcastToAll);
-app.set('broadcastToAdmins', broadcastToAdmins);
-app.set('broadcastToUser', broadcastToUser);
+// Make WebSocket manager available to routes
+app.set('wsManager', wsManager);
+app.set('broadcastToAll', (data) => wsManager.broadcastToAll(data));
+app.set('broadcastToAdmins', (data) => wsManager.broadcastToAdmins(data));
+app.set('broadcastToUser', (userId, data) => wsManager.broadcastToUser(userId, data));
+app.set('broadcastToOthers', (excludeUserId, data) => wsManager.broadcastToOthers(excludeUserId, data));
 
 // ==================== ERROR HANDLING ====================
 
