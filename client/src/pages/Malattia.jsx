@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const SickLeave = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
     startDate: '',
@@ -58,26 +58,53 @@ const SickLeave = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newRequest = {
-      id: Date.now(),
-      ...formData,
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-      submittedBy: user?.firstName + ' ' + user?.lastName
-    };
     
-    setSickRequests(prev => [newRequest, ...prev]);
-    setFormData({
-      startDate: '',
-      endDate: '',
-      reason: '',
-      doctor: '',
-      medicalCertificate: null,
-      notes: ''
-    });
-    setShowNewRequest(false);
+    try {
+      const response = await apiCall('/api/leave-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'sick_leave',
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          reason: formData.reason,
+          notes: formData.notes,
+          doctor: formData.doctor
+        })
+      });
+      
+      if (response.ok) {
+        const newRequest = {
+          id: Date.now(),
+          ...formData,
+          status: 'pending',
+          submittedAt: new Date().toISOString(),
+          submittedBy: user?.firstName + ' ' + user?.lastName
+        };
+        
+        setSickRequests(prev => [newRequest, ...prev]);
+        setFormData({
+          startDate: '',
+          endDate: '',
+          reason: '',
+          doctor: '',
+          medicalCertificate: null,
+          notes: ''
+        });
+        setShowNewRequest(false);
+        alert('Richiesta di malattia inviata con successo!');
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
+      }
+    } catch (error) {
+      console.error('Errore:', error);
+      alert('Errore nel salvataggio della richiesta');
+    }
   };
 
   const handleCancel = () => {
@@ -125,11 +152,9 @@ const SickLeave = () => {
   // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
   const handleApproveRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -154,11 +179,9 @@ const SickLeave = () => {
 
   const handleRejectRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

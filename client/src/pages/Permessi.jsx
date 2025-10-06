@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 const LeaveRequests = () => {
-  const { user } = useAuthStore();
+  const { user, apiCall } = useAuthStore();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
     type: 'uscita_anticipata', // USCITA ANTICIPATA o ENTRATA_POSTICIPATA
@@ -57,13 +57,7 @@ const LeaveRequests = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/leave-requests', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await apiCall('/api/leave-requests');
       
       if (response.ok) {
         const data = await response.json();
@@ -105,11 +99,9 @@ const LeaveRequests = () => {
   // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
   const handleApproveRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -133,11 +125,9 @@ const LeaveRequests = () => {
 
   const handleRejectRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -204,11 +194,9 @@ const LeaveRequests = () => {
     }
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/leave-requests', {
+      const response = await apiCall('/api/leave-requests', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -235,6 +223,7 @@ const LeaveRequests = () => {
           notes: ''
         });
         setShowNewRequest(false);
+        alert('Richiesta inviata con successo!');
       } else {
         const error = await response.json();
         alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
