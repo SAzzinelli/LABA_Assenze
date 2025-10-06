@@ -33,13 +33,18 @@ const Attendance = () => {
     fetchWorkSchedules();
     fetchCurrentHours();
     
+    // Forza aggiornamento immediato delle ore correnti
+    setTimeout(() => {
+      updateCurrentAttendance();
+    }, 2000);
+    
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
     
-    // Aggiorna le ore ogni minuto
+    // Aggiorna le ore ogni minuto nel database
     const updateTimer = setInterval(() => {
-      fetchCurrentHours();
+      updateCurrentAttendance();
     }, 60000);
     
     // Aggiorna tutti i dati ogni 5 minuti per evitare problemi di refresh
@@ -157,22 +162,30 @@ const Attendance = () => {
   const updateCurrentAttendance = async () => {
     setUpdatingHours(true);
     try {
+      console.log('🔄 Updating current attendance...');
       const response = await apiCall('/api/attendance/update-current', {
         method: 'PUT'
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Attendance updated:', data);
         setCurrentHours(data.hours);
-        fetchAttendance(); // Refresh attendance data
-        fetchHoursBalance(); // Refresh balance
+        
+        // Aggiorna tutti i dati in parallelo
+        await Promise.all([
+          fetchAttendance(),
+          fetchHoursBalance(),
+          fetchCurrentHours()
+        ]);
+        
+        console.log('✅ All data refreshed after update');
       } else {
         const error = await response.json();
-        alert(error.error || 'Errore durante l\'aggiornamento');
+        console.error('❌ Update failed:', error);
       }
     } catch (error) {
-      console.error('Error updating attendance:', error);
-      alert('Errore durante l\'aggiornamento');
+      console.error('❌ Update error:', error);
     } finally {
       setUpdatingHours(false);
     }
