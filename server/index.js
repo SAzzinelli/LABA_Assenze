@@ -1741,9 +1741,9 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
         const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
         
-        // Sottrai la pausa pranzo se siamo dopo l'orario di pausa
-        const breakStartTime = new Date(startTime.getTime() + (workMinutes / 2) * 60 * 1000);
-        const breakEndTime = new Date(breakStartTime.getTime() + (break_duration || 60) * 60 * 1000);
+        // Pausa pranzo fissa dalle 13:00 alle 14:00 (o come configurato)
+        const breakStartTime = new Date(`2000-01-01T13:00`);
+        const breakEndTime = new Date(`2000-01-01T14:00`);
         
         if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
           // Durante la pausa pranzo
@@ -1836,9 +1836,9 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
         const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
         
-        // Sottrai la pausa pranzo se siamo dopo l'orario di pausa
-        const breakStartTime = new Date(startTime.getTime() + (workMinutes / 2) * 60 * 1000);
-        const breakEndTime = new Date(breakStartTime.getTime() + (break_duration || 60) * 60 * 1000);
+        // Pausa pranzo fissa dalle 13:00 alle 14:00 (o come configurato)
+        const breakStartTime = new Date(`2000-01-01T13:00`);
+        const breakEndTime = new Date(`2000-01-01T14:00`);
         
         if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
           // Durante la pausa pranzo

@@ -53,10 +53,19 @@ const Attendance = () => {
       fetchHoursBalance();
     }, 300000); // 5 minuti
     
+    // Aggiorna quando la finestra torna in focus (navigazione)
+    const handleFocus = () => {
+      console.log('🔄 Window focused - updating attendance');
+      updateCurrentAttendance();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
     return () => {
       clearInterval(timer);
       clearInterval(updateTimer);
       clearInterval(refreshTimer);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
