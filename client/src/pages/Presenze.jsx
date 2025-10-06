@@ -32,25 +32,29 @@ const Attendance = () => {
       setCurrentTime(new Date());
     }, 1000);
     
-    return () => clearInterval(timer);
+    // Aggiorna le ore ogni minuto
+    const updateTimer = setInterval(() => {
+      fetchCurrentHours();
+    }, 60000);
+    
+    return () => {
+      clearInterval(timer);
+      clearInterval(updateTimer);
+    };
   }, []);
 
   const fetchAttendance = async () => {
     try {
-      console.log('🔍 Fetching attendance data...');
       const response = await apiCall('/api/attendance');
-      console.log('📊 Attendance response:', response);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('📋 Attendance data:', data);
         setAttendance(data);
       } else {
-        console.error('❌ Attendance fetch failed:', response.status);
+        console.error('Attendance fetch failed:', response.status);
         setAttendance([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching attendance:', error);
+      console.error('Error fetching attendance:', error);
       setAttendance([]);
     } finally {
       setLoading(false);
@@ -174,11 +178,6 @@ const Attendance = () => {
   const todayAttendance = attendance.find(record => 
     new Date(record.date).toDateString() === new Date().toDateString()
   );
-
-  console.log('🔍 Debug - Loading:', loading);
-  console.log('🔍 Debug - Attendance:', attendance);
-  console.log('🔍 Debug - Hours Balance:', hoursBalance);
-  console.log('🔍 Debug - Work Schedules:', workSchedules);
 
   if (loading) {
     return (
@@ -334,6 +333,11 @@ const Attendance = () => {
                       {formatHours(todayAttendance.balance_hours)}
                     </span>
                   </div>
+                  {todayAttendance.balance_hours < 0 && (
+                    <div className="text-xs text-slate-400 mt-2 p-2 bg-slate-800 rounded">
+                      💡 Saldo negativo: non hai ancora completato l'orario di lavoro di oggi
+                    </div>
+                  )}
                   <div className="flex justify-center gap-3 pt-3">
                     <button
                       onClick={updateCurrentAttendance}

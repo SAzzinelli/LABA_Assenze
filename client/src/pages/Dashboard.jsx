@@ -144,11 +144,22 @@ const Dashboard = () => {
   const fetchUserKPIs = async () => {
     try {
       if (user?.role === 'employee') {
-        // Fetch weekly hours
-        const weeklyResponse = await apiCall('/api/dashboard/attendance');
-        if (weeklyResponse.ok) {
-          const weeklyData = await weeklyResponse.json();
-          const totalWeeklyHours = weeklyData.reduce((sum, day) => sum + (day.presenze || 0) * 8, 0);
+        // Fetch weekly hours from attendance data
+        const attendanceResponse = await apiCall('/api/attendance');
+        if (attendanceResponse.ok) {
+          const attendanceData = await attendanceResponse.json();
+          
+          // Calculate weekly hours (last 7 days)
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          
+          const weeklyRecords = attendanceData.filter(record => {
+            const recordDate = new Date(record.date);
+            return recordDate >= weekAgo && recordDate <= now;
+          });
+          
+          const totalWeeklyHours = weeklyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+          
           setUserKPIs(prev => ({
             ...prev,
             weeklyHours: formatHours(totalWeeklyHours)
@@ -167,10 +178,10 @@ const Dashboard = () => {
         }
 
         // Fetch monthly presences
-        const attendanceResponse = await apiCall(`/api/attendance?month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`);
-        if (attendanceResponse.ok) {
-          const attendanceData = await attendanceResponse.json();
-          const presentDays = attendanceData.filter(record => record.actual_hours > 0).length;
+        const attendanceResponse2 = await apiCall(`/api/attendance?month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`);
+        if (attendanceResponse2.ok) {
+          const attendanceData2 = await attendanceResponse2.json();
+          const presentDays = attendanceData2.filter(record => record.actual_hours > 0).length;
           setUserKPIs(prev => ({
             ...prev,
             monthlyPresences: `${presentDays}/20`
