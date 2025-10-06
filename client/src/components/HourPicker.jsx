@@ -37,7 +37,8 @@ const HourPicker = ({
 
   const formatDisplayTime = (time) => {
     if (!time) return placeholder;
-    return time;
+    // Rimuovi i secondi se presenti (09:00:00 -> 09:00)
+    return time.includes(':') ? time.substring(0, 5) : time;
   };
 
   return (
@@ -77,7 +78,7 @@ const HourPicker = ({
             />
             
             {/* Dropdown */}
-            <div className="absolute z-20 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
               <div className="p-2">
                 <div className="grid grid-cols-4 gap-1">
                   {timeOptions.map((time) => (

@@ -72,7 +72,10 @@ const Profile = () => {
   const parseTimeRange = (timeRange) => {
     if (!timeRange || !timeRange.includes('-')) return { start: '', end: '' };
     const [start, end] = timeRange.split('-');
-    return { start: start.trim(), end: end.trim() };
+    // Rimuovi i secondi se presenti (09:00:00 -> 09:00)
+    const cleanStart = start.trim().substring(0, 5);
+    const cleanEnd = end.trim().substring(0, 5);
+    return { start: cleanStart, end: cleanEnd };
   };
 
   const formatTimeRange = (start, end) => {
