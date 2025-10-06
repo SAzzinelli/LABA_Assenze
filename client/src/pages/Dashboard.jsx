@@ -37,6 +37,7 @@ const Dashboard = () => {
   
   // Dati per calcoli real-time
   const [attendanceData, setAttendanceData] = useState([]);
+  const [workSchedules, setWorkSchedules] = useState([]);
 
 
   useEffect(() => {
@@ -55,6 +56,7 @@ const Dashboard = () => {
         // Fetch attendance data for employees
         if (user?.role === 'employee') {
           await fetchAttendanceData();
+          await fetchWorkSchedules();
         }
         
         // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -129,12 +131,12 @@ const Dashboard = () => {
     }
   }, [user?.role]);
 
-  // Ricalcola i KPI quando cambiano i dati di attendance
+  // Ricalcola i KPI quando cambiano i dati di attendance o work schedules
   useEffect(() => {
-    if (user?.role === 'employee' && attendanceData.length > 0) {
+    if (user?.role === 'employee' && attendanceData.length > 0 && workSchedules.length > 0) {
       calculateUserKPIs();
     }
-  }, [attendanceData, user?.role]);
+  }, [attendanceData, workSchedules, user?.role]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -148,6 +150,19 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
+    }
+  };
+
+  const fetchWorkSchedules = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkSchedules(data);
+        console.log('📅 Work schedules loaded:', data.length, 'records');
+      }
+    } catch (error) {
+      console.error('Error fetching work schedules:', error);
     }
   };
 
@@ -198,21 +213,58 @@ const Dashboard = () => {
   };
 
   const calculateUserKPIs = () => {
-    if (user?.role === 'employee' && attendanceData.length > 0) {
-      console.log('🔄 Calculating user KPIs from local data...');
+    if (user?.role === 'employee' && attendanceData.length > 0 && workSchedules.length > 0) {
+      console.log('🔄 Calculating user KPIs with real-time data...');
       
-      // Calculate weekly hours (last 7 days)
       const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const dayOfWeek = now.getDay();
+      
+      // Calculate weekly hours (last 7 days) with real-time calculation for today
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
-      const weeklyRecords = attendanceData.filter(record => {
-        const recordDate = new Date(record.date);
-        return recordDate >= weekAgo && recordDate <= now;
-      });
+      let totalWeeklyHours = 0;
       
-      const totalWeeklyHours = weeklyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Find attendance record for this date
+        const record = attendanceData.find(r => r.date === dateStr);
+        
+        if (record) {
+          if (i === 0) {
+            // Today - calculate real-time hours
+            const todaySchedule = workSchedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day);
+            if (todaySchedule) {
+              const { start_time, end_time, break_duration } = todaySchedule;
+              const [startHour, startMin] = start_time.split(':').map(Number);
+              const [endHour, endMin] = end_time.split(':').map(Number);
+              const breakDuration = break_duration || 60;
+              
+              // Calculate real-time hours for today
+              if (currentHour >= startHour && currentHour <= endHour) {
+                const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+                if (currentHour >= 13) {
+                  totalWeeklyHours += Math.max(0, (workedMinutes - breakDuration) / 60);
+                } else {
+                  totalWeeklyHours += workedMinutes / 60;
+                }
+              } else if (currentHour > endHour) {
+                const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                const workMinutes = totalMinutes - breakDuration;
+                totalWeeklyHours += workMinutes / 60;
+              }
+            }
+          } else {
+            // Past days - use actual_hours from database
+            totalWeeklyHours += record.actual_hours || 0;
+          }
+        }
+      }
       
-      // Calculate monthly data
+      // Calculate monthly data with real-time for today
       const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
       
@@ -221,10 +273,79 @@ const Dashboard = () => {
         return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
       });
       
-      const totalMonthlyHours = monthlyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
-      const totalExpectedHours = monthlyRecords.reduce((sum, record) => sum + (record.expected_hours || 8), 0);
+      let totalMonthlyHours = monthlyRecords.reduce((sum, record) => {
+        const recordDate = new Date(record.date);
+        const today = new Date();
+        
+        // If it's today, calculate real-time
+        if (recordDate.toDateString() === today.toDateString()) {
+          const todaySchedule = workSchedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day);
+          if (todaySchedule) {
+            const { start_time, end_time, break_duration } = todaySchedule;
+            const [startHour, startMin] = start_time.split(':').map(Number);
+            const [endHour, endMin] = end_time.split(':').map(Number);
+            const breakDuration = break_duration || 60;
+            
+            if (currentHour >= startHour && currentHour <= endHour) {
+              const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+              if (currentHour >= 13) {
+                return sum + Math.max(0, (workedMinutes - breakDuration) / 60);
+              } else {
+                return sum + workedMinutes / 60;
+              }
+            } else if (currentHour > endHour) {
+              const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+              const workMinutes = totalMinutes - breakDuration;
+              return sum + workMinutes / 60;
+            }
+          }
+        }
+        
+        // For other days, use database value
+        return sum + (record.actual_hours || 0);
+      }, 0);
+      
+      const totalExpectedHours = monthlyRecords.reduce((sum, record) => {
+        const recordDate = new Date(record.date);
+        const today = new Date();
+        
+        // If it's today, calculate based on work schedule
+        if (recordDate.toDateString() === today.toDateString()) {
+          const todaySchedule = workSchedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day);
+          if (todaySchedule) {
+            const { start_time, end_time, break_duration } = todaySchedule;
+            const [startHour, startMin] = start_time.split(':').map(Number);
+            const [endHour, endMin] = end_time.split(':').map(Number);
+            const breakDuration = break_duration || 60;
+            const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+            const workMinutes = totalMinutes - breakDuration;
+            return sum + workMinutes / 60;
+          }
+        }
+        
+        // For other days, use expected_hours from database
+        return sum + (record.expected_hours || 8);
+      }, 0);
+      
       const balanceHours = totalMonthlyHours - totalExpectedHours;
-      const presentDays = monthlyRecords.filter(record => (record.actual_hours || 0) > 0).length;
+      const presentDays = monthlyRecords.filter(record => {
+        const recordDate = new Date(record.date);
+        const today = new Date();
+        
+        // If it's today, check if currently working
+        if (recordDate.toDateString() === today.toDateString()) {
+          const todaySchedule = workSchedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day);
+          if (todaySchedule) {
+            const { start_time, end_time } = todaySchedule;
+            const [startHour] = start_time.split(':').map(Number);
+            const [endHour] = end_time.split(':').map(Number);
+            return currentHour >= startHour && currentHour <= endHour;
+          }
+        }
+        
+        // For other days, check actual_hours
+        return (record.actual_hours || 0) > 0;
+      }).length;
       
       setUserKPIs({
         weeklyHours: formatHours(totalWeeklyHours),
@@ -233,10 +354,12 @@ const Dashboard = () => {
         monthlyPresences: `${presentDays}/20`
       });
       
-      console.log('✅ User KPIs calculated:', {
+      console.log('✅ User KPIs calculated (real-time):', {
         weeklyHours: totalWeeklyHours,
         balanceHours,
-        presentDays
+        presentDays,
+        totalMonthlyHours,
+        totalExpectedHours
       });
     }
   };
