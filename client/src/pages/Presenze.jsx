@@ -19,18 +19,6 @@ const Attendance = () => {
   const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
   const [selectedAttendanceDetails, setSelectedAttendanceDetails] = useState(null);
 
-  useEffect(() => {
-    fetchAttendance();
-    fetchHoursBalance();
-    fetchWorkSchedules();
-    
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, []);
-
   const [currentHours, setCurrentHours] = useState(null);
   const [updatingHours, setUpdatingHours] = useState(false);
 
@@ -46,6 +34,53 @@ const Attendance = () => {
     
     return () => clearInterval(timer);
   }, []);
+
+  const fetchAttendance = async () => {
+    try {
+      console.log('🔍 Fetching attendance data...');
+      const response = await apiCall('/api/attendance');
+      console.log('📊 Attendance response:', response);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📋 Attendance data:', data);
+        setAttendance(data);
+      } else {
+        console.error('❌ Attendance fetch failed:', response.status);
+        setAttendance([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching attendance:', error);
+      setAttendance([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHoursBalance = async () => {
+    try {
+      const currentDate = new Date();
+      const response = await apiCall(`/api/attendance/hours-balance?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
+      if (response.ok) {
+        const data = await response.json();
+        setHoursBalance(data);
+      }
+    } catch (error) {
+      console.error('Error fetching hours balance:', error);
+    }
+  };
+
+  const fetchWorkSchedules = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkSchedules(data);
+      }
+    } catch (error) {
+      console.error('Error fetching work schedules:', error);
+    }
+  };
 
   const fetchCurrentHours = async () => {
     try {
@@ -80,31 +115,6 @@ const Attendance = () => {
       alert('Errore durante l\'aggiornamento');
     } finally {
       setUpdatingHours(false);
-    }
-  };
-
-  const fetchHoursBalance = async () => {
-    try {
-      const currentDate = new Date();
-      const response = await apiCall(`/api/attendance/hours-balance?year=${currentDate.getFullYear()}&month=${currentDate.getMonth() + 1}`);
-      if (response.ok) {
-        const data = await response.json();
-        setHoursBalance(data);
-      }
-    } catch (error) {
-      console.error('Error fetching hours balance:', error);
-    }
-  };
-
-  const fetchWorkSchedules = async () => {
-    try {
-      const response = await apiCall('/api/work-schedules');
-      if (response.ok) {
-        const data = await response.json();
-        setWorkSchedules(data);
-      }
-    } catch (error) {
-      console.error('Error fetching work schedules:', error);
     }
   };
 
@@ -164,6 +174,11 @@ const Attendance = () => {
   const todayAttendance = attendance.find(record => 
     new Date(record.date).toDateString() === new Date().toDateString()
   );
+
+  console.log('🔍 Debug - Loading:', loading);
+  console.log('🔍 Debug - Attendance:', attendance);
+  console.log('🔍 Debug - Hours Balance:', hoursBalance);
+  console.log('🔍 Debug - Work Schedules:', workSchedules);
 
   if (loading) {
     return (
