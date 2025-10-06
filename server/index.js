@@ -2432,6 +2432,11 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
+    // Calcola i giorni richiesti
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
     // Prepara i dati per l'inserimento, escludendo i campi che potrebbero non esistere
     const insertData = {
       user_id: req.user.id,
@@ -2440,7 +2445,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       end_date: endDate,
       reason: reason || (type === 'vacation' ? 'Ferie' : ''),
       status: 'pending',
-      submitted_at: new Date().toISOString()
+      submitted_at: new Date().toISOString(),
+      days_requested: daysRequested
     };
 
     // Aggiungi campi opzionali solo se sono definiti

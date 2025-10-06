@@ -7,7 +7,9 @@ ADD COLUMN IF NOT EXISTS doctor TEXT,
 ADD COLUMN IF NOT EXISTS permission_type VARCHAR(50),
 ADD COLUMN IF NOT EXISTS hours DECIMAL(4,2) DEFAULT 0,
 ADD COLUMN IF NOT EXISTS entry_time TIME,
-ADD COLUMN IF NOT EXISTS exit_time TIME;
+ADD COLUMN IF NOT EXISTS exit_time TIME,
+ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN IF NOT EXISTS days_requested INTEGER DEFAULT 1;
 
 -- Verifica che le colonne siano state aggiunte
 SELECT column_name, data_type, is_nullable, column_default
