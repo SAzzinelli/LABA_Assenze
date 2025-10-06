@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, Building2, CheckCircle, ArrowLeft, ArrowRight, X, Calendar, MapPin, FileText } from 'lucide-react';
 
-const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
+const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Informazioni Personali
@@ -93,11 +93,11 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert('Le password non corrispondono');
+      if (onError) onError('Le password non corrispondono');
       return;
     }
     if (formData.email !== formData.confirmEmail) {
-      alert('Le email non corrispondono');
+      if (onError) onError('Le email non corrispondono');
       return;
     }
     onAddEmployee(formData);

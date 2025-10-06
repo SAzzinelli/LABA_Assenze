@@ -3,6 +3,8 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AddEmployeeModal from '../components/AddEmployeeModal';
+import CustomAlert from '../components/CustomAlert';
+import ConfirmModal from '../components/ConfirmModal';
 import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
 
 const Employees = () => {
@@ -14,6 +16,19 @@ const Employees = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  
+  // Stati per alert custom
+  const [alert, setAlert] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, employeeId: null, employeeName: '' });
+
+  // Funzioni helper per alert
+  const showAlert = (type, title, message) => {
+    setAlert({ isOpen: true, type, title, message });
+  };
+
+  const closeAlert = () => {
+    setAlert({ isOpen: false, type: 'success', title: '', message: '' });
+  };
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showAddModal, () => setShowAddModal(false));
@@ -139,14 +154,14 @@ const Employees = () => {
         fetchEmployees();
         setShowAddModal(false);
         
-        alert(`Dipendente ${employeeData.firstName} ${employeeData.lastName} aggiunto con successo!`);
+        showAlert('success', 'Successo!', `Dipendente ${employeeData.firstName} ${employeeData.lastName} aggiunto con successo!`);
       } else {
         const error = await response.json();
-        alert(`Errore: ${error.error}`);
+        showAlert('error', 'Errore', error.error);
       }
     } catch (error) {
       console.error('Error adding employee:', error);
-      alert('Errore durante l\'aggiunta del dipendente');
+      showAlert('error', 'Errore', 'Errore durante l\'aggiunta del dipendente');
     }
   };
 
@@ -197,28 +212,36 @@ const Employees = () => {
     resetForm();
   };
 
-  const handleDeleteEmployee = async (employeeId) => {
+  const handleDeleteEmployee = (employeeId) => {
     const employee = employees.find(emp => emp.id === employeeId);
     const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'questo dipendente';
     
-    if (window.confirm(`Sei sicuro di voler eliminare ${employeeName}?\n\nQuesta azione eliminerà:\n• Tutti i record di presenza\n• Tutte le richieste di permesso\n• Tutti i dati associati\n\nL'azione è IRREVERSIBILE!`)) {
-      try {
-        const response = await apiCall(`/api/employees/${employeeId}`, {
-          method: 'DELETE'
-        });
+    setConfirmModal({
+      isOpen: true,
+      employeeId,
+      employeeName
+    });
+  };
 
-        if (response.ok) {
-          const data = await response.json();
-          alert(data.message || 'Dipendente eliminato con successo!');
-          setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
-        } else {
-          const error = await response.json();
-          alert(error.error || 'Errore durante l\'eliminazione del dipendente');
-        }
-      } catch (error) {
-        console.error('Error deleting employee:', error);
-        alert('Errore di connessione durante l\'eliminazione');
+  const confirmDeleteEmployee = async () => {
+    const { employeeId, employeeName } = confirmModal;
+    
+    try {
+      const response = await apiCall(`/api/employees/${employeeId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showAlert('success', 'Successo!', data.message || 'Dipendente eliminato con successo!');
+        setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+      } else {
+        const error = await response.json();
+        showAlert('error', 'Errore', error.error || 'Errore durante l\'eliminazione del dipendente');
       }
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      showAlert('error', 'Errore', 'Errore di connessione durante l\'eliminazione');
     }
   };
 
@@ -437,6 +460,7 @@ const Employees = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAddEmployee={handleAddEmployee}
+        onError={(message) => showAlert('error', 'Errore', message)}
         loading={false}
       />
 
@@ -866,6 +890,33 @@ const Employees = () => {
           </div>
         </div>
       )}
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alert.isOpen}
+        onClose={closeAlert}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, employeeId: null, employeeName: '' })}
+        onConfirm={confirmDeleteEmployee}
+        title="Conferma Eliminazione"
+        message={`Sei sicuro di voler eliminare ${confirmModal.employeeName}?
+
+Questa azione eliminerà:
+• Tutti i record di presenza
+• Tutte le richieste di permesso
+• Tutti i dati associati
+
+L'azione è IRREVERSIBILE!`}
+        confirmText="Elimina"
+        cancelText="Annulla"
+      />
     </div>
   );
 };
