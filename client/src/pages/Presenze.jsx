@@ -8,9 +8,7 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState([]);
   const [hoursBalance, setHoursBalance] = useState({
     total_worked: 0,
-    total_balance: 0,
-    overtime_hours: 0,
-    deficit_hours: 0,
+    monte_ore: 0,
     working_days: 0,
     absent_days: 0
   });
@@ -252,17 +250,17 @@ const Attendance = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Presenze</h1>
           <p className="text-slate-400">
-            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(hoursBalance.total_balance)}
+            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(hoursBalance.monte_ore)}
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* TOTALE LAVORATO Mensile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {/* TOTALE ORE LAVORATE */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">TOTALE LAVORATO Mensile</p>
+                <p className="text-slate-400 text-sm">TOTALE ORE LAVORATE</p>
                 <p className="text-2xl font-bold text-blue-400">
                   {formatHours(hoursBalance.total_worked)}
                 </p>
@@ -273,32 +271,20 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* Ore Straordinario */}
+          {/* MONTE ORE */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Straordinari</p>
-                <p className="text-2xl font-bold text-green-400">
-                  {formatHours(hoursBalance.overtime_hours)}
+                <p className="text-slate-400 text-sm">MONTE ORE</p>
+                <p className={`text-2xl font-bold ${hoursBalance.monte_ore >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {hoursBalance.monte_ore >= 0 ? '+' : ''}{formatHours(hoursBalance.monte_ore)}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {hoursBalance.monte_ore >= 0 ? 'Credito' : 'Debito'}
                 </p>
               </div>
-              <div className="p-3 rounded-full text-green-400">
-                <TrendingUp className="h-4 w-4" />
-              </div>
-            </div>
-          </div>
-
-          {/* ORE MANCANTI Mensili */}
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">ORE MANCANTI Mensili</p>
-                <p className="text-2xl font-bold text-red-400">
-                  {formatHours(hoursBalance.deficit_hours)}
-                </p>
-              </div>
-              <div className="p-3 rounded-full text-red-400">
-                <TrendingDown className="h-4 w-4" />
+              <div className={`p-3 rounded-full ${hoursBalance.monte_ore >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {hoursBalance.monte_ore >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               </div>
             </div>
           </div>
@@ -308,11 +294,11 @@ const Attendance = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">Giorni Lavorativi</p>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-2xl font-bold text-purple-400">
                   {hoursBalance.working_days}
                 </p>
               </div>
-              <div className="p-3 rounded-full text-blue-400">
+              <div className="p-3 rounded-full text-purple-400">
                 <Calendar className="h-4 w-4" />
               </div>
             </div>

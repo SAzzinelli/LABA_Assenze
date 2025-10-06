@@ -933,10 +933,8 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     });
 
     res.json({
-      total_worked: totalActualHours, // TOTALE LAVORATO (sempre positivo)
-      total_balance: totalBalance, // Saldo per calcoli interni
-      overtime_hours: overtimeHours,
-      deficit_hours: deficitHours, // ORE MANCANTI mensili
+      total_worked: totalActualHours, // TOTALE ORE LAVORATE (sempre positivo)
+      monte_ore: totalBalance, // MONTE ORE (saldo positivo/negativo)
       working_days: workingDays,
       absent_days: absentDays
     });
