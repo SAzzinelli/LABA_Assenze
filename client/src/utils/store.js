@@ -32,6 +32,10 @@ export const useAuthStore = create(
               isAuthenticated: true,
               loading: false,
             });
+            
+            // Avvia l'auto-refresh del token
+            get().startTokenRefresh();
+            
             return { success: true };
           } else {
             set({ loading: false });
@@ -75,13 +79,30 @@ export const useAuthStore = create(
       },
 
       // Logout function
-      logout: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          loading: false,
-        });
+      logout: async () => {
+        try {
+          // Chiama l'endpoint di logout se abbiamo un token
+          const { token } = get();
+          if (token) {
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+              credentials: 'include',
+            });
+          }
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          // Pulisci sempre lo stato locale
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            loading: false,
+          });
+        }
       },
 
       // Check authentication
@@ -100,6 +121,42 @@ export const useAuthStore = create(
         set({ loading });
       },
 
+      // Auto-refresh token every 30 minutes
+      startTokenRefresh: () => {
+        const refreshInterval = setInterval(async () => {
+          const { token, user } = get();
+          if (token && user) {
+            try {
+              console.log('🔄 Auto-refresh token...');
+              const response = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+                credentials: 'include',
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                set({
+                  token: data.token,
+                  user: data.user,
+                });
+                console.log('✅ Token auto-rinnovato');
+              } else {
+                console.log('❌ Auto-refresh fallito');
+                clearInterval(refreshInterval);
+              }
+            } catch (error) {
+              console.error('❌ Errore auto-refresh:', error);
+            }
+          }
+        }, 30 * 60 * 1000); // 30 minuti
+
+        return refreshInterval;
+      },
+
       // Helper function for authenticated API calls
       apiCall: async (url, options = {}) => {
         const { token } = get();
@@ -112,11 +169,67 @@ export const useAuthStore = create(
           headers.Authorization = `Bearer ${token}`;
         }
 
-        return fetch(url, {
+        let response = await fetch(url, {
           ...options,
           headers,
           credentials: 'include',
         });
+
+        // Se riceviamo un 401, proviamo a refreshare il token
+        if (response.status === 401 && token) {
+          console.log('🔄 Token scaduto, tentativo di refresh...');
+          
+          try {
+            const refreshResponse = await fetch('/api/auth/refresh', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              credentials: 'include',
+            });
+
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json();
+              console.log('✅ Token rinnovato con successo');
+              
+              // Aggiorna il token nello store
+              set({
+                token: refreshData.token,
+                user: refreshData.user,
+              });
+
+              // Riprova la chiamata originale con il nuovo token
+              headers.Authorization = `Bearer ${refreshData.token}`;
+              response = await fetch(url, {
+                ...options,
+                headers,
+                credentials: 'include',
+              });
+            } else {
+              console.log('❌ Refresh token fallito, logout richiesto');
+              // Se il refresh fallisce, fai logout
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+              });
+              // Reindirizza al login
+              window.location.href = '/login';
+            }
+          } catch (refreshError) {
+            console.error('❌ Errore durante refresh token:', refreshError);
+            // Se c'è un errore nel refresh, fai logout
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+            });
+            window.location.href = '/login';
+          }
+        }
+
+        return response;
       },
     }),
     {
