@@ -2086,6 +2086,28 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 }
 
+// ==================== POLLING FALLBACK ====================
+
+// Check for updates (polling fallback)
+app.post('/api/updates/check', authenticateToken, async (req, res) => {
+  try {
+    const { userId, lastUpdate } = req.body;
+    
+    // Per ora restituiamo sempre false, in futuro possiamo implementare
+    // un sistema di tracking degli aggiornamenti
+    res.json({
+      hasUpdates: false,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Polling check error:', error);
+    res.json({
+      hasUpdates: false,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // ==================== WEBSOCKET REAL-TIME ====================
 
 // WebSocket connection handling

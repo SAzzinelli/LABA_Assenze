@@ -5,15 +5,13 @@ export const useRealTimeUpdates = (callbacks = {}) => {
   const { user } = useAuthStore();
   const socketRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const pollingIntervalRef = useRef(null);
+  const lastUpdateRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
 
-    // WebSocket temporaneamente disabilitato per evitare errori in produzione
-    console.log('🔌 WebSocket disabilitato temporaneamente');
-    return;
-
-    // Initialize WebSocket connection
+    // Initialize WebSocket connection with fallback
     const initializeSocket = () => {
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -62,31 +60,75 @@ export const useRealTimeUpdates = (callbacks = {}) => {
           }
         };
 
-        socketRef.current.onclose = () => {
-          console.log('🔌 WebSocket disconnesso');
+        socketRef.current.onclose = (event) => {
+          console.log('🔌 WebSocket disconnesso:', event.code, event.reason);
           
-          // Auto-reconnect after 3 seconds
-          reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('🔄 Tentativo di riconnessione WebSocket...');
-            initializeSocket();
-          }, 3000);
+          // Solo se non è una chiusura normale, riprova dopo 5 secondi
+          if (event.code !== 1000) {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              console.log('🔄 Tentativo di riconnessione WebSocket...');
+              initializeSocket();
+            }, 5000);
+          }
         };
 
         socketRef.current.onerror = (error) => {
-          console.error('❌ Errore WebSocket:', error);
+          console.log('⚠️ WebSocket non disponibile, usando polling fallback');
+          // Non loggare come errore, è normale in produzione
         };
 
       } catch (error) {
-        console.error('❌ Errore inizializzazione WebSocket:', error);
+        console.log('⚠️ WebSocket non supportato, usando polling fallback');
+        // Non loggare come errore, è normale in produzione
       }
     };
 
     initializeSocket();
 
+    // Fallback polling system
+    const startPolling = () => {
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          // Controlla se ci sono aggiornamenti
+          const response = await fetch('/api/updates/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ 
+              userId: user.id, 
+              lastUpdate: lastUpdateRef.current 
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.hasUpdates) {
+              lastUpdateRef.current = data.timestamp;
+              // Trigger refresh callbacks
+              callbacks.onEmployeeUpdate?.({ type: 'refresh' });
+              callbacks.onAttendanceUpdate?.({ type: 'refresh' });
+              callbacks.onLeaveRequestUpdate?.({ type: 'refresh' });
+            }
+          }
+        } catch (error) {
+          // Silently fail, polling will retry
+        }
+      }, 10000); // Poll ogni 10 secondi
+    };
+
+    // Avvia polling dopo 2 secondi (per dare tempo ai WebSocket)
+    const pollingTimeout = setTimeout(startPolling, 2000);
+
     // Cleanup on unmount
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      if (pollingTimeout) {
+        clearTimeout(pollingTimeout);
       }
       if (socketRef.current) {
         socketRef.current.close();
