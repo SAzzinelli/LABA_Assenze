@@ -170,13 +170,17 @@ const AdminAttendance = () => {
 
   const fetchWorkSchedules = async () => {
     try {
+      console.log('🔄 Fetching work schedules...');
       const response = await apiCall('/api/work-schedules');
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Work schedules fetched:', data);
         setWorkSchedules(data);
+      } else {
+        console.error('❌ Failed to fetch work schedules:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching work schedules:', error);
+      console.error('❌ Error fetching work schedules:', error);
     }
   };
 
