@@ -35,8 +35,15 @@ const Attendance = () => {
     
     // Forza aggiornamento immediato delle ore correnti
     setTimeout(() => {
+      console.log('🔄 Forcing immediate update...');
       updateCurrentAttendance();
-    }, 2000);
+    }, 1000);
+    
+    // Forza aggiornamento anche dopo 5 secondi
+    setTimeout(() => {
+      console.log('🔄 Second forced update...');
+      updateCurrentAttendance();
+    }, 5000);
     
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -412,6 +419,16 @@ const Attendance = () => {
                     >
                       <Clock className="h-4 w-4" />
                       {updatingHours ? 'Aggiornando...' : 'Aggiorna Ore'}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        console.log('🔄 Manual refresh triggered');
+                        updateCurrentAttendance();
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      🔄 Debug
                     </button>
                     <button
                       onClick={() => handleViewAttendanceDetails(todayAttendance)}
