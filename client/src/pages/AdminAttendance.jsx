@@ -24,7 +24,8 @@ import {
   FileText,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  Clock
 } from 'lucide-react';
 
 const AdminAttendance = () => {
@@ -34,7 +35,7 @@ const AdminAttendance = () => {
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [activeTab, setActiveTab] = useState('today');
+  const [activeTab, setActiveTab] = useState('currently');
   
   // Stati per cronologia
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -71,7 +72,6 @@ const AdminAttendance = () => {
 
   // Statistiche
   const [stats, setStats] = useState({
-    totalEmployees: 0,
     workedToday: 0, // Chi ha lavorato oggi
     currentlyPresent: 0, // Chi è fisicamente presente ora
     absentToday: 0 // Chi doveva lavorare ma non ha lavorato
@@ -184,13 +184,6 @@ const AdminAttendance = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch employees count
-      const employeesResponse = await apiCall('/api/employees');
-      let totalEmployees = 0;
-      if (employeesResponse.ok) {
-        const employeesData = await employeesResponse.json();
-        totalEmployees = employeesData.employees ? employeesData.employees.length : employeesData.length || 0;
-      }
 
       // Fetch today's attendance
       const attendanceResponse = await apiCall(`/api/attendance?date=${today}`);
@@ -211,26 +204,48 @@ const AdminAttendance = () => {
         let absentToday = 0; // Chi doveva lavorare ma non ha lavorato
         
         for (const record of attendanceData) {
-          // 1. Controlla se ha lavorato oggi (ore effettive > 0)
-          if (record.actual_hours && record.actual_hours > 0) {
-            workedToday++;
-          }
-          
-          // 2. Controlla se è attualmente presente (nell'orario di lavoro)
+          // Fetch work schedule una sola volta per dipendente
           const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
           if (scheduleResponse.ok) {
             const scheduleData = await scheduleResponse.json();
             const schedule = scheduleData.find(s => s.is_working_day);
             
             if (schedule) {
-              const { start_time, end_time } = schedule;
-              // Se è nell'orario di lavoro, è attualmente presente
+              const { start_time, end_time, break_duration } = schedule;
+              const [startHour, startMin] = start_time.split(':').map(Number);
+              const [endHour, endMin] = end_time.split(':').map(Number);
+              const breakDuration = break_duration || 60;
+              
+              // Calcola ore attese totali
+              const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+              const workMinutes = totalMinutes - breakDuration;
+              const expectedHours = workMinutes / 60;
+              
+              // Calcola ore effettive real-time
+              let actualHours = 0;
+              if (currentHour >= startHour && currentHour <= endHour) {
+                const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+                if (currentHour >= 13) {
+                  actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+                } else {
+                  actualHours = workedMinutes / 60;
+                }
+              } else if (currentHour > endHour) {
+                actualHours = expectedHours;
+              }
+              
+              // 1. Se ha ore effettive > 0, ha lavorato oggi
+              if (actualHours > 0) {
+                workedToday++;
+              }
+              
+              // 2. Se è nell'orario di lavoro, è attualmente presente
               if (currentTime >= start_time && currentTime <= end_time) {
                 currentlyPresent++;
               }
               
               // 3. Se dovrebbe lavorare ma non ha ore effettive = assente
-              if (!record.actual_hours || record.actual_hours <= 0) {
+              if (actualHours <= 0) {
                 absentToday++;
               }
             }
@@ -238,7 +253,6 @@ const AdminAttendance = () => {
         }
         
         console.log('📊 Admin KPI calculation (real-time):', {
-          totalEmployees,
           workedToday,
           currentlyPresent,
           absentToday,
@@ -248,7 +262,6 @@ const AdminAttendance = () => {
       }
 
       setStats({
-        totalEmployees,
         workedToday,
         currentlyPresent,
         absentToday
@@ -293,11 +306,11 @@ const AdminAttendance = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'present': return 'bg-green-100 text-green-900 border-green-200';
-      case 'absent': return 'bg-red-100 text-red-900 border-red-200';
-      case 'holiday': return 'bg-blue-100 text-blue-900 border-blue-200';
-      case 'non_working_day': return 'bg-gray-100 text-gray-900 border-gray-200';
-      default: return 'bg-gray-100 text-gray-900 border-gray-200';
+      case 'present': return 'bg-green-900 text-green-100 border-green-700';
+      case 'absent': return 'bg-red-900 text-red-100 border-red-700';
+      case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
+      case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
+      default: return 'bg-gray-900 text-gray-100 border-gray-700';
     }
   };
 
@@ -409,24 +422,50 @@ const AdminAttendance = () => {
     }
   };
 
-  const filteredData = (activeTab === 'today' ? attendance : attendanceHistory).filter(record => {
-    // Filtro per ricerca
-    if (searchTerm) {
-      const employeeName = record.users ? 
-        `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
-      if (!employeeName.includes(searchTerm.toLowerCase())) {
-        return false;
+  const filteredData = (() => {
+    let data = [];
+    if (activeTab === 'currently' || activeTab === 'today') {
+      data = attendance;
+    } else {
+      data = attendanceHistory;
+    }
+    
+    return data.filter(record => {
+      // Filtro per ricerca
+      if (searchTerm) {
+        const employeeName = record.users ? 
+          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+        if (!employeeName.includes(searchTerm.toLowerCase())) {
+          return false;
+        }
       }
-    }
-    
-    // Se siamo nella tab "Oggi", mostra chi ha lavorato oggi
-    if (activeTab === 'today') {
-      // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi)
-      return record.actual_hours && record.actual_hours > 0;
-    }
-    
-    return true;
-  });
+      
+      // Logica specifica per ogni tab
+      if (activeTab === 'currently') {
+        // Mostra solo chi è attualmente nell'orario di lavoro
+        const now = new Date();
+        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+        const dayOfWeek = now.getDay();
+        
+        const workSchedule = workSchedules.find(schedule => 
+          schedule.user_id === record.user_id && 
+          schedule.day_of_week === dayOfWeek && 
+          schedule.is_working_day
+        );
+        
+        if (workSchedule) {
+          const { start_time, end_time } = workSchedule;
+          return currentTime >= start_time && currentTime <= end_time;
+        }
+        return false;
+      } else if (activeTab === 'today') {
+        // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi)
+        return record.actual_hours && record.actual_hours > 0;
+      }
+      
+      return true;
+    });
+  })();
 
   if (loading) {
     return (
@@ -477,18 +516,6 @@ const AdminAttendance = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-slate-400 text-sm">Totale Dipendenti</p>
-                <p className="text-2xl font-bold text-white">{stats.totalEmployees}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
@@ -531,6 +558,17 @@ const AdminAttendance = () => {
         <div className="mb-6">
           <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
             <button
+              onClick={() => setActiveTab('currently')}
+              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${
+                activeTab === 'currently' 
+                  ? 'bg-indigo-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              Attualmente a lavoro
+            </button>
+            <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${
                 activeTab === 'today' 
@@ -539,7 +577,7 @@ const AdminAttendance = () => {
               }`}
             >
               <CalendarDays className="h-4 w-4" />
-              Presenze Oggi
+              Oggi
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -556,7 +594,7 @@ const AdminAttendance = () => {
         </div>
 
         {/* Filtri */}
-        {showFilters && (
+        {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -573,8 +611,6 @@ const AdminAttendance = () => {
                 </div>
               </div>
               
-              {activeTab === 'history' && (
-                <>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
                     <select
@@ -623,8 +659,6 @@ const AdminAttendance = () => {
                       ))}
                     </select>
                   </div>
-                </>
-              )}
             </div>
           </div>
         )}
@@ -634,7 +668,8 @@ const AdminAttendance = () => {
           <div className="px-6 py-4 border-b border-slate-700">
             <h2 className="text-xl font-semibold text-white flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              {activeTab === 'today' ? 'Chi Ha Lavorato Oggi' : 'Cronologia Presenze'}
+              {activeTab === 'currently' ? 'Attualmente a lavoro' : 
+               activeTab === 'today' ? 'Chi ha lavorato oggi' : 'Cronologia Presenze'}
             </h2>
           </div>
           
@@ -648,7 +683,6 @@ const AdminAttendance = () => {
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Attese</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Effettive</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Saldo Ore</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Note</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Azioni</th>
                 </tr>
               </thead>
@@ -702,11 +736,6 @@ const AdminAttendance = () => {
                           <TrendingDown className="h-3 w-3 mr-1" />
                         ) : null}
                         {formatHours(record.balance_hours || 0)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-sm text-slate-400">
-                        {record.notes || '-'}
                       </span>
                     </td>
                     <td className="py-4 px-6">
