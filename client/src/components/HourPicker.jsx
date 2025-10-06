@@ -78,19 +78,19 @@ const HourPicker = ({
             />
             
             {/* Dropdown */}
-            <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-              <div className="p-2">
-                <div className="grid grid-cols-4 gap-1">
+            <div className="absolute z-50 w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto transform -translate-y-1">
+              <div className="p-3">
+                <div className="grid grid-cols-3 gap-2">
                   {timeOptions.map((time) => (
                     <button
                       key={time}
                       type="button"
                       onClick={() => handleTimeSelect(time)}
                       className={`
-                        px-3 py-2 text-sm rounded transition-colors
+                        px-4 py-3 text-sm rounded-lg transition-colors font-mono
                         ${selectedTime === time 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'text-slate-300 hover:bg-slate-700'
+                          ? 'bg-indigo-600 text-white border border-indigo-500' 
+                          : 'text-slate-300 hover:bg-slate-700 border border-transparent'
                         }
                       `}
                     >

@@ -777,26 +777,26 @@ const Profile = () => {
                     <Sun className="h-4 w-4 mr-2 text-yellow-400" />
                     Orario Mattina
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <HourPicker
-                      label="Inizio"
-                      value={parseTimeRange(workSchedule[selectedDay].morning).start}
-                      onChange={(time) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].morning);
-                        handleWorkScheduleChange('morning', formatTimeRange(time, end));
-                      }}
-                      placeholder="09:00"
-                    />
-                    <HourPicker
-                      label="Fine"
-                      value={parseTimeRange(workSchedule[selectedDay].morning).end}
-                      onChange={(time) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].morning);
-                        handleWorkScheduleChange('morning', formatTimeRange(start, time));
-                      }}
-                      placeholder="13:00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <HourPicker
+                    label="Inizio"
+                    value={parseTimeRange(workSchedule[selectedDay].morning).start}
+                    onChange={(time) => {
+                      const { end } = parseTimeRange(workSchedule[selectedDay].morning);
+                      handleWorkScheduleChange('morning', formatTimeRange(time, end));
+                    }}
+                    placeholder="09:00"
+                  />
+                  <HourPicker
+                    label="Fine"
+                    value={parseTimeRange(workSchedule[selectedDay].morning).end}
+                    onChange={(time) => {
+                      const { start } = parseTimeRange(workSchedule[selectedDay].morning);
+                      handleWorkScheduleChange('morning', formatTimeRange(start, time));
+                    }}
+                    placeholder="13:00"
+                  />
+                </div>
                 </div>
               )}
               
@@ -806,26 +806,26 @@ const Profile = () => {
                     <Coffee className="h-4 w-4 mr-2 text-amber-400" />
                     Pausa Pranzo
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <HourPicker
-                      label="Inizio"
-                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start}
-                      onChange={(time) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
-                        handleWorkScheduleChange('lunchBreak', formatTimeRange(time, end));
-                      }}
-                      placeholder="13:00"
-                    />
-                    <HourPicker
-                      label="Fine"
-                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end}
-                      onChange={(time) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
-                        handleWorkScheduleChange('lunchBreak', formatTimeRange(start, time));
-                      }}
-                      placeholder="14:00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <HourPicker
+                    label="Inizio"
+                    value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start}
+                    onChange={(time) => {
+                      const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                      handleWorkScheduleChange('lunchBreak', formatTimeRange(time, end));
+                    }}
+                    placeholder="13:00"
+                  />
+                  <HourPicker
+                    label="Fine"
+                    value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end}
+                    onChange={(time) => {
+                      const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                      handleWorkScheduleChange('lunchBreak', formatTimeRange(start, time));
+                    }}
+                    placeholder="14:00"
+                  />
+                </div>
                 </div>
               )}
               
@@ -835,26 +835,26 @@ const Profile = () => {
                     <Moon className="h-4 w-4 mr-2 text-blue-400" />
                     Orario Pomeriggio
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <HourPicker
-                      label="Inizio"
-                      value={parseTimeRange(workSchedule[selectedDay].afternoon).start}
-                      onChange={(time) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
-                        handleWorkScheduleChange('afternoon', formatTimeRange(time, end));
-                      }}
-                      placeholder="14:00"
-                    />
-                    <HourPicker
-                      label="Fine"
-                      value={parseTimeRange(workSchedule[selectedDay].afternoon).end}
-                      onChange={(time) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
-                        handleWorkScheduleChange('afternoon', formatTimeRange(start, time));
-                      }}
-                      placeholder="18:00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <HourPicker
+                    label="Inizio"
+                    value={parseTimeRange(workSchedule[selectedDay].afternoon).start}
+                    onChange={(time) => {
+                      const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                      handleWorkScheduleChange('afternoon', formatTimeRange(time, end));
+                    }}
+                    placeholder="14:00"
+                  />
+                  <HourPicker
+                    label="Fine"
+                    value={parseTimeRange(workSchedule[selectedDay].afternoon).end}
+                    onChange={(time) => {
+                      const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                      handleWorkScheduleChange('afternoon', formatTimeRange(start, time));
+                    }}
+                    placeholder="18:00"
+                  />
+                </div>
                 </div>
               )}
             </div>
