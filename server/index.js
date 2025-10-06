@@ -931,6 +931,50 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
   }
 });
 
+// Salvataggio orario delle presenze (ogni ora)
+app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
+  try {
+    const { date, actualHours, expectedHours, balanceHours, notes } = req.body;
+    
+    if (!date || actualHours === undefined || expectedHours === undefined) {
+      return res.status(400).json({ error: 'Dati mancanti' });
+    }
+
+    const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
+
+    // Aggiorna o inserisci il record di presenza
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert({
+        user_id: targetUserId,
+        date: date,
+        actual_hours: parseFloat(actualHours),
+        expected_hours: parseFloat(expectedHours),
+        balance_hours: parseFloat(balanceHours || 0),
+        notes: notes || '',
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,date'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Hourly attendance save error:', error);
+      return res.status(500).json({ error: 'Errore nel salvare le presenze orarie' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Presenza oraria salvata con successo',
+      attendance: data
+    });
+  } catch (error) {
+    console.error('Hourly attendance save error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get monthly hours balance for a user
 app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => {
   try {

@@ -107,20 +107,17 @@ const AdminAttendance = () => {
     
     initializeData();
     
-    // Aggiorna i dati ogni 30 secondi per admin
-    const dataInterval = setInterval(() => {
+    // Polling ogni 30s per sincronizzazione con dipendenti
+    const syncInterval = setInterval(() => {
+      console.log('🔄 Admin sync polling...');
       fetchAttendanceData();
+      fetchEmployees();
+      fetchWorkSchedules();
+      calculateRealTimeStats();
     }, 30000);
     
-    // Aggiorna i KPI ogni 10 secondi per admin
-    const kpiInterval = setInterval(() => {
-      console.log('🔄 Auto-updating admin KPIs...');
-      fetchStats();
-    }, 10000);
-    
     return () => {
-      clearInterval(dataInterval);
-      clearInterval(kpiInterval);
+      clearInterval(syncInterval);
     };
   }, []);
 
@@ -129,6 +126,13 @@ const AdminAttendance = () => {
       fetchAttendanceHistory();
     }
   }, [activeTab, selectedMonth, selectedYear, selectedEmployee]);
+
+  // Ricalcola le statistiche quando cambiano i workSchedules
+  useEffect(() => {
+    if (workSchedules.length > 0) {
+      calculateRealTimeStats();
+    }
+  }, [workSchedules]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -184,95 +188,110 @@ const AdminAttendance = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
+  // Calcolo real-time unificato (stesso sistema del dipendente)
+  const calculateRealTimeStats = () => {
+    console.log('🔄 Admin calculating real-time stats...');
+    
+    if (!workSchedules || workSchedules.length === 0) {
+      console.log('⚠️ No work schedules available for admin stats');
+      return;
+    }
 
-      // Fetch today's attendance
-      const attendanceResponse = await apiCall(`/api/attendance?date=${today}`);
-      let presentToday = 0;
-      let absentToday = 0;
-      let totalHours = 0;
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+    const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+    
+    let workedToday = 0; // Chi ha lavorato oggi
+    let currentlyPresent = 0; // Chi è fisicamente presente ora
+    let absentToday = 0; // Chi doveva lavorare ma non ha lavorato
+    
+    // Usa i workSchedules già caricati invece di fare chiamate API
+    const todaySchedules = workSchedules.filter(schedule => 
+      schedule.day_of_week === dayOfWeek && schedule.is_working_day
+    );
+    
+    console.log(`📊 Admin stats: ${todaySchedules.length} working schedules today`);
+    
+    todaySchedules.forEach(schedule => {
+      const { start_time, end_time, break_duration } = schedule;
+      const [startHour, startMin] = start_time.split(':').map(Number);
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const breakDuration = break_duration || 60;
       
-      if (attendanceResponse.ok) {
-        const attendanceData = await attendanceResponse.json();
+      // Calcola ore attese totali
+      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const workMinutes = totalMinutes - breakDuration;
+      const expectedHours = workMinutes / 60;
+      
+      // Calcola ore effettive real-time (stesso calcolo del dipendente)
+      let actualHours = 0;
+      let status = 'not_started';
+      
+      // Se è prima dell'inizio
+      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+        actualHours = 0;
+        status = 'not_started';
+      }
+      // Se è dopo la fine
+      else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+        actualHours = expectedHours;
+        status = 'completed';
+      }
+      // Se è durante l'orario di lavoro
+      else {
+        // Calcola ore lavorate fino ad ora
+        let totalMinutesWorked = 0;
         
-        // Calcola statistiche più chiare
-        const dayOfWeek = new Date().getDay();
-        const now = new Date();
-        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+        // Calcola minuti dall'inizio
+        const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
         
-        let workedToday = 0; // Chi ha lavorato oggi
-        let currentlyPresent = 0; // Chi è fisicamente presente ora
-        let absentToday = 0; // Chi doveva lavorare ma non ha lavorato
+        // Calcola l'orario di pausa (metà giornata)
+        const halfDayMinutes = workMinutes / 2;
+        const breakStartMinutes = halfDayMinutes;
+        const breakEndMinutes = halfDayMinutes + breakDuration;
         
-        for (const record of attendanceData) {
-          // Fetch work schedule una sola volta per dipendente
-          const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
-          if (scheduleResponse.ok) {
-            const scheduleData = await scheduleResponse.json();
-            const schedule = scheduleData.find(s => s.is_working_day);
-            
-            if (schedule) {
-              const { start_time, end_time, break_duration } = schedule;
-              const [startHour, startMin] = start_time.split(':').map(Number);
-              const [endHour, endMin] = end_time.split(':').map(Number);
-              const breakDuration = break_duration || 60;
-              
-              // Calcola ore attese totali
-              const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-              const workMinutes = totalMinutes - breakDuration;
-              const expectedHours = workMinutes / 60;
-              
-              // Calcola ore effettive real-time
-              let actualHours = 0;
-              if (currentHour >= startHour && currentHour <= endHour) {
-                const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-                if (currentHour >= 13) {
-                  actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
-                } else {
-                  actualHours = workedMinutes / 60;
-                }
-              } else if (currentHour > endHour) {
-                actualHours = expectedHours;
-              }
-              
-              // 1. Se ha ore effettive > 0, ha lavorato oggi
-              if (actualHours > 0) {
-                workedToday++;
-              }
-              
-              // 2. Se è nell'orario di lavoro, è attualmente presente
-              if (currentTime >= start_time && currentTime <= end_time) {
-                currentlyPresent++;
-              }
-              
-              // 3. Se dovrebbe lavorare ma non ha ore effettive = assente
-              if (actualHours <= 0) {
-                absentToday++;
-              }
-            }
-          }
+        if (minutesFromStart < breakStartMinutes) {
+          // Prima della pausa
+          totalMinutesWorked = minutesFromStart;
+          status = 'working';
+        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+          // Durante la pausa
+          totalMinutesWorked = breakStartMinutes;
+          status = 'on_break';
+        } else {
+          // Dopo la pausa
+          const morningMinutes = breakStartMinutes;
+          const afternoonMinutes = minutesFromStart - breakEndMinutes;
+          totalMinutesWorked = morningMinutes + afternoonMinutes;
+          status = 'working';
         }
         
-        console.log('📊 Admin KPI calculation (real-time):', {
-          workedToday,
-          currentlyPresent,
-          absentToday,
-          currentTime,
-          dayOfWeek
-        });
+        actualHours = totalMinutesWorked / 60;
       }
+      
+      // Aggiorna le statistiche
+      if (actualHours > 0) {
+        workedToday++;
+      }
+      
+      if (currentTime >= start_time && currentTime <= end_time) {
+        currentlyPresent++;
+      }
+      
+      // Se dovrebbe lavorare ma non ha ore effettive
+      if (actualHours <= 0 && status !== 'not_started') {
+        absentToday++;
+      }
+    });
+    
+    console.log(`📊 Admin real-time stats: worked=${workedToday}, present=${currentlyPresent}, absent=${absentToday}`);
+    setStats({ workedToday, currentlyPresent, absentToday });
+  };
 
-      setStats({
-        workedToday,
-        currentlyPresent,
-        absentToday
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+  const fetchStats = () => {
+    calculateRealTimeStats();
   };
 
   const fetchAttendanceHistory = async () => {

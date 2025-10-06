@@ -27,6 +27,13 @@ const Attendance = () => {
     status: 'not_started',
     progress: 0
   });
+  
+  // Cache locale per sistema ibrido
+  const [localCache, setLocalCache] = useState({
+    lastHourlySave: null,
+    lastCalculation: null,
+    pendingSave: false
+  });
   const [updatingHours, setUpdatingHours] = useState(false);
   const [kpiData, setKpiData] = useState({
     monthlyHours: 0,
@@ -62,18 +69,26 @@ const Attendance = () => {
     
     initializeData();
     
-    const timer = setInterval(() => {
+    // Timer per calcoli real-time ogni minuto
+    const realTimeTimer = setInterval(() => {
       setCurrentTime(new Date());
-      // Ricalcola le ore ogni minuto
       calculateRealTimeHours();
+    }, 60000); // Ogni minuto
+    
+    // Timer per salvataggio orario ogni ora
+    const hourlySaveTimer = setInterval(() => {
+      if (currentHours.actualHours > 0) {
+        saveHourlyAttendance();
+      }
+    }, 3600000); // Ogni ora (3600000 ms)
+    
+    // Timer per salvataggio giornaliero alla fine della giornata
+    const dailySaveTimer = setInterval(() => {
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.day_of_week === new Date().getDay() && 
+        schedule.is_working_day
+      );
       
-      // Ricarica anche i dati dal database per assicurarsi che siano sincronizzati
-      fetchAttendance().then(() => {
-        // Dopo aver ricaricato, ricalcola le ore real-time per sovrascrivere i dati vecchi
-        calculateRealTimeHours();
-      });
-      
-      // Salva automaticamente le ore alla fine della giornata lavorativa
       if (todaySchedule && todaySchedule.is_working_day) {
         const now = new Date();
         const currentHour = now.getHours();
@@ -85,16 +100,19 @@ const Attendance = () => {
           saveDailyAttendance();
         }
       }
-    }, 60000); // Ogni minuto
+    }, 60000); // Controlla ogni minuto
     
     // RIMOSSO: Aggiornamento database automatico (causa errori 403)
     // Il calcolo è ora completamente lato frontend
     
-    // Aggiorna tutti i dati ogni 5 minuti per evitare problemi di refresh
-    const refreshTimer = setInterval(() => {
+    // Polling ogni 30s per sincronizzazione con admin
+    const syncInterval = setInterval(() => {
+      console.log('🔄 Employee sync polling...');
       fetchAttendance();
       fetchHoursBalance();
-    }, 300000); // 5 minuti
+      fetchWorkSchedules();
+      calculateRealTimeHours();
+    }, 30000); // 30 secondi
     
     // Aggiorna quando la finestra torna in focus (navigazione)
     const handleFocus = () => {
@@ -109,8 +127,10 @@ const Attendance = () => {
     window.addEventListener('focus', handleFocus);
     
     return () => {
-      clearInterval(timer);
-      clearInterval(refreshTimer);
+      clearInterval(realTimeTimer);
+      clearInterval(hourlySaveTimer);
+      clearInterval(dailySaveTimer);
+      clearInterval(syncInterval);
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
@@ -301,7 +321,19 @@ const Attendance = () => {
 
     console.log(`📊 Calcolo dipendente: ${actualHours.toFixed(1)}h lavorate, ${remainingHours.toFixed(1)}h rimanenti, status: ${status}`);
 
-    // Aggiorna lo stato
+    // Calcola i dati finali
+    const finalActualHours = Math.round(actualHours * 10) / 10;
+    const finalExpectedHours = Math.round(expectedHours * 10) / 10;
+    const finalBalanceHours = Math.round((actualHours - expectedHours) * 10) / 10;
+
+    // Aggiorna la cache locale
+    setLocalCache(prev => ({
+      ...prev,
+      lastCalculation: now,
+      pendingSave: prev.pendingSave || (now.getMinutes() === 0 && finalActualHours > 0) // Salva ogni ora in punto
+    }));
+
+    // Aggiorna lo stato con cache
     setCurrentHours({
       isWorkingDay: true,
       schedule: {
@@ -310,9 +342,9 @@ const Attendance = () => {
         break_duration: breakDuration
       },
       currentTime,
-      expectedHours: Math.round(expectedHours * 10) / 10,
-      actualHours: Math.round(actualHours * 10) / 10,
-      balanceHours: Math.round((actualHours - expectedHours) * 10) / 10,
+      expectedHours: finalExpectedHours,
+      actualHours: finalActualHours,
+      balanceHours: finalBalanceHours,
       status,
       progress: Math.min((actualHours / expectedHours) * 100, 100)
     });
@@ -324,8 +356,8 @@ const Attendance = () => {
         record.date === today 
           ? { 
               ...record, 
-              actual_hours: Math.round(actualHours * 10) / 10, 
-              balance_hours: Math.round((actualHours - expectedHours) * 10) / 10 
+              actual_hours: finalActualHours, 
+              balance_hours: finalBalanceHours 
             }
           : record
       );
@@ -334,6 +366,15 @@ const Attendance = () => {
       // Ricalcola i KPI dopo aver aggiornato le ore
       console.log('🔄 Recalculating KPIs after hour update...');
       calculateKPIs(updatedAttendance);
+    }
+
+    // Controlla se è il momento di salvare (ogni ora in punto)
+    if (now.getMinutes() === 0 && finalActualHours > 0) {
+      const lastSave = localCache.lastHourlySave;
+      if (!lastSave || (now.getTime() - lastSave.getTime()) >= 3600000) {
+        console.log('⏰ Time for hourly save:', finalActualHours, 'hours');
+        saveHourlyAttendance();
+      }
     }
   };
 
@@ -388,68 +429,98 @@ const Attendance = () => {
     }
   };
 
-  const saveDailyAttendance = async () => {
+  // Salvataggio orario ogni ora (sistema ibrido)
+  const saveHourlyAttendance = async () => {
     try {
-      if (!todaySchedule || !todaySchedule.is_working_day) {
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.day_of_week === new Date().getDay() && 
+        schedule.is_working_day
+      );
+      
+      if (!todaySchedule || !currentHours.actualHours || currentHours.actualHours <= 0) {
         return;
       }
 
       const now = new Date();
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const dayOfWeek = now.getDay();
+      const lastSave = localCache.lastHourlySave;
       
-      // Calcola le ore effettive per oggi
-      const { start_time, end_time, break_duration } = todaySchedule;
-      const [startHour, startMin] = start_time.split(':').map(Number);
-      const [endHour, endMin] = end_time.split(':').map(Number);
-      const breakDuration = break_duration || 60;
-      
-      // Calcola ore attese totali
-      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60;
-      
-      let actualHours = 0;
-      
-      // Calcola ore effettive basandosi sull'ora corrente
-      if (currentHour >= startHour && currentHour <= endHour) {
-        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-        if (currentHour >= 13) {
-          actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
-        } else {
-          actualHours = workedMinutes / 60;
-        }
-      } else if (currentHour > endHour) {
-        actualHours = expectedHours;
+      // Evita salvataggi duplicati nella stessa ora
+      if (lastSave && (now.getTime() - lastSave.getTime()) < 3600000) {
+        console.log('⏰ Hourly save skipped - already saved this hour');
+        return;
       }
+
+      console.log('💾 Saving hourly attendance:', currentHours.actualHours, 'hours');
+
+      const response = await apiCall('/api/attendance/save-hourly', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
+          actualHours: currentHours.actualHours,
+          expectedHours: currentHours.expectedHours,
+          balanceHours: currentHours.balanceHours,
+          notes: `Salvataggio orario alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Hourly attendance saved successfully');
+        setLocalCache(prev => ({
+          ...prev,
+          lastHourlySave: now,
+          pendingSave: false
+        }));
+      } else {
+        console.error('❌ Hourly save failed:', response.status, await response.json());
+        setLocalCache(prev => ({ ...prev, pendingSave: true }));
+      }
+    } catch (error) {
+      console.error('❌ Hourly save error:', error);
+      setLocalCache(prev => ({ ...prev, pendingSave: true }));
+    }
+  };
+
+  // Salvataggio giornaliero finale
+  const saveDailyAttendance = async () => {
+    try {
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.day_of_week === new Date().getDay() && 
+        schedule.is_working_day
+      );
       
-      const balanceHours = actualHours - expectedHours;
+      if (!todaySchedule) {
+        return;
+      }
+
+      const now = new Date();
       
+      console.log('💾 Saving final daily attendance:', currentHours.actualHours, 'hours');
+
       const response = await apiCall('/api/attendance/save-daily', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: new Date().toISOString().split('T')[0],
-          actualHours: actualHours,
-          expectedHours: expectedHours,
-          balanceHours: balanceHours,
+          actualHours: currentHours.actualHours,
+          expectedHours: currentHours.expectedHours,
+          balanceHours: currentHours.balanceHours,
           notes: `Presenza salvata automaticamente alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
         })
       });
 
       if (response.ok) {
-        console.log('✅ Daily attendance saved successfully');
+        console.log('✅ Final daily attendance saved successfully');
         // Ricarica i dati dopo il salvataggio
         await Promise.all([
           fetchAttendance(),
           fetchHoursBalance()
         ]);
       } else {
-        console.error('❌ Save failed:', response.status, await response.json());
+        console.error('❌ Final save failed:', response.status, await response.json());
       }
     } catch (error) {
-      console.error('❌ Save error:', error);
+      console.error('❌ Final save error:', error);
     }
   };
 
