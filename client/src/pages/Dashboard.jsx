@@ -65,6 +65,16 @@ const Dashboard = () => {
           }
         }, 1000);
         
+        // Timer per ricaricare i dati di attendance ogni 30 secondi
+        if (user?.role === 'employee') {
+          const attendanceTimer = setInterval(() => {
+            console.log('🔄 Refreshing attendance data...');
+            fetchAttendanceData();
+          }, 30000); // Ogni 30 secondi
+          
+          return () => clearInterval(attendanceTimer);
+        }
+        
         // Fetch weekly attendance data
         const weeklyResponse = await apiCall('/api/dashboard/attendance');
         if (weeklyResponse.ok) {
@@ -107,12 +117,13 @@ const Dashboard = () => {
       return () => clearInterval(interval);
     }
     
-    // Aggiornamento KPI ogni 15 secondi per utenti
+    // Aggiornamento KPI ogni 5 secondi per utenti
     if (user?.role === 'employee') {
       const kpiInterval = setInterval(() => {
-        console.log('🔄 Updating user KPIs...');
+        console.log('🔄 Force updating user KPIs...');
+        // Forza il ricalcolo anche se i dati non sono cambiati
         calculateUserKPIs();
-      }, 15000); // Ogni 15 secondi
+      }, 5000); // Ogni 5 secondi
       
       return () => clearInterval(kpiInterval);
     }

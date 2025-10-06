@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye } from 'lucide-react';
-import AttendanceDetails from '../components/AttendanceDetails';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -371,11 +370,22 @@ const Attendance = () => {
   };
 
   const handleViewAttendanceDetails = (record) => {
-    setSelectedAttendanceDetails({
-      userId: user.id,
-      date: record.date,
-      employeeName: `${user.first_name} ${user.last_name}`
-    });
+    // Usa i dati real-time invece dell'endpoint API
+    const realTimeData = {
+      attendance: record,
+      schedule: workSchedules.find(s => s.day_of_week === new Date(record.date).getDay()),
+      summary: {
+        date: record.date,
+        employee: `${user.first_name} ${user.last_name}`,
+        expectedHours: record.expected_hours || 8,
+        actualHours: currentHours?.actualHours || record.actual_hours || 0,
+        balanceHours: currentHours?.balanceHours || record.balance_hours || 0,
+        status: (currentHours?.actualHours || record.actual_hours || 0) > 0 ? 'Presente' : 'Assente',
+        notes: `Aggiornato alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - Sistema real-time`
+      }
+    };
+    
+    setSelectedAttendanceDetails(realTimeData);
     setShowAttendanceDetails(true);
   };
 
@@ -677,14 +687,117 @@ const Attendance = () => {
 
         {/* Modal Dettagli Presenze */}
         {showAttendanceDetails && selectedAttendanceDetails && (
-          <AttendanceDetails
-            userId={selectedAttendanceDetails.userId}
-            date={selectedAttendanceDetails.date}
-            onClose={() => {
-              setShowAttendanceDetails(false);
-              setSelectedAttendanceDetails(null);
-            }}
-          />
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">
+                  Dettagli Presenze - {new Date(selectedAttendanceDetails.summary.date).toLocaleDateString('it-IT')}
+                </h2>
+                <button
+                  onClick={() => {
+                    setShowAttendanceDetails(false);
+                    setSelectedAttendanceDetails(null);
+                  }}
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <XCircle className="h-6 w-6" />
+                </button>
+              </div>
+              
+              {selectedAttendanceDetails.summary ? (
+                <div className="space-y-4">
+                  {/* Riepilogo principale */}
+                  <div className="bg-slate-700 rounded-lg p-6 border border-slate-600">
+                    <h3 className="text-xl font-semibold text-white mb-4">Riepilogo Giornata</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="text-center">
+                        <p className="text-sm text-slate-400">Dipendente</p>
+                        <p className="text-lg font-bold text-white">
+                          {selectedAttendanceDetails.summary.employee}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-400">Ore Attese</p>
+                        <p className="text-lg font-bold text-blue-400">
+                          {selectedAttendanceDetails.summary.expectedHours}h
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-400">Ore Effettive</p>
+                        <p className="text-lg font-bold text-green-400">
+                          {selectedAttendanceDetails.summary.actualHours}h
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-slate-400">Saldo Ore</p>
+                        <p className={`text-lg font-bold ${selectedAttendanceDetails.summary.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {selectedAttendanceDetails.summary.balanceHours >= 0 ? '+' : ''}{selectedAttendanceDetails.summary.balanceHours}h
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t border-slate-600 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm text-slate-400">Stato:</span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            selectedAttendanceDetails.summary.status === 'Presente' 
+                              ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                              : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                          }`}>
+                            {selectedAttendanceDetails.summary.status}
+                          </span>
+                        </div>
+                        <div className="text-sm text-slate-400">
+                          Data: {new Date(selectedAttendanceDetails.summary.date).toLocaleDateString('it-IT')}
+                        </div>
+                      </div>
+                      
+                      {selectedAttendanceDetails.summary.notes && (
+                        <div className="mt-3 p-3 bg-slate-800 rounded border border-slate-600">
+                          <p className="text-sm text-slate-300">
+                            <strong>Note:</strong> {selectedAttendanceDetails.summary.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Orario di lavoro */}
+                  {selectedAttendanceDetails.schedule && (
+                    <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+                      <h3 className="text-lg font-semibold text-white mb-3">Orario di Lavoro</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-sm text-slate-400">Inizio</p>
+                          <p className="text-lg font-bold text-white">
+                            {selectedAttendanceDetails.schedule.start_time}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-slate-400">Fine</p>
+                          <p className="text-lg font-bold text-white">
+                            {selectedAttendanceDetails.schedule.end_time}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-slate-400">Pausa</p>
+                          <p className="text-lg font-bold text-white">
+                            {selectedAttendanceDetails.schedule.break_duration} min
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-400 text-lg">Nessun dettaglio disponibile per questa data</p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
