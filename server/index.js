@@ -2477,7 +2477,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           title: `Nuova richiesta ${typeLabels[type] || type}`,
           message: `${req.user.first_name} ${req.user.last_name} ha richiesto ${typeLabels[type] || type} dal ${startDate} al ${endDate}`,
           type: 'request',
-          request_id: newRequest[0].id,
+          request_id: newRequest.id,
           request_type: type,
           is_read: false,
           created_at: new Date().toISOString()
@@ -2491,7 +2491,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         try {
           const userName = `${req.user.first_name} ${req.user.last_name}`;
           const requestType = typeLabels[type] || type;
-          const requestId = newRequest[0].id;
+          const requestId = newRequest.id;
           
           // Verifica che l'utente abbia un'email reale
           if (isRealEmail(req.user.email)) {
