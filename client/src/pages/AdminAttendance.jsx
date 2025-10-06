@@ -3,7 +3,6 @@ import { useAuthStore } from '../utils/store';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AttendanceDetails from '../components/AttendanceDetails';
 import { 
-  Clock, 
   Users, 
   AlertCircle, 
   RefreshCw, 
@@ -18,7 +17,6 @@ import {
   Eye,
   CheckCircle,
   XCircle,
-  Clock3,
   User,
   CalendarDays,
   BarChart3,
@@ -74,9 +72,7 @@ const AdminAttendance = () => {
   const [stats, setStats] = useState({
     totalEmployees: 0,
     presentToday: 0,
-    absentToday: 0,
-    totalHours: 0,
-    averageHours: 0
+    absentToday: 0
   });
 
   // Real-time updates
@@ -189,26 +185,57 @@ const AdminAttendance = () => {
       
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
-        // Calcola presente/assente basato su actual_hours invece di status
-        presentToday = attendanceData.filter(record => (record.actual_hours || 0) > 0).length;
-        absentToday = attendanceData.filter(record => (record.actual_hours || 0) === 0).length;
-        totalHours = attendanceData.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
         
-        console.log('📊 Admin KPI calculation:', {
+        // Calcola presente/assente basato sull'orario di lavoro corrente
+        const now = new Date();
+        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+        const dayOfWeek = now.getDay();
+        
+        // Per ogni dipendente, controlla se dovrebbe essere presente ora
+        let currentlyPresent = 0;
+        let currentlyAbsent = 0;
+        
+        for (const record of attendanceData) {
+          // Fetch work schedule per questo dipendente
+          const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
+          if (scheduleResponse.ok) {
+            const scheduleData = await scheduleResponse.json();
+            const schedule = scheduleData.find(s => s.is_working_day);
+            
+            if (schedule) {
+              const { start_time, end_time } = schedule;
+              // Se è nell'orario di lavoro, è presente
+              if (currentTime >= start_time && currentTime <= end_time) {
+                currentlyPresent++;
+              } else {
+                currentlyAbsent++;
+              }
+            } else {
+              // Nessun orario di lavoro per oggi = assente
+              currentlyAbsent++;
+            }
+          } else {
+            // Errore nel fetch schedule = assente
+            currentlyAbsent++;
+          }
+        }
+        
+        presentToday = currentlyPresent;
+        absentToday = currentlyAbsent;
+        
+        console.log('📊 Admin KPI calculation (real-time):', {
           totalEmployees,
           presentToday,
           absentToday,
-          totalHours,
-          attendanceData: attendanceData.length
+          currentTime,
+          dayOfWeek
         });
       }
 
       setStats({
         totalEmployees,
         presentToday,
-        absentToday,
-        totalHours,
-        averageHours: totalEmployees > 0 ? totalHours / totalEmployees : 0
+        absentToday
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -326,32 +353,6 @@ const AdminAttendance = () => {
     }
   };
 
-  const handleGenerateTodayAttendance = async () => {
-    try {
-      const response = await apiCall('/api/attendance/generate-today', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        alert(data.message || 'Presenze per oggi generate con successo!');
-        fetchAttendanceData();
-        fetchStats();
-        if (activeTab === 'history') {
-          fetchAttendanceHistory();
-        }
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Errore durante la generazione');
-      }
-    } catch (error) {
-      console.error('Error generating today attendance:', error);
-      alert('Errore durante la generazione');
-    }
-  };
 
   const handleGenerateAttendance = async () => {
     try {
@@ -393,10 +394,27 @@ const AdminAttendance = () => {
   };
 
   const filteredData = (activeTab === 'today' ? attendance : attendanceHistory).filter(record => {
-    if (!searchTerm) return true;
-    const employeeName = record.users ? 
-      `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
-    return employeeName.includes(searchTerm.toLowerCase());
+    // Filtro per ricerca
+    if (searchTerm) {
+      const employeeName = record.users ? 
+        `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+      if (!employeeName.includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Se siamo nella tab "Oggi", filtra solo chi è attualmente presente
+    if (activeTab === 'today') {
+      const now = new Date();
+      const currentTime = now.toTimeString().substring(0, 5); // HH:MM
+      const dayOfWeek = now.getDay();
+      
+      // Per ora, mostra tutti i record di oggi
+      // TODO: Implementare filtro basato su orario di lavoro
+      return true;
+    }
+    
+    return true;
   });
 
   if (loading) {
@@ -427,37 +445,11 @@ const AdminAttendance = () => {
             </div>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={handleGenerateTodayAttendance}
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Clock className="h-4 w-4" />
-                Genera Oggi
-              </button>
-              <button
                 onClick={() => setShowGenerateModal(true)}
                 className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 Genera Presenze
-              </button>
-              <button
-                onClick={() => {
-                  fetchAttendanceData();
-                  fetchStats();
-                }}
-                className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Aggiorna
-              </button>
-              <button
-                onClick={() => {
-                  console.log('🔄 Manual KPI update triggered');
-                  fetchStats();
-                }}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                🔄 KPI
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -471,7 +463,7 @@ const AdminAttendance = () => {
         </div>
 
         {/* Statistiche */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -492,6 +484,7 @@ const AdminAttendance = () => {
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Presenti Oggi</p>
                 <p className="text-2xl font-bold text-white">{stats.presentToday}</p>
+                <p className="text-xs text-slate-500 mt-1">Reset alle 9:00</p>
               </div>
             </div>
           </div>
@@ -504,18 +497,7 @@ const AdminAttendance = () => {
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Assenti Oggi</p>
                 <p className="text-2xl font-bold text-white">{stats.absentToday}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock3 className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-slate-400 text-sm">Ore Totali</p>
-                <p className="text-2xl font-bold text-white">{formatHours(stats.totalHours)}</p>
+                <p className="text-xs text-slate-500 mt-1">Reset alle 9:00</p>
               </div>
             </div>
           </div>
@@ -627,7 +609,7 @@ const AdminAttendance = () => {
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-700">
             <h2 className="text-xl font-semibold text-white flex items-center">
-              <Clock className="h-5 w-5 mr-2" />
+              <Calendar className="h-5 w-5 mr-2" />
               {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
             </h2>
           </div>
