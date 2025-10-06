@@ -247,24 +247,34 @@ const AdminAttendance = () => {
         // Calcola minuti dall'inizio
         const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
         
-        // Calcola l'orario di pausa (metà giornata)
-        const halfDayMinutes = workMinutes / 2;
-        const breakStartMinutes = halfDayMinutes;
-        const breakEndMinutes = halfDayMinutes + breakDuration;
+        // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
+        const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
         
-        if (minutesFromStart < breakStartMinutes) {
-          // Prima della pausa
-          totalMinutesWorked = minutesFromStart;
-          status = 'working';
-        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-          // Durante la pausa
-          totalMinutesWorked = breakStartMinutes;
-          status = 'on_break';
+        if (hasLunchBreak) {
+          // GIORNATA COMPLETA: ha pausa pranzo (es. 9:00-18:00)
+          const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // Fine mattina
+          const breakStartMinutes = morningEndMinutes;
+          const breakEndMinutes = morningEndMinutes + breakDuration;
+          
+          if (minutesFromStart < breakStartMinutes) {
+            // Prima della pausa pranzo
+            totalMinutesWorked = minutesFromStart;
+            status = 'working';
+          } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+            // Durante la pausa pranzo
+            totalMinutesWorked = breakStartMinutes;
+            status = 'on_break';
+          } else {
+            // Dopo la pausa pranzo
+            const morningMinutes = breakStartMinutes;
+            const afternoonMinutes = minutesFromStart - breakEndMinutes;
+            totalMinutesWorked = morningMinutes + afternoonMinutes;
+            status = 'working';
+          }
         } else {
-          // Dopo la pausa
-          const morningMinutes = breakStartMinutes;
-          const afternoonMinutes = minutesFromStart - breakEndMinutes;
-          totalMinutesWorked = morningMinutes + afternoonMinutes;
+          // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
+          totalMinutesWorked = minutesFromStart;
           status = 'working';
         }
         
