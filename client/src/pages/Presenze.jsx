@@ -28,22 +28,25 @@ const Attendance = () => {
   });
 
   useEffect(() => {
-    fetchAttendance();
-    fetchHoursBalance();
-    fetchWorkSchedules();
-    fetchCurrentHours();
+    // PRIMA aggiorna le ore nel database, POI carica i dati
+    const initializeData = async () => {
+      console.log('🔄 Initializing with real-time calculation...');
+      
+      // 1. Aggiorna le ore nel database con calcolo real-time
+      await updateCurrentAttendance();
+      
+      // 2. Poi carica tutti i dati aggiornati
+      await Promise.all([
+        fetchAttendance(),
+        fetchHoursBalance(),
+        fetchWorkSchedules(),
+        fetchCurrentHours()
+      ]);
+      
+      console.log('✅ All data loaded with real-time calculation');
+    };
     
-    // Forza aggiornamento immediato delle ore correnti
-    setTimeout(() => {
-      console.log('🔄 Forcing immediate update...');
-      updateCurrentAttendance();
-    }, 1000);
-    
-    // Forza aggiornamento anche dopo 5 secondi
-    setTimeout(() => {
-      console.log('🔄 Second forced update...');
-      updateCurrentAttendance();
-    }, 5000);
+    initializeData();
     
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -61,9 +64,14 @@ const Attendance = () => {
     }, 300000); // 5 minuti
     
     // Aggiorna quando la finestra torna in focus (navigazione)
-    const handleFocus = () => {
-      console.log('🔄 Window focused - updating attendance');
-      updateCurrentAttendance();
+    const handleFocus = async () => {
+      console.log('🔄 Window focused - recalculating attendance');
+      await updateCurrentAttendance();
+      await Promise.all([
+        fetchAttendance(),
+        fetchHoursBalance(),
+        fetchCurrentHours()
+      ]);
     };
     
     window.addEventListener('focus', handleFocus);
@@ -165,13 +173,17 @@ const Attendance = () => {
 
   const fetchCurrentHours = async () => {
     try {
+      console.log('🔄 Fetching current hours with real-time calculation...');
       const response = await apiCall('/api/attendance/current-hours');
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Current hours fetched:', data);
         setCurrentHours(data);
+      } else {
+        console.error('❌ Failed to fetch current hours:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching current hours:', error);
+      console.error('❌ Error fetching current hours:', error);
     }
   };
 
