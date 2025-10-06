@@ -7,6 +7,7 @@ const Attendance = () => {
   const { user, apiCall } = useAuthStore();
   const [attendance, setAttendance] = useState([]);
   const [hoursBalance, setHoursBalance] = useState({
+    total_worked: 0,
     total_balance: 0,
     overtime_hours: 0,
     deficit_hours: 0,
@@ -43,9 +44,16 @@ const Attendance = () => {
       fetchCurrentHours();
     }, 60000);
     
+    // Aggiorna tutti i dati ogni 5 minuti per evitare problemi di refresh
+    const refreshTimer = setInterval(() => {
+      fetchAttendance();
+      fetchHoursBalance();
+    }, 300000); // 5 minuti
+    
     return () => {
       clearInterval(timer);
       clearInterval(updateTimer);
+      clearInterval(refreshTimer);
     };
   }, []);
 
@@ -250,17 +258,17 @@ const Attendance = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Monte Ore Mensile */}
+          {/* TOTALE LAVORATO Mensile */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Monte Ore Mensile</p>
-                <p className={`text-2xl font-bold ${getBalanceColor(hoursBalance.total_balance)}`}>
-                  {formatHours(hoursBalance.total_balance)}
+                <p className="text-slate-400 text-sm">TOTALE LAVORATO Mensile</p>
+                <p className="text-2xl font-bold text-blue-400">
+                  {formatHours(hoursBalance.total_worked)}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${getBalanceColor(hoursBalance.total_balance)}`}>
-                {getBalanceIcon(hoursBalance.total_balance)}
+              <div className="p-3 rounded-full text-blue-400">
+                <Clock className="h-4 w-4" />
               </div>
             </div>
           </div>
@@ -280,11 +288,11 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* Ore Deficit */}
+          {/* ORE MANCANTI Mensili */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Deficit</p>
+                <p className="text-slate-400 text-sm">ORE MANCANTI Mensili</p>
                 <p className="text-2xl font-bold text-red-400">
                   {formatHours(hoursBalance.deficit_hours)}
                 </p>

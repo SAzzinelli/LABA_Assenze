@@ -902,7 +902,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    // Calcola le statistiche
+    // Calcola le statistiche CORRETTE
     const totalActualHours = attendance.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
     const totalExpectedHours = attendance.reduce((sum, record) => sum + (record.expected_hours || 8), 0);
     const totalBalance = totalActualHours - totalExpectedHours;
@@ -912,6 +912,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return balance > 0 ? sum + balance : sum;
     }, 0);
     
+    // Deficit = ore mancanti (sempre positivo per chiarezza)
     const deficitHours = attendance.reduce((sum, record) => {
       const balance = record.balance_hours || 0;
       return balance < 0 ? sum + Math.abs(balance) : sum;
@@ -932,9 +933,10 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     });
 
     res.json({
-      total_balance: totalBalance,
+      total_worked: totalActualHours, // TOTALE LAVORATO (sempre positivo)
+      total_balance: totalBalance, // Saldo per calcoli interni
       overtime_hours: overtimeHours,
-      deficit_hours: deficitHours,
+      deficit_hours: deficitHours, // ORE MANCANTI mensili
       working_days: workingDays,
       absent_days: absentDays
     });
@@ -1819,15 +1821,12 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       return res.status(400).json({ error: 'Nessun orario di lavoro per oggi' });
     }
 
-    const { start_time, end_time, break_duration } = schedule;
-    console.log(`⏰ Schedule: ${start_time} - ${end_time}, break: ${break_duration}min`);
-    
-    // Calcola ore attese
+    // Calcola ore attese CORRETTE: 9-18 con 1h pausa = 8h
     const startTime = new Date(`2000-01-01T${start_time}`);
     const endTime = new Date(`2000-01-01T${end_time}`);
-    const totalMinutes = (endTime - startTime) / (1000 * 60);
-    const workMinutes = totalMinutes - (break_duration || 60);
-    const expectedHours = workMinutes / 60;
+    const totalMinutes = (endTime - startTime) / (1000 * 60); // Minuti totali (9 ore = 540 min)
+    const workMinutes = totalMinutes - (break_duration || 60); // Sottrai pausa (540 - 60 = 480 min)
+    const expectedHours = workMinutes / 60; // Converti in ore (480/60 = 8h)
 
     // Calcola ore effettive basate sull'orario corrente
     let actualHours = 0;
