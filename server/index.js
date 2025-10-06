@@ -257,7 +257,8 @@ app.post('/api/auth/register', async (req, res) => {
       hireDate,
       workplace,
       contractType,
-      has104 = false
+      has104 = false,
+      workSchedules = null
     } = req.body;
     
     // Validazione email dominio
@@ -343,30 +344,46 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('Employee creation error:', employeeError);
     }
 
-    // Crea orari di lavoro di default per il nuovo dipendente
-    const defaultWorkSchedules = [
-      { day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Lunedì
-      { day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Martedì
-      { day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Mercoledì
-      { day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Giovedì
-      { day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Venerdì
-      { day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 }, // Sabato
-      { day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 }  // Domenica
-    ];
-
-    const schedulesWithUserId = defaultWorkSchedules.map(schedule => ({
-      ...schedule,
-      user_id: newUser.id
-    }));
+    // Crea orari di lavoro per il nuovo dipendente
+    let workSchedulesToCreate = [];
+    
+    if (workSchedules) {
+      // Usa gli orari forniti dall'utente
+      const dayMapping = {
+        monday: 1, tuesday: 2, wednesday: 3, thursday: 4, 
+        friday: 5, saturday: 6, sunday: 0
+      };
+      
+      workSchedulesToCreate = Object.entries(workSchedules).map(([day, schedule]) => ({
+        user_id: newUser.id,
+        day_of_week: dayMapping[day],
+        is_working_day: schedule.isWorking,
+        work_type: 'full_day',
+        start_time: schedule.isWorking ? schedule.startTime : null,
+        end_time: schedule.isWorking ? schedule.endTime : null,
+        break_duration: schedule.isWorking ? schedule.breakDuration : 0
+      }));
+    } else {
+      // Fallback: orari di default se non forniti
+      workSchedulesToCreate = [
+        { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 },
+        { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 }
+      ];
+    }
 
     const { error: schedulesError } = await supabase
       .from('work_schedules')
-      .insert(schedulesWithUserId);
+      .insert(workSchedulesToCreate);
 
     if (schedulesError) {
       console.error('Work schedules creation error:', schedulesError);
     } else {
-      console.log(`✅ Orari di lavoro di default creati per ${newUser.email}`);
+      console.log(`✅ Orari di lavoro creati per ${newUser.email} (${workSchedules ? 'personalizzati' : 'default'})`);
     }
 
     // Invia notifica agli admin per nuovo dipendente
