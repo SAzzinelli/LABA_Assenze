@@ -49,6 +49,9 @@ const Dashboard = () => {
         // Fetch recent requests for admin
         await fetchRecentRequests();
         
+        // Fetch user KPIs for employees
+        await fetchUserKPIs();
+        
         // Fetch weekly attendance data
         const weeklyResponse = await apiCall('/api/dashboard/attendance');
         if (weeklyResponse.ok) {
@@ -138,6 +141,47 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUserKPIs = async () => {
+    try {
+      if (user?.role === 'employee') {
+        // Fetch weekly hours
+        const weeklyResponse = await apiCall('/api/dashboard/attendance');
+        if (weeklyResponse.ok) {
+          const weeklyData = await weeklyResponse.json();
+          const totalWeeklyHours = weeklyData.reduce((sum, day) => sum + (day.presenze || 0) * 8, 0);
+          setUserKPIs(prev => ({
+            ...prev,
+            weeklyHours: formatHours(totalWeeklyHours)
+          }));
+        }
+
+        // Fetch monthly balance
+        const balanceResponse = await apiCall(`/api/attendance/hours-balance?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          setUserKPIs(prev => ({
+            ...prev,
+            overtimeBalance: formatOvertime(balanceData.total_balance || 0),
+            remainingPermissions: `${balanceData.overtime_hours || 0}h`
+          }));
+        }
+
+        // Fetch monthly presences
+        const attendanceResponse = await apiCall(`/api/attendance?month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`);
+        if (attendanceResponse.ok) {
+          const attendanceData = await attendanceResponse.json();
+          const presentDays = attendanceData.filter(record => record.actual_hours > 0).length;
+          setUserKPIs(prev => ({
+            ...prev,
+            monthlyPresences: `${presentDays}/20`
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user KPIs:', error);
+    }
+  };
+
   const formatHours = (hours) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
@@ -167,9 +211,9 @@ const Dashboard = () => {
     },
     {
       title: 'Saldo Ore',
-      value: stats.monthlyBalance ? `${stats.monthlyBalance > 0 ? '+' : ''}${stats.monthlyBalance}h` : '0h',
+      value: userKPIs.overtimeBalance,
       icon: Activity,
-      color: stats.monthlyBalance > 0 ? 'green' : stats.monthlyBalance < 0 ? 'red' : 'blue',
+      color: userKPIs.overtimeBalance.startsWith('+') ? 'green' : userKPIs.overtimeBalance.startsWith('-') ? 'red' : 'blue',
       change: '+0h 0m',
       changeType: 'positive',
       subtitle: 'Monte ore mensile'
