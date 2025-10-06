@@ -1787,8 +1787,12 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     const now = new Date();
     const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
     
+    console.log(`🔄 Update current attendance for user ${userId}, today: ${today}, current time: ${currentTime}`);
+    
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();
+    console.log(`📅 Day of week: ${dayOfWeek}`);
+    
     const { data: schedule, error: scheduleError } = await supabase
       .from('work_schedules')
       .select('*')
@@ -1797,11 +1801,15 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       .eq('is_working_day', true)
       .single();
 
+    console.log(`📋 Schedule query result:`, { schedule, error: scheduleError });
+
     if (scheduleError || !schedule) {
+      console.log(`❌ No working schedule found for user ${userId} on day ${dayOfWeek}`);
       return res.status(400).json({ error: 'Nessun orario di lavoro per oggi' });
     }
 
     const { start_time, end_time, break_duration } = schedule;
+    console.log(`⏰ Schedule: ${start_time} - ${end_time}, break: ${break_duration}min`);
     
     // Calcola ore attese
     const startTime = new Date(`2000-01-01T${start_time}`);
@@ -1848,6 +1856,8 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
 
     // Calcola saldo ore
     const balanceHours = actualHours - expectedHours;
+    
+    console.log(`📊 Calculated: expected=${expectedHours}h, actual=${actualHours}h, balance=${balanceHours}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -1872,6 +1882,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         console.error('Update attendance error:', updateError);
         return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
       }
+      console.log(`✅ Updated existing attendance record`);
     } else {
       // Crea nuova presenza
       const { error: insertError } = await supabase
@@ -1889,6 +1900,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         console.error('Insert attendance error:', insertError);
         return res.status(500).json({ error: 'Errore nella creazione della presenza' });
       }
+      console.log(`✅ Created new attendance record`);
     }
 
     res.json({

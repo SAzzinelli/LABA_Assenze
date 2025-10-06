@@ -18,6 +18,7 @@ import {
   MapPin,
   FileText
 } from 'lucide-react';
+import HourPicker from '../components/HourPicker';
 import MonteOreCalculator from '../components/MonteOreCalculator';
 
 const Profile = () => {
@@ -66,6 +67,18 @@ const Profile = () => {
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
 
   const [selectedDay, setSelectedDay] = useState('monday');
+
+  // Helper functions for time conversion
+  const parseTimeRange = (timeRange) => {
+    if (!timeRange || !timeRange.includes('-')) return { start: '', end: '' };
+    const [start, end] = timeRange.split('-');
+    return { start: start.trim(), end: end.trim() };
+  };
+
+  const formatTimeRange = (start, end) => {
+    if (!start || !end) return '';
+    return `${start}-${end}`;
+  };
 
   // Carica dati utente dal database
   useEffect(() => {
@@ -761,13 +774,26 @@ const Profile = () => {
                     <Sun className="h-4 w-4 mr-2 text-yellow-400" />
                     Orario Mattina
                   </label>
-                  <input
-                    type="text"
-                    value={workSchedule[selectedDay].morning}
-                    onChange={(e) => handleWorkScheduleChange('morning', e.target.value)}
-                    placeholder="09:00-13:00"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <HourPicker
+                      label="Inizio"
+                      value={parseTimeRange(workSchedule[selectedDay].morning).start}
+                      onChange={(time) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].morning);
+                        handleWorkScheduleChange('morning', formatTimeRange(time, end));
+                      }}
+                      placeholder="09:00"
+                    />
+                    <HourPicker
+                      label="Fine"
+                      value={parseTimeRange(workSchedule[selectedDay].morning).end}
+                      onChange={(time) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].morning);
+                        handleWorkScheduleChange('morning', formatTimeRange(start, time));
+                      }}
+                      placeholder="13:00"
+                    />
+                  </div>
                 </div>
               )}
               
@@ -777,13 +803,26 @@ const Profile = () => {
                     <Coffee className="h-4 w-4 mr-2 text-amber-400" />
                     Pausa Pranzo
                   </label>
-                  <input
-                    type="text"
-                    value={workSchedule[selectedDay].lunchBreak}
-                    onChange={(e) => handleWorkScheduleChange('lunchBreak', e.target.value)}
-                    placeholder="13:00-14:00"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <HourPicker
+                      label="Inizio"
+                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start}
+                      onChange={(time) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                        handleWorkScheduleChange('lunchBreak', formatTimeRange(time, end));
+                      }}
+                      placeholder="13:00"
+                    />
+                    <HourPicker
+                      label="Fine"
+                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end}
+                      onChange={(time) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                        handleWorkScheduleChange('lunchBreak', formatTimeRange(start, time));
+                      }}
+                      placeholder="14:00"
+                    />
+                  </div>
                 </div>
               )}
               
@@ -793,13 +832,26 @@ const Profile = () => {
                     <Moon className="h-4 w-4 mr-2 text-blue-400" />
                     Orario Pomeriggio
                   </label>
-                  <input
-                    type="text"
-                    value={workSchedule[selectedDay].afternoon}
-                    onChange={(e) => handleWorkScheduleChange('afternoon', e.target.value)}
-                    placeholder="14:00-18:00"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <HourPicker
+                      label="Inizio"
+                      value={parseTimeRange(workSchedule[selectedDay].afternoon).start}
+                      onChange={(time) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                        handleWorkScheduleChange('afternoon', formatTimeRange(time, end));
+                      }}
+                      placeholder="14:00"
+                    />
+                    <HourPicker
+                      label="Fine"
+                      value={parseTimeRange(workSchedule[selectedDay].afternoon).end}
+                      onChange={(time) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                        handleWorkScheduleChange('afternoon', formatTimeRange(start, time));
+                      }}
+                      placeholder="18:00"
+                    />
+                  </div>
                 </div>
               )}
             </div>
