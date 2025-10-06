@@ -158,28 +158,16 @@ class AttendanceScheduler {
       
       console.log(`   📊 Ore calcolate: ${workHours}h per ${employee.first_name}`);
 
-      // Crea la presenza automatica
-      const { data: newAttendance, error: attendanceError } = await supabase
-        .from('attendance')
-        .insert({
-          user_id: employee.id,
-          date: date,
-          status: 'present',
-          expected_hours: workHours,
-          actual_hours: workHours,
-          balance_hours: 0,
-          clock_in: `${date} ${start_time}:00`,
-          clock_out: `${date} ${end_time}:00`,
-          is_absent: false,
-          is_overtime: false,
-          is_early_departure: false,
-          is_late_arrival: false,
-          notes: `Presenza automatica per orario ${start_time}-${end_time} (${work_type})`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+        // Crea la presenza automatica
+        const { data: newAttendance, error: attendanceError } = await supabase
+          .from('attendance')
+          .insert({
+            user_id: employee.id,
+            date: date,
+            notes: `Presenza automatica per orario ${start_time}-${end_time} (${work_type})`
+          })
+          .select()
+          .single();
 
       if (attendanceError) {
         console.error(`❌ Errore creazione presenza per ${employee.first_name}:`, attendanceError);

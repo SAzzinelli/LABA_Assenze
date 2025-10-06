@@ -1096,13 +1096,11 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active');
 
-    // Present today - count those who are not absent and have expected hours > 0
+    // Present today - count those who have attendance records
     const { count: presentToday } = await supabase
       .from('attendance')
       .select('*', { count: 'exact', head: true })
-      .eq('date', today)
-      .eq('is_absent', false)
-      .gt('expected_hours', 0);
+      .eq('date', today);
 
     // Pending requests
     const { count: pendingRequests } = await supabase
@@ -1167,16 +1165,10 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
       let presenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
-        .eq('date', dateStr)
-        .eq('is_absent', false)
-        .gt('expected_hours', 0);
+        .eq('date', dateStr);
       
-      // Calcola assenze: chi è marcato come assente
-      let assenzeQuery = supabase
-        .from('attendance')
-        .select('*', { count: 'exact', head: true })
-        .eq('date', dateStr)
-        .eq('is_absent', true);
+      // Calcola assenze: per ora non abbiamo un sistema di assenze
+      let assenzeQuery = { count: 0 };
       
       // Se è employee, mostra solo i propri dati
       if (req.user.role === 'employee') {
@@ -1420,19 +1412,7 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
       .insert({
         user_id: targetUserId,
         date: targetDate,
-        status: 'present',
-        expected_hours: workHours,
-        actual_hours: workHours,
-        balance_hours: 0,
-        clock_in: `${targetDate} ${start_time}:00`,
-        clock_out: `${targetDate} ${end_time}:00`,
-        is_absent: false,
-        is_overtime: false,
-        is_early_departure: false,
-        is_late_arrival: false,
-        notes: `Presenza generata manualmente per orario ${start_time}-${end_time}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        notes: `Presenza generata manualmente per orario ${start_time}-${end_time}`
       })
       .select()
       .single();
