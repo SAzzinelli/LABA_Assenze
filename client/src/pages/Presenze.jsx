@@ -28,34 +28,30 @@ const Attendance = () => {
   });
 
   useEffect(() => {
-    // Carica prima i dati esistenti, poi aggiorna se necessario
+    // Carica i dati e calcola le ore in tempo reale
     const initializeData = async () => {
-      console.log('🔄 Initializing data...');
+      console.log('🔄 Initializing with real-time calculation...');
       
-      // 1. Carica prima i dati esistenti
+      // 1. Carica i dati di base
       await Promise.all([
         fetchAttendance(),
         fetchHoursBalance(),
-        fetchWorkSchedules(),
-        fetchCurrentHours()
+        fetchWorkSchedules()
       ]);
       
-      // 2. Poi aggiorna le ore nel database (solo una volta)
-      try {
-        console.log('🔄 Updating attendance once...');
-        await updateCurrentAttendance();
-      } catch (error) {
-        console.error('❌ Update failed, but continuing with existing data:', error);
-      }
+      // 2. Calcola le ore in tempo reale lato frontend
+      calculateRealTimeHours();
       
-      console.log('✅ Data loaded');
+      console.log('✅ Data loaded with real-time calculation');
     };
     
     initializeData();
     
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+      // Ricalcola le ore ogni minuto
+      calculateRealTimeHours();
+    }, 60000); // Ogni minuto
     
     // Aggiorna le ore ogni 5 minuti nel database (meno frequente)
     const updateTimer = setInterval(() => {
@@ -69,19 +65,18 @@ const Attendance = () => {
       fetchHoursBalance();
     }, 300000); // 5 minuti
     
-    // Aggiorna quando la finestra torna in focus (navigazione) - solo se non è già in aggiornamento
+    // Aggiorna quando la finestra torna in focus (navigazione)
     const handleFocus = async () => {
-      if (updatingHours) {
-        console.log('🔄 Update already in progress, skipping...');
-        return;
-      }
+      console.log('🔄 Window focused - recalculating hours...');
       
-      console.log('🔄 Window focused - refreshing data...');
+      // Ricalcola immediatamente le ore in tempo reale
+      calculateRealTimeHours();
+      
+      // Poi aggiorna i dati dal server se possibile
       try {
         await Promise.all([
           fetchAttendance(),
-          fetchHoursBalance(),
-          fetchCurrentHours()
+          fetchHoursBalance()
         ]);
         console.log('✅ Data refreshed on focus');
       } catch (error) {
@@ -105,6 +100,13 @@ const Attendance = () => {
       calculateKPIs();
     }
   }, [attendance]);
+
+  // Ricalcola le ore real-time quando cambiano i work schedules
+  useEffect(() => {
+    if (workSchedules.length > 0) {
+      calculateRealTimeHours();
+    }
+  }, [workSchedules]);
 
   const fetchAttendance = async () => {
     try {
@@ -184,6 +186,110 @@ const Attendance = () => {
       deficit: deficit,
       workingDays: workingDays
     });
+  };
+
+  // Calcola le ore in tempo reale lato frontend
+  const calculateRealTimeHours = () => {
+    if (!workSchedules || workSchedules.length === 0) {
+      console.log('⚠️ No work schedules available for real-time calculation');
+      return;
+    }
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+    const dayOfWeek = now.getDay();
+
+    // Trova l'orario di lavoro per oggi
+    const todaySchedule = workSchedules.find(schedule => 
+      schedule.day_of_week === dayOfWeek && schedule.is_working_day
+    );
+
+    if (!todaySchedule) {
+      console.log('⚠️ No working schedule for today');
+      return;
+    }
+
+    const { start_time, end_time, break_duration } = todaySchedule;
+    console.log(`🕐 Real-time calculation: ${start_time} - ${end_time}, current: ${currentTime}`);
+
+    // Calcola ore attese (9-18 con 1h pausa = 8h)
+    const startTime = new Date(`2000-01-01T${start_time}`);
+    const endTime = new Date(`2000-01-01T${end_time}`);
+    const totalMinutes = (endTime - startTime) / (1000 * 60);
+    const workMinutes = totalMinutes - (break_duration || 60);
+    const expectedHours = workMinutes / 60;
+
+    // Calcola ore effettive in tempo reale
+    let actualHours = 0;
+    let status = 'not_started';
+    
+    if (currentTime >= start_time) {
+      if (currentTime <= end_time) {
+        // Durante l'orario di lavoro
+        const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
+        const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
+        
+        // Pausa pranzo fissa dalle 13:00 alle 14:00
+        const breakStartTime = new Date(`2000-01-01T13:00`);
+        const breakEndTime = new Date(`2000-01-01T14:00`);
+        
+        if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
+          // Durante la pausa pranzo
+          actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
+          status = 'on_break';
+        } else if (currentTimeObj > breakEndTime) {
+          // Dopo la pausa pranzo
+          const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
+          const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
+          actualHours = (morningMinutes + afternoonMinutes) / 60;
+          status = 'working';
+        } else {
+          // Prima della pausa pranzo
+          actualHours = workedMinutes / 60;
+          status = 'working';
+        }
+      } else {
+        // Dopo l'orario di lavoro
+        actualHours = expectedHours;
+        status = 'completed';
+      }
+    }
+
+    // Calcola saldo ore
+    const balanceHours = actualHours - expectedHours;
+    
+    console.log(`📊 Real-time calculation: expected=${expectedHours.toFixed(1)}h, actual=${actualHours.toFixed(1)}h, balance=${balanceHours.toFixed(1)}h, status=${status}`);
+
+    // Aggiorna lo stato con i calcoli real-time
+    setCurrentHours({
+      isWorkingDay: true,
+      schedule: {
+        start_time,
+        end_time,
+        break_duration: break_duration || 60
+      },
+      currentTime,
+      expectedHours: Math.round(expectedHours * 10) / 10,
+      actualHours: Math.round(actualHours * 10) / 10,
+      balanceHours: Math.round(balanceHours * 10) / 10,
+      status,
+      progress: Math.min((actualHours / expectedHours) * 100, 100)
+    });
+
+    // Aggiorna anche i dati di attendance per oggi se esiste
+    if (attendance.length > 0) {
+      const todayAttendance = attendance.find(record => record.date === today);
+      if (todayAttendance) {
+        // Aggiorna il record di oggi con i calcoli real-time
+        const updatedAttendance = attendance.map(record => 
+          record.date === today 
+            ? { ...record, actual_hours: actualHours, balance_hours: balanceHours }
+            : record
+        );
+        setAttendance(updatedAttendance);
+      }
+    }
   };
 
   const fetchCurrentHours = async () => {
