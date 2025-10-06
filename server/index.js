@@ -920,6 +920,17 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     const workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
     const absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
 
+    console.log(`📊 Hours balance calculation:`, {
+      totalActualHours,
+      totalExpectedHours,
+      totalBalance,
+      overtimeHours,
+      deficitHours,
+      workingDays,
+      absentDays,
+      attendanceCount: attendance.length
+    });
+
     res.json({
       total_balance: totalBalance,
       overtime_hours: overtimeHours,
