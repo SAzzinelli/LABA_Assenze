@@ -4,14 +4,14 @@ import { User, Building2, CheckCircle, ArrowLeft, ArrowRight, X, Calendar, MapPi
 const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Step 1: Informazioni Personali
+    // Step 1: Informazioni Personali (stesso ordine della registrazione)
+    firstName: '',
+    lastName: '',
+    birthDate: '',
     email: '',
     confirmEmail: '',
     password: '',
     confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    birthDate: '',
     phone: '',
     has104: false,
     
@@ -21,13 +21,25 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
     hireDate: '',
     workplace: '',
     contractType: '',
-    role: 'employee' // Nuovo campo per il ruolo
+    role: 'employee', // Nuovo campo per il ruolo
+    
+    // Step 3: Orario di Lavoro (aggiunto come nella registrazione)
+    workSchedules: {
+      monday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      tuesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      wednesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      thursday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      friday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      saturday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      sunday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60 }
+    }
   });
 
   const steps = [
     { id: 1, title: 'Informazioni Personali', icon: User },
     { id: 2, title: 'Informazioni Lavorative', icon: Building2 },
-    { id: 3, title: 'Verifica Dati', icon: CheckCircle }
+    { id: 3, title: 'Orario di Lavoro', icon: Calendar },
+    { id: 4, title: 'Verifica Dati', icon: CheckCircle }
   ];
 
   const departments = ['Amministrazione', 'Segreteria', 'Orientamento', 'Reparto IT'];
@@ -53,6 +65,19 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
     }));
   };
 
+  const handleWorkScheduleChange = (day, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      workSchedules: {
+        ...prev.workSchedules,
+        [day]: {
+          ...prev.workSchedules[day],
+          [field]: value
+        }
+      }
+    }));
+  };
+
   const validateCurrentStep = () => {
     switch (currentStep) {
       case 1:
@@ -73,6 +98,9 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                formData.workplace && 
                formData.contractType &&
                formData.role;
+      case 3:
+        // Verifica che almeno un giorno sia selezionato come lavorativo
+        return Object.values(formData.workSchedules).some(day => day.isWorking);
       default:
         return true;
     }
@@ -139,6 +167,42 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Nome *</label>
+          <input
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome *</label>
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita *</label>
+          <input
+            type="date"
+            name="birthDate"
+            value={formData.birthDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Email *</label>
           <input
             type="email"
@@ -189,35 +253,11 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Nome *</label>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Telefono *</label>
           <input
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Cognome *</label>
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita *</label>
-          <input
-            type="date"
-            name="birthDate"
-            value={formData.birthDate}
+            type="tel"
+            name="phone"
+            value={formData.phone}
             onChange={handleInputChange}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             required
@@ -386,6 +426,84 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
+        <Calendar className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-white mb-2">Orario di Lavoro</h3>
+        <p className="text-slate-400">Configura l'orario di lavoro settimanale del dipendente</p>
+      </div>
+
+      <div className="space-y-4">
+        {Object.entries(formData.workSchedules).map(([day, schedule]) => {
+          const dayNames = {
+            monday: 'Lunedì',
+            tuesday: 'Martedì', 
+            wednesday: 'Mercoledì',
+            thursday: 'Giovedì',
+            friday: 'Venerdì',
+            saturday: 'Sabato',
+            sunday: 'Domenica'
+          };
+
+          return (
+            <div key={day} className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-white">{dayNames[day]}</h4>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={schedule.isWorking}
+                    onChange={(e) => handleWorkScheduleChange(day, 'isWorking', e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 bg-slate-600 border-slate-500 rounded focus:ring-indigo-500 focus:ring-2"
+                  />
+                  <span className="text-slate-300">Giorno lavorativo</span>
+                </label>
+              </div>
+
+              {schedule.isWorking && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Ora Inizio</label>
+                    <input
+                      type="time"
+                      value={schedule.startTime}
+                      onChange={(e) => handleWorkScheduleChange(day, 'startTime', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Ora Fine</label>
+                    <input
+                      type="time"
+                      value={schedule.endTime}
+                      onChange={(e) => handleWorkScheduleChange(day, 'endTime', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Pausa Pranzo (min)</label>
+                    <select
+                      value={schedule.breakDuration}
+                      onChange={(e) => handleWorkScheduleChange(day, 'breakDuration', parseInt(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+                    >
+                      <option value={0}>Nessuna pausa</option>
+                      <option value={30}>30 minuti</option>
+                      <option value={60}>1 ora</option>
+                      <option value={90}>1 ora e 30 min</option>
+                      <option value={120}>2 ore</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
         <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Verifica Dati</h3>
         <p className="text-slate-400">Controlla i dati inseriti prima di procedere</p>
@@ -424,6 +542,42 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                 {formData.role === 'supervisor' ? 'SUPERVISORE' : 'Dipendente'}
               </span></p>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <Calendar className="h-5 w-5 mr-2 text-indigo-400" />
+            Orario di Lavoro
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Object.entries(formData.workSchedules).map(([day, schedule]) => {
+              const dayNames = {
+                monday: 'Lunedì',
+                tuesday: 'Martedì', 
+                wednesday: 'Mercoledì',
+                thursday: 'Giovedì',
+                friday: 'Venerdì',
+                saturday: 'Sabato',
+                sunday: 'Domenica'
+              };
+
+              return (
+                <div key={day} className="bg-slate-600 rounded-lg p-3">
+                  <h5 className="font-medium text-white mb-2">{dayNames[day]}</h5>
+                  {schedule.isWorking ? (
+                    <div className="text-sm text-slate-300">
+                      <p>{schedule.startTime} - {schedule.endTime}</p>
+                      {schedule.breakDuration > 0 && (
+                        <p className="text-slate-400">Pausa: {schedule.breakDuration} min</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm">Non lavorativo</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -490,6 +644,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
+          {currentStep === 4 && renderStep4()}
 
           {/* Navigation Buttons */}
           <div className="flex justify-between mt-8">

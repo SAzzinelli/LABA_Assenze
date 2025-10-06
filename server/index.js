@@ -616,7 +616,8 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       workplace, 
       contractType, 
       has104 = false,
-      role = 'employee' // Nuovo campo per il ruolo
+      role = 'employee', // Nuovo campo per il ruolo
+      workSchedules // Aggiunto per gestire l'orario di lavoro
     } = req.body;
     
     // Validazione dipartimento protetto
@@ -679,6 +680,48 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     if (employeeError) {
       console.error('Employee creation error:', employeeError);
       return res.status(500).json({ error: 'Errore nella creazione del dipendente' });
+    }
+
+    // Crea work_schedules se forniti
+    if (workSchedules) {
+      const scheduleEntries = Object.entries(workSchedules).map(([day, schedule]) => ({
+        user_id: newUser.id,
+        day_of_week: day,
+        is_working: schedule.isWorking,
+        start_time: schedule.startTime,
+        end_time: schedule.endTime,
+        break_duration: schedule.breakDuration
+      }));
+
+      const { error: scheduleError } = await supabase
+        .from('work_schedules')
+        .insert(scheduleEntries);
+
+      if (scheduleError) {
+        console.error('Work schedule creation error:', scheduleError);
+        // Non bloccare la creazione del dipendente se fallisce la creazione degli orari
+        console.log('⚠️ Dipendente creato ma orari non salvati');
+      }
+    } else {
+      // Crea orari di default se non forniti
+      const defaultSchedules = [
+        { user_id: newUser.id, day_of_week: 'monday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'tuesday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'wednesday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'thursday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'friday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'saturday', is_working: false, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+        { user_id: newUser.id, day_of_week: 'sunday', is_working: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
+      ];
+
+      const { error: defaultScheduleError } = await supabase
+        .from('work_schedules')
+        .insert(defaultSchedules);
+
+      if (defaultScheduleError) {
+        console.error('Default work schedule creation error:', defaultScheduleError);
+        console.log('⚠️ Dipendente creato ma orari di default non salvati');
+      }
     }
 
     res.status(201).json({
