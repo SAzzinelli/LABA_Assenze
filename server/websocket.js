@@ -3,8 +3,7 @@ const WebSocket = require('ws');
 class WebSocketManager {
   constructor(server) {
     this.wss = new WebSocket.Server({ 
-      server,
-      port: process.env.WS_PORT || 8080
+      server
     });
     
     this.clients = new Map(); // userId -> WebSocket

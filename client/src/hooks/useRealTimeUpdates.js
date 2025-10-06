@@ -16,8 +16,7 @@ export const useRealTimeUpdates = (callbacks = {}) => {
       try {
         // WebSocket nativi come nel repository plot
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsPort = process.env.NODE_ENV === 'production' ? '' : ':8080';
-        const wsUrl = `${protocol}//${window.location.hostname}${wsPort}`;
+        const wsUrl = `${protocol}//${window.location.host}`;
         
         console.log('🔌 Tentativo connessione WebSocket a:', wsUrl);
         socketRef.current = new WebSocket(wsUrl);
