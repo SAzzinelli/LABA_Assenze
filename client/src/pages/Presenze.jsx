@@ -419,7 +419,7 @@ const Attendance = () => {
       schedule: todaySchedule,
       summary: {
         date: record.date,
-        employee: `${user.first_name} ${user.last_name}`,
+        employee: user ? `${user.first_name} ${user.last_name}` : 'Dipendente',
         expectedHours: todaySchedule ? (() => {
           const { start_time, end_time, break_duration } = todaySchedule;
           const [startHour, startMin] = start_time.split(':').map(Number);
@@ -432,7 +432,7 @@ const Attendance = () => {
         actualHours: realTimeActualHours,
         balanceHours: realTimeBalanceHours,
         status: realTimeActualHours > 0 ? 'Presente' : 'Assente',
-        notes: `Aggiornato alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - Sistema real-time`
+        notes: ''
       }
     };
     
@@ -565,93 +565,108 @@ const Attendance = () => {
             Stato Oggi
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Orario di Lavoro */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Orario di Lavoro</h3>
-              {todaySchedule && todaySchedule.is_working_day ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Inizio:</span>
-                    <span className="font-mono">{todaySchedule.start_time}</span>
+          {(() => {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const isWorkingDay = todaySchedule && todaySchedule.is_working_day;
+            
+            if (!isWorkingDay) {
+              return (
+                <div className="text-center py-8">
+                  <div className="text-slate-400 text-lg">
+                    <p>Giorno non lavorativo</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Fine:</span>
-                    <span className="font-mono">{todaySchedule.end_time}</span>
+                </div>
+              );
+            }
+            
+            // Check if workday is concluded
+            const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
+            const isWorkdayConcluded = currentHour > endHour || (currentHour === endHour && currentMinute >= endMin);
+            
+            if (isWorkdayConcluded) {
+              return (
+                <div className="text-center py-8">
+                  <div className="text-slate-300 text-lg">
+                    <p className="mb-2">🎯 <strong>Giornata lavorativa conclusa</strong></p>
+                    <p className="text-slate-400">
+                      Controlla la cronologia di oggi per presenza e dettagli completi
+                    </p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Pausa:</span>
-                    <span className="font-mono">{todaySchedule.break_duration} min</span>
-                  </div>
-                  <div className="flex justify-between border-t border-slate-700 pt-2">
-                    <span className="text-slate-400">Ore Attese:</span>
-                    <span className="font-bold text-green-400">
-                      {formatHours(todaySchedule.expected_hours || 8)}
-                    </span>
-                  </div>
-                  {currentHours && (
+                </div>
+              );
+            }
+            
+            // Active workday - show current status
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Orario di Lavoro */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Orario di Lavoro</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Inizio:</span>
+                      <span className="font-mono">{todaySchedule.start_time.substring(0, 5)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Fine:</span>
+                      <span className="font-mono">{todaySchedule.end_time.substring(0, 5)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Pausa:</span>
+                      <span className="font-mono">{todaySchedule.break_duration} min</span>
+                    </div>
                     <div className="flex justify-between border-t border-slate-700 pt-2">
+                      <span className="text-slate-400">Ore Attese:</span>
+                      <span className="font-bold text-green-400">
+                        {formatHours(todaySchedule.expected_hours || 8)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stato Presenza */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Stato Presenza</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Stato:</span>
+                      <span className="font-semibold text-green-400">
+                        Presente
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-slate-400">Ore Correnti:</span>
                       <span className="font-bold text-blue-400">
                         {formatHours(currentHours?.actualHours || 0)}
                       </span>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-slate-400">
-                  <p>Giorno non lavorativo</p>
-                </div>
-              )}
-            </div>
-
-            {/* Stato Presenza */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Stato Presenza</h3>
-              {todayAttendance ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Stato:</span>
-                    <span className={`font-semibold ${getStatusColor(todayAttendance)}`}>
-                      {getStatusText(todayAttendance)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Ore Attese:</span>
-                    <span className="font-mono">{formatHours(todayAttendance.expected_hours)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Ore Effettive:</span>
-                    <span className="font-mono">{formatHours(todayAttendance.actual_hours)}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-slate-700 pt-2">
-                    <span className="text-slate-400">Ore Mancanti:</span>
-                    <span className={`font-bold ${getBalanceColor(todayAttendance.balance_hours)}`}>
-                      {todayAttendance.balance_hours < 0 ? formatHours(Math.abs(todayAttendance.balance_hours)) : '0h 0m'}
-                    </span>
-                  </div>
-                  {todayAttendance.balance_hours < 0 && (
-                    <div className="text-xs text-slate-400 mt-2 p-2 bg-slate-800 rounded">
-                      💡 Mancano {formatHours(Math.abs(todayAttendance.balance_hours))} per completare la giornata
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Ore Mancanti:</span>
+                      <span className={`font-bold ${(currentHours?.balanceHours || 0) < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                        {formatHours(Math.abs(currentHours?.balanceHours || 0))}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-center gap-3 pt-3">
-                    <button
-                      onClick={() => handleViewAttendanceDetails(todayAttendance)}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Visualizza Dettagli
-                    </button>
+                    {(currentHours?.balanceHours || 0) < 0 && (
+                      <div className="text-xs text-slate-400 mt-2 p-2 bg-slate-800 rounded">
+                        💡 Mancano {formatHours(Math.abs(currentHours?.balanceHours || 0))} per completare la giornata
+                      </div>
+                    )}
+                    <div className="flex justify-center gap-3 pt-3">
+                      <button
+                        onClick={() => handleViewAttendanceDetails(todayAttendance)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizza Dettagli
+                      </button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-slate-400">
-                  <p>Nessun record per oggi</p>
-                </div>
-              )}
-            </div>
-          </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Attendance History */}
@@ -670,7 +685,6 @@ const Attendance = () => {
                   <th className="text-left py-3 px-4">Ore Attese</th>
                   <th className="text-left py-3 px-4">Ore Effettive</th>
                   <th className="text-left py-3 px-4">Ore Mancanti</th>
-                  <th className="text-left py-3 px-4">Note</th>
                   <th className="text-left py-3 px-4">Azioni</th>
                 </tr>
               </thead>
@@ -695,9 +709,6 @@ const Attendance = () => {
                       <span className={`font-bold ${getBalanceColor(record.balance_hours)}`}>
                         {record.balance_hours < 0 ? formatHours(Math.abs(record.balance_hours)) : '0h 0m'}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-sm text-slate-400">
-                      {record.notes || '-'}
                     </td>
                     <td className="py-3 px-4">
                       <button
@@ -804,13 +815,6 @@ const Attendance = () => {
                         </div>
                       </div>
                       
-                      {selectedAttendanceDetails.summary.notes && (
-                        <div className="mt-3 p-3 bg-slate-800 rounded border border-slate-600">
-                          <p className="text-sm text-slate-300">
-                            <strong>Note:</strong> {selectedAttendanceDetails.summary.notes}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -822,13 +826,13 @@ const Attendance = () => {
                         <div className="text-center">
                           <p className="text-sm text-slate-400">Inizio</p>
                           <p className="text-lg font-bold text-white">
-                            {selectedAttendanceDetails.schedule.start_time}
+                            {selectedAttendanceDetails.schedule.start_time.substring(0, 5)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-sm text-slate-400">Fine</p>
                           <p className="text-lg font-bold text-white">
-                            {selectedAttendanceDetails.schedule.end_time}
+                            {selectedAttendanceDetails.schedule.end_time.substring(0, 5)}
                           </p>
                         </div>
                         <div className="text-center">
