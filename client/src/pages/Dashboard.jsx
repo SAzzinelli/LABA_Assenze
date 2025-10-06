@@ -34,6 +34,9 @@ const Dashboard = () => {
     remainingPermissions: '0h',
     monthlyPresences: '0/20'
   });
+  
+  // Dati per calcoli real-time
+  const [attendanceData, setAttendanceData] = useState([]);
 
 
   useEffect(() => {
@@ -49,14 +52,16 @@ const Dashboard = () => {
         // Fetch recent requests for admin
         await fetchRecentRequests();
         
-        // Fetch user KPIs for employees
-        await fetchUserKPIs();
+        // Fetch attendance data for employees
+        if (user?.role === 'employee') {
+          await fetchAttendanceData();
+        }
         
         // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
         setTimeout(() => {
           if (user?.role === 'employee') {
             console.log('🔄 Secondary KPI update...');
-            fetchUserKPIs();
+            calculateUserKPIs();
           }
         }, 1000);
         
@@ -106,12 +111,34 @@ const Dashboard = () => {
     if (user?.role === 'employee') {
       const kpiInterval = setInterval(() => {
         console.log('🔄 Updating user KPIs...');
-        fetchUserKPIs();
+        calculateUserKPIs();
       }, 15000); // Ogni 15 secondi
       
       return () => clearInterval(kpiInterval);
     }
   }, [user?.role]);
+
+  // Ricalcola i KPI quando cambiano i dati di attendance
+  useEffect(() => {
+    if (user?.role === 'employee' && attendanceData.length > 0) {
+      calculateUserKPIs();
+    }
+  }, [attendanceData, user?.role]);
+
+  const fetchAttendanceData = async () => {
+    try {
+      const response = await apiCall('/api/attendance');
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceData(data);
+        console.log('📊 Attendance data loaded:', data.length, 'records');
+        // Calcola i KPI immediatamente dopo aver caricato i dati
+        calculateUserKPIs();
+      }
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+    }
+  };
 
   const fetchCurrentAttendance = async () => {
     try {
@@ -159,55 +186,47 @@ const Dashboard = () => {
     }
   };
 
-  const fetchUserKPIs = async () => {
-    try {
-      if (user?.role === 'employee') {
-        // Fetch weekly hours from attendance data
-        const attendanceResponse = await apiCall('/api/attendance');
-        if (attendanceResponse.ok) {
-          const attendanceData = await attendanceResponse.json();
-          
-          // Calculate weekly hours (last 7 days)
-          const now = new Date();
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          
-          const weeklyRecords = attendanceData.filter(record => {
-            const recordDate = new Date(record.date);
-            return recordDate >= weekAgo && recordDate <= now;
-          });
-          
-          const totalWeeklyHours = weeklyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
-          
-          setUserKPIs(prev => ({
-            ...prev,
-            weeklyHours: formatHours(totalWeeklyHours)
-          }));
-        }
-
-        // Fetch monthly balance
-        const balanceResponse = await apiCall(`/api/attendance/hours-balance?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`);
-        if (balanceResponse.ok) {
-          const balanceData = await balanceResponse.json();
-          setUserKPIs(prev => ({
-            ...prev,
-            overtimeBalance: formatOvertime(balanceData.total_balance || 0),
-            remainingPermissions: `${balanceData.overtime_hours || 0}h`
-          }));
-        }
-
-        // Fetch monthly presences
-        const attendanceResponse2 = await apiCall(`/api/attendance?month=${new Date().getMonth() + 1}&year=${new Date().getFullYear()}`);
-        if (attendanceResponse2.ok) {
-          const attendanceData2 = await attendanceResponse2.json();
-          const presentDays = attendanceData2.filter(record => record.actual_hours > 0).length;
-          setUserKPIs(prev => ({
-            ...prev,
-            monthlyPresences: `${presentDays}/20`
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user KPIs:', error);
+  const calculateUserKPIs = () => {
+    if (user?.role === 'employee' && attendanceData.length > 0) {
+      console.log('🔄 Calculating user KPIs from local data...');
+      
+      // Calculate weekly hours (last 7 days)
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const weeklyRecords = attendanceData.filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate >= weekAgo && recordDate <= now;
+      });
+      
+      const totalWeeklyHours = weeklyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+      
+      // Calculate monthly data
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      const monthlyRecords = attendanceData.filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+      });
+      
+      const totalMonthlyHours = monthlyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+      const totalExpectedHours = monthlyRecords.reduce((sum, record) => sum + (record.expected_hours || 8), 0);
+      const balanceHours = totalMonthlyHours - totalExpectedHours;
+      const presentDays = monthlyRecords.filter(record => (record.actual_hours || 0) > 0).length;
+      
+      setUserKPIs({
+        weeklyHours: formatHours(totalWeeklyHours),
+        overtimeBalance: formatOvertime(balanceHours),
+        remainingPermissions: `${Math.max(0, balanceHours)}h`,
+        monthlyPresences: `${presentDays}/20`
+      });
+      
+      console.log('✅ User KPIs calculated:', {
+        weeklyHours: totalWeeklyHours,
+        balanceHours,
+        presentDays
+      });
     }
   };
 
@@ -292,18 +311,6 @@ const Dashboard = () => {
       {/* Stats Cards - Solo per Utenti */}
       {user?.role !== 'admin' && (
         <div className="space-y-4">
-          {/* Pulsante di aggiornamento KPI */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                console.log('🔄 Manual KPI update triggered');
-                fetchUserKPIs();
-              }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              🔄 Aggiorna KPI
-            </button>
-          </div>
           
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat, index) => {

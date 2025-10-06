@@ -433,7 +433,7 @@ const Attendance = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Presenze</h1>
           <p className="text-slate-400">
-            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(hoursBalance.monte_ore)}
+            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(currentHours.balanceHours || 0)}
           </p>
         </div>
 
@@ -445,7 +445,7 @@ const Attendance = () => {
               <div>
                 <p className="text-slate-400 text-sm">TOTALE ORE LAVORATE</p>
                 <p className="text-2xl font-bold text-blue-400">
-                  {formatHours(hoursBalance.total_worked)}
+                  {formatHours(currentHours.actualHours || 0)}
                 </p>
               </div>
               <div className="p-3 rounded-full text-blue-400">
@@ -459,15 +459,15 @@ const Attendance = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-sm">MONTE ORE</p>
-                <p className={`text-2xl font-bold ${hoursBalance.monte_ore >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {hoursBalance.monte_ore >= 0 ? '+' : ''}{formatHours(hoursBalance.monte_ore)}
+                <p className={`text-2xl font-bold ${(currentHours.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {(currentHours.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours.balanceHours || 0)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {hoursBalance.monte_ore >= 0 ? 'Credito' : 'Debito'}
+                  {(currentHours.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${hoursBalance.monte_ore >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {hoursBalance.monte_ore >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              <div className={`p-3 rounded-full ${(currentHours.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {(currentHours.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               </div>
             </div>
           </div>
@@ -478,7 +478,7 @@ const Attendance = () => {
               <div>
                 <p className="text-slate-400 text-sm">Giorni Lavorativi</p>
                 <p className="text-2xl font-bold text-purple-400">
-                  {hoursBalance.working_days}
+                  {attendance.filter(record => (record.actual_hours || 0) > 0).length}
                 </p>
               </div>
               <div className="p-3 rounded-full text-purple-400">
@@ -566,24 +566,6 @@ const Attendance = () => {
                     </div>
                   )}
                   <div className="flex justify-center gap-3 pt-3">
-                    <button
-                      onClick={updateCurrentAttendance}
-                      disabled={updatingHours}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Clock className="h-4 w-4" />
-                      {updatingHours ? 'Aggiornando...' : 'Aggiorna Ore'}
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        console.log('🔄 Manual recalculation triggered');
-                        calculateRealTimeHours();
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      🔄 Ricalcola
-                    </button>
                     <button
                       onClick={() => handleViewAttendanceDetails(todayAttendance)}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
