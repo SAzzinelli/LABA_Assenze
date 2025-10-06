@@ -299,6 +299,10 @@ const Attendance = () => {
           : record
       );
       setAttendance(updatedAttendance);
+      
+      // Ricalcola i KPI dopo aver aggiornato le ore
+      console.log('🔄 Recalculating KPIs after hour update...');
+      calculateKPIs(updatedAttendance);
     }
   };
 

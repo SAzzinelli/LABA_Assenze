@@ -93,6 +93,16 @@ const Dashboard = () => {
       
       return () => clearInterval(interval);
     }
+    
+    // Aggiornamento KPI ogni minuto per utenti
+    if (user?.role === 'employee') {
+      const kpiInterval = setInterval(() => {
+        console.log('🔄 Updating user KPIs...');
+        fetchUserKPIs();
+      }, 60000); // Ogni minuto
+      
+      return () => clearInterval(kpiInterval);
+    }
   }, [user?.role]);
 
   const fetchCurrentAttendance = async () => {
@@ -273,7 +283,21 @@ const Dashboard = () => {
 
       {/* Stats Cards - Solo per Utenti */}
       {user?.role !== 'admin' && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-4">
+          {/* Pulsante di aggiornamento KPI */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                console.log('🔄 Manual KPI update triggered');
+                fetchUserKPIs();
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+            >
+              🔄 Aggiorna KPI
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat, index) => {
             const IconComponent = stat.icon;
             const colorClasses = {
@@ -310,6 +334,7 @@ const Dashboard = () => {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
