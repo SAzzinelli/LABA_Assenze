@@ -2420,7 +2420,7 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
 // Create leave request
 app.post('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
-    const { type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime } = req.body;
+    const { type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor } = req.body;
 
     // Validation
     if (!type || !startDate || !endDate) {
