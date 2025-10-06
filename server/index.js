@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
+const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const { Server } = require('socket.io');
 require('dotenv').config();
@@ -1336,6 +1337,104 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
     res.json(upcomingDepartures);
   } catch (error) {
     console.error('Upcoming departures error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== ATTENDANCE DETAILS API ====================
+
+// Get attendance details for a user and date
+app.get('/api/attendance/details', authenticateToken, async (req, res) => {
+  try {
+    const { date, userId } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({ error: 'Data richiesta' });
+    }
+
+    const targetUserId = userId || req.user.id;
+    
+    // Verifica permessi: admin può vedere tutti, employee solo i propri
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { data: details, error } = await supabase
+      .from('attendance_details')
+      .select(`
+        *,
+        attendance!inner(
+          id,
+          status,
+          expected_hours,
+          actual_hours,
+          users!inner(first_name, last_name, email)
+        )
+      `)
+      .eq('user_id', targetUserId)
+      .eq('date', date)
+      .order('start_time');
+
+    if (error) {
+      console.error('Attendance details error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
+    }
+
+    res.json(details);
+  } catch (error) {
+    console.error('Attendance details error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Update attendance detail status
+app.put('/api/attendance/details/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    // Verifica che il dettaglio esista e appartenga all'utente
+    const { data: detail, error: fetchError } = await supabase
+      .from('attendance_details')
+      .select(`
+        *,
+        attendance!inner(user_id)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !detail) {
+      return res.status(404).json({ error: 'Dettaglio non trovato' });
+    }
+
+    // Verifica permessi
+    if (req.user.role === 'employee' && detail.attendance.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { data: updatedDetail, error: updateError } = await supabase
+      .from('attendance_details')
+      .update({
+        status,
+        notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Update detail error:', updateError);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Dettaglio aggiornato con successo',
+      detail: updatedDetail
+    });
+  } catch (error) {
+    console.error('Update detail error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -2685,6 +2784,10 @@ server.listen(PORT, () => {
   
   // Avvia Email Scheduler
   emailScheduler.start();
+  
+  // Avvia Attendance Scheduler
+  const attendanceScheduler = new AttendanceScheduler();
+  attendanceScheduler.start();
 });
 
 module.exports = app;

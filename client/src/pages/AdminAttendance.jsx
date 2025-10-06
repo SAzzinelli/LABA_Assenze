@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
+import AttendanceDetails from '../components/AttendanceDetails';
 import { 
   Clock, 
   Users, 
@@ -46,6 +47,8 @@ const AdminAttendance = () => {
   
   // Stati per modali
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
+  const [selectedAttendanceDetails, setSelectedAttendanceDetails] = useState(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
@@ -123,6 +126,15 @@ const AdminAttendance = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewAttendanceDetails = (record) => {
+    setSelectedAttendanceDetails({
+      userId: record.user_id,
+      date: record.date,
+      employeeName: record.users?.first_name + ' ' + record.users?.last_name
+    });
+    setShowAttendanceDetails(true);
   };
 
   const fetchEmployees = async () => {
@@ -626,8 +638,9 @@ const AdminAttendance = () => {
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button
-                          className="p-2 text-slate-400 hover:text-slate-300 hover:bg-slate-700 rounded-lg transition-colors"
-                          title="Visualizza dettagli"
+                          onClick={() => handleViewAttendanceDetails(record)}
+                          className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                          title="Visualizza dettagli presenze"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -907,6 +920,18 @@ const AdminAttendance = () => {
               )}
             </div>
           </div>
+        )}
+
+        {/* Modal Dettagli Presenze */}
+        {showAttendanceDetails && selectedAttendanceDetails && (
+          <AttendanceDetails
+            userId={selectedAttendanceDetails.userId}
+            date={selectedAttendanceDetails.date}
+            onClose={() => {
+              setShowAttendanceDetails(false);
+              setSelectedAttendanceDetails(null);
+            }}
+          />
         )}
       </div>
     </div>
