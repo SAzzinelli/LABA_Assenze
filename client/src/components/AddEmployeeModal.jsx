@@ -6,6 +6,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
   const [formData, setFormData] = useState({
     // Step 1: Informazioni Personali
     email: '',
+    confirmEmail: '',
     password: '',
     confirmPassword: '',
     firstName: '',
@@ -13,7 +14,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
     birthDate: '',
     phone: '',
     has104: false,
-    personalEmail: '', // Email personale opzionale
     
     // Step 2: Informazioni Lavorative
     department: '',
@@ -63,6 +63,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
                formData.confirmEmail &&
                formData.password && 
                formData.confirmPassword &&
+               formData.phone &&
                formData.email === formData.confirmEmail &&
                formData.password === formData.confirmPassword;
       case 2:
@@ -95,12 +96,17 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
       alert('Le password non corrispondono');
       return;
     }
+    if (formData.email !== formData.confirmEmail) {
+      alert('Le email non corrispondono');
+      return;
+    }
     onAddEmployee(formData);
   };
 
   const resetForm = () => {
     setFormData({
       email: '',
+      confirmEmail: '',
       password: '',
       confirmPassword: '',
       firstName: '',
@@ -108,7 +114,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
       birthDate: '',
       phone: '',
       has104: false,
-      personalEmail: '',
       department: '',
       position: '',
       hireDate: '',
@@ -142,6 +147,19 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
             onChange={handleInputChange}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="nome.cognome@labafirenze.com"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">Conferma Email *</label>
+          <input
+            type="email"
+            name="confirmEmail"
+            value={formData.confirmEmail}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="conferma la tua email"
             required
           />
         </div>
@@ -397,9 +415,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
               <p><span className="text-slate-400">Email:</span> <span className="text-white">{formData.email}</span></p>
               <p><span className="text-slate-400">Telefono:</span> <span className="text-white">{formData.phone}</span></p>
               <p><span className="text-slate-400">Data Nascita:</span> <span className="text-white">{formData.birthDate}</span></p>
-              {formData.personalEmail && (
-                <p><span className="text-slate-400">Email Personale:</span> <span className="text-white">{formData.personalEmail}</span></p>
-              )}
               <p><span className="text-slate-400">Legge 104:</span> <span className="text-white">{formData.has104 ? 'Sì' : 'No'}</span></p>
             </div>
           </div>

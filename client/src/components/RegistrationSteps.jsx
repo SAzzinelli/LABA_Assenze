@@ -14,7 +14,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     confirmPassword: '',
     phone: '',
     has104: false,
-    personalEmail: '', // Email personale opzionale
     
     // Step 2: Informazioni Lavorative
     department: '',
@@ -63,6 +62,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                formData.confirmEmail &&
                formData.password && 
                formData.confirmPassword &&
+               formData.phone &&
                formData.email === formData.confirmEmail &&
                formData.password === formData.confirmPassword;
       case 2:
@@ -217,21 +217,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           />
         </div>
 
-        {/* Email Personale */}
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Email Personale</label>
-          <input
-            type="email"
-            name="personalEmail"
-            value={formData.personalEmail}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="esempio@gmail.com (opzionale)"
-          />
-          <p className="text-xs text-slate-400 mt-1">
-            Per ricevere notifiche email personali
-          </p>
-        </div>
       </div>
 
       <div className="flex items-center">
@@ -375,9 +360,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               <p><span className="text-slate-400">Email:</span> <span className="text-white">{formData.email}</span></p>
               <p><span className="text-slate-400">Telefono:</span> <span className="text-white">{formData.phone}</span></p>
               <p><span className="text-slate-400">Data Nascita:</span> <span className="text-white">{formData.birthDate}</span></p>
-              {formData.personalEmail && (
-                <p><span className="text-slate-400">Email Personale:</span> <span className="text-white">{formData.personalEmail}</span></p>
-              )}
               <p><span className="text-slate-400">Legge 104:</span> <span className="text-white">{formData.has104 ? 'Sì' : 'No'}</span></p>
             </div>
           </div>
