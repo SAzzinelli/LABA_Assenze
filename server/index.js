@@ -2474,43 +2474,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
     console.log('✅ Leave request created successfully:', newRequest.id);
 
-    // Crea notifica per tutti gli admin
-    try {
-      const { data: admins, error: adminError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .eq('role', 'admin');
-
-      if (!adminError && admins && admins.length > 0) {
-        const typeLabels = {
-          'permission': 'Permesso',
-          'sick': 'Malattia', 
-          'vacation': 'Ferie'
-        };
-
-        const notifications = admins.map(admin => ({
-          user_id: admin.id,
-          title: `Nuova richiesta ${typeLabels[type] || type}`,
-          message: `${req.user.first_name} ${req.user.last_name} ha richiesto ${typeLabels[type] || type} dal ${startDate} al ${endDate}`,
-          type: 'request',
-          request_id: newRequest.id,
-          request_type: type,
-          is_read: false,
-          created_at: new Date().toISOString()
-        }));
-
-        await supabase
-          .from('notifications')
-          .insert(notifications);
-        
-        console.log('✅ Notifiche create con successo per', admins.length, 'admin');
-      } else {
-        console.log('⚠️ Nessun admin trovato per le notifiche');
-      }
-    } catch (notificationError) {
-      console.error('⚠️ Errore creazione notifiche:', notificationError);
-      // Non bloccare la richiesta se le notifiche falliscono
-    }
+    // TEMPORANEAMENTE DISABILITATO per Railway
+    console.log('⚠️ Notifiche temporaneamente disabilitate per Railway - richiesta creata con successo');
 
     console.log('🎉 Sending success response for request:', newRequest.id);
     
