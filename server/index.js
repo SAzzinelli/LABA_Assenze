@@ -2474,62 +2474,9 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
     console.log('✅ Leave request created successfully:', newRequest.id);
 
-    // Crea notifica per tutti gli admin
-    try {
-      const { data: admins, error: adminError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .eq('role', 'admin');
-
-      if (!adminError && admins) {
-        const typeLabels = {
-          'permission': 'Permesso',
-          'sick': 'Malattia', 
-          'vacation': 'Ferie'
-        };
-
-        const notifications = admins.map(admin => ({
-          user_id: admin.id,
-          title: `Nuova richiesta ${typeLabels[type] || type}`,
-          message: `${req.user.first_name} ${req.user.last_name} ha richiesto ${typeLabels[type] || type} dal ${startDate} al ${endDate}`,
-          type: 'request',
-          request_id: newRequest.id,
-          request_type: type,
-          is_read: false,
-          created_at: new Date().toISOString()
-        }));
-
-        try {
-          await supabase
-            .from('notifications')
-            .insert(notifications);
-          console.log('✅ Notifiche create con successo');
-        } catch (notificationInsertError) {
-          console.log('⚠️ Notifiche non create (tabella notifications potrebbe non avere tutte le colonne):', notificationInsertError.message);
-        }
-
-        // Invia email agli admin (SOLO email reali)
-        try {
-          const userName = `${req.user.first_name} ${req.user.last_name}`;
-          const requestType = typeLabels[type] || type;
-          const requestId = newRequest.id;
-          
-          // Verifica che l'utente abbia un'email reale
-          if (isRealEmail(req.user.email)) {
-            await sendEmailToAdmins('newRequest', [userName, requestType, startDate, endDate, requestId]);
-            console.log('Email inviata agli admin per nuova richiesta');
-          } else {
-            console.log('Email non inviata: utente con email non reale');
-          }
-        } catch (emailError) {
-          console.error('Errore invio email:', emailError);
-          // Non bloccare la risposta se l'email fallisce
-        }
-      }
-    } catch (notificationError) {
-      console.error('⚠️ Notification creation error:', notificationError);
-      // Non bloccare la richiesta se le notifiche falliscono
-    }
+    // TEMPORANEAMENTE DISABILITATO: Crea notifica per tutti gli admin
+    // TODO: Riabilitare quando la tabella notifications avrà tutte le colonne necessarie
+    console.log('⚠️ Notifiche temporaneamente disabilitate - richiesta creata con successo');
 
     console.log('🎉 Sending success response for request:', newRequest.id);
     
