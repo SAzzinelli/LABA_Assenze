@@ -169,9 +169,18 @@ const AdminAttendance = () => {
       
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
-        presentToday = attendanceData.filter(record => record.status === 'present').length;
-        absentToday = attendanceData.filter(record => record.status === 'absent').length;
+        // Calcola presente/assente basato su actual_hours invece di status
+        presentToday = attendanceData.filter(record => (record.actual_hours || 0) > 0).length;
+        absentToday = attendanceData.filter(record => (record.actual_hours || 0) === 0).length;
         totalHours = attendanceData.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+        
+        console.log('📊 Admin KPI calculation:', {
+          totalEmployees,
+          presentToday,
+          absentToday,
+          totalHours,
+          attendanceData: attendanceData.length
+        });
       }
 
       setStats({
@@ -412,11 +421,23 @@ const AdminAttendance = () => {
                 Genera Presenze
               </button>
               <button
-                onClick={fetchAttendanceData}
+                onClick={() => {
+                  fetchAttendanceData();
+                  fetchStats();
+                }}
                 className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
                 Aggiorna
+              </button>
+              <button
+                onClick={() => {
+                  console.log('🔄 Manual KPI update triggered');
+                  fetchStats();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                🔄 KPI
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -632,9 +653,9 @@ const AdminAttendance = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(record.status)}`}>
-                        {getStatusIcon(record.status)}
-                        <span className="ml-1">{getStatusText(record.status)}</span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}`}>
+                        {getStatusIcon(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}
+                        <span className="ml-1">{getStatusText(record.status || (record.actual_hours > 0 ? 'present' : 'absent'))}</span>
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -648,13 +669,13 @@ const AdminAttendance = () => {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(record.balance_hours)}`}>
-                        {record.balance_hours > 0 ? (
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(record.balance_hours || 0)}`}>
+                        {(record.balance_hours || 0) > 0 ? (
                           <TrendingUp className="h-3 w-3 mr-1" />
-                        ) : record.balance_hours < 0 ? (
+                        ) : (record.balance_hours || 0) < 0 ? (
                           <TrendingDown className="h-3 w-3 mr-1" />
                         ) : null}
-                        {formatHours(record.balance_hours)}
+                        {formatHours(record.balance_hours || 0)}
                       </span>
                     </td>
                     <td className="py-4 px-6">
