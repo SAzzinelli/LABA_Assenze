@@ -402,17 +402,47 @@ const AdminAttendance = () => {
     const workMinutes = totalMinutes - breakDuration;
     const expectedHours = workMinutes / 60;
     
-    // Calcola ore effettive real-time
+    // Calcola ore effettive real-time (stessa logica del dipendente)
     let actualHours = 0;
-    if (currentHour >= startHour && currentHour <= endHour) {
-      const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-      if (currentHour >= 13) {
-        actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
-      } else {
-        actualHours = workedMinutes / 60;
-      }
-    } else if (currentHour > endHour) {
+    
+    // Se è prima dell'inizio
+    if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+      actualHours = 0;
+    }
+    // Se è dopo la fine
+    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
       actualHours = expectedHours;
+    }
+    // Se è durante l'orario di lavoro
+    else {
+      const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+      
+      // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
+      const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
+      
+      if (hasLunchBreak) {
+        // GIORNATA COMPLETA: ha pausa pranzo (es. 9:00-18:00)
+        const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // Fine mattina
+        const breakStartMinutes = morningEndMinutes;
+        const breakEndMinutes = morningEndMinutes + breakDuration;
+        
+        if (minutesFromStart < breakStartMinutes) {
+          // Prima della pausa pranzo
+          actualHours = minutesFromStart / 60;
+        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+          // Durante la pausa pranzo
+          actualHours = breakStartMinutes / 60;
+        } else {
+          // Dopo la pausa pranzo
+          const morningMinutes = breakStartMinutes;
+          const afternoonMinutes = minutesFromStart - breakEndMinutes;
+          actualHours = (morningMinutes + afternoonMinutes) / 60;
+        }
+      } else {
+        // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
+        actualHours = minutesFromStart / 60;
+      }
     }
     
     const balanceHours = actualHours - expectedHours;
