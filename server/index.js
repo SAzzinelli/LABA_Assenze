@@ -878,6 +878,59 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
   }
 });
 
+// Save daily attendance with actual hours
+app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
+  try {
+    const { date, actualHours, expectedHours, balanceHours, notes } = req.body;
+    
+    if (!date || actualHours === undefined || expectedHours === undefined) {
+      return res.status(400).json({ error: 'Dati mancanti' });
+    }
+
+    // Verifica permessi
+    if (req.user.role === 'employee') {
+      // Employee può salvare solo i propri dati
+      const targetUserId = req.user.id;
+    } else {
+      // Admin può salvare per qualsiasi utente
+      const targetUserId = req.body.userId || req.user.id;
+    }
+
+    const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
+
+    // Aggiorna o inserisci il record di presenza
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert({
+        user_id: targetUserId,
+        date: date,
+        actual_hours: parseFloat(actualHours),
+        expected_hours: parseFloat(expectedHours),
+        balance_hours: parseFloat(balanceHours || 0),
+        notes: notes || '',
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,date'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Attendance save error:', error);
+      return res.status(500).json({ error: 'Errore nel salvare le presenze' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Presenza salvata con successo',
+      attendance: data
+    });
+  } catch (error) {
+    console.error('Attendance save error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get monthly hours balance for a user
 app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => {
   try {

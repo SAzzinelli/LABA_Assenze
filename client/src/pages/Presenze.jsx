@@ -66,6 +66,19 @@ const Attendance = () => {
       setCurrentTime(new Date());
       // Ricalcola le ore ogni minuto
       calculateRealTimeHours();
+      
+      // Salva automaticamente le ore alla fine della giornata lavorativa
+      if (todaySchedule && todaySchedule.is_working_day) {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
+        
+        // Salva 5 minuti dopo la fine dell'orario di lavoro
+        if (currentHour === endHour && currentMinute >= endMin + 5) {
+          saveDailyAttendance();
+        }
+      }
     }, 60000); // Ogni minuto
     
     // RIMOSSO: Aggiornamento database automatico (causa errori 403)
@@ -366,6 +379,71 @@ const Attendance = () => {
       return false;
     } finally {
       setUpdatingHours(false);
+    }
+  };
+
+  const saveDailyAttendance = async () => {
+    try {
+      if (!todaySchedule || !todaySchedule.is_working_day) {
+        return;
+      }
+
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const dayOfWeek = now.getDay();
+      
+      // Calcola le ore effettive per oggi
+      const { start_time, end_time, break_duration } = todaySchedule;
+      const [startHour, startMin] = start_time.split(':').map(Number);
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const breakDuration = break_duration || 60;
+      
+      // Calcola ore attese totali
+      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const workMinutes = totalMinutes - breakDuration;
+      const expectedHours = workMinutes / 60;
+      
+      let actualHours = 0;
+      
+      // Calcola ore effettive basandosi sull'ora corrente
+      if (currentHour >= startHour && currentHour <= endHour) {
+        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+        if (currentHour >= 13) {
+          actualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+        } else {
+          actualHours = workedMinutes / 60;
+        }
+      } else if (currentHour > endHour) {
+        actualHours = expectedHours;
+      }
+      
+      const balanceHours = actualHours - expectedHours;
+      
+      const response = await apiCall('/api/attendance/save-daily', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: new Date().toISOString().split('T')[0],
+          actualHours: actualHours,
+          expectedHours: expectedHours,
+          balanceHours: balanceHours,
+          notes: `Presenza salvata automaticamente alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Daily attendance saved successfully');
+        // Ricarica i dati dopo il salvataggio
+        await Promise.all([
+          fetchAttendance(),
+          fetchHoursBalance()
+        ]);
+      } else {
+        console.error('❌ Save failed:', response.status, await response.json());
+      }
+    } catch (error) {
+      console.error('❌ Save error:', error);
     }
   };
 
