@@ -1761,23 +1761,70 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
   try {
     const userId = req.user.id;
     const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
     
-    // Ottieni le ore correnti
-    const hoursResponse = await fetch(`http://localhost:${PORT}/api/attendance/current-hours`, {
-      headers: {
-        'Authorization': req.headers.authorization
+    // Ottieni l'orario di lavoro per oggi
+    const dayOfWeek = now.getDay();
+    const { data: schedule, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+
+    if (scheduleError || !schedule) {
+      return res.status(400).json({ error: 'Nessun orario di lavoro per oggi' });
+    }
+
+    const { start_time, end_time, break_duration } = schedule;
+    
+    // Calcola ore attese
+    const startTime = new Date(`2000-01-01T${start_time}`);
+    const endTime = new Date(`2000-01-01T${end_time}`);
+    const totalMinutes = (endTime - startTime) / (1000 * 60);
+    const workMinutes = totalMinutes - (break_duration || 60);
+    const expectedHours = workMinutes / 60;
+
+    // Calcola ore effettive basate sull'orario corrente
+    let actualHours = 0;
+    let status = 'not_started';
+    
+    if (currentTime >= start_time) {
+      if (currentTime <= end_time) {
+        // Durante l'orario di lavoro
+        const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
+        const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
+        
+        // Sottrai la pausa pranzo se siamo dopo l'orario di pausa
+        const breakStartTime = new Date(startTime.getTime() + (workMinutes / 2) * 60 * 1000);
+        const breakEndTime = new Date(breakStartTime.getTime() + (break_duration || 60) * 60 * 1000);
+        
+        if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
+          // Durante la pausa pranzo
+          actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
+          status = 'on_break';
+        } else if (currentTimeObj > breakEndTime) {
+          // Dopo la pausa pranzo
+          const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
+          const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
+          actualHours = (morningMinutes + afternoonMinutes) / 60;
+          status = 'working';
+        } else {
+          // Prima della pausa pranzo
+          actualHours = workedMinutes / 60;
+          status = 'working';
+        }
+      } else {
+        // Dopo l'orario di lavoro
+        actualHours = expectedHours;
+        status = 'completed';
       }
-    });
-    
-    if (!hoursResponse.ok) {
-      return res.status(500).json({ error: 'Errore nel calcolo delle ore' });
     }
-    
-    const hoursData = await hoursResponse.json();
-    
-    if (!hoursData.isWorkingDay) {
-      return res.status(400).json({ error: 'Non è un giorno lavorativo' });
-    }
+
+    // Calcola saldo ore
+    const balanceHours = actualHours - expectedHours;
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -1792,9 +1839,9 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       const { error: updateError } = await supabase
         .from('attendance')
         .update({
-          actual_hours: hoursData.actualHours,
-          balance_hours: hoursData.balanceHours,
-          notes: `Aggiornato alle ${hoursData.currentTime} - ${hoursData.status}`
+          actual_hours: actualHours,
+          balance_hours: balanceHours,
+          notes: `Aggiornato alle ${currentTime} - ${status}`
         })
         .eq('id', existingAttendance.id);
 
@@ -1809,10 +1856,10 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .insert({
           user_id: userId,
           date: today,
-          expected_hours: hoursData.expectedHours,
-          actual_hours: hoursData.actualHours,
-          balance_hours: hoursData.balanceHours,
-          notes: `Presenza aggiornata alle ${hoursData.currentTime} - ${hoursData.status}`
+          expected_hours: expectedHours,
+          actual_hours: actualHours,
+          balance_hours: balanceHours,
+          notes: `Presenza aggiornata alle ${currentTime} - ${status}`
         });
 
       if (insertError) {
@@ -1824,7 +1871,20 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     res.json({
       success: true,
       message: 'Presenza aggiornata con successo',
-      hours: hoursData
+      hours: {
+        isWorkingDay: true,
+        schedule: {
+          start_time,
+          end_time,
+          break_duration: break_duration || 60
+        },
+        currentTime,
+        expectedHours: Math.round(expectedHours * 10) / 10,
+        actualHours: Math.round(actualHours * 10) / 10,
+        balanceHours: Math.round(balanceHours * 10) / 10,
+        status,
+        progress: Math.min((actualHours / expectedHours) * 100, 100)
+      }
     });
   } catch (error) {
     console.error('Update current attendance error:', error);
@@ -1848,28 +1908,55 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const { data: details, error } = await supabase
-      .from('attendance_details')
+    // Ottieni i dettagli dalla tabella attendance
+    const { data: attendance, error } = await supabase
+      .from('attendance')
       .select(`
         *,
-        attendance!inner(
-          id,
-          status,
-          expected_hours,
-          actual_hours,
-          users!inner(first_name, last_name, email)
-        )
+        users!inner(first_name, last_name, email)
       `)
       .eq('user_id', targetUserId)
       .eq('date', date)
-      .order('start_time');
+      .single();
 
     if (error) {
-      console.error('Attendance details error:', error);
+      if (error.code === 'PGRST116') {
+        // Nessun record trovato
+        return res.json({
+          success: true,
+          details: null,
+          message: 'Nessun dettaglio disponibile per questa data'
+        });
+      }
+      console.error('Attendance details fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
     }
 
-    res.json(details);
+    // Ottieni anche l'orario di lavoro per quel giorno
+    const dayOfWeek = new Date(date).getDay();
+    const { data: schedule } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('day_of_week', dayOfWeek)
+      .single();
+
+    res.json({
+      success: true,
+      details: {
+        attendance,
+        schedule,
+        summary: {
+          date: attendance.date,
+          employee: `${attendance.users.first_name} ${attendance.users.last_name}`,
+          expectedHours: attendance.expected_hours || 8,
+          actualHours: attendance.actual_hours || 0,
+          balanceHours: attendance.balance_hours || 0,
+          status: attendance.actual_hours > 0 ? 'Presente' : 'Assente',
+          notes: attendance.notes || 'Nessuna nota'
+        }
+      }
+    });
   } catch (error) {
     console.error('Attendance details error:', error);
     res.status(500).json({ error: 'Errore interno del server' });

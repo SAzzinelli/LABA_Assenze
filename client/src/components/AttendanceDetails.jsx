@@ -19,12 +19,23 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
       
       if (response.ok) {
         const data = await response.json();
-        setDetails(data);
+        console.log('Details response:', data);
+        
+        if (data.success && data.details) {
+          setDetails(data.details);
+        } else if (data.success && data.details === null) {
+          // Nessun dettaglio disponibile
+          setDetails([]);
+        } else {
+          setDetails([]);
+        }
       } else {
         console.error('Errore nel recupero dettagli');
+        setDetails([]);
       }
     } catch (error) {
       console.error('Errore fetch dettagli:', error);
+      setDetails([]);
     } finally {
       setLoading(false);
     }
@@ -155,124 +166,96 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
           </button>
         </div>
 
-        {details.length === 0 ? (
+        {!details || !details.summary ? (
           <div className="text-center py-8">
             <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-400 text-lg">Nessun dettaglio disponibile per questa data</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {details.map((detail) => (
-              <div
-                key={detail.id}
-                className="bg-slate-700 rounded-lg p-4 border border-slate-600"
-              >
-                <div className="flex items-center justify-between mb-3">
+            {/* Riepilogo principale */}
+            <div className="bg-slate-700 rounded-lg p-6 border border-slate-600">
+              <h3 className="text-xl font-semibold text-white mb-4">Riepilogo Giornata</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="text-center">
+                  <p className="text-sm text-slate-400">Dipendente</p>
+                  <p className="text-lg font-bold text-white">
+                    {details.summary.employee}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-400">Ore Attese</p>
+                  <p className="text-lg font-bold text-blue-400">
+                    {details.summary.expectedHours}h
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-400">Ore Effettive</p>
+                  <p className="text-lg font-bold text-green-400">
+                    {details.summary.actualHours}h
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-slate-400">Saldo Ore</p>
+                  <p className={`text-lg font-bold ${details.summary.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {details.summary.balanceHours >= 0 ? '+' : ''}{details.summary.balanceHours}h
+                  </p>
+                </div>
+              </div>
+              
+              <div className="border-t border-slate-600 pt-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    {getStatusIcon(detail.status)}
-                    <h3 className="text-lg font-semibold text-white">
-                      {getPeriodLabel(detail.period)}
-                    </h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(detail.status)}`}>
-                      {getStatusLabel(detail.status)}
+                    <span className="text-sm text-slate-400">Stato:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      details.summary.status === 'Presente' 
+                        ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                        : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                    }`}>
+                      {details.summary.status}
                     </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-400">
-                      {formatTime(detail.start_time)} - {formatTime(detail.end_time)}
+                  <div className="text-sm text-slate-400">
+                    Data: {new Date(details.summary.date).toLocaleDateString('it-IT')}
+                  </div>
+                </div>
+                
+                {details.summary.notes && (
+                  <div className="mt-3 p-3 bg-slate-800 rounded border border-slate-600">
+                    <p className="text-sm text-slate-300">
+                      <strong>Note:</strong> {details.summary.notes}
                     </p>
-                    <p className="text-sm font-medium text-white">
-                      {detail.hours}h
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Orario di lavoro */}
+            {details.schedule && (
+              <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+                <h3 className="text-lg font-semibold text-white mb-3">Orario di Lavoro</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <p className="text-sm text-slate-400">Inizio</p>
+                    <p className="text-lg font-bold text-white">
+                      {details.schedule.start_time}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-400">Fine</p>
+                    <p className="text-lg font-bold text-white">
+                      {details.schedule.end_time}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-400">Pausa</p>
+                    <p className="text-lg font-bold text-white">
+                      {details.schedule.break_duration} min
                     </p>
                   </div>
                 </div>
-
-                {detail.notes && (
-                  <p className="text-sm text-slate-300 mb-3">
-                    {detail.notes}
-                  </p>
-                )}
-
-                {/* Pulsanti di azione per admin */}
-                <div className="flex space-x-2">
-                  {detail.status !== 'completed' && (
-                    <button
-                      onClick={() => updateDetailStatus(detail.id, 'completed')}
-                      disabled={updating === detail.id}
-                      className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 text-white text-sm rounded transition-colors flex items-center"
-                    >
-                      {updating === detail.id ? (
-                        <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                      )}
-                      Completato
-                    </button>
-                  )}
-                  
-                  {detail.status !== 'missed' && (
-                    <button
-                      onClick={() => updateDetailStatus(detail.id, 'missed')}
-                      disabled={updating === detail.id}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 text-white text-sm rounded transition-colors flex items-center"
-                    >
-                      {updating === detail.id ? (
-                        <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <XCircle className="h-3 w-3 mr-1" />
-                      )}
-                      Mancato
-                    </button>
-                  )}
-
-                  {detail.period === 'pausa_pranzo' && detail.status !== 'break' && (
-                    <button
-                      onClick={() => updateDetailStatus(detail.id, 'break')}
-                      disabled={updating === detail.id}
-                      className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-slate-600 text-white text-sm rounded transition-colors flex items-center"
-                    >
-                      {updating === detail.id ? (
-                        <RefreshCw className="h-3 w-3 animate-spin mr-1" />
-                      ) : (
-                        <Pause className="h-3 w-3 mr-1" />
-                      )}
-                      Pausa
-                    </button>
-                  )}
-                </div>
               </div>
-            ))}
-
-            {/* Riepilogo */}
-            <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
-              <h3 className="text-lg font-semibold text-white mb-3">Riepilogo Giornata</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-slate-400">Ore Mattina</p>
-                  <p className="text-xl font-bold text-white">
-                    {details.find(d => d.period === 'mattina')?.hours || 0}h
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-slate-400">Pausa Pranzo</p>
-                  <p className="text-xl font-bold text-white">
-                    {details.find(d => d.period === 'pausa_pranzo')?.hours || 0}h
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-slate-400">Ore Pomeriggio</p>
-                  <p className="text-xl font-bold text-white">
-                    {details.find(d => d.period === 'pomeriggio')?.hours || 0}h
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-slate-400">Totale</p>
-                  <p className="text-xl font-bold text-indigo-400">
-                    {details.reduce((sum, d) => sum + (d.hours || 0), 0)}h
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>
