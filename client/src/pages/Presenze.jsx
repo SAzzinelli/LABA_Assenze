@@ -370,17 +370,68 @@ const Attendance = () => {
   };
 
   const handleViewAttendanceDetails = (record) => {
-    // Usa i dati real-time invece dell'endpoint API
+    // Calcola i dati real-time al momento dell'apertura del modal
+    const now = new Date();
+    const currentTime = now.toTimeString().substring(0, 5);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+    
+    // Trova l'orario di lavoro per oggi
+    const todaySchedule = workSchedules.find(schedule => 
+      schedule.day_of_week === dayOfWeek && schedule.is_working_day
+    );
+    
+    let realTimeActualHours = 0;
+    let realTimeBalanceHours = 0;
+    
+    if (todaySchedule) {
+      const { start_time, end_time, break_duration } = todaySchedule;
+      const [startHour, startMin] = start_time.split(':').map(Number);
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const breakDuration = break_duration || 60;
+      
+      // Calcola ore attese totali
+      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const workMinutes = totalMinutes - breakDuration;
+      const expectedHours = workMinutes / 60;
+      
+      // Calcola ore effettive real-time
+      if (currentHour >= startHour && currentHour <= endHour) {
+        // Durante l'orario di lavoro
+        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+        // Sottrai la pausa se siamo dopo le 13:00
+        if (currentHour >= 13) {
+          realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+        } else {
+          realTimeActualHours = workedMinutes / 60;
+        }
+        realTimeBalanceHours = realTimeActualHours - expectedHours;
+      } else if (currentHour > endHour) {
+        // Dopo l'orario di lavoro
+        realTimeActualHours = expectedHours;
+        realTimeBalanceHours = 0;
+      }
+    }
+    
     const realTimeData = {
       attendance: record,
-      schedule: workSchedules.find(s => s.day_of_week === new Date(record.date).getDay()),
+      schedule: todaySchedule,
       summary: {
         date: record.date,
         employee: `${user.first_name} ${user.last_name}`,
-        expectedHours: record.expected_hours || 8,
-        actualHours: currentHours?.actualHours || record.actual_hours || 0,
-        balanceHours: currentHours?.balanceHours || record.balance_hours || 0,
-        status: (currentHours?.actualHours || record.actual_hours || 0) > 0 ? 'Presente' : 'Assente',
+        expectedHours: todaySchedule ? (() => {
+          const { start_time, end_time, break_duration } = todaySchedule;
+          const [startHour, startMin] = start_time.split(':').map(Number);
+          const [endHour, endMin] = end_time.split(':').map(Number);
+          const breakDuration = break_duration || 60;
+          const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const workMinutes = totalMinutes - breakDuration;
+          return workMinutes / 60;
+        })() : 8,
+        actualHours: realTimeActualHours,
+        balanceHours: realTimeBalanceHours,
+        status: realTimeActualHours > 0 ? 'Presente' : 'Assente',
         notes: `Aggiornato alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} - Sistema real-time`
       }
     };
