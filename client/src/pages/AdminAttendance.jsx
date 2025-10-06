@@ -297,6 +297,33 @@ const AdminAttendance = () => {
     }
   };
 
+  const handleGenerateTodayAttendance = async () => {
+    try {
+      const response = await apiCall('/api/attendance/generate-today', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || 'Presenze per oggi generate con successo!');
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante la generazione');
+      }
+    } catch (error) {
+      console.error('Error generating today attendance:', error);
+      alert('Errore durante la generazione');
+    }
+  };
+
   const handleGenerateAttendance = async () => {
     try {
       const response = await apiCall('/api/attendance/generate', {
@@ -370,6 +397,13 @@ const AdminAttendance = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleGenerateTodayAttendance}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Clock className="h-4 w-4" />
+                Genera Oggi
+              </button>
               <button
                 onClick={() => setShowGenerateModal(true)}
                 className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"

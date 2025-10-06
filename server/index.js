@@ -1573,6 +1573,96 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
   }
 });
 
+// Generate attendance for all employees today
+app.post('/api/attendance/generate-today', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const dayOfWeek = new Date().getDay();
+
+    // Ottieni tutti i dipendenti attivi con i loro orari di lavoro per oggi
+    const { data: employees, error: employeesError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        work_schedules!inner(
+          day_of_week,
+          is_working_day,
+          start_time,
+          end_time,
+          break_duration
+        )
+      `)
+      .eq('is_active', true)
+      .eq('role', 'employee')
+      .eq('work_schedules.day_of_week', dayOfWeek)
+      .eq('work_schedules.is_working_day', true);
+
+    if (employeesError) {
+      console.error('Errore nel recupero dipendenti:', employeesError);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
+    }
+
+    if (!employees || employees.length === 0) {
+      return res.status(404).json({ error: 'Nessun dipendente con orario di lavoro per oggi' });
+    }
+
+    let generatedCount = 0;
+    let skippedCount = 0;
+
+    // Per ogni dipendente, genera la presenza automatica
+    for (const employee of employees) {
+      const schedule = employee.work_schedules[0];
+
+      // Verifica se esiste già una presenza per oggi
+      const { data: existingAttendance } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('user_id', employee.id)
+        .eq('date', today)
+        .single();
+
+      if (existingAttendance) {
+        skippedCount++;
+        continue;
+      }
+
+      // Crea la presenza automatica
+      const { error: attendanceError } = await supabase
+        .from('attendance')
+        .insert({
+          user_id: employee.id,
+          date: today,
+          notes: `Presenza automatica per orario ${schedule.start_time}-${schedule.end_time}`
+        });
+
+      if (attendanceError) {
+        console.error(`Errore creazione presenza per ${employee.first_name}:`, attendanceError);
+        continue;
+      }
+
+      generatedCount++;
+    }
+
+    res.json({
+      success: true,
+      message: `Presenze generate: ${generatedCount} nuove, ${skippedCount} già esistenti`,
+      generated: generatedCount,
+      skipped: skippedCount,
+      total: employees.length
+    });
+  } catch (error) {
+    console.error('Errore generazione presenze per oggi:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== ATTENDANCE DETAILS API ====================
 
 // Get attendance details for a user and date
