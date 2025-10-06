@@ -55,15 +55,15 @@ const CustomAlert = ({
   const getTextColor = () => {
     switch (type) {
       case 'success':
-        return 'text-green-800';
+        return 'text-green-900';
       case 'error':
-        return 'text-red-800';
+        return 'text-red-900';
       case 'warning':
-        return 'text-yellow-800';
+        return 'text-yellow-900';
       case 'info':
-        return 'text-blue-800';
+        return 'text-blue-900';
       default:
-        return 'text-green-800';
+        return 'text-green-900';
     }
   };
 
