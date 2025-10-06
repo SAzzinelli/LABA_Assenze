@@ -257,8 +257,7 @@ app.post('/api/auth/register', async (req, res) => {
       hireDate,
       workplace,
       contractType,
-      has104 = false,
-      personalEmail = null // Email personale opzionale
+      has104 = false
     } = req.body;
     
     // Validazione email dominio
@@ -272,7 +271,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
     
     // Validazione campi obbligatori
-    if (!email || !password || !firstName || !lastName || !department || !position || !hireDate || !workplace || !contractType) {
+    if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !position || !hireDate || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
@@ -309,7 +308,7 @@ app.post('/api/auth/register', async (req, res) => {
           workplace: workplace,
           contract_type: contractType,
           department: department,
-          personal_email: personalEmail // Aggiungi email personale
+          birth_date: birthDate
         }
       ])
       .select()
