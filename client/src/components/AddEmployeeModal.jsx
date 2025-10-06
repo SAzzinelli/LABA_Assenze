@@ -236,18 +236,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading }) => {
             required
           />
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Email Personale</label>
-          <input
-            type="email"
-            name="personalEmail"
-            value={formData.personalEmail}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="email.personale@gmail.com"
-          />
-        </div>
       </div>
 
       <div className="flex items-center">
