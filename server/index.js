@@ -2466,11 +2466,13 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('Leave request creation error:', error);
+      console.error('❌ Leave request creation error:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       console.error('Insert data that failed:', JSON.stringify(insertData, null, 2));
       return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
     }
+
+    console.log('✅ Leave request created successfully:', newRequest.id);
 
     // Crea notifica per tutti gli admin
     try {
@@ -2525,10 +2527,12 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         }
       }
     } catch (notificationError) {
-      console.error('Notification creation error:', notificationError);
+      console.error('⚠️ Notification creation error:', notificationError);
       // Non bloccare la richiesta se le notifiche falliscono
     }
 
+    console.log('🎉 Sending success response for request:', newRequest.id);
+    
     res.status(201).json({
       success: true,
       message: 'Richiesta inviata con successo',
