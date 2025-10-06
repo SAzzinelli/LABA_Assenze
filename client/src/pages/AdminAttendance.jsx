@@ -72,8 +72,9 @@ const AdminAttendance = () => {
   // Statistiche
   const [stats, setStats] = useState({
     totalEmployees: 0,
-    presentToday: 0,
-    absentToday: 0
+    workedToday: 0, // Chi ha lavorato oggi
+    currentlyPresent: 0, // Chi è fisicamente presente ora
+    absentToday: 0 // Chi doveva lavorare ma non ha lavorato
   });
 
   // Real-time updates
@@ -200,44 +201,46 @@ const AdminAttendance = () => {
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
         
-        // Calcola presente/assente basato sul lavoro effettivo di oggi
+        // Calcola statistiche più chiare
         const dayOfWeek = new Date().getDay();
+        const now = new Date();
+        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
         
-        // Per ogni dipendente, controlla se ha lavorato oggi
-        let workedToday = 0;
-        let notWorkedToday = 0;
+        let workedToday = 0; // Chi ha lavorato oggi
+        let currentlyPresent = 0; // Chi è fisicamente presente ora
+        let absentToday = 0; // Chi doveva lavorare ma non ha lavorato
         
         for (const record of attendanceData) {
-          // Controlla se ha ore effettive > 0 (ha lavorato)
+          // 1. Controlla se ha lavorato oggi (ore effettive > 0)
           if (record.actual_hours && record.actual_hours > 0) {
             workedToday++;
-          } else {
-            // Controlla se dovrebbe lavorare oggi
-            const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
-            if (scheduleResponse.ok) {
-              const scheduleData = await scheduleResponse.json();
-              const schedule = scheduleData.find(s => s.is_working_day);
-              
-              if (schedule) {
-                // Dovrebbe lavorare ma non ha ore effettive = assente
-                notWorkedToday++;
-              } else {
-                // Non dovrebbe lavorare oggi = non conta come assente
-                // Non incrementare nessun contatore
+          }
+          
+          // 2. Controlla se è attualmente presente (nell'orario di lavoro)
+          const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
+          if (scheduleResponse.ok) {
+            const scheduleData = await scheduleResponse.json();
+            const schedule = scheduleData.find(s => s.is_working_day);
+            
+            if (schedule) {
+              const { start_time, end_time } = schedule;
+              // Se è nell'orario di lavoro, è attualmente presente
+              if (currentTime >= start_time && currentTime <= end_time) {
+                currentlyPresent++;
               }
-            } else {
-              // Errore nel fetch schedule = considera assente
-              notWorkedToday++;
+              
+              // 3. Se dovrebbe lavorare ma non ha ore effettive = assente
+              if (!record.actual_hours || record.actual_hours <= 0) {
+                absentToday++;
+              }
             }
           }
         }
         
-        presentToday = workedToday;
-        absentToday = notWorkedToday;
-        
         console.log('📊 Admin KPI calculation (real-time):', {
           totalEmployees,
-          presentToday,
+          workedToday,
+          currentlyPresent,
           absentToday,
           currentTime,
           dayOfWeek
@@ -246,7 +249,8 @@ const AdminAttendance = () => {
 
       setStats({
         totalEmployees,
-        presentToday,
+        workedToday,
+        currentlyPresent,
         absentToday
       });
     } catch (error) {
@@ -415,27 +419,10 @@ const AdminAttendance = () => {
       }
     }
     
-    // Se siamo nella tab "Oggi", filtra solo chi è attualmente presente
+    // Se siamo nella tab "Oggi", mostra chi ha lavorato oggi
     if (activeTab === 'today') {
-      const now = new Date();
-      const currentTime = now.toTimeString().substring(0, 5); // HH:MM
-      const dayOfWeek = now.getDay();
-      
-      // Trova l'orario di lavoro per questo dipendente
-      const workSchedule = workSchedules.find(schedule => 
-        schedule.user_id === record.user_id && 
-        schedule.day_of_week === dayOfWeek && 
-        schedule.is_working_day
-      );
-      
-      if (workSchedule) {
-        const { start_time, end_time } = workSchedule;
-        // Mostra solo se è nell'orario di lavoro attuale
-        return currentTime >= start_time && currentTime <= end_time;
-      }
-      
-      // Se non ha orario di lavoro per oggi, non mostrare
-      return false;
+      // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi)
+      return record.actual_hours && record.actual_hours > 0;
     }
     
     return true;
@@ -506,9 +493,9 @@ const AdminAttendance = () => {
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-slate-400 text-sm">Presenti Oggi</p>
-                <p className="text-2xl font-bold text-white">{stats.presentToday}</p>
-                <p className="text-xs text-slate-500 mt-1">Reset alle 9:00</p>
+                <p className="text-slate-400 text-sm">Hanno Lavorato Oggi</p>
+                <p className="text-2xl font-bold text-white">{stats.workedToday}</p>
+                <p className="text-xs text-slate-500 mt-1">Ore effettive &gt; 0</p>
               </div>
             </div>
           </div>
@@ -519,9 +506,22 @@ const AdminAttendance = () => {
                 <XCircle className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
+                <p className="text-slate-400 text-sm">Attualmente Presenti</p>
+                <p className="text-2xl font-bold text-white">{stats.currentlyPresent}</p>
+                <p className="text-xs text-slate-500 mt-1">Nell'orario di lavoro</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
                 <p className="text-slate-400 text-sm">Assenti Oggi</p>
                 <p className="text-2xl font-bold text-white">{stats.absentToday}</p>
-                <p className="text-xs text-slate-500 mt-1">Reset alle 9:00</p>
+                <p className="text-xs text-slate-500 mt-1">Dovevano lavorare</p>
               </div>
             </div>
           </div>
@@ -539,7 +539,7 @@ const AdminAttendance = () => {
               }`}
             >
               <CalendarDays className="h-4 w-4" />
-              Oggi
+              Presenze Oggi
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -634,7 +634,7 @@ const AdminAttendance = () => {
           <div className="px-6 py-4 border-b border-slate-700">
             <h2 className="text-xl font-semibold text-white flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
+              {activeTab === 'today' ? 'Chi Ha Lavorato Oggi' : 'Cronologia Presenze'}
             </h2>
           </div>
           
