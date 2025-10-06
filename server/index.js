@@ -343,6 +343,32 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('Employee creation error:', employeeError);
     }
 
+    // Crea orari di lavoro di default per il nuovo dipendente
+    const defaultWorkSchedules = [
+      { day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Lunedì
+      { day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Martedì
+      { day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Mercoledì
+      { day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Giovedì
+      { day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Venerdì
+      { day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 }, // Sabato
+      { day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0 }  // Domenica
+    ];
+
+    const schedulesWithUserId = defaultWorkSchedules.map(schedule => ({
+      ...schedule,
+      user_id: newUser.id
+    }));
+
+    const { error: schedulesError } = await supabase
+      .from('work_schedules')
+      .insert(schedulesWithUserId);
+
+    if (schedulesError) {
+      console.error('Work schedules creation error:', schedulesError);
+    } else {
+      console.log(`✅ Orari di lavoro di default creati per ${newUser.email}`);
+    }
+
     // Invia notifica agli admin per nuovo dipendente
     try {
       const { data: admins } = await supabase
@@ -1336,6 +1362,178 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
     res.json(upcomingDepartures);
   } catch (error) {
     console.error('Upcoming departures error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== MANUAL ATTENDANCE GENERATION ====================
+
+// Generate attendance for a specific user and date (for testing/debugging)
+app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) => {
+  try {
+    const { userId, date } = req.body;
+    const targetUserId = userId || req.user.id;
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    
+    // Verifica permessi: admin può generare per chiunque, employee solo per se stesso
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Ottieni l'orario per questo giorno della settimana
+    const dayOfWeek = new Date(targetDate).getDay();
+    const { data: schedule, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+
+    if (scheduleError || !schedule) {
+      return res.status(400).json({ error: 'Nessun orario di lavoro definito per questo giorno' });
+    }
+
+    // Verifica se esiste già una presenza per questa data
+    const { data: existingAttendance } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('user_id', targetUserId)
+      .eq('date', targetDate)
+      .single();
+
+    if (existingAttendance) {
+      return res.status(400).json({ error: 'Presenza già esistente per questa data' });
+    }
+
+    // Calcola ore di lavoro basate sull'orario specifico
+    const { start_time, end_time, break_duration } = schedule;
+    const start = new Date(`2000-01-01T${start_time}`);
+    const end = new Date(`2000-01-01T${end_time}`);
+    const totalMinutes = (end - start) / (1000 * 60);
+    const workMinutes = totalMinutes - (break_duration || 60);
+    const workHours = workMinutes / 60;
+
+    // Crea la presenza automatica
+    const { data: newAttendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .insert({
+        user_id: targetUserId,
+        date: targetDate,
+        status: 'present',
+        expected_hours: workHours,
+        actual_hours: workHours,
+        balance_hours: 0,
+        clock_in: `${targetDate} ${start_time}:00`,
+        clock_out: `${targetDate} ${end_time}:00`,
+        is_absent: false,
+        is_overtime: false,
+        is_early_departure: false,
+        is_late_arrival: false,
+        notes: `Presenza generata manualmente per orario ${start_time}-${end_time}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (attendanceError) {
+      console.error('Manual attendance creation error:', attendanceError);
+      return res.status(500).json({ error: 'Errore nella creazione della presenza' });
+    }
+
+    // Crea i dettagli della presenza basati sull'orario specifico
+    const breakMinutes = break_duration || 60;
+    let details = [];
+
+    if (schedule.work_type === 'full_day') {
+      // Giornata completa con pausa pranzo
+      const workMinutes = totalMinutes - breakMinutes;
+      const morningMinutes = Math.floor(workMinutes / 2);
+      const afternoonMinutes = workMinutes - morningMinutes;
+      
+      const breakStart = new Date(start.getTime() + (morningMinutes * 60 * 1000));
+      const breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
+      
+      details = [
+        {
+          attendance_id: newAttendance.id,
+          user_id: targetUserId,
+          date: targetDate,
+          segment: 'morning',
+          start_time: start_time,
+          end_time: breakStart.toTimeString().substring(0, 5),
+          status: 'completed',
+          notes: 'Periodo mattutino completato'
+        },
+        {
+          attendance_id: newAttendance.id,
+          user_id: targetUserId,
+          date: targetDate,
+          segment: 'lunch_break',
+          start_time: breakStart.toTimeString().substring(0, 5),
+          end_time: breakEnd.toTimeString().substring(0, 5),
+          status: 'completed',
+          notes: 'Pausa pranzo'
+        },
+        {
+          attendance_id: newAttendance.id,
+          user_id: targetUserId,
+          date: targetDate,
+          segment: 'afternoon',
+          start_time: breakEnd.toTimeString().substring(0, 5),
+          end_time: end_time,
+          status: 'completed',
+          notes: 'Periodo pomeridiano completato'
+        }
+      ];
+    } else if (schedule.work_type === 'morning') {
+      details = [
+        {
+          attendance_id: newAttendance.id,
+          user_id: targetUserId,
+          date: targetDate,
+          segment: 'morning',
+          start_time: start_time,
+          end_time: end_time,
+          status: 'completed',
+          notes: 'Turno mattutino completato'
+        }
+      ];
+    } else if (schedule.work_type === 'afternoon') {
+      details = [
+        {
+          attendance_id: newAttendance.id,
+          user_id: targetUserId,
+          date: targetDate,
+          segment: 'afternoon',
+          start_time: start_time,
+          end_time: end_time,
+          status: 'completed',
+          notes: 'Turno pomeridiano completato'
+        }
+      ];
+    }
+
+    // Inserisci i dettagli
+    if (details.length > 0) {
+      const { error: detailsError } = await supabase
+        .from('attendance_details')
+        .insert(details);
+
+      if (detailsError) {
+        console.error('Attendance details creation error:', detailsError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Presenza generata con successo',
+      attendance: newAttendance,
+      details: details.length
+    });
+  } catch (error) {
+    console.error('Manual attendance generation error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
