@@ -497,7 +497,7 @@ const Attendance = () => {
       schedule: todaySchedule,
       summary: {
         date: record.date,
-        employee: user ? `${user.first_name} ${user.last_name}` : 'Dipendente',
+        employee: user && user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : 'Dipendente',
         expectedHours: todaySchedule ? (() => {
           const { start_time, end_time, break_duration } = todaySchedule;
           const [startHour, startMin] = start_time.split(':').map(Number);
@@ -781,11 +781,33 @@ const Attendance = () => {
                       {formatHours(record.expected_hours)}
                     </td>
                     <td className="py-3 px-4 font-mono">
-                      {formatHours(record.actual_hours)}
+                      {(() => {
+                        // Se è oggi, usa i dati real-time
+                        const today = new Date().toISOString().split('T')[0];
+                        if (record.date === today && currentHours?.actualHours !== undefined) {
+                          return formatHours(currentHours.actualHours);
+                        }
+                        // Altrimenti usa i dati dal database
+                        return formatHours(record.actual_hours || 0);
+                      })()}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`font-bold ${getBalanceColor(record.balance_hours)}`}>
-                        {record.balance_hours < 0 ? formatHours(Math.abs(record.balance_hours)) : '0h 0m'}
+                      <span className={`font-bold ${(() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        if (record.date === today && currentHours?.balanceHours !== undefined) {
+                          return (currentHours.balanceHours < 0 ? 'text-red-400' : 'text-green-400');
+                        }
+                        return getBalanceColor(record.balance_hours);
+                      })()}`}>
+                        {(() => {
+                          // Se è oggi, usa i dati real-time
+                          const today = new Date().toISOString().split('T')[0];
+                          if (record.date === today && currentHours?.balanceHours !== undefined) {
+                            return currentHours.balanceHours < 0 ? formatHours(Math.abs(currentHours.balanceHours)) : '0h 0m';
+                          }
+                          // Altrimenti usa i dati dal database
+                          return record.balance_hours < 0 ? formatHours(Math.abs(record.balance_hours)) : '0h 0m';
+                        })()}
                       </span>
                     </td>
                     <td className="py-3 px-4">
