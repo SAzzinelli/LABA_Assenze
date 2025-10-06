@@ -332,18 +332,16 @@ const Dashboard = () => {
         const recordDate = new Date(record.date);
         const today = new Date();
         
-        // If it's today, check if currently working
+        // If it's today, check if it's a working day
         if (recordDate.toDateString() === today.toDateString()) {
           const todaySchedule = workSchedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day);
           if (todaySchedule) {
-            const { start_time, end_time } = todaySchedule;
-            const [startHour] = start_time.split(':').map(Number);
-            const [endHour] = end_time.split(':').map(Number);
-            return currentHour >= startHour && currentHour <= endHour;
+            // If it's a working day, count as present (regardless of current time)
+            return true;
           }
         }
         
-        // For other days, check actual_hours
+        // For other days, check actual_hours from database
         return (record.actual_hours || 0) > 0;
       }).length;
       
