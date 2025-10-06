@@ -31,6 +31,7 @@ const AdminAttendance = () => {
   const { user, apiCall } = useAuthStore();
   const [attendance, setAttendance] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('today');
@@ -93,6 +94,7 @@ const AdminAttendance = () => {
     const initializeData = async () => {
       await fetchAttendanceData();
       await fetchEmployees();
+      await fetchWorkSchedules();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -165,6 +167,18 @@ const AdminAttendance = () => {
     }
   };
 
+  const fetchWorkSchedules = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkSchedules(data);
+      }
+    } catch (error) {
+      console.error('Error fetching work schedules:', error);
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -186,42 +200,40 @@ const AdminAttendance = () => {
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
         
-        // Calcola presente/assente basato sull'orario di lavoro corrente
-        const now = new Date();
-        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
-        const dayOfWeek = now.getDay();
+        // Calcola presente/assente basato sul lavoro effettivo di oggi
+        const dayOfWeek = new Date().getDay();
         
-        // Per ogni dipendente, controlla se dovrebbe essere presente ora
-        let currentlyPresent = 0;
-        let currentlyAbsent = 0;
+        // Per ogni dipendente, controlla se ha lavorato oggi
+        let workedToday = 0;
+        let notWorkedToday = 0;
         
         for (const record of attendanceData) {
-          // Fetch work schedule per questo dipendente
-          const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
-          if (scheduleResponse.ok) {
-            const scheduleData = await scheduleResponse.json();
-            const schedule = scheduleData.find(s => s.is_working_day);
-            
-            if (schedule) {
-              const { start_time, end_time } = schedule;
-              // Se è nell'orario di lavoro, è presente
-              if (currentTime >= start_time && currentTime <= end_time) {
-                currentlyPresent++;
+          // Controlla se ha ore effettive > 0 (ha lavorato)
+          if (record.actual_hours && record.actual_hours > 0) {
+            workedToday++;
+          } else {
+            // Controlla se dovrebbe lavorare oggi
+            const scheduleResponse = await apiCall(`/api/work-schedules?userId=${record.user_id}&dayOfWeek=${dayOfWeek}`);
+            if (scheduleResponse.ok) {
+              const scheduleData = await scheduleResponse.json();
+              const schedule = scheduleData.find(s => s.is_working_day);
+              
+              if (schedule) {
+                // Dovrebbe lavorare ma non ha ore effettive = assente
+                notWorkedToday++;
               } else {
-                currentlyAbsent++;
+                // Non dovrebbe lavorare oggi = non conta come assente
+                // Non incrementare nessun contatore
               }
             } else {
-              // Nessun orario di lavoro per oggi = assente
-              currentlyAbsent++;
+              // Errore nel fetch schedule = considera assente
+              notWorkedToday++;
             }
-          } else {
-            // Errore nel fetch schedule = assente
-            currentlyAbsent++;
           }
         }
         
-        presentToday = currentlyPresent;
-        absentToday = currentlyAbsent;
+        presentToday = workedToday;
+        absentToday = notWorkedToday;
         
         console.log('📊 Admin KPI calculation (real-time):', {
           totalEmployees,
@@ -277,11 +289,11 @@ const AdminAttendance = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'present': return 'bg-green-100 text-green-800 border-green-200';
-      case 'absent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'holiday': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'non_working_day': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'present': return 'bg-green-100 text-green-900 border-green-200';
+      case 'absent': return 'bg-red-100 text-red-900 border-red-200';
+      case 'holiday': return 'bg-blue-100 text-blue-900 border-blue-200';
+      case 'non_working_day': return 'bg-gray-100 text-gray-900 border-gray-200';
+      default: return 'bg-gray-100 text-gray-900 border-gray-200';
     }
   };
 
@@ -409,9 +421,21 @@ const AdminAttendance = () => {
       const currentTime = now.toTimeString().substring(0, 5); // HH:MM
       const dayOfWeek = now.getDay();
       
-      // Per ora, mostra tutti i record di oggi
-      // TODO: Implementare filtro basato su orario di lavoro
-      return true;
+      // Trova l'orario di lavoro per questo dipendente
+      const workSchedule = workSchedules.find(schedule => 
+        schedule.user_id === record.user_id && 
+        schedule.day_of_week === dayOfWeek && 
+        schedule.is_working_day
+      );
+      
+      if (workSchedule) {
+        const { start_time, end_time } = workSchedule;
+        // Mostra solo se è nell'orario di lavoro attuale
+        return currentTime >= start_time && currentTime <= end_time;
+      }
+      
+      // Se non ha orario di lavoro per oggi, non mostrare
+      return false;
     }
     
     return true;
