@@ -38,6 +38,9 @@ const Dashboard = () => {
   // Dati per calcoli real-time
   const [attendanceData, setAttendanceData] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
+  
+  // Dati per admin dashboard real-time
+  const [adminRealTimeData, setAdminRealTimeData] = useState([]);
 
 
   useEffect(() => {
@@ -47,35 +50,48 @@ const Dashboard = () => {
         // Fetch dashboard stats
         await fetchDashboardData();
         
-        // Fetch current attendance
-        await fetchCurrentAttendance();
-        
-        // Fetch recent requests for admin
-        await fetchRecentRequests();
-        
-        // Fetch attendance data for employees
-        if (user?.role === 'employee') {
+        // Fetch data based on role
+        if (user?.role === 'admin') {
+          // Admin: fetch real-time data
+          await fetchEmployees();
+          await fetchAdminWorkSchedules();
+          await calculateAdminRealTimeData();
+        } else {
+          // Employee: fetch personal data
           await fetchAttendanceData();
           await fetchWorkSchedules();
         }
+        
+        // Fetch recent requests for admin
+        await fetchRecentRequests();
         
         // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
         setTimeout(() => {
           if (user?.role === 'employee') {
             console.log('🔄 Secondary KPI update...');
             calculateUserKPIs();
+          } else if (user?.role === 'admin') {
+            console.log('🔄 Secondary admin real-time update...');
+            calculateAdminRealTimeData();
           }
         }, 1000);
         
-        // Timer per ricaricare i dati di attendance ogni 30 secondi
-        if (user?.role === 'employee') {
-          const attendanceTimer = setInterval(() => {
-            console.log('🔄 Refreshing attendance data...');
+        // Timer per ricaricare i dati ogni 30 secondi
+        const refreshTimer = setInterval(() => {
+          if (user?.role === 'employee') {
+            console.log('🔄 Refreshing employee data...');
             fetchAttendanceData();
-          }, 30000); // Ogni 30 secondi
-          
-          return () => clearInterval(attendanceTimer);
-        }
+            fetchWorkSchedules();
+            calculateUserKPIs();
+          } else if (user?.role === 'admin') {
+            console.log('🔄 Refreshing admin data...');
+            fetchEmployees();
+            fetchAdminWorkSchedules();
+            calculateAdminRealTimeData();
+          }
+        }, 30000); // Ogni 30 secondi
+        
+        return () => clearInterval(refreshTimer);
         
         // Fetch weekly attendance data
         const weeklyResponse = await apiCall('/api/dashboard/attendance');
@@ -109,26 +125,6 @@ const Dashboard = () => {
     
     loadDashboardData();
     
-    // Aggiornamento live ogni 30 secondi per admin
-    if (user?.role === 'admin') {
-      const interval = setInterval(() => {
-        fetchCurrentAttendance();
-        fetchRecentRequests();
-      }, 30000); // 30 secondi
-      
-      return () => clearInterval(interval);
-    }
-    
-    // Aggiornamento KPI ogni 5 secondi per utenti
-    if (user?.role === 'employee') {
-      const kpiInterval = setInterval(() => {
-        console.log('🔄 Force updating user KPIs...');
-        // Forza il ricalcolo anche se i dati non sono cambiati
-        calculateUserKPIs();
-      }, 5000); // Ogni 5 secondi
-      
-      return () => clearInterval(kpiInterval);
-    }
   }, [user?.role]);
 
   // Ricalcola i KPI quando cambiano i dati di attendance o work schedules
@@ -137,6 +133,13 @@ const Dashboard = () => {
       calculateUserKPIs();
     }
   }, [attendanceData, workSchedules, user?.role]);
+
+  // Ricalcola i dati admin quando cambiano workSchedules o currentAttendance
+  useEffect(() => {
+    if (user?.role === 'admin' && workSchedules.length > 0 && currentAttendance.length > 0) {
+      calculateAdminRealTimeData();
+    }
+  }, [workSchedules, currentAttendance, user?.role]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -166,17 +169,136 @@ const Dashboard = () => {
     }
   };
 
-  const fetchCurrentAttendance = async () => {
+  // Fetch employees for admin dashboard
+  const fetchEmployees = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await apiCall(`/api/attendance?date=${today}`);
+      const response = await apiCall('/api/employees');
       if (response.ok) {
         const data = await response.json();
-        setCurrentAttendance(data);
+        setCurrentAttendance(data.employees || data);
       }
     } catch (error) {
-      console.error('Error fetching current attendance:', error);
+      console.error('Error fetching employees:', error);
     }
+  };
+
+  // Fetch work schedules for admin dashboard
+  const fetchAdminWorkSchedules = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setWorkSchedules(data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin work schedules:', error);
+    }
+  };
+
+  // Calcolo real-time per admin dashboard (stesso sistema del dipendente)
+  const calculateAdminRealTimeData = () => {
+    console.log('🔄 Admin dashboard calculating real-time data...');
+    
+    if (!currentAttendance || !workSchedules || currentAttendance.length === 0 || workSchedules.length === 0) {
+      console.log('⚠️ No data available for admin real-time calculation');
+      return;
+    }
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+    
+    const realTimeData = currentAttendance.map(employee => {
+      // Trova l'orario di lavoro per questo dipendente
+      const workSchedule = workSchedules.find(schedule => 
+        schedule.user_id === employee.id && 
+        schedule.day_of_week === dayOfWeek && 
+        schedule.is_working_day
+      );
+      
+      if (!workSchedule) {
+        return {
+          ...employee,
+          is_working_day: false,
+          expected_hours: 0,
+          actual_hours: 0,
+          balance_hours: 0,
+          status: 'non_working_day'
+        };
+      }
+      
+      const { start_time, end_time, break_duration } = workSchedule;
+      const [startHour, startMin] = start_time.split(':').map(Number);
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const breakDuration = break_duration || 60;
+      
+      // Calcola ore attese totali
+      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const workMinutes = totalMinutes - breakDuration;
+      const expectedHours = workMinutes / 60;
+      
+      // Calcola ore effettive real-time (stesso calcolo del dipendente)
+      let actualHours = 0;
+      let status = 'not_started';
+      
+      // Se è prima dell'inizio
+      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+        actualHours = 0;
+        status = 'not_started';
+      }
+      // Se è dopo la fine
+      else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+        actualHours = expectedHours;
+        status = 'completed';
+      }
+      // Se è durante l'orario di lavoro
+      else {
+        // Calcola ore lavorate fino ad ora
+        let totalMinutesWorked = 0;
+        
+        // Calcola minuti dall'inizio
+        const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+        
+        // Calcola l'orario di pausa (metà giornata)
+        const halfDayMinutes = workMinutes / 2;
+        const breakStartMinutes = halfDayMinutes;
+        const breakEndMinutes = halfDayMinutes + breakDuration;
+        
+        if (minutesFromStart < breakStartMinutes) {
+          // Prima della pausa
+          totalMinutesWorked = minutesFromStart;
+          status = 'working';
+        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+          // Durante la pausa
+          totalMinutesWorked = breakStartMinutes;
+          status = 'on_break';
+        } else {
+          // Dopo la pausa
+          const morningMinutes = breakStartMinutes;
+          const afternoonMinutes = minutesFromStart - breakEndMinutes;
+          totalMinutesWorked = morningMinutes + afternoonMinutes;
+          status = 'working';
+        }
+        
+        actualHours = totalMinutesWorked / 60;
+      }
+      
+      const balanceHours = actualHours - expectedHours;
+      
+      return {
+        ...employee,
+        is_working_day: true,
+        expected_hours: Math.round(expectedHours * 10) / 10,
+        actual_hours: Math.round(actualHours * 10) / 10,
+        balance_hours: Math.round(balanceHours * 10) / 10,
+        status: status,
+        is_absent: status === 'not_started' && actualHours === 0
+      };
+    });
+    
+    console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
+    setAdminRealTimeData(realTimeData);
   };
 
   const fetchRecentRequests = async () => {
@@ -499,30 +621,30 @@ const Dashboard = () => {
               </div>
             </h3>
           
-          {currentAttendance.length > 0 ? (
+          {adminRealTimeData.length > 0 ? (
             <div className="space-y-3">
-              {currentAttendance.map((person) => {
-                const isPresent = !person.is_absent && person.expected_hours > 0;
+              {adminRealTimeData.map((person) => {
+                const isPresent = person.status === 'working' || person.status === 'on_break' || person.status === 'completed';
                 const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
                                    person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
                 
                 return (
                   <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center">
+                        <div className="flex items-center">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
                           isPresent ? 'bg-green-500' : 'bg-slate-500'
                         }`}>
                           <span className="text-white font-semibold text-sm">
-                            {person.users ? person.users.first_name[0] + person.users.last_name[0] : 'N/A'}
+                            {person.first_name ? person.first_name[0] + person.last_name[0] : 'N/A'}
                           </span>
                         </div>
                         <div>
                           <h4 className="text-white font-semibold">
-                            {person.users ? `${person.users.first_name} ${person.users.last_name}` : 'N/A'}
+                            {person.first_name ? `${person.first_name} ${person.last_name}` : 'N/A'}
                           </h4>
                           <p className="text-slate-400 text-sm">
-                            {person.users ? person.users.email : 'N/A'}
+                            {person.email || 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -530,10 +652,14 @@ const Dashboard = () => {
                         {isPresent ? (
                           <>
                             <div className="text-green-400 font-semibold">
-                              Presente
+                              {person.status === 'working' ? 'Lavorando' : 
+                               person.status === 'on_break' ? 'In pausa' : 'Completato'}
                             </div>
                             <div className="text-slate-400 text-sm">
                               Ore attese: {person.expected_hours}h
+                            </div>
+                            <div className="text-slate-400 text-sm">
+                              Ore effettive: {person.actual_hours}h
                             </div>
                             <div className={`text-sm font-semibold ${balanceColor}`}>
                               Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
@@ -542,10 +668,10 @@ const Dashboard = () => {
                         ) : (
                           <>
                             <div className="text-slate-400 font-semibold">
-                              {person.is_absent ? 'Assente' : 'Non lavorativo'}
+                              {person.status === 'not_started' ? 'Non iniziato' : 'Non lavorativo'}
                             </div>
                             <div className="text-slate-500 text-sm">
-                              {person.absence_reason || 'Giorno non lavorativo'}
+                              {person.is_working_day ? 'Giorno lavorativo' : 'Giorno non lavorativo'}
                             </div>
                           </>
                         )}
