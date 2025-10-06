@@ -53,11 +53,8 @@ const Attendance = () => {
       calculateRealTimeHours();
     }, 60000); // Ogni minuto
     
-    // Aggiorna le ore ogni 5 minuti nel database (meno frequente)
-    const updateTimer = setInterval(() => {
-      console.log('🔄 Scheduled update...');
-      updateCurrentAttendance();
-    }, 300000); // 5 minuti invece di 1
+    // RIMOSSO: Aggiornamento database automatico (causa errori 403)
+    // Il calcolo è ora completamente lato frontend
     
     // Aggiorna tutti i dati ogni 5 minuti per evitare problemi di refresh
     const refreshTimer = setInterval(() => {
@@ -66,29 +63,19 @@ const Attendance = () => {
     }, 300000); // 5 minuti
     
     // Aggiorna quando la finestra torna in focus (navigazione)
-    const handleFocus = async () => {
+    const handleFocus = () => {
       console.log('🔄 Window focused - recalculating hours...');
       
       // Ricalcola immediatamente le ore in tempo reale
       calculateRealTimeHours();
       
-      // Poi aggiorna i dati dal server se possibile
-      try {
-        await Promise.all([
-          fetchAttendance(),
-          fetchHoursBalance()
-        ]);
-        console.log('✅ Data refreshed on focus');
-      } catch (error) {
-        console.error('❌ Error refreshing on focus:', error);
-      }
+      console.log('✅ Hours recalculated on focus');
     };
     
     window.addEventListener('focus', handleFocus);
     
     return () => {
       clearInterval(timer);
-      clearInterval(updateTimer);
       clearInterval(refreshTimer);
       window.removeEventListener('focus', handleFocus);
     };
@@ -188,107 +175,97 @@ const Attendance = () => {
     });
   };
 
-  // Calcola le ore in tempo reale lato frontend
+  // Calcolo SEMPLICE delle ore in tempo reale
   const calculateRealTimeHours = () => {
-    if (!workSchedules || workSchedules.length === 0) {
-      console.log('⚠️ No work schedules available for real-time calculation');
-      return;
-    }
-
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
     const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
-    const dayOfWeek = now.getDay();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    console.log(`🕐 Calcolo semplice: ora attuale ${currentTime}`);
 
-    // Trova l'orario di lavoro per oggi
-    const todaySchedule = workSchedules.find(schedule => 
-      schedule.day_of_week === dayOfWeek && schedule.is_working_day
-    );
+    // ORARIO FISSO SIMONE: 9-18 con pausa 13-14 = 8 ore totali
+    const workStart = 9; // 09:00
+    const workEnd = 18;   // 18:00
+    const breakStart = 13; // 13:00
+    const breakEnd = 14;   // 14:00
+    const expectedHours = 8; // 9 ore - 1 ora pausa = 8 ore
 
-    if (!todaySchedule) {
-      console.log('⚠️ No working schedule for today');
-      return;
-    }
-
-    const { start_time, end_time, break_duration } = todaySchedule;
-    console.log(`🕐 Real-time calculation: ${start_time} - ${end_time}, current: ${currentTime}`);
-
-    // Calcola ore attese (9-18 con 1h pausa = 8h)
-    const startTime = new Date(`2000-01-01T${start_time}`);
-    const endTime = new Date(`2000-01-01T${end_time}`);
-    const totalMinutes = (endTime - startTime) / (1000 * 60);
-    const workMinutes = totalMinutes - (break_duration || 60);
-    const expectedHours = workMinutes / 60;
-
-    // Calcola ore effettive in tempo reale
     let actualHours = 0;
     let status = 'not_started';
-    
-    if (currentTime >= start_time) {
-      if (currentTime <= end_time) {
-        // Durante l'orario di lavoro
-        const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
-        const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
-        
-        // Pausa pranzo fissa dalle 13:00 alle 14:00
-        const breakStartTime = new Date(`2000-01-01T13:00`);
-        const breakEndTime = new Date(`2000-01-01T14:00`);
-        
-        if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
-          // Durante la pausa pranzo
-          actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
-          status = 'on_break';
-        } else if (currentTimeObj > breakEndTime) {
-          // Dopo la pausa pranzo
-          const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
-          const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
-          actualHours = (morningMinutes + afternoonMinutes) / 60;
-          status = 'working';
-        } else {
-          // Prima della pausa pranzo
-          actualHours = workedMinutes / 60;
-          status = 'working';
-        }
-      } else {
-        // Dopo l'orario di lavoro
-        actualHours = expectedHours;
-        status = 'completed';
+    let remainingHours = 0;
+
+    // Se è prima delle 9:00
+    if (currentHour < workStart) {
+      actualHours = 0;
+      status = 'not_started';
+      remainingHours = expectedHours;
+    }
+    // Se è dopo le 18:00
+    else if (currentHour >= workEnd) {
+      actualHours = expectedHours;
+      status = 'completed';
+      remainingHours = 0;
+    }
+    // Se è durante l'orario di lavoro
+    else {
+      // Calcola ore lavorate fino ad ora
+      let totalMinutesWorked = 0;
+      
+      // Ore mattina (9:00 - 13:00) = 4 ore
+      if (currentHour >= workStart && currentHour < breakStart) {
+        totalMinutesWorked = (currentHour - workStart) * 60 + currentMinute;
       }
+      // Durante la pausa pranzo (13:00 - 14:00)
+      else if (currentHour >= breakStart && currentHour < breakEnd) {
+        totalMinutesWorked = (breakStart - workStart) * 60; // Solo ore mattina
+        status = 'on_break';
+      }
+      // Ore pomeriggio (14:00 - 18:00)
+      else if (currentHour >= breakEnd && currentHour < workEnd) {
+        const morningMinutes = (breakStart - workStart) * 60; // 4 ore = 240 min
+        const afternoonMinutes = (currentHour - breakEnd) * 60 + currentMinute;
+        totalMinutesWorked = morningMinutes + afternoonMinutes;
+        status = 'working';
+      }
+      
+      actualHours = totalMinutesWorked / 60;
+      remainingHours = expectedHours - actualHours;
+      
+      if (status === 'not_started') status = 'working';
     }
 
-    // Calcola saldo ore
-    const balanceHours = actualHours - expectedHours;
-    
-    console.log(`📊 Real-time calculation: expected=${expectedHours.toFixed(1)}h, actual=${actualHours.toFixed(1)}h, balance=${balanceHours.toFixed(1)}h, status=${status}`);
+    console.log(`📊 Calcolo: ${actualHours.toFixed(1)}h lavorate, ${remainingHours.toFixed(1)}h rimanenti, status: ${status}`);
 
-    // Aggiorna lo stato con i calcoli real-time
+    // Aggiorna lo stato
     setCurrentHours({
       isWorkingDay: true,
       schedule: {
-        start_time,
-        end_time,
-        break_duration: break_duration || 60
+        start_time: '09:00',
+        end_time: '18:00',
+        break_duration: 60
       },
       currentTime,
-      expectedHours: Math.round(expectedHours * 10) / 10,
+      expectedHours: expectedHours,
       actualHours: Math.round(actualHours * 10) / 10,
-      balanceHours: Math.round(balanceHours * 10) / 10,
+      balanceHours: Math.round((actualHours - expectedHours) * 10) / 10,
       status,
       progress: Math.min((actualHours / expectedHours) * 100, 100)
     });
 
-    // Aggiorna anche i dati di attendance per oggi se esiste
+    // Aggiorna anche i dati di attendance per oggi
+    const today = now.toISOString().split('T')[0];
     if (attendance.length > 0) {
-      const todayAttendance = attendance.find(record => record.date === today);
-      if (todayAttendance) {
-        // Aggiorna il record di oggi con i calcoli real-time
-        const updatedAttendance = attendance.map(record => 
-          record.date === today 
-            ? { ...record, actual_hours: actualHours, balance_hours: balanceHours }
-            : record
-        );
-        setAttendance(updatedAttendance);
-      }
+      const updatedAttendance = attendance.map(record => 
+        record.date === today 
+          ? { 
+              ...record, 
+              actual_hours: Math.round(actualHours * 10) / 10, 
+              balance_hours: Math.round((actualHours - expectedHours) * 10) / 10 
+            }
+          : record
+      );
+      setAttendance(updatedAttendance);
     }
   };
 
