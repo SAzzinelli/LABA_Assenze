@@ -3936,7 +3936,7 @@ async function saveHourlyAttendance() {
         
         // Ottieni l'orario di lavoro per oggi
         const { data: workSchedules, error: scheduleError } = await supabase
-          .from('work_patterns')
+          .from('work_schedules')
           .select('*')
           .eq('user_id', user.id);
         
@@ -4079,7 +4079,7 @@ async function finalizeDailyAttendance() {
         // Calcola le ore finali per ieri
         const dayOfWeek = yesterday.getDay();
         const { data: workSchedules } = await supabase
-          .from('work_patterns')
+          .from('work_schedules')
           .select('*')
           .eq('user_id', user.id);
         
