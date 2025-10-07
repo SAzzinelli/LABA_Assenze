@@ -357,6 +357,7 @@ const AdminAttendance = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'present': return 'bg-green-900 text-green-100 border-green-700';
+      case 'completed': return 'bg-green-800 text-green-200 border-green-600';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -367,6 +368,7 @@ const AdminAttendance = () => {
   const getStatusText = (status) => {
     switch (status) {
       case 'present': return 'Presente';
+      case 'completed': return 'Giornata terminata';
       case 'absent': return 'Assente';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
@@ -538,10 +540,23 @@ const AdminAttendance = () => {
     const balanceHours = actualHours - expectedHours;
     const isPresent = actualHours > 0;
     
+    // Determina lo status finale
+    let finalStatus = 'absent';
+    if (actualHours > 0) {
+      if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+        finalStatus = 'completed';
+      } else if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+        finalStatus = 'not_started';
+      } else {
+        finalStatus = 'working';
+      }
+    }
+    
     const result = {
       expectedHours: Math.round(expectedHours * 10) / 10,
       actualHours: Math.round(actualHours * 10) / 10,
       balanceHours: Math.round(balanceHours * 10) / 10,
+      status: finalStatus,
       isPresent
     };
     
@@ -553,6 +568,7 @@ const AdminAttendance = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'present': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'absent': return <XCircle className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
@@ -1000,7 +1016,7 @@ const AdminAttendance = () => {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
                       email: record.users?.email || '',
                       date: record.date,
-                      status: realTimeData.isPresent ? 'present' : 'absent',
+                      status: realTimeData.status,
                       expectedHours: realTimeData.expectedHours,
                       actualHours: realTimeData.actualHours,
                       balanceHours: realTimeData.balanceHours,
@@ -1034,11 +1050,26 @@ const AdminAttendance = () => {
                         </div>
                     </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}`}>
-                          {getStatusIcon(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}
-                          <span className="ml-1">{getStatusText(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}</span>
-                      </span>
-                    </td>
+                        {(() => {
+                          // Determina lo status basandosi su actualHours e status
+                          let finalStatus = 'absent';
+                          if (displayData.actualHours > 0) {
+                            if (displayData.status === 'completed') {
+                              finalStatus = 'completed';
+                            } else if (displayData.status === 'working' || displayData.status === 'on_break' || displayData.status === 'present') {
+                              finalStatus = 'present';
+                            } else {
+                              finalStatus = 'present'; // Se ha ore ma status non definito, è presente
+                            }
+                          }
+                          return (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(finalStatus)}`}>
+                              {getStatusIcon(finalStatus)}
+                              <span className="ml-1">{getStatusText(finalStatus)}</span>
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
                           {formatHours(displayData.expectedHours)}
