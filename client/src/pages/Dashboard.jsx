@@ -375,18 +375,47 @@ const Dashboard = () => {
               const [endHour, endMin] = end_time.split(':').map(Number);
               const breakDuration = break_duration || 60;
               
-              // Calculate real-time hours for today
-              if (currentHour >= startHour && currentHour <= endHour) {
-                const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-                if (currentHour >= 13) {
-                  totalWeeklyHours += Math.max(0, (workedMinutes - breakDuration) / 60);
-                } else {
-                  totalWeeklyHours += workedMinutes / 60;
-                }
-              } else if (currentHour > endHour) {
+              // Calculate real-time hours for today (same logic as Presenze page)
+              if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+                // Before start time
+                totalWeeklyHours += 0;
+              } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+                // After end time - full day
                 const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                 const workMinutes = totalMinutes - breakDuration;
                 totalWeeklyHours += workMinutes / 60;
+              } else {
+                // During work time - calculate with lunch break logic
+                const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+                const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                const hasLunchBreak = totalWorkMinutes > 300; // More than 5 hours = full day
+                
+                let totalMinutesWorked = 0;
+                
+                if (hasLunchBreak) {
+                  // FULL DAY: has lunch break (e.g. 9:00-18:00)
+                  const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // End of morning
+                  const breakStartMinutes = morningEndMinutes;
+                  const breakEndMinutes = morningEndMinutes + breakDuration;
+                  
+                  if (minutesFromStart < breakStartMinutes) {
+                    // Before lunch break
+                    totalMinutesWorked = minutesFromStart;
+                  } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+                    // During lunch break
+                    totalMinutesWorked = breakStartMinutes;
+                  } else {
+                    // After lunch break
+                    const morningMinutes = breakStartMinutes;
+                    const afternoonMinutes = minutesFromStart - breakEndMinutes;
+                    totalMinutesWorked = morningMinutes + afternoonMinutes;
+                  }
+                } else {
+                  // HALF DAY: no lunch break (e.g. 9:00-13:00)
+                  totalMinutesWorked = minutesFromStart;
+                }
+                
+                totalWeeklyHours += totalMinutesWorked / 60;
               }
             }
           } else {
@@ -418,17 +447,47 @@ const Dashboard = () => {
             const [endHour, endMin] = end_time.split(':').map(Number);
             const breakDuration = break_duration || 60;
             
-            if (currentHour >= startHour && currentHour <= endHour) {
-              const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-              if (currentHour >= 13) {
-                return sum + Math.max(0, (workedMinutes - breakDuration) / 60);
-              } else {
-                return sum + workedMinutes / 60;
-              }
-            } else if (currentHour > endHour) {
+            // Calculate real-time hours for today (same logic as Presenze page)
+            if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+              // Before start time
+              return sum + 0;
+            } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+              // After end time - full day
               const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
               const workMinutes = totalMinutes - breakDuration;
               return sum + workMinutes / 60;
+            } else {
+              // During work time - calculate with lunch break logic
+              const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+              const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+              const hasLunchBreak = totalWorkMinutes > 300; // More than 5 hours = full day
+              
+              let totalMinutesWorked = 0;
+              
+              if (hasLunchBreak) {
+                // FULL DAY: has lunch break (e.g. 9:00-18:00)
+                const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // End of morning
+                const breakStartMinutes = morningEndMinutes;
+                const breakEndMinutes = morningEndMinutes + breakDuration;
+                
+                if (minutesFromStart < breakStartMinutes) {
+                  // Before lunch break
+                  totalMinutesWorked = minutesFromStart;
+                } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+                  // During lunch break
+                  totalMinutesWorked = breakStartMinutes;
+                } else {
+                  // After lunch break
+                  const morningMinutes = breakStartMinutes;
+                  const afternoonMinutes = minutesFromStart - breakEndMinutes;
+                  totalMinutesWorked = morningMinutes + afternoonMinutes;
+                }
+              } else {
+                // HALF DAY: no lunch break (e.g. 9:00-13:00)
+                totalMinutesWorked = minutesFromStart;
+              }
+              
+              return sum + totalMinutesWorked / 60;
             }
           }
         }
