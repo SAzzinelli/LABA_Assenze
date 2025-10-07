@@ -739,7 +739,7 @@ const Attendance = () => {
               <div>
                 <p className="text-slate-400 text-sm">Giorni Lavorativi</p>
                 <p className="text-2xl font-bold text-purple-400">
-                  {attendance.filter(record => (record.actual_hours || 0) > 0).length}
+                  {hoursBalance.working_days || 0}
                 </p>
               </div>
               <div className="p-3 rounded-full text-purple-400">
@@ -880,7 +880,27 @@ const Attendance = () => {
                 </tr>
               </thead>
               <tbody>
-                {attendance.slice(0, 10).map((record) => (
+                {(() => {
+                  // Crea un array combinato con i dati del database + oggi (se non esiste)
+                  const today = new Date().toISOString().split('T')[0];
+                  const todayExists = attendance.some(record => record.date === today);
+                  
+                  let combinedAttendance = [...attendance];
+                  
+                  // Se oggi non esiste nel database, aggiungilo usando i dati real-time
+                  if (!todayExists && currentHours?.actualHours !== undefined && currentHours.actualHours > 0) {
+                    const todayRecord = {
+                      id: 'today-realtime',
+                      date: today,
+                      actual_hours: currentHours.actualHours,
+                      expected_hours: currentHours.expectedHours,
+                      balance_hours: currentHours.balanceHours,
+                      status: currentHours.status
+                    };
+                    combinedAttendance = [todayRecord, ...attendance];
+                  }
+                  
+                  return combinedAttendance.slice(0, 10).map((record) => (
                   <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                     <td className="py-3 px-4">
                       {new Date(record.date).toLocaleDateString('it-IT')}
@@ -933,7 +953,8 @@ const Attendance = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
