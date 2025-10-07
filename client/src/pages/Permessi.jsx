@@ -115,7 +115,7 @@ const LeaveRequests = () => {
   // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
   const handleApproveRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
+      const { token } = useAuthStore.getState();
       const response = await fetch(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
@@ -143,7 +143,7 @@ const LeaveRequests = () => {
 
   const handleRejectRequest = async (requestId, notes = '') => {
     try {
-      const token = localStorage.getItem('token');
+      const { token } = useAuthStore.getState();
       const response = await fetch(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
@@ -206,7 +206,7 @@ const LeaveRequests = () => {
   // Funzione per annullare richieste approvate (solo admin, solo permessi)
   const handleCancelRequest = async (requestId, reason = '') => {
     try {
-      const token = localStorage.getItem('token');
+      const { token } = useAuthStore.getState();
       
       if (!token) {
         showError('Token non trovato. Effettua il login.');
