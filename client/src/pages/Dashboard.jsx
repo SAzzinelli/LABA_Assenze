@@ -631,7 +631,7 @@ const Dashboard = () => {
           ) : (
             <div className="text-center py-8">
               <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400">Nessun record di presenza per oggi</p>
+              <p className="text-slate-400">Nessuno presente attualmente</p>
             </div>
           )}
           </div>
@@ -709,7 +709,6 @@ const Dashboard = () => {
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-slate-400">Nessuna richiesta recente</p>
-                <p className="text-slate-500 text-sm mt-2">Le richieste dei dipendenti appariranno qui</p>
               </div>
             )}
           </div>

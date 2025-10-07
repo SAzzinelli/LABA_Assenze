@@ -1795,9 +1795,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
-    // Filter to show only those who should be working today and are currently working
+    // Filter to show only those who should be working today and are currently working or completed
     const currentlyWorking = currentAttendance.filter(emp => 
-      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
+      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break' || emp.status === 'completed')
     );
 
     console.log(`🔍 Filtered currently working: ${currentlyWorking.length}`);

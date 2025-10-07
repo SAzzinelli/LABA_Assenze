@@ -816,7 +816,6 @@ const AdminAttendance = () => {
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Stato</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Attese</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Effettive</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Saldo Ore</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Azioni</th>
                 </tr>
               </thead>
@@ -891,16 +890,6 @@ const AdminAttendance = () => {
                         <span className="font-mono text-slate-300">
                           {formatHours(displayData.actualHours)}
                         </span>
-                    </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(displayData.balanceHours)}`}>
-                          {displayData.balanceHours > 0 ? (
-                            <TrendingUp className="h-3 w-3 mr-1" />
-                          ) : displayData.balanceHours < 0 ? (
-                            <TrendingDown className="h-3 w-3 mr-1" />
-                          ) : null}
-                          {formatHours(displayData.balanceHours)}
-                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
