@@ -600,7 +600,7 @@ const Dashboard = () => {
                             <div className="text-green-400 font-semibold">
                               {person.status === 'working' ? 'Lavorando' : 
                                person.status === 'on_break' ? 'In pausa' : 
-                               person.status === 'completed' ? 'Completato' : 'Presente'}
+                               person.status === 'completed' ? 'Giornata terminata' : 'Presente'}
                             </div>
                             <div className="text-slate-400 text-sm">
                               Ore attese: {person.expected_hours}h

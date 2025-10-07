@@ -14,11 +14,30 @@ if (process.env.RESEND_API_KEY) {
 // Resend è pronto per l'uso
 console.log('✅ Resend configured and ready to send emails');
 
+// Funzioni helper per traduzione e colori
+const getItalianRequestType = (type) => {
+  switch (type) {
+    case 'sick_leave': return 'malattia';
+    case 'vacation': return 'ferie';
+    case 'permission': return 'permesso';
+    default: return type;
+  }
+};
+
+const getBannerColor = (type) => {
+  switch (type) {
+    case 'sick_leave': return '#EF4444'; // Red-500
+    case 'vacation': return '#3B82F6'; // Blue-500
+    case 'permission': return '#8B5CF6'; // Purple-500
+    default: return '#64748B'; // Slate-500 (default)
+  }
+};
+
 // Template email per notifiche
 const emailTemplates = {
   // Notifica admin per nuova richiesta
   newRequest: (userName, requestType, startDate, endDate, requestId) => ({
-    subject: `🔔 Nuova Richiesta ${requestType} - Sistema HR LABA`,
+    subject: `🔔 Nuova richiesta per ${getItalianRequestType(requestType)} - Sistema HR LABA`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -29,7 +48,7 @@ const emailTemplates = {
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: ${getBannerColor(requestType)}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
           .request-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
           .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
@@ -40,14 +59,14 @@ const emailTemplates = {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🔔 Nuova Richiesta</h1>
+            <h1>🔔 Nuova richiesta per ${getItalianRequestType(requestType)}</h1>
             <p>Sistema HR LABA</p>
           </div>
           <div class="content">
             <div class="highlight">
               <h2>📋 Dettagli Richiesta</h2>
               <p><strong>Dipendente:</strong> ${userName}</p>
-              <p><strong>Tipo:</strong> ${requestType}</p>
+              <p><strong>Tipo:</strong> ${getItalianRequestType(requestType)}</p>
               <p><strong>Periodo:</strong> ${startDate} - ${endDate}</p>
               <p><strong>ID Richiesta:</strong> #${requestId}</p>
             </div>
@@ -77,7 +96,7 @@ const emailTemplates = {
 
   // Risposta richiesta per dipendente
   requestResponse: (requestType, status, startDate, endDate, notes, requestId) => ({
-    subject: `📋 Aggiornamento Richiesta ${requestType}: ${status}`,
+    subject: `📋 Richiesta ${getItalianRequestType(requestType)} ${status === 'approved' ? 'approvata' : 'rifiutata'} - Sistema HR LABA`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -88,7 +107,7 @@ const emailTemplates = {
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: ${getBannerColor(requestType)}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
           .status-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
           .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
@@ -99,13 +118,13 @@ const emailTemplates = {
       <body>
         <div class="container">
           <div class="header">
-            <h1>📋 Aggiornamento Richiesta</h1>
+            <h1>📋 Richiesta ${getItalianRequestType(requestType)} ${status === 'approved' ? 'approvata' : 'rifiutata'}</h1>
             <p>Sistema HR LABA</p>
           </div>
           <div class="content">
             <div class="highlight">
               <h2>📝 Dettagli Richiesta</h2>
-              <p><strong>Tipo:</strong> ${requestType}</p>
+              <p><strong>Tipo:</strong> ${getItalianRequestType(requestType)}</p>
               <p><strong>Periodo:</strong> ${startDate} - ${endDate}</p>
               <p><strong>Stato:</strong> ${status}</p>
               <p><strong>ID Richiesta:</strong> #${requestId}</p>
@@ -113,7 +132,7 @@ const emailTemplates = {
             
             <div class="status-card">
               <h3>✅ Risposta</h3>
-              <p>La tua richiesta è stata <strong>${status}</strong>.</p>
+              <p>La tua richiesta è stata <strong>${status === 'approved' ? 'approvata' : 'rifiutata'}</strong>.</p>
               ${notes ? `<p><strong>Note:</strong> ${notes}</p>` : ''}
             </div>
             

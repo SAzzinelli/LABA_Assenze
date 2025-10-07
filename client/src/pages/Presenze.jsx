@@ -905,7 +905,8 @@ const Attendance = () => {
                   let combinedAttendance = [...attendance];
                   
                   // Se oggi non esiste nel database, aggiungilo usando i dati real-time
-                  if (!todayExists && currentHours?.actualHours !== undefined && currentHours.actualHours > 0) {
+                  // Aggiungi sempre oggi se non esiste, anche con 0 ore
+                  if (!todayExists) {
                     const todayRecord = {
                       id: 'today-realtime',
                       date: today,
