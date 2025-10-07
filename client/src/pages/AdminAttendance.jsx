@@ -32,6 +32,7 @@ const AdminAttendance = () => {
   const { user, apiCall } = useAuthStore();
   const [attendance, setAttendance] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -95,6 +96,7 @@ const AdminAttendance = () => {
     const initializeData = async () => {
       await fetchAttendanceData();
       await fetchEmployees();
+      await fetchAllEmployees();
       await fetchWorkSchedules();
       await fetchStats();
       
@@ -112,6 +114,7 @@ const AdminAttendance = () => {
       console.log('🔄 Admin sync polling...');
     fetchAttendanceData();
     fetchEmployees();
+      fetchAllEmployees();
       fetchWorkSchedules();
       calculateRealTimeStats();
     }, 30000);
@@ -170,6 +173,19 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('Error fetching current attendance:', error);
+    }
+  };
+
+  const fetchAllEmployees = async () => {
+    try {
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const data = await response.json();
+        setAllEmployees(data);
+        console.log('👥 All employees loaded for admin:', data.length, 'total employees');
+      }
+    } catch (error) {
+      console.error('Error fetching all employees:', error);
     }
   };
 
@@ -356,6 +372,79 @@ const AdminAttendance = () => {
       case 'non_working_day': return 'Non lavorativo';
       default: return 'Sconosciuto';
     }
+  };
+
+  // Calcola le ore real-time per un employee ID
+  const calculateRealTimeHoursForEmployee = (employeeId) => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
+    
+    // Trova l'orario di lavoro per questo dipendente
+    const workSchedule = workSchedules.find(schedule => 
+      schedule.user_id === employeeId && 
+      schedule.day_of_week === dayOfWeek && 
+      schedule.is_working_day === true
+    );
+    
+    if (!workSchedule) {
+      return {
+        actualHours: 0,
+        expectedHours: 0,
+        balanceHours: 0,
+        status: 'not_working',
+        isPresent: false
+      };
+    }
+    
+    const startHour = parseInt(workSchedule.start_time.split(':')[0]);
+    const startMin = parseInt(workSchedule.start_time.split(':')[1]);
+    const endHour = parseInt(workSchedule.end_time.split(':')[0]);
+    const endMin = parseInt(workSchedule.end_time.split(':')[1]);
+    
+    const expectedHours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
+    let actualHours = 0;
+    let status = 'not_started';
+    
+    if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+      actualHours = 0;
+      status = 'not_started';
+    } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+      actualHours = expectedHours;
+      status = 'completed';
+    } else {
+      // Durante l'orario di lavoro - calcola con logica pausa pranzo
+      const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+      const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const hasLunchBreak = totalWorkMinutes > 300; // 5 ore = 300 minuti
+      
+      if (hasLunchBreak) {
+        const lunchBreakMinutes = 60; // 1 ora di pausa
+        const effectiveWorkMinutes = totalWorkMinutes - lunchBreakMinutes;
+        
+        if (minutesFromStart <= effectiveWorkMinutes) {
+          actualHours = minutesFromStart / 60;
+          status = 'working';
+        } else {
+          actualHours = effectiveWorkMinutes / 60;
+          status = 'on_break';
+        }
+      } else {
+        actualHours = minutesFromStart / 60;
+        status = 'working';
+      }
+    }
+    
+    const balanceHours = actualHours - expectedHours;
+    
+    return {
+      actualHours: Math.round(actualHours * 100) / 100,
+      expectedHours: Math.round(expectedHours * 100) / 100,
+      balanceHours: Math.round(balanceHours * 100) / 100,
+      status: status,
+      isPresent: status === 'working' || status === 'on_break'
+    };
   };
 
   // Calcola le ore real-time per un record
@@ -572,19 +661,30 @@ const AdminAttendance = () => {
       const today = new Date().toISOString().split('T')[0];
       const hasTodayInDatabase = attendance.some(record => record.date === today);
       
-      if (!hasTodayInDatabase && employees.length > 0) {
-        // Aggiungi i dati real-time per oggi
-        const todayRealTimeData = employees.map(emp => ({
-          id: `realtime-${emp.user_id}`,
-          user_id: emp.user_id,
-          date: today,
-          actual_hours: emp.actual_hours,
-          expected_hours: emp.expected_hours,
-          balance_hours: emp.balance_hours,
-          status: emp.status,
-          users: { first_name: emp.name.split(' ')[0], last_name: emp.name.split(' ')[1] || '' },
-          is_realtime: true // Flag per identificare dati real-time
-        }));
+      if (!hasTodayInDatabase && allEmployees.length > 0) {
+        // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
+        const todayRealTimeData = allEmployees
+          .filter(emp => emp.role !== 'admin') // Escludi admin
+          .map(emp => {
+            // Calcola ore real-time per questo dipendente
+            const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
+            if (realTimeHours && realTimeHours.actualHours > 0) {
+              return {
+                id: `realtime-${emp.id}`,
+                user_id: emp.id,
+                date: today,
+                actual_hours: realTimeHours.actualHours,
+                expected_hours: realTimeHours.expectedHours,
+                balance_hours: realTimeHours.balanceHours,
+                status: realTimeHours.status,
+                users: { first_name: emp.firstName, last_name: emp.lastName },
+                is_realtime: true // Flag per identificare dati real-time
+              };
+            }
+            return null;
+          })
+          .filter(Boolean); // Rimuovi null values
+        
         data = [...data, ...todayRealTimeData];
       }
     } else {
@@ -595,19 +695,30 @@ const AdminAttendance = () => {
       const today = new Date().toISOString().split('T')[0];
       const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
       
-      if (!hasTodayInHistory && employees.length > 0) {
-        // Aggiungi i dati real-time per oggi
-        const todayRealTimeData = employees.map(emp => ({
-          id: `realtime-${emp.user_id}`,
-          user_id: emp.user_id,
-          date: today,
-          actual_hours: emp.actual_hours,
-          expected_hours: emp.expected_hours,
-          balance_hours: emp.balance_hours,
-          status: emp.status,
-          users: { first_name: emp.name.split(' ')[0], last_name: emp.name.split(' ')[1] || '' },
-          is_realtime: true // Flag per identificare dati real-time
-        }));
+      if (!hasTodayInHistory && allEmployees.length > 0) {
+        // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
+        const todayRealTimeData = allEmployees
+          .filter(emp => emp.role !== 'admin') // Escludi admin
+          .map(emp => {
+            // Calcola ore real-time per questo dipendente
+            const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
+            if (realTimeHours && realTimeHours.actualHours > 0) {
+              return {
+                id: `realtime-${emp.id}`,
+                user_id: emp.id,
+                date: today,
+                actual_hours: realTimeHours.actualHours,
+                expected_hours: realTimeHours.expectedHours,
+                balance_hours: realTimeHours.balanceHours,
+                status: realTimeHours.status,
+                users: { first_name: emp.firstName, last_name: emp.lastName },
+                is_realtime: true // Flag per identificare dati real-time
+              };
+            }
+            return null;
+          })
+          .filter(Boolean); // Rimuovi null values
+        
         data = [...data, ...todayRealTimeData];
       }
     }
@@ -1135,7 +1246,7 @@ const AdminAttendance = () => {
                       className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Seleziona dipendente</option>
-                      {employees.map((emp) => (
+                      {allEmployees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
                           {emp.firstName} {emp.lastName}
                         </option>
