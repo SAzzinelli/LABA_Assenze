@@ -1085,8 +1085,14 @@ const AdminAttendance = () => {
                     });
                     
                     // Usa i dati del database per giorni passati, real-time per oggi
-                    const today = new Date().toISOString().split('T')[0];
+                    const now = new Date();
+                    const today = now.toISOString().split('T')[0];
                     const recordDate = record.date;
+                    
+                    // Converti le date in oggetti Date per confronto corretto
+                    const todayDate = new Date(today);
+                    const recordDateObj = new Date(recordDate);
+                    const isPast = recordDateObj < todayDate;
                     const isToday = recordDate === today;
                     
                     // Determina status in base ai dati: per giorni passati usa DB, per oggi usa real-time
@@ -1095,18 +1101,18 @@ const AdminAttendance = () => {
                     let finalExpectedHours;
                     let finalBalanceHours;
                     
-                    if (isToday) {
-                      // Oggi: usa real-time
-                      finalStatus = realTimeData.status;
-                      finalActualHours = realTimeData.actualHours;
-                      finalExpectedHours = realTimeData.expectedHours;
-                      finalBalanceHours = realTimeData.balanceHours;
-                    } else {
+                    if (isPast || !isToday) {
                       // Giorni passati: usa DB e determina status dai dati
                       finalActualHours = record.actual_hours || 0;
                       finalExpectedHours = record.expected_hours || 0;
                       finalBalanceHours = record.balance_hours || 0;
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
+                    } else {
+                      // Oggi: usa real-time
+                      finalStatus = realTimeData.status;
+                      finalActualHours = realTimeData.actualHours;
+                      finalExpectedHours = realTimeData.expectedHours;
+                      finalBalanceHours = realTimeData.balanceHours;
                     }
                     
                     displayData = {
