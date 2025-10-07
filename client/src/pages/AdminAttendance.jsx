@@ -1065,6 +1065,11 @@ const AdminAttendance = () => {
                   } else {
                     // Per dati database, calcola le ore real-time
                     const realTimeData = calculateRealTimeHoursForRecord(record);
+                    console.log('🔍 DisplayData creation for', record.date, ':', {
+                      realTimeData,
+                      recordActualHours: record.actual_hours,
+                      recordExpectedHours: record.expected_hours
+                    });
                     displayData = {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
                       email: record.users?.email || '',
