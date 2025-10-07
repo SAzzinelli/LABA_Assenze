@@ -47,6 +47,9 @@ const SickLeave = () => {
   // Array vuoto per le richieste di malattia
   const [sickRequests, setSickRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Tab per admin
+  const [activeTab, setActiveTab] = useState('cronologia'); // 'cronologia' | 'programmate'
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
@@ -228,8 +231,26 @@ const SickLeave = () => {
   const getFilteredRequests = () => {
     let filtered = sickRequests;
     
-    // Filtro per mese/anno (solo admin)
+    // Filtro per tab (solo admin)
     if (user?.role === 'admin') {
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (activeTab === 'programmate') {
+        // Mostra solo richieste approvate con data futura
+        filtered = filtered.filter(request => 
+          request.status === 'approved' && request.startDate > today
+        );
+      } else {
+        // Cronologia: filtra per mese/anno E esclude richieste programmate
+        filtered = filtered.filter(request => {
+          const requestDate = new Date(request.startDate);
+          const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+          const isNotProgrammed = request.status !== 'approved' || request.startDate <= today;
+          return isInCurrentMonth && isNotProgrammed;
+        });
+      }
+    } else {
+      // Per dipendenti: filtra per mese/anno
       filtered = filtered.filter(request => {
         const requestDate = new Date(request.startDate);
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
@@ -537,10 +558,38 @@ const SickLeave = () => {
 
       {/* Requests List */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center">
-          <FileText className="h-6 w-6 mr-3 text-slate-400" />
-          {user?.role === 'admin' ? 'Gestione Richieste Malattia' : 'Storico Richieste Malattia'}
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white flex items-center">
+            <FileText className="h-6 w-6 mr-3 text-slate-400" />
+            {user?.role === 'admin' ? 'Gestione Richieste Malattia' : 'Storico Richieste Malattia'}
+          </h2>
+          
+          {/* Tab per Admin */}
+          {user?.role === 'admin' && (
+            <div className="flex bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('cronologia')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'cronologia'
+                    ? 'bg-red-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Cronologia
+              </button>
+              <button
+                onClick={() => setActiveTab('programmate')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'programmate'
+                    ? 'bg-red-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Programmate
+              </button>
+            </div>
+          )}
+        </div>
 
         {(() => {
           const filteredRequests = getFilteredRequests();
@@ -549,13 +598,17 @@ const SickLeave = () => {
               <Heart className="h-16 w-16 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-400 text-lg">
                 {user?.role === 'admin' 
-                  ? `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`
+                  ? (activeTab === 'programmate' 
+                      ? 'Nessuna malattia programmata'
+                      : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
                   : 'Nessuna richiesta di malattia presente'
                 }
               </p>
               <p className="text-slate-500 text-sm mt-2">
                 {user?.role === 'admin' 
-                  ? 'Prova a cambiare mese o aggiungere nuove richieste'
+                  ? (activeTab === 'programmate'
+                      ? 'Le richieste di malattia approvate con date future appariranno qui'
+                      : 'Prova a cambiare mese o aggiungere nuove richieste')
                   : 'Clicca su "Nuova Richiesta" per iniziare'
                 }
               </p>
@@ -573,6 +626,14 @@ const SickLeave = () => {
                         {getStatusText(request.status)}
                       </span>
                     </div>
+                    {user?.role === 'admin' && (
+                      <div className="flex items-center mb-3">
+                        <User className="h-4 w-4 mr-2 text-slate-400" />
+                        <span className="text-slate-300 text-sm">
+                          <strong>Dipendente:</strong> {request.user?.name || request.submittedBy || 'N/A'}
+                        </span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-slate-400" />

@@ -48,6 +48,9 @@ const LeaveRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Tab per admin
+  const [activeTab, setActiveTab] = useState('cronologia'); // 'cronologia' | 'programmate'
+  
   // Stati per dialog di approvazione/rifiuto
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -446,6 +449,25 @@ const LeaveRequests = () => {
     return diffDays;
   };
 
+  // Filtra le richieste in base alla tab attiva per admin
+  const getFilteredRequests = () => {
+    if (user?.role !== 'admin') return requests;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (activeTab === 'programmate') {
+      // Mostra solo richieste approvate con data futura
+      return requests.filter(request => 
+        request.status === 'approved' && request.startDate > today
+      );
+    } else {
+      // Cronologia: tutte le altre richieste (pending, rifiutate, approvate passate)
+      return requests.filter(request => 
+        request.status !== 'approved' || request.startDate <= today
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -722,10 +744,38 @@ const LeaveRequests = () => {
 
       {/* Requests List */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center">
-          <Clock className="h-6 w-6 mr-3 text-slate-400" />
-          Storico Richieste Permessi
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white flex items-center">
+            <Clock className="h-6 w-6 mr-3 text-slate-400" />
+            {user?.role === 'admin' ? 'Gestione Richieste Permessi' : 'Storico Richieste Permessi'}
+          </h2>
+          
+          {/* Tab per Admin */}
+          {user?.role === 'admin' && (
+            <div className="flex bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('cronologia')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'cronologia'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Cronologia
+              </button>
+              <button
+                onClick={() => setActiveTab('programmate')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'programmate'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Programmate
+              </button>
+            </div>
+          )}
+        </div>
 
         {(() => {
           const filteredRequests = getFilteredRequests();
@@ -734,13 +784,17 @@ const LeaveRequests = () => {
               <FileText className="h-16 w-16 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-400 text-lg">
                 {user?.role === 'admin' 
-                  ? `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`
+                  ? (activeTab === 'programmate' 
+                      ? 'Nessuna richiesta programmata'
+                      : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
                   : 'Nessuna richiesta di permesso presente'
                 }
               </p>
               <p className="text-slate-500 text-sm mt-2">
                 {user?.role === 'admin' 
-                  ? 'Prova a cambiare mese o aggiungere nuove richieste'
+                  ? (activeTab === 'programmate'
+                      ? 'Le richieste approvate con date future appariranno qui'
+                      : 'Prova a cambiare mese o aggiungere nuove richieste')
                   : 'Clicca su "Nuova Richiesta" per iniziare'
                 }
               </p>
