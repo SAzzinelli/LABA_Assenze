@@ -70,7 +70,7 @@ const Dashboard = () => {
         setTimeout(() => {
           if (user?.role === 'employee') {
             console.log('🔄 Secondary KPI update...');
-            calculateUserKPIs();
+            // Non calcolare KPI localmente, usa solo l'endpoint
           } else if (user?.role === 'admin') {
             console.log('🔄 Secondary admin real-time update...');
             calculateAdminRealTimeData();
@@ -83,7 +83,7 @@ const Dashboard = () => {
             console.log('🔄 Refreshing employee data...');
             fetchAttendanceData();
             fetchWorkSchedules();
-            calculateUserKPIs();
+            // Non calcolare KPI localmente, usa solo l'endpoint
           } else if (user?.role === 'admin') {
             console.log('🔄 Refreshing admin data...');
             fetchEmployees();
@@ -131,7 +131,8 @@ const Dashboard = () => {
   // Ricalcola i KPI quando cambiano i dati di attendance o work schedules
   useEffect(() => {
     if (user?.role === 'employee' && attendanceData.length > 0 && workSchedules.length > 0) {
-      calculateUserKPIs();
+      // Non calcolare KPI localmente, usa solo l'endpoint
+      console.log('📊 Attendance and work schedules loaded, KPI will be updated by endpoint');
     }
   }, [attendanceData, workSchedules, user?.role]);
 
@@ -149,8 +150,7 @@ const Dashboard = () => {
         const data = await response.json();
         setAttendanceData(data);
         console.log('📊 Attendance data loaded:', data.length, 'records');
-        // Calcola i KPI immediatamente dopo aver caricato i dati
-        calculateUserKPIs();
+        // Non calcolare i KPI localmente, usa solo l'endpoint
       }
       
       // Fetch hours balance from the correct endpoint (same as Presenze page)
@@ -580,6 +580,7 @@ const Dashboard = () => {
       // Update KPIs with the correct balance data from the API
       setUserKPIs(prevKPIs => ({
         ...prevKPIs,
+        weeklyHours: formatHours(balanceData.total_worked), // Use total_worked from API
         overtimeBalance: formatOvertime(balanceData.monte_ore),
         remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
         monthlyPresences: `${balanceData.working_days}/20`
