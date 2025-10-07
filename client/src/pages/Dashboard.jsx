@@ -179,6 +179,15 @@ const Dashboard = () => {
     }
   };
 
+  // Ricalcola i KPI quando i work schedules sono caricati
+  useEffect(() => {
+    if (user?.role === 'employee' && workSchedules.length > 0) {
+      console.log('🔄 Work schedules loaded, recalculating employee KPIs...');
+      // Ricalcola i KPI per il dipendente quando i work schedules sono disponibili
+      fetchAttendanceData();
+    }
+  }, [workSchedules, user?.role]);
+
   // Fetch employees for admin dashboard
   const fetchEmployees = async () => {
     try {
