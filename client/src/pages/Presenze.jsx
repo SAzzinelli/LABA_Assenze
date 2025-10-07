@@ -646,14 +646,31 @@ const Attendance = () => {
   };
 
   const getStatusColor = (record) => {
+    // Assenza giustificata (malattia, ferie, permessi approvati)
+    if (record.is_justified_absence) return 'text-yellow-400';
+    // Assenza non giustificata
     if (record.is_absent) return 'text-red-400';
+    // Giorno non lavorativo
     if (record.expected_hours === 0) return 'text-gray-400';
+    // Presente
     return 'text-green-400';
   };
 
   const getStatusText = (record) => {
+    // Assenza giustificata
+    if (record.is_justified_absence) {
+      const leaveTypeText = {
+        'sick_leave': 'Malattia',
+        'vacation': 'Ferie',
+        'permission': 'Permesso'
+      }[record.leave_type] || 'Assente (Giustificato)';
+      return `Assente (${leaveTypeText})`;
+    }
+    // Assenza non giustificata
     if (record.is_absent) return 'Assente';
+    // Giorno non lavorativo
     if (record.expected_hours === 0) return 'Non lavorativo';
+    // Presente
     return 'Presente';
   };
 

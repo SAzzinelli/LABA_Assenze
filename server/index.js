@@ -902,7 +902,59 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    res.json(attendance);
+    // Recupera le leave requests approvate per controllare assenze giustificate
+    const targetUserId = userId || req.user.id;
+    let leaveQuery = supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('status', 'approved');
+    
+    if (month && year) {
+      const startDate = `${year}-${month.padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      leaveQuery = leaveQuery.gte('start_date', startDate).lte('end_date', endDate);
+    }
+
+    const { data: leaveRequests, error: leaveError } = await leaveQuery;
+    
+    if (leaveError) {
+      console.error('Leave requests fetch error:', leaveError);
+    }
+
+    // Mappa le attendance con informazioni su assenze giustificate
+    const attendanceWithLeaves = attendance.map(record => {
+      const recordDate = record.date;
+      
+      // Controlla se c'è una leave request approvata per questa data
+      const hasApprovedLeave = leaveRequests?.some(leave => {
+        const leaveStart = new Date(leave.start_date).toISOString().split('T')[0];
+        const leaveEnd = new Date(leave.end_date).toISOString().split('T')[0];
+        return recordDate >= leaveStart && recordDate <= leaveEnd;
+      });
+
+      // Se c'è una leave approvata, trova quale tipo
+      let leaveType = null;
+      let leaveReason = null;
+      if (hasApprovedLeave) {
+        const leave = leaveRequests.find(leave => {
+          const leaveStart = new Date(leave.start_date).toISOString().split('T')[0];
+          const leaveEnd = new Date(leave.end_date).toISOString().split('T')[0];
+          return recordDate >= leaveStart && recordDate <= leaveEnd;
+        });
+        leaveType = leave?.type;
+        leaveReason = leave?.reason;
+      }
+
+      return {
+        ...record,
+        is_justified_absence: hasApprovedLeave,
+        leave_type: leaveType,
+        leave_reason: leaveReason
+      };
+    });
+
+    res.json(attendanceWithLeaves);
   } catch (error) {
     console.error('Attendance fetch error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
