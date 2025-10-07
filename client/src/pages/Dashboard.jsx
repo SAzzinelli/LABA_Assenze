@@ -152,6 +152,15 @@ const Dashboard = () => {
         // Calcola i KPI immediatamente dopo aver caricato i dati
         calculateUserKPIs();
       }
+      
+      // Fetch hours balance from the correct endpoint (same as Presenze page)
+      const balanceResponse = await apiCall('/api/attendance/hours-balance');
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        console.log('📊 Hours balance loaded:', balanceData);
+        // Update KPIs with correct balance data
+        updateKPIsWithBalance(balanceData);
+      }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
     }
@@ -564,6 +573,20 @@ const Dashboard = () => {
   const formatOvertime = (hours) => {
     const sign = hours >= 0 ? '+' : '';
     return `${sign}${formatHours(Math.abs(hours))}`;
+  };
+
+  const updateKPIsWithBalance = (balanceData) => {
+    if (user?.role === 'employee') {
+      // Update KPIs with the correct balance data from the API
+      setUserKPIs(prevKPIs => ({
+        ...prevKPIs,
+        overtimeBalance: formatOvertime(balanceData.monte_ore),
+        remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
+        monthlyPresences: `${balanceData.working_days}/20`
+      }));
+      
+      console.log('✅ KPIs updated with balance data:', balanceData);
+    }
   };
 
   // Usa i dati reali dal database
