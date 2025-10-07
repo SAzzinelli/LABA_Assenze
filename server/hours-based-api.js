@@ -713,6 +713,90 @@ router.put('/admin/leave-requests/:id/approve', async (req, res) => {
   }
 });
 
+// Cancel approved leave request (admin only, permissions only)
+router.put('/admin/leave-requests/:id/cancel', async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    // Get the leave request
+    const { data: request, error: requestError } = await req.supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (requestError || !request) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({ error: 'Solo le richieste approvate possono essere annullate' });
+    }
+
+    // Solo i permessi possono essere annullati
+    if (request.type !== 'permission') {
+      return res.status(400).json({ error: 'Solo i permessi possono essere annullati' });
+    }
+
+    // Update leave request status to cancelled
+    const { data: updatedRequest, error: updateError } = await req.supabase
+      .from('leave_requests')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: req.user.id,
+        cancellation_reason: reason || 'Annullato dall\'amministratore'
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Leave request cancellation error:', updateError);
+      return res.status(500).json({ error: 'Errore nell\'annullamento della richiesta' });
+    }
+
+    // Ripristina le ore nel saldo (aggiunge le ore sottratte)
+    const category = 'permission';
+    
+    // Aggiungi movimento di ripristino al ledger
+    const { error: ledgerError } = await req.supabase
+      .from('hours_ledger')
+      .insert([
+        {
+          user_id: request.user_id,
+          transaction_date: new Date().toISOString().split('T')[0],
+          transaction_type: 'restoration',
+          category: category,
+          hours_amount: request.hours_requested, // Ripristina le ore (valore positivo)
+          description: `Annullamento permesso dal ${request.start_date} al ${request.end_date}`,
+          reference_id: request.id,
+          reference_type: 'leave_request',
+          running_balance: 0 // Will be calculated by trigger
+        }
+      ]);
+
+    if (ledgerError) {
+      console.error('Ledger restoration error:', ledgerError);
+      // Non fallire la richiesta, solo loggare l'errore
+    }
+
+    res.json({
+      success: true,
+      message: 'Richiesta annullata con successo. Le ore sono state ripristinate nel saldo.',
+      request: updatedRequest
+    });
+  } catch (error) {
+    console.error('Leave request cancellation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get all work patterns (admin)
 router.get('/admin/work-patterns', async (req, res) => {
   try {

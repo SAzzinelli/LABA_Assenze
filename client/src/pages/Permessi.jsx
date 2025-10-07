@@ -51,12 +51,14 @@ const LeaveRequests = () => {
   // Tab per admin
   const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
   
-  // Stati per dialog di approvazione/rifiuto
+  // Stati per dialog di approvazione/rifiuto/annullamento
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
+  const [cancellationReason, setCancellationReason] = useState('');
   const [permissions104, setPermissions104] = useState({
     usedThisMonth: 0,
     maxPerMonth: 3,
@@ -180,6 +182,12 @@ const LeaveRequests = () => {
     setShowRejectDialog(true);
   };
 
+  const openCancelDialog = (requestId) => {
+    setSelectedRequestId(requestId);
+    setCancellationReason('');
+    setShowCancelDialog(true);
+  };
+
   const confirmApprove = () => {
     handleApproveRequest(selectedRequestId, approvalNotes);
     setShowApproveDialog(false);
@@ -188,6 +196,40 @@ const LeaveRequests = () => {
   const confirmReject = () => {
     handleRejectRequest(selectedRequestId, rejectionNotes);
     setShowRejectDialog(false);
+  };
+
+  const confirmCancel = () => {
+    handleCancelRequest(selectedRequestId, cancellationReason);
+    setShowCancelDialog(false);
+  };
+
+  // Funzione per annullare richieste approvate (solo admin, solo permessi)
+  const handleCancelRequest = async (requestId, reason = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/hours/admin/leave-requests/${requestId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: reason
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Richiesta annullata con successo!');
+        fetchRequests(); // Ricarica le richieste
+      } else {
+        const errorData = await response.json();
+        showError(errorData.error || 'Errore durante l\'annullamento della richiesta');
+      }
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      showError('Errore durante l\'annullamento della richiesta');
+    }
   };
 
   const handleInputChange = (e) => {
@@ -383,6 +425,8 @@ const LeaveRequests = () => {
         return 'Approvata';
       case 'rejected':
         return 'Rifiutata';
+      case 'cancelled':
+        return 'Annullata';
       case 'pending':
         return 'In attesa';
       default:
@@ -396,6 +440,8 @@ const LeaveRequests = () => {
         return 'bg-green-500/20 text-green-300 border-green-400/30';
       case 'rejected':
         return 'bg-red-500/20 text-red-300 border-red-400/30';
+      case 'cancelled':
+        return 'bg-orange-500/20 text-orange-300 border-orange-400/30';
       case 'pending':
         return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30';
       default:
@@ -887,6 +933,19 @@ const LeaveRequests = () => {
                         </button>
                       </div>
                     )}
+
+                    {/* Pulsante di annullamento per admin - solo per richieste approvate */}
+                    {user?.role === 'admin' && request.status === 'approved' && (
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          onClick={() => openCancelDialog(request.id)}
+                          className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Annulla
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -954,6 +1013,38 @@ const LeaveRequests = () => {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 Rifiuta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog di annullamento */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)} />
+          <div className="relative bg-slate-800 border border-slate-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Annulla Richiesta</h3>
+            <p className="text-slate-300 mb-4">Inserisci il motivo dell'annullamento (opzionale):</p>
+            <textarea
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              rows={3}
+              placeholder="Motivo dell'annullamento..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setShowCancelDialog(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              >
+                Conferma Annullamento
               </button>
             </div>
           </div>
