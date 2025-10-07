@@ -753,51 +753,30 @@ router.put('/admin/leave-requests/:id/cancel', async (req, res) => {
     }
 
     // Update leave request status to cancelled
+    console.log('🔄 Updating leave request to cancelled status...');
+    
     const { data: updatedRequest, error: updateError } = await req.supabase
       .from('leave_requests')
       .update({
-        status: 'cancelled',
-        cancelled_at: new Date().toISOString(),
-        cancelled_by: req.user.id,
-        cancellation_reason: reason || 'Annullato dall\'amministratore'
+        status: 'cancelled'
       })
       .eq('id', id)
       .select()
       .single();
 
     if (updateError) {
-      console.error('Leave request cancellation error:', updateError);
-      return res.status(500).json({ error: 'Errore nell\'annullamento della richiesta' });
+      console.error('❌ Leave request cancellation error:', updateError);
+      return res.status(500).json({ 
+        error: 'Errore nell\'annullamento della richiesta', 
+        details: updateError.message 
+      });
     }
 
-    // Ripristina le ore nel saldo (aggiunge le ore sottratte)
-    const category = 'permission';
-    
-    // Aggiungi movimento di ripristino al ledger
-    const { error: ledgerError } = await req.supabase
-      .from('hours_ledger')
-      .insert([
-        {
-          user_id: request.user_id,
-          transaction_date: new Date().toISOString().split('T')[0],
-          transaction_type: 'restoration',
-          category: category,
-          hours_amount: request.hours_requested, // Ripristina le ore (valore positivo)
-          description: `Annullamento permesso dal ${request.start_date} al ${request.end_date}`,
-          reference_id: request.id,
-          reference_type: 'leave_request',
-          running_balance: 0 // Will be calculated by trigger
-        }
-      ]);
-
-    if (ledgerError) {
-      console.error('Ledger restoration error:', ledgerError);
-      // Non fallire la richiesta, solo loggare l'errore
-    }
+    console.log('✅ Leave request cancelled successfully:', updatedRequest.id);
 
     res.json({
       success: true,
-      message: 'Richiesta annullata con successo. Le ore sono state ripristinate nel saldo.',
+      message: 'Richiesta annullata con successo.',
       request: updatedRequest
     });
   } catch (error) {

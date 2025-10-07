@@ -4,7 +4,7 @@
  */
 
 const cron = require('node-cron');
-const fetch = require('node-fetch');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 // Configurazione
 const API_BASE_URL = process.env.API_BASE_URL || 'https://hr.laba.biz';
@@ -127,7 +127,7 @@ function stopHourlyAttendanceSaver() {
 // Funzione per testare il cron job (esecuzione immediata)
 function testHourlyAttendanceSaver() {
   console.log('🧪 Test esecuzione cron job...');
-  hourlySaveJob.fire();
+  saveHourlyAttendance();
 }
 
 // Gestione segnali per shutdown graceful
