@@ -1083,14 +1083,20 @@ const AdminAttendance = () => {
                       recordActualHours: record.actual_hours,
                       recordExpectedHours: record.expected_hours
                     });
+                    
+                    // Usa i dati del database per giorni passati, real-time per oggi
+                    const today = new Date().toISOString().split('T')[0];
+                    const recordDate = record.date;
+                    const isToday = recordDate === today;
+                    
                     displayData = {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
                       email: record.users?.email || '',
                       date: record.date,
                       status: realTimeData.status,
-                      expectedHours: realTimeData.expectedHours,
-                      actualHours: realTimeData.actualHours,
-                      balanceHours: realTimeData.balanceHours,
+                      expectedHours: isToday ? realTimeData.expectedHours : (record.expected_hours || 0),
+                      actualHours: isToday ? realTimeData.actualHours : (record.actual_hours || 0),
+                      balanceHours: isToday ? realTimeData.balanceHours : (record.balance_hours || 0),
                       department: ''
                     };
                   }
