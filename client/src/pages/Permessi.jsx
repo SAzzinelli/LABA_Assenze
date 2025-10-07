@@ -318,12 +318,30 @@ const LeaveRequests = () => {
     setCurrentYear(today.getFullYear());
   };
 
-  // Filtra le richieste per il mese/anno selezionato e ricerca
+  // Filtra le richieste per il mese/anno selezionato, ricerca e tab attiva
   const getFilteredRequests = () => {
     let filtered = requests;
     
-    // Filtro per mese/anno (solo admin)
+    // Filtro per tab (solo admin)
     if (user?.role === 'admin') {
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (activeTab === 'programmate') {
+        // Mostra solo richieste approvate con data futura
+        filtered = filtered.filter(request => 
+          request.status === 'approved' && request.startDate > today
+        );
+      } else {
+        // Cronologia: filtra per mese/anno E esclude richieste programmate
+        filtered = filtered.filter(request => {
+          const requestDate = new Date(request.permissionDate || request.startDate);
+          const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+          const isNotProgrammed = request.status !== 'approved' || request.startDate <= today;
+          return isInCurrentMonth && isNotProgrammed;
+        });
+      }
+    } else {
+      // Per dipendenti: filtra per mese/anno
       filtered = filtered.filter(request => {
         const requestDate = new Date(request.permissionDate || request.startDate);
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
@@ -449,24 +467,6 @@ const LeaveRequests = () => {
     return diffDays;
   };
 
-  // Filtra le richieste in base alla tab attiva per admin
-  const getFilteredRequests = () => {
-    if (user?.role !== 'admin') return requests;
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (activeTab === 'programmate') {
-      // Mostra solo richieste approvate con data futura
-      return requests.filter(request => 
-        request.status === 'approved' && request.startDate > today
-      );
-    } else {
-      // Cronologia: tutte le altre richieste (pending, rifiutate, approvate passate)
-      return requests.filter(request => 
-        request.status !== 'approved' || request.startDate <= today
-      );
-    }
-  };
 
   return (
     <div className="space-y-6">
