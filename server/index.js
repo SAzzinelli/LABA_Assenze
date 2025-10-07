@@ -1160,8 +1160,21 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return balance < 0 ? sum + Math.abs(balance) : sum;
     }, 0);
     
-    const workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
-    const absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
+    // Calcola workingDays considerando anche il calcolo real-time di oggi
+    let workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
+    let absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
+    
+    // Se abbiamo calcolo real-time per oggi, aggiungilo ai workingDays se > 0
+    if (hasRealTimeCalculation && isCurrentMonth && realTimeActualHours > 0) {
+      // Controlla se oggi è già nel database
+      const todayInDb = attendance.find(record => record.date === today);
+      if (!todayInDb) {
+        // Oggi non è nel database ma abbiamo ore real-time > 0, aggiungilo
+        workingDays += 1;
+        console.log(`📊 Added today to workingDays (real-time): ${realTimeActualHours.toFixed(2)}h`);
+      }
+      // Se oggi è nel database, workingDays è già corretto
+    }
 
     console.log(`📊 Hours balance calculation (hybrid):`, {
       totalActualHours,
