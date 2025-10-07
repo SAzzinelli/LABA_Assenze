@@ -1122,34 +1122,29 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       }
     }
 
-    // Calculate statistics with real-time data for today
+    // Calculate statistics with real-time data for today ONLY
     let totalActualHours = 0;
     let totalExpectedHours = 0;
-    let todayIncluded = false;
     
-    attendance.forEach(record => {
-      if (record.date === today) {
-        todayIncluded = true;
-        if (hasRealTimeCalculation) {
-          // Use real-time calculation for today
-          totalActualHours += realTimeActualHours;
-          totalExpectedHours += realTimeExpectedHours;
-        } else {
-          // Use database values if no real-time calculation
+    // If we have real-time calculation for today, use ONLY that (ignore DB record for today)
+    if (hasRealTimeCalculation && isCurrentMonth) {
+      // Use real-time for today
+      totalActualHours = realTimeActualHours;
+      totalExpectedHours = realTimeExpectedHours;
+      
+      // Add other days from database (excluding today if it exists)
+      attendance.forEach(record => {
+        if (record.date !== today) {
           totalActualHours += record.actual_hours || 0;
           totalExpectedHours += record.expected_hours || 8;
         }
-      } else {
-        // Use database values for other days
+      });
+    } else {
+      // No real-time calculation, use all database values
+      attendance.forEach(record => {
         totalActualHours += record.actual_hours || 0;
         totalExpectedHours += record.expected_hours || 8;
-      }
-    });
-    
-    // If today is not in the database yet but we have real-time calculation, add it
-    if (!todayIncluded && hasRealTimeCalculation) {
-      totalActualHours += realTimeActualHours;
-      totalExpectedHours += realTimeExpectedHours;
+      });
     }
     
     const totalBalance = totalActualHours - totalExpectedHours;
