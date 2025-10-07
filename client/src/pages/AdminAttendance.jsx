@@ -405,7 +405,9 @@ const AdminAttendance = () => {
     const endHour = parseInt(workSchedule.end_time.split(':')[0]);
     const endMin = parseInt(workSchedule.end_time.split(':')[1]);
     
-    const expectedHours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
+    const totalWorkMinutes = (endHour * 60 + endMin - startHour * 60 - startMin);
+    const hasLunchBreak = totalWorkMinutes > 300; // 5 ore = 300 minuti
+    const expectedHours = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60; // Sottrai 1 ora di pausa pranzo
     let actualHours = 0;
     let status = 'not_started';
     
