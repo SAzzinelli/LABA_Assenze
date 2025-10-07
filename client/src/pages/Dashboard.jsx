@@ -10,7 +10,8 @@ import {
   Activity,
   Target,
   Calendar,
-  XCircle
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const [currentAttendance, setCurrentAttendance] = useState([]);
   const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sickToday, setSickToday] = useState([]); // Dipendenti in malattia oggi
   
   // Stati per KPI utente
   const [userKPIs, setUserKPIs] = useState({
@@ -57,6 +59,7 @@ const Dashboard = () => {
           await fetchEmployees();
           await fetchAdminWorkSchedules();
           await calculateAdminRealTimeData();
+          await fetchSickToday(); // Fetch employees on sick leave today
         } else {
           // Employee: fetch personal data
           await fetchAttendanceData();
@@ -89,6 +92,7 @@ const Dashboard = () => {
             fetchEmployees();
             fetchAdminWorkSchedules();
             calculateAdminRealTimeData();
+            fetchSickToday();
           }
         }, 30000); // Ogni 30 secondi
         
@@ -259,6 +263,21 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching recent requests:', error);
+    }
+  };
+
+  const fetchSickToday = async () => {
+    try {
+      if (user?.role === 'admin') {
+        const response = await apiCall('/api/attendance/sick-today');
+        if (response.ok) {
+          const data = await response.json();
+          setSickToday(data);
+          console.log('🤒 Employees sick today:', data.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching sick today:', error);
     }
   };
 
@@ -496,12 +515,52 @@ const Dashboard = () => {
 
       {/* Admin Dashboard - Layout a 2 colonne */}
       {user?.role === 'admin' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Presenti Attualmente */}
+        <>
+          {/* Sezione In Malattia Oggi - Solo se ci sono dipendenti malati */}
+          {sickToday.length > 0 && (
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+                <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
+                In malattia oggi
+              </h3>
+              <div className="space-y-3">
+                {sickToday.map((person) => (
+                  <div key={person.user_id} className="bg-red-800/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white font-semibold text-sm">
+                            {person.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-white font-semibold">{person.name}</h4>
+                          <p className="text-red-200 text-sm">{person.department}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-red-400 font-semibold">Malattia</div>
+                        <div className="text-red-300 text-sm">
+                          {person.reason || 'Nessun motivo'}
+                        </div>
+                        <div className="text-red-200 text-xs mt-1">
+                          Dal {new Date(person.start_date).toLocaleDateString('it-IT')} 
+                          {' '}al {new Date(person.end_date).toLocaleDateString('it-IT')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Presenti adesso */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <Clock className="h-6 w-6 mr-3 text-orange-400" />
-              Presenti Attualmente
+              <Clock className="h-6 w-6 mr-3 text-green-400" />
+              Presenti adesso
               <div className="ml-auto flex items-center text-sm text-slate-400">
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
                 Live
@@ -590,33 +649,62 @@ const Dashboard = () => {
           
           <div className="space-y-3">
             {recentRequests.length > 0 ? (
-              recentRequests.map((request) => (
-                <div key={request.id} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 hover:bg-yellow-500/20 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-3">
-                        <FileText className="h-5 w-5 text-white" />
+              recentRequests.map((request) => {
+                // Determina i colori in base al tipo: viola per permessi, rosso per malattia, blu per ferie
+                const colors = request.type === 'permission' ? {
+                  bg: 'bg-purple-500/10',
+                  border: 'border-purple-500/20',
+                  hover: 'hover:bg-purple-500/20',
+                  circle: 'bg-purple-500',
+                  text: 'text-purple-200',
+                  textLight: 'text-purple-300',
+                  textBold: 'text-purple-400'
+                } : request.type === 'sick_leave' ? {
+                  bg: 'bg-red-500/10',
+                  border: 'border-red-500/20',
+                  hover: 'hover:bg-red-500/20',
+                  circle: 'bg-red-500',
+                  text: 'text-red-200',
+                  textLight: 'text-red-300',
+                  textBold: 'text-red-400'
+                } : {
+                  bg: 'bg-blue-500/10',
+                  border: 'border-blue-500/20',
+                  hover: 'hover:bg-blue-500/20',
+                  circle: 'bg-blue-500',
+                  text: 'text-blue-200',
+                  textLight: 'text-blue-300',
+                  textBold: 'text-blue-400'
+                };
+
+                return (
+                  <div key={request.id} className={`${colors.bg} border ${colors.border} rounded-lg p-4 ${colors.hover} transition-colors`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`w-10 h-10 ${colors.circle} rounded-full flex items-center justify-center mr-3`}>
+                          <FileText className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-white font-semibold">{request.user?.name || request.submittedBy || 'Dipendente'}</h4>
+                          <p className={`${colors.text} text-sm`}>
+                            {request.type === 'permission' ? 'Permesso' : 
+                             request.type === 'vacation' ? 'Ferie' : 
+                             request.type === 'sick_leave' ? 'Malattia' : 'Richiesta'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-white font-semibold">{request.user?.name || 'Dipendente'}</h4>
-                        <p className="text-yellow-200 text-sm">
-                          {request.type === 'permission' ? 'Permesso' : 
-                           request.type === 'vacation' ? 'Ferie' : 
-                           request.type === 'sick' ? 'Malattia' : 'Richiesta'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-yellow-400 font-semibold">
-                        {new Date(request.submittedAt).toLocaleDateString('it-IT')}
-                      </div>
-                      <div className="text-yellow-300 text-sm">
-                        {request.reason || 'Nessun motivo specificato'}
+                      <div className="text-right">
+                        <div className={`${colors.textBold} font-semibold`}>
+                          {new Date(request.submittedAt).toLocaleDateString('it-IT')}
+                        </div>
+                        <div className={`${colors.textLight} text-sm`}>
+                          {request.reason || request.notes || 'Nessun motivo'}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -627,6 +715,7 @@ const Dashboard = () => {
           </div>
           </div>
         </div>
+        </>
       )}
 
 

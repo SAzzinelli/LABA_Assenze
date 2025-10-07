@@ -1810,6 +1810,51 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
   }
 });
 
+// Get employees on sick leave today
+app.get('/api/attendance/sick-today', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all approved sick leave requests for today
+    const { data: sickLeaves, error: leaveError } = await supabase
+      .from('leave_requests')
+      .select(`
+        *,
+        users!leave_requests_user_id_fkey(id, first_name, last_name, department, email)
+      `)
+      .eq('type', 'sick_leave')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    if (leaveError) {
+      console.error('Sick leave fetch error:', leaveError);
+      return res.status(500).json({ error: 'Errore nel recupero delle malattie' });
+    }
+
+    const employeesOnSickLeave = sickLeaves.map(leave => ({
+      user_id: leave.users.id,
+      name: `${leave.users.first_name} ${leave.users.last_name}`,
+      department: leave.users.department || 'Non specificato',
+      email: leave.users.email,
+      reason: leave.reason,
+      start_date: leave.start_date,
+      end_date: leave.end_date,
+      notes: leave.notes
+    }));
+
+    console.log(`🤒 Employees on sick leave today: ${employeesOnSickLeave.length}`);
+    res.json(employeesOnSickLeave);
+  } catch (error) {
+    console.error('Sick leave today error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Upcoming departures (next 2 hours)
 app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, res) => {
   try {
