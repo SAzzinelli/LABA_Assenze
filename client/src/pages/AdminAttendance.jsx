@@ -489,10 +489,16 @@ const AdminAttendance = () => {
       };
     }
     
-    // PER GIORNI FUTURI: gestione appropriata
+    // PER GIORNI FUTURI: non dovrebbero mai arrivare qui (filtrati nella cronologia)
     if (recordDate > today) {
-      console.log('🔮 Giorno futuro - calcolo ore attese');
-      return handleFutureDay(record);
+      console.log('⚠️ Giorno futuro non dovrebbe essere qui - usando dati DB');
+      return {
+        expectedHours: record.expected_hours || 0,
+        actualHours: record.actual_hours || 0,
+        balanceHours: record.balance_hours || 0,
+        status: 'not_started',
+        isPresent: false
+      };
     }
     
     // PER OGGI: calcolo real-time
@@ -609,42 +615,6 @@ const AdminAttendance = () => {
     return result;
   };
 
-  // Gestisce i giorni futuri (non ancora arrivati)
-  const handleFutureDay = (record) => {
-    const dayOfWeek = new Date(record.date).getDay();
-    const workSchedule = workSchedules.find(schedule => 
-      schedule.user_id === record.user_id && 
-      schedule.day_of_week === dayOfWeek
-    );
-    
-    if (!workSchedule || !workSchedule.is_working_day) {
-      return {
-        expectedHours: 0,
-        actualHours: 0,
-        balanceHours: 0,
-        status: 'non_working_day',
-        isPresent: false
-      };
-    }
-    
-    // Calcola ore attese per il giorno futuro
-    const { start_time, end_time, break_duration } = workSchedule;
-    const [startHour, startMin] = start_time.split(':').map(Number);
-    const [endHour, endMin] = end_time.split(':').map(Number);
-    const breakDuration = break_duration || 60;
-    
-    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-    const workMinutes = totalMinutes - breakDuration;
-    const expectedHours = workMinutes / 60;
-    
-    return {
-      expectedHours: Math.round(expectedHours * 10) / 10,
-      actualHours: 0,
-      balanceHours: -expectedHours,
-      status: 'not_started',
-      isPresent: false
-    };
-  };
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -787,8 +757,9 @@ const AdminAttendance = () => {
         data = [...data, ...todayRealTimeData];
       }
     } else {
-      // Per "Cronologia" usa attendanceHistory
-      data = attendanceHistory;
+      // Per "Cronologia" usa attendanceHistory - SOLO giorni passati e oggi
+      const today = new Date().toISOString().split('T')[0];
+      data = attendanceHistory.filter(record => record.date <= today);
       
       // Aggiungi dati real-time per oggi se non ci sono record nel database
       const today = new Date().toISOString().split('T')[0];
