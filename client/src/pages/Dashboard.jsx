@@ -54,20 +54,25 @@ const Dashboard = () => {
         await fetchDashboardData();
         
         // Fetch data based on role
+        console.log('🔍 Dashboard loading for user role:', user?.role);
         if (user?.role === 'admin') {
           // Admin: fetch real-time data
+          console.log('🔍 Loading admin data...');
           await fetchEmployees();
           await fetchAdminWorkSchedules();
           await calculateAdminRealTimeData();
           await fetchSickToday(); // Fetch employees on sick leave today
         } else {
           // Employee: fetch personal data
+          console.log('🔍 Loading employee data...');
           await fetchAttendanceData();
           await fetchWorkSchedules();
         }
         
         // Fetch recent requests for admin
-        await fetchRecentRequests();
+        if (user?.role === 'admin') {
+          await fetchRecentRequests();
+        }
         
         // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
         setTimeout(() => {
