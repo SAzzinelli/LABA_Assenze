@@ -195,7 +195,7 @@ const LeaveRequests = () => {
     
     try {
       const { token } = useAuthStore.getState();
-      const response = await fetch('/api/leave-requests', {
+      const response = await fetch('/api/leave-requests-hours', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
