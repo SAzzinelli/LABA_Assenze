@@ -485,6 +485,32 @@ const LeaveRequests = () => {
               }
             </p>
           </div>
+          
+          {/* Tab per Admin */}
+          {user?.role === 'admin' && (
+            <div className="flex bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('cronologia')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'cronologia'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Cronologia
+              </button>
+              <button
+                onClick={() => setActiveTab('programmate')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'programmate'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Programmate
+              </button>
+            </div>
+          )}
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
@@ -744,38 +770,10 @@ const LeaveRequests = () => {
 
       {/* Requests List */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center">
-            <Clock className="h-6 w-6 mr-3 text-slate-400" />
-            {user?.role === 'admin' ? 'Gestione Richieste Permessi' : 'Storico Richieste Permessi'}
-          </h2>
-          
-          {/* Tab per Admin */}
-          {user?.role === 'admin' && (
-            <div className="flex bg-slate-700 rounded-lg p-1">
-              <button
-                onClick={() => setActiveTab('cronologia')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'cronologia'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Cronologia
-              </button>
-              <button
-                onClick={() => setActiveTab('programmate')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'programmate'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Programmate
-              </button>
-            </div>
-          )}
-        </div>
+        <h2 className="text-xl font-bold text-white flex items-center mb-6">
+          <Clock className="h-6 w-6 mr-3 text-slate-400" />
+          {user?.role === 'admin' ? 'Gestione Richieste Permessi' : 'Storico Richieste Permessi'}
+        </h2>
 
         {(() => {
           const filteredRequests = getFilteredRequests();
