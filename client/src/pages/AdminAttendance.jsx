@@ -1066,7 +1066,11 @@ const AdminAttendance = () => {
                     // Per dati database, calcola le ore real-time
                     const realTimeData = calculateRealTimeHoursForRecord(record);
                     console.log('🔍 DisplayData creation for', record.date, ':', {
-                      realTimeData,
+                      realTimeData: {
+                        actualHours: realTimeData.actualHours,
+                        expectedHours: realTimeData.expectedHours,
+                        status: realTimeData.status
+                      },
                       recordActualHours: record.actual_hours,
                       recordExpectedHours: record.expected_hours
                     });
