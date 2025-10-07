@@ -1464,7 +1464,7 @@ app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
   }
 });
 
-// Current attendance (who's in office now)
+// Current attendance (who's in office now) - REAL-TIME VERSION
 app.get('/api/attendance/current', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -1472,11 +1472,18 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
     
-    // Get all users and their attendance status for today
+    // Get all users with their work schedules
     const { data: allUsers, error: usersError } = await supabase
       .from('users')
-      .select('id, first_name, last_name, department')
+      .select(`
+        id, first_name, last_name, department,
+        work_schedules!left(*)
+      `)
       .neq('role', 'admin');
     
     if (usersError) {
@@ -1484,48 +1491,104 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero degli utenti' });
     }
 
-    // Get attendance records for today
-    const { data: attendanceRecords, error: attendanceError } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('date', today);
-    
-    if (attendanceError) {
-      console.error('Attendance error:', attendanceError);
-      return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
-    }
-
-    // Combine users with their attendance status - only show those who are actually present
+    // Calculate real-time attendance for each user
     const currentAttendance = allUsers.map(user => {
-      const attendance = attendanceRecords.find(att => att.user_id === user.id);
+      // Find today's work schedule
+      const todaySchedule = user.work_schedules?.find(schedule => 
+        schedule.day_of_week === dayOfWeek && schedule.is_working_day
+      );
+      
+      if (!todaySchedule) {
+        return {
+          user_id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: false,
+          status: 'non_working_day',
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0
+        };
+      }
+
+      const { start_time, end_time, break_duration } = todaySchedule;
+      const [startHour, startMin] = start_time.split(':').map(Number);
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const breakDuration = break_duration || 60;
+      
+      // Calculate expected hours
+      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+      const workMinutes = totalMinutes - breakDuration;
+      const expectedHours = workMinutes / 60;
+      
+      // Calculate real-time hours (same logic as employee page)
+      let actualHours = 0;
+      let status = 'not_started';
+      
+      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+        actualHours = 0;
+        status = 'not_started';
+      } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+        actualHours = expectedHours;
+        status = 'completed';
+      } else {
+        // During work time - calculate with lunch break logic
+        const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+        const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const hasLunchBreak = totalWorkMinutes > 300;
+        
+        let totalMinutesWorked = 0;
+        
+        if (hasLunchBreak) {
+          // FULL DAY: has lunch break
+          const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
+          const breakStartMinutes = morningEndMinutes;
+          const breakEndMinutes = morningEndMinutes + breakDuration;
+          
+          if (minutesFromStart < breakStartMinutes) {
+            totalMinutesWorked = minutesFromStart;
+            status = 'working';
+          } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+            totalMinutesWorked = breakStartMinutes;
+            status = 'on_break';
+          } else {
+            const morningMinutes = breakStartMinutes;
+            const afternoonMinutes = minutesFromStart - breakEndMinutes;
+            totalMinutesWorked = morningMinutes + afternoonMinutes;
+            status = 'working';
+          }
+        } else {
+          // HALF DAY: no lunch break
+          totalMinutesWorked = minutesFromStart;
+          status = 'working';
+        }
+        
+        actualHours = totalMinutesWorked / 60;
+      }
+      
+      const balanceHours = actualHours - expectedHours;
+      
       return {
-        id: attendance?.id || null,
         user_id: user.id,
         name: `${user.first_name} ${user.last_name}`,
         department: user.department || 'Non specificato',
-        clock_in: attendance?.clock_in || null,
-        clock_out: attendance?.clock_out || null,
-        hours_worked: attendance?.hours_worked || 0
-      };
-    }).filter(att => att.clock_in && !att.clock_out); // Only show users who are actually present
-
-    // Calcola ore lavorate per chi ha fatto clock-in
-    const formatted = currentAttendance.map(att => {
-      let hoursWorked = att.hours_worked;
-      if (att.clock_in && !att.clock_out) {
-        const clockInTime = new Date(att.clock_in);
-        const now = new Date();
-        const diffMs = now - clockInTime;
-        hoursWorked = diffMs / (1000 * 60 * 60); // Converti in ore
-      }
-
-      return {
-        ...att,
-        hours_worked: hoursWorked
+        is_working_day: true,
+        status,
+        actual_hours: Math.round(actualHours * 10) / 10,
+        expected_hours: Math.round(expectedHours * 10) / 10,
+        balance_hours: Math.round(balanceHours * 10) / 10,
+        start_time,
+        end_time,
+        break_duration: breakDuration
       };
     });
 
-    res.json(formatted);
+    // Filter to show only those who should be working today and are currently working
+    const currentlyWorking = currentAttendance.filter(emp => 
+      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
+    );
+
+    res.json(currentlyWorking);
   } catch (error) {
     console.error('Current attendance error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
@@ -2413,7 +2476,8 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
         name: `${req.users.first_name} ${req.users.last_name}`,
         email: req.users.email,
         department: 'Non specificato'
-      }
+      },
+      submittedBy: `${req.users.first_name} ${req.users.last_name}` // Per compatibilità con frontend
     }));
 
     res.json(formattedRequests);

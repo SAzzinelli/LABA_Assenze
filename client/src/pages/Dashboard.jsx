@@ -9,7 +9,8 @@ import {
   ArrowDownRight,
   Activity,
   Target,
-  Calendar
+  Calendar,
+  XCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -172,13 +173,14 @@ const Dashboard = () => {
   // Fetch employees for admin dashboard
   const fetchEmployees = async () => {
     try {
-      const response = await apiCall('/api/employees');
+      const response = await apiCall('/api/attendance/current');
       if (response.ok) {
         const data = await response.json();
-        setCurrentAttendance(data.employees || data);
+        setCurrentAttendance(data);
+        console.log('📊 Current attendance loaded:', data.length, 'employees currently working');
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error('Error fetching current attendance:', error);
     }
   };
 
@@ -682,7 +684,7 @@ const Dashboard = () => {
           {/* Presenti Attualmente */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <CheckCircle className="h-6 w-6 mr-3 text-green-400" />
+              <Clock className="h-6 w-6 mr-3 text-orange-400" />
               Presenti Attualmente
               <div className="ml-auto flex items-center text-sm text-slate-400">
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>

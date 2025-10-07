@@ -781,7 +781,7 @@ const LeaveRequests = () => {
                       </div>
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>Tipo: {getTypeText(request.type)}</span>
+                        <span>Tipo: {getPermissionTypeText(request)}</span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />

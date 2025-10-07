@@ -110,8 +110,8 @@ const AdminAttendance = () => {
     // Polling ogni 30s per sincronizzazione con dipendenti
     const syncInterval = setInterval(() => {
       console.log('🔄 Admin sync polling...');
-      fetchAttendanceData();
-      fetchEmployees();
+    fetchAttendanceData();
+    fetchEmployees();
       fetchWorkSchedules();
       calculateRealTimeStats();
     }, 30000);
@@ -162,13 +162,14 @@ const AdminAttendance = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await apiCall('/api/employees');
+      const response = await apiCall('/api/attendance/current');
       if (response.ok) {
         const data = await response.json();
-        setEmployees(data.employees || data);
+        setEmployees(data);
+        console.log('📊 Current attendance loaded for admin:', data.length, 'employees currently working');
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error('Error fetching current attendance:', error);
     }
   };
 
@@ -666,8 +667,8 @@ const AdminAttendance = () => {
           
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="h-6 w-6 text-red-600" />
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Clock className="h-6 w-6 text-orange-600" />
               </div>
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Attualmente Presenti</p>
@@ -748,54 +749,54 @@ const AdminAttendance = () => {
                 </div>
               </div>
               
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                    <select
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {Array.from({ length: 5 }, (_, i) => {
-                        const year = new Date().getFullYear() - 2 + i;
-                        return (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                >
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = new Date().getFullYear() - 2 + i;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
-                    <select
-                      value={selectedEmployee}
-                      onChange={(e) => setSelectedEmployee(e.target.value)}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
+                >
                       <option value="">Tutti i dipendenti</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.firstName} {emp.lastName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -807,7 +808,7 @@ const AdminAttendance = () => {
               <Calendar className="h-5 w-5 mr-2" />
               {activeTab === 'currently' ? 'Attualmente a lavoro' : 
                activeTab === 'today' ? 'Chi ha lavorato oggi' : 'Cronologia Presenze'}
-            </h2>
+          </h2>
           </div>
           
           <div className="overflow-x-auto">
@@ -837,38 +838,38 @@ const AdminAttendance = () => {
                           </div>
                           <div>
                             <p className="font-medium text-white">
-                              {record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A'}
+                      {record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A'}
                             </p>
                             <p className="text-sm text-slate-400">
                               {record.users?.email || ''}
                             </p>
                           </div>
                         </div>
-                      </td>
+                    </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 text-slate-400 mr-2" />
                           <span className="text-slate-300">
-                            {new Date(record.date).toLocaleDateString('it-IT')}
+                      {new Date(record.date).toLocaleDateString('it-IT')}
                           </span>
                         </div>
-                      </td>
+                    </td>
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(realTimeData.isPresent ? 'present' : 'absent')}`}>
                           {getStatusIcon(realTimeData.isPresent ? 'present' : 'absent')}
                           <span className="ml-1">{getStatusText(realTimeData.isPresent ? 'present' : 'absent')}</span>
-                        </span>
-                      </td>
+                      </span>
+                    </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
                           {formatHours(realTimeData.expectedHours)}
                         </span>
-                      </td>
+                    </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
                           {formatHours(realTimeData.actualHours)}
                         </span>
-                      </td>
+                    </td>
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(realTimeData.balanceHours)}`}>
                           {realTimeData.balanceHours > 0 ? (
@@ -877,8 +878,8 @@ const AdminAttendance = () => {
                             <TrendingDown className="h-3 w-3 mr-1" />
                           ) : null}
                           {formatHours(realTimeData.balanceHours)}
-                        </span>
-                      </td>
+                      </span>
+                    </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
                         <button
@@ -897,7 +898,7 @@ const AdminAttendance = () => {
                         </button>
                       </div>
                     </td>
-                    </tr>
+                  </tr>
                   );
                 })}
               </tbody>
@@ -1170,8 +1171,8 @@ const AdminAttendance = () => {
                   </div>
                 </div>
               )}
-            </div>
           </div>
+        </div>
         )}
 
         {/* Modal Dettagli Presenze */}
