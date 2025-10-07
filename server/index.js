@@ -2937,25 +2937,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 // ==================== WORK SCHEDULES ENDPOINTS ====================
 
 // Get work schedule for user
-app.get('/api/work-schedules', authenticateToken, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('user_id', req.user.id)
-      .order('day_of_week');
-
-    if (error) {
-      console.error('Work schedules fetch error:', error);
-      return res.status(500).json({ error: 'Errore nel recuperare gli orari di lavoro' });
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Work schedules fetch error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
+// Rimosso endpoint duplicato - usa quello alla linea 1295
 
 // Save work schedule for user
 app.post('/api/work-schedules', authenticateToken, async (req, res) => {
