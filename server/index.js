@@ -1295,6 +1295,26 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
 app.get('/api/work-schedules', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.query;
+    
+    // Se è admin e non specifica userId, restituisce tutti i work schedules
+    if (req.user.role === 'admin' && !userId) {
+      const { data: schedules, error } = await supabase
+        .from('work_schedules')
+        .select(`
+          *,
+          users!work_schedules_user_id_fkey(first_name, last_name, id)
+        `)
+        .order('user_id, day_of_week');
+      
+      if (error) {
+        console.error('Work schedules fetch error:', error);
+        return res.status(500).json({ error: 'Errore nel recupero degli orari' });
+      }
+      
+      return res.json(schedules);
+    }
+    
+    // Per dipendenti o admin che specifica userId
     const targetUserId = userId || req.user.id;
     
     // Verifica permessi
