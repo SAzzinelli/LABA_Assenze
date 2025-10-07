@@ -2582,7 +2582,7 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
 // Get all leave requests (admin) or user's requests
 app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, type } = req.query;
     
     let query = supabase
       .from('leave_requests')
@@ -2592,6 +2592,11 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
         approver:users!leave_requests_approved_by_fkey(first_name, last_name, email)
       `)
       .order('created_at', { ascending: false });
+
+    // Filter by type if provided (vacation, sick_leave, permission, etc.)
+    if (type) {
+      query = query.eq('type', type);
+    }
 
     // Filter by month/year if provided
     if (month && year) {
