@@ -1089,14 +1089,34 @@ const AdminAttendance = () => {
                     const recordDate = record.date;
                     const isToday = recordDate === today;
                     
+                    // Determina status in base ai dati: per giorni passati usa DB, per oggi usa real-time
+                    let finalStatus;
+                    let finalActualHours;
+                    let finalExpectedHours;
+                    let finalBalanceHours;
+                    
+                    if (isToday) {
+                      // Oggi: usa real-time
+                      finalStatus = realTimeData.status;
+                      finalActualHours = realTimeData.actualHours;
+                      finalExpectedHours = realTimeData.expectedHours;
+                      finalBalanceHours = realTimeData.balanceHours;
+                    } else {
+                      // Giorni passati: usa DB e determina status dai dati
+                      finalActualHours = record.actual_hours || 0;
+                      finalExpectedHours = record.expected_hours || 0;
+                      finalBalanceHours = record.balance_hours || 0;
+                      finalStatus = finalActualHours > 0 ? 'present' : 'absent';
+                    }
+                    
                     displayData = {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
                       email: record.users?.email || '',
                       date: record.date,
-                      status: realTimeData.status,
-                      expectedHours: isToday ? realTimeData.expectedHours : (record.expected_hours || 0),
-                      actualHours: isToday ? realTimeData.actualHours : (record.actual_hours || 0),
-                      balanceHours: isToday ? realTimeData.balanceHours : (record.balance_hours || 0),
+                      status: finalStatus,
+                      expectedHours: finalExpectedHours,
+                      actualHours: finalActualHours,
+                      balanceHours: finalBalanceHours,
                       department: ''
                     };
                   }
