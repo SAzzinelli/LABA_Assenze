@@ -370,16 +370,70 @@ const Dashboard = () => {
 
   const updateKPIsWithBalance = (balanceData) => {
     if (user?.role === 'employee') {
-      // Update KPIs with the correct balance data from the API
+      // Calculate today's hours only (not weekly)
+      const today = new Date();
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.day_of_week === today.getDay() && schedule.is_working_day
+      );
+      
+      let todayHours = 0;
+      if (todaySchedule) {
+        const currentHour = today.getHours();
+        const currentMinute = today.getMinutes();
+        const { start_time, end_time, break_duration } = todaySchedule;
+        const [startHour, startMin] = start_time.split(':').map(Number);
+        const [endHour, endMin] = end_time.split(':').map(Number);
+        const breakDuration = break_duration || 60;
+        
+        // Calculate today's real-time hours (same logic as Presenze page)
+        if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+          todayHours = 0;
+        } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+          const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const workMinutes = totalMinutes - breakDuration;
+          todayHours = workMinutes / 60;
+        } else {
+          // During work time - calculate with lunch break logic
+          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const hasLunchBreak = totalWorkMinutes > 300;
+          
+          let totalMinutesWorked = 0;
+          
+          if (hasLunchBreak) {
+            // FULL DAY: has lunch break
+            const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
+            const breakStartMinutes = morningEndMinutes;
+            const breakEndMinutes = morningEndMinutes + breakDuration;
+            
+            if (minutesFromStart < breakStartMinutes) {
+              totalMinutesWorked = minutesFromStart;
+            } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+              totalMinutesWorked = breakStartMinutes;
+            } else {
+              const morningMinutes = breakStartMinutes;
+              const afternoonMinutes = minutesFromStart - breakEndMinutes;
+              totalMinutesWorked = morningMinutes + afternoonMinutes;
+            }
+          } else {
+            // HALF DAY: no lunch break
+            totalMinutesWorked = minutesFromStart;
+          }
+          
+          todayHours = totalMinutesWorked / 60;
+        }
+      }
+      
+      // Update KPIs with today's hours and correct balance
       setUserKPIs(prevKPIs => ({
         ...prevKPIs,
-        weeklyHours: formatHours(balanceData.total_worked), // Use total_worked from API
-        overtimeBalance: formatOvertime(balanceData.monte_ore),
+        weeklyHours: formatHours(todayHours), // TODAY'S hours only
+        overtimeBalance: formatOvertime(balanceData.monte_ore), // Correct balance (positive/negative/zero)
         remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
         monthlyPresences: `${balanceData.working_days}/20`
       }));
       
-      console.log('✅ KPIs updated with balance data:', balanceData);
+      console.log('✅ KPIs updated with today\'s hours:', { todayHours, balance: balanceData.monte_ore });
     }
   };
 
@@ -397,7 +451,7 @@ const Dashboard = () => {
       color: 'blue',
       change: '+0h 0m',
       changeType: 'positive',
-      subtitle: 'Questa settimana'
+      subtitle: 'OGGI'
     },
     {
       title: 'Saldo Ore',
