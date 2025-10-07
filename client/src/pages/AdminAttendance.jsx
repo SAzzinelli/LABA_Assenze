@@ -1095,20 +1095,25 @@ const AdminAttendance = () => {
                     const isPast = recordDateObj < todayDate;
                     const isToday = recordDate === today;
                     
-                    // Determina status in base ai dati: per giorni passati usa DB, per oggi usa real-time
+                    // Determina status in base ai dati: 
+                    // - Se il DB ha actual_hours > 0, usa sempre quelli (dati salvati dal cron)
+                    // - Altrimenti se è oggi, usa real-time
+                    // - Altrimenti usa DB (anche se 0)
                     let finalStatus;
                     let finalActualHours;
                     let finalExpectedHours;
                     let finalBalanceHours;
                     
-                    if (isPast || !isToday) {
-                      // Giorni passati: usa DB e determina status dai dati
+                    const hasActualData = (record.actual_hours || 0) > 0;
+                    
+                    if (hasActualData || isPast || !isToday) {
+                      // Ha dati salvati O è un giorno passato: usa DB
                       finalActualHours = record.actual_hours || 0;
                       finalExpectedHours = record.expected_hours || 0;
                       finalBalanceHours = record.balance_hours || 0;
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
                     } else {
-                      // Oggi: usa real-time
+                      // Oggi senza dati salvati: usa real-time
                       finalStatus = realTimeData.status;
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
