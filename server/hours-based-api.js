@@ -597,6 +597,7 @@ router.post('/leave-requests-hours', async (req, res) => {
           reason: reason,
           notes: notes || '',
           status: 'pending',
+          days_requested: dates.length,
           hours_requested: totalHours,
           work_pattern_snapshot: workPattern,
           permission_type: permissionType || null,
