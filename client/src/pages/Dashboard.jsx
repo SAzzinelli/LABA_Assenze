@@ -435,8 +435,10 @@ const Dashboard = () => {
       
       // Calculate today's expected hours for balance calculation
       let todayExpectedHours = 0;
+      console.log('🔍 Debug todaySchedule:', todaySchedule);
       if (todaySchedule) {
         const { start_time, end_time, break_duration } = todaySchedule;
+        console.log('🔍 Schedule times:', { start_time, end_time, break_duration });
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
         const breakDuration = break_duration || 60;
@@ -444,6 +446,9 @@ const Dashboard = () => {
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
         todayExpectedHours = workMinutes / 60;
+        console.log('🔍 Calculated expected hours:', todayExpectedHours);
+      } else {
+        console.log('⚠️ No todaySchedule found!');
       }
       
       // Calculate today's balance (actual vs expected)
