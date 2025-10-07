@@ -49,7 +49,7 @@ const LeaveRequests = () => {
   const [loading, setLoading] = useState(true);
   
   // Tab per admin
-  const [activeTab, setActiveTab] = useState('cronologia'); // 'cronologia' | 'programmate'
+  const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
   
   // Stati per dialog di approvazione/rifiuto
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -326,12 +326,12 @@ const LeaveRequests = () => {
     if (user?.role === 'admin') {
       const today = new Date().toISOString().split('T')[0];
       
-      if (activeTab === 'programmate') {
-        // Mostra solo richieste approvate con data futura
-        filtered = filtered.filter(request => 
-          request.status === 'approved' && request.startDate > today
-        );
-      } else {
+            if (activeTab === 'imminenti') {
+              // Mostra solo richieste approvate con data futura
+              filtered = filtered.filter(request => 
+                request.status === 'approved' && request.startDate > today
+              );
+            } else {
         // Cronologia: filtra per mese/anno E esclude richieste programmate
         filtered = filtered.filter(request => {
           const requestDate = new Date(request.permissionDate || request.startDate);
@@ -490,6 +490,16 @@ const LeaveRequests = () => {
           {user?.role === 'admin' && (
             <div className="flex bg-slate-700 rounded-lg p-1">
               <button
+                onClick={() => setActiveTab('imminenti')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === 'imminenti'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Imminenti
+              </button>
+              <button
                 onClick={() => setActiveTab('cronologia')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeTab === 'cronologia'
@@ -498,16 +508,6 @@ const LeaveRequests = () => {
                 }`}
               >
                 Cronologia
-              </button>
-              <button
-                onClick={() => setActiveTab('programmate')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'programmate'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Programmate
               </button>
             </div>
           )}
@@ -782,15 +782,15 @@ const LeaveRequests = () => {
               <FileText className="h-16 w-16 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-400 text-lg">
                 {user?.role === 'admin' 
-                  ? (activeTab === 'programmate' 
-                      ? 'Nessuna richiesta programmata'
+                  ? (activeTab === 'imminenti' 
+                      ? 'Nessuna richiesta imminente'
                       : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
                   : 'Nessuna richiesta di permesso presente'
                 }
               </p>
               <p className="text-slate-500 text-sm mt-2">
                 {user?.role === 'admin' 
-                  ? (activeTab === 'programmate'
+                  ? (activeTab === 'imminenti'
                       ? 'Le richieste approvate con date future appariranno qui'
                       : 'Prova a cambiare mese o aggiungere nuove richieste')
                   : 'Clicca su "Nuova Richiesta" per iniziare'

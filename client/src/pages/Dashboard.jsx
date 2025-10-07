@@ -570,7 +570,7 @@ const Dashboard = () => {
           {adminRealTimeData.length > 0 ? (
             <div className="space-y-3">
               {adminRealTimeData.map((person) => {
-                const isPresent = person.status === 'working' || person.status === 'on_break' || person.status === 'completed';
+                const isPresent = person.status === 'working' || person.status === 'on_break';
                 const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
                                    person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
                 
