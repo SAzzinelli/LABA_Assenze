@@ -619,7 +619,7 @@ router.post('/leave-requests-hours', async (req, res) => {
       request: {
         ...newRequest,
         calculatedHours: totalHours,
-        availableBalance: balance.current_balance
+        availableBalance: balance?.current_balance || 0
       }
     });
   } catch (error) {
