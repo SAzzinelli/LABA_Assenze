@@ -4000,9 +4000,7 @@ async function saveHourlyAttendance() {
             actual_hours: Math.round(actualHours * 100) / 100,
             expected_hours: Math.round(expectedHours * 100) / 100,
             balance_hours: Math.round((actualHours - expectedHours) * 100) / 100,
-            status: status,
-            notes: 'Salvataggio automatico orario',
-            updated_at: new Date().toISOString()
+            notes: 'Salvataggio automatico orario'
           }, {
             onConflict: 'user_id,date'
           });
@@ -4110,9 +4108,7 @@ async function finalizeDailyAttendance() {
             actual_hours: Math.round(finalActualHours * 100) / 100,
             expected_hours: Math.round(finalExpectedHours * 100) / 100,
             balance_hours: Math.round(finalBalanceHours * 100) / 100,
-            status: 'completed',
-            notes: 'Finalizzazione automatica giornata',
-            updated_at: new Date().toISOString()
+            notes: 'Finalizzazione automatica giornata'
           }, {
             onConflict: 'user_id,date'
           });
