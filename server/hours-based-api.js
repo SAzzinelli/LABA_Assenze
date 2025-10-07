@@ -531,22 +531,21 @@ router.post('/leave-requests-hours', async (req, res) => {
       .limit(1)
       .single();
 
+    let workPattern;
     if (patternError || !pattern) {
-      // Se la tabella non esiste, usa pattern di default
-      if (patternError.code === 'PGRST205') {
-        const defaultPattern = {
-          monday_hours: 8,
-          tuesday_hours: 8,
-          wednesday_hours: 8,
-          thursday_hours: 8,
-          friday_hours: 8,
-          saturday_hours: 0,
-          sunday_hours: 0
-        };
-        pattern = defaultPattern;
-      } else {
-        return res.status(404).json({ error: 'Pattern di lavoro non trovato' });
-      }
+      // Se la tabella non esiste o non ci sono pattern per l'utente, usa pattern di default
+      const defaultPattern = {
+        monday_hours: 8,
+        tuesday_hours: 8,
+        wednesday_hours: 8,
+        thursday_hours: 8,
+        friday_hours: 8,
+        saturday_hours: 0,
+        sunday_hours: 0
+      };
+      workPattern = defaultPattern;
+    } else {
+      workPattern = pattern;
     }
 
     // Calculate total hours
@@ -556,19 +555,19 @@ router.post('/leave-requests-hours', async (req, res) => {
       let dailyHours = 0;
       
       switch (dayOfWeek) {
-        case 1: dailyHours = pattern.monday_hours; break;
-        case 2: dailyHours = pattern.tuesday_hours; break;
-        case 3: dailyHours = pattern.wednesday_hours; break;
-        case 4: dailyHours = pattern.thursday_hours; break;
-        case 5: dailyHours = pattern.friday_hours; break;
-        case 6: dailyHours = pattern.saturday_hours; break;
-        case 0: dailyHours = pattern.sunday_hours; break;
+        case 1: dailyHours = workPattern.monday_hours; break;
+        case 2: dailyHours = workPattern.tuesday_hours; break;
+        case 3: dailyHours = workPattern.wednesday_hours; break;
+        case 4: dailyHours = workPattern.thursday_hours; break;
+        case 5: dailyHours = workPattern.friday_hours; break;
+        case 6: dailyHours = workPattern.saturday_hours; break;
+        case 0: dailyHours = workPattern.sunday_hours; break;
       }
       
       totalHours += dailyHours;
     });
 
-    // Check if user has enough balance
+    // Check if user has enough balance (optional - skip if balance doesn't exist yet)
     const { data: balance, error: balanceError } = await req.supabase
       .from('current_balances')
       .select('current_balance')
@@ -577,11 +576,8 @@ router.post('/leave-requests-hours', async (req, res) => {
       .eq('year', new Date().getFullYear())
       .single();
 
-    if (balanceError || !balance) {
-      return res.status(404).json({ error: 'Saldo non trovato' });
-    }
-
-    if (balance.current_balance < totalHours) {
+    // Only check balance if it exists
+    if (balance && balance.current_balance < totalHours) {
       return res.status(400).json({ 
         error: 'Saldo insufficiente',
         requested: totalHours,
@@ -602,7 +598,7 @@ router.post('/leave-requests-hours', async (req, res) => {
           notes: notes || '',
           status: 'pending',
           hours_requested: totalHours,
-          work_pattern_snapshot: pattern,
+          work_pattern_snapshot: workPattern,
           permission_type: permissionType || null,
           hours: hours || null,
           exit_time: exitTime || null,
