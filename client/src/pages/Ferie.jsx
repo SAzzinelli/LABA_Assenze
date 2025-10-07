@@ -445,8 +445,8 @@ const Vacation = () => {
   const getFilteredRequests = () => {
     let filtered = vacationRequests;
     
-    // Filtro per mese/anno (solo admin)
-    if (user?.role === 'admin') {
+    // Filtro per mese/anno (solo admin e solo nella vista lista)
+    if (user?.role === 'admin' && activeView === 'list') {
       filtered = filtered.filter(request => {
         const requestDate = new Date(request.startDate);
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
@@ -457,11 +457,17 @@ const Vacation = () => {
     if (searchTerm.trim()) {
       filtered = filtered.filter(request => {
         const searchLower = searchTerm.toLowerCase();
-        return (
-          request.notes?.toLowerCase().includes(searchLower) ||
-          request.status?.toLowerCase().includes(searchLower) ||
-          request.submittedBy?.toLowerCase().includes(searchLower)
-        );
+        if (activeView === 'calendar') {
+          // Nella vista calendario, cerca principalmente per nome dipendente
+          return request.submittedBy?.toLowerCase().includes(searchLower);
+        } else {
+          // Nella vista lista, cerca per tutti i campi
+          return (
+            request.notes?.toLowerCase().includes(searchLower) ||
+            request.status?.toLowerCase().includes(searchLower) ||
+            request.submittedBy?.toLowerCase().includes(searchLower)
+          );
+        }
       });
     }
     
@@ -805,8 +811,8 @@ const Vacation = () => {
         
         {!filtersCollapsed && (
           <div className="border-t border-slate-700 p-4 space-y-4">
-            {/* Filtro temporale per admin */}
-            {user?.role === 'admin' && (
+            {/* Filtro temporale per admin - solo nella vista lista */}
+            {user?.role === 'admin' && activeView === 'list' && (
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <Calendar className="h-5 w-5 text-blue-400" />
@@ -843,7 +849,7 @@ const Vacation = () => {
               <Search className="h-5 w-5 text-green-400" />
               <input
                 type="text"
-                placeholder="Cerca per note o stato..."
+                placeholder={activeView === 'calendar' ? "Cerca per nome dipendente..." : "Cerca per note o stato..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
