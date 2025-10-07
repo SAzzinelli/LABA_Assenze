@@ -3903,6 +3903,30 @@ app.get('*', (req, res) => {
 
 // ==================== SISTEMA SALVATAGGIO AUTOMATICO PRESENZE ====================
 
+// Endpoint per salvataggio orario (chiamabile da servizi esterni come cron-job.org)
+app.post('/api/cron/hourly-save', async (req, res) => {
+  try {
+    console.log('🕘 Salvataggio orario richiesto via API...');
+    await saveHourlyAttendance();
+    res.json({ success: true, message: 'Salvataggio orario completato' });
+  } catch (error) {
+    console.error('❌ Errore salvataggio orario API:', error);
+    res.status(500).json({ error: 'Errore nel salvataggio orario' });
+  }
+});
+
+// Endpoint per finalizzazione giornaliera
+app.post('/api/cron/daily-finalize', async (req, res) => {
+  try {
+    console.log('🌙 Finalizzazione giornaliera richiesta via API...');
+    await finalizeDailyAttendance();
+    res.json({ success: true, message: 'Finalizzazione giornaliera completata' });
+  } catch (error) {
+    console.error('❌ Errore finalizzazione API:', error);
+    res.status(500).json({ error: 'Errore nella finalizzazione giornaliera' });
+  }
+});
+
 /**
  * Salva automaticamente le presenze real-time per tutti i dipendenti
  */
