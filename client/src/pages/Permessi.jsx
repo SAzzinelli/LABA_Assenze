@@ -207,6 +207,14 @@ const LeaveRequests = () => {
   const handleCancelRequest = async (requestId, reason = '') => {
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        showError('Token non trovato. Effettua il login.');
+        return;
+      }
+      
+      console.log('🔍 Cancelling request with token:', token.substring(0, 20) + '...');
+      
       const response = await fetch(`/api/hours/admin/leave-requests/${requestId}/cancel`, {
         method: 'PUT',
         headers: {
