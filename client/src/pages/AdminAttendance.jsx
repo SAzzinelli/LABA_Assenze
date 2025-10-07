@@ -561,7 +561,10 @@ const AdminAttendance = () => {
 
   const filteredData = (() => {
     let data = [];
-    if (activeTab === 'currently' || activeTab === 'today') {
+    if (activeTab === 'currently') {
+      // Per "Attualmente a lavoro" usa i dati real-time da employees
+      data = employees;
+    } else if (activeTab === 'today') {
       data = attendance;
     } else {
       data = attendanceHistory;
@@ -570,8 +573,15 @@ const AdminAttendance = () => {
     return data.filter(record => {
       // Filtro per ricerca
       if (searchTerm) {
-        const employeeName = record.users ? 
-          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+        let employeeName = '';
+        if (activeTab === 'currently') {
+          // Per employees (current attendance), usa la struttura diversa
+          employeeName = record.name ? record.name.toLowerCase() : '';
+        } else {
+          // Per attendance records, usa la struttura normale
+          employeeName = record.users ? 
+            `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+        }
         if (!employeeName.includes(searchTerm.toLowerCase())) {
           return false;
         }
@@ -579,22 +589,8 @@ const AdminAttendance = () => {
       
       // Logica specifica per ogni tab
       if (activeTab === 'currently') {
-        // Mostra solo chi è attualmente nell'orario di lavoro
-        const now = new Date();
-        const currentTime = now.toTimeString().substring(0, 5); // HH:MM
-        const dayOfWeek = now.getDay();
-        
-        const workSchedule = workSchedules.find(schedule => 
-          schedule.user_id === record.user_id && 
-          schedule.day_of_week === dayOfWeek && 
-          schedule.is_working_day
-        );
-        
-        if (workSchedule) {
-          const { start_time, end_time } = workSchedule;
-          return currentTime >= start_time && currentTime <= end_time;
-        }
-        return false;
+        // Per employees, mostra solo chi è attualmente working o on_break
+        return record.status === 'working' || record.status === 'on_break';
       } else if (activeTab === 'today') {
         // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi) - calcolo real-time
         const realTimeData = calculateRealTimeHoursForRecord(record);
@@ -826,11 +822,37 @@ const AdminAttendance = () => {
               </thead>
               <tbody>
                 {filteredData.map((record) => {
-                  // Calcola le ore real-time per questo record
-                  const realTimeData = calculateRealTimeHoursForRecord(record);
+                  // Per il tab "currently" usa i dati direttamente, per gli altri calcola real-time
+                  let displayData;
+                  if (activeTab === 'currently') {
+                    // Usa i dati direttamente da employees
+                    displayData = {
+                      name: record.name,
+                      email: '', // Non disponibile nei dati employees
+                      date: new Date().toISOString().split('T')[0],
+                      status: record.status,
+                      expectedHours: record.expected_hours,
+                      actualHours: record.actual_hours,
+                      balanceHours: record.balance_hours,
+                      department: record.department
+                    };
+                  } else {
+                    // Per gli altri tab, calcola le ore real-time
+                    const realTimeData = calculateRealTimeHoursForRecord(record);
+                    displayData = {
+                      name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
+                      email: record.users?.email || '',
+                      date: record.date,
+                      status: realTimeData.isPresent ? 'present' : 'absent',
+                      expectedHours: realTimeData.expectedHours,
+                      actualHours: realTimeData.actualHours,
+                      balanceHours: realTimeData.balanceHours,
+                      department: ''
+                    };
+                  }
                   
                   return (
-                    <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                    <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
                       <td className="py-4 px-6">
                         <div className="flex items-center">
                           <div className="h-8 w-8 bg-slate-600 rounded-full flex items-center justify-center mr-3">
@@ -838,10 +860,10 @@ const AdminAttendance = () => {
                           </div>
                           <div>
                             <p className="font-medium text-white">
-                      {record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A'}
+                              {displayData.name}
                             </p>
                             <p className="text-sm text-slate-400">
-                              {record.users?.email || ''}
+                              {displayData.email || displayData.department}
                             </p>
                           </div>
                         </div>
@@ -850,34 +872,34 @@ const AdminAttendance = () => {
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 text-slate-400 mr-2" />
                           <span className="text-slate-300">
-                      {new Date(record.date).toLocaleDateString('it-IT')}
+                            {new Date(displayData.date).toLocaleDateString('it-IT')}
                           </span>
                         </div>
                     </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(realTimeData.isPresent ? 'present' : 'absent')}`}>
-                          {getStatusIcon(realTimeData.isPresent ? 'present' : 'absent')}
-                          <span className="ml-1">{getStatusText(realTimeData.isPresent ? 'present' : 'absent')}</span>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}`}>
+                          {getStatusIcon(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}
+                          <span className="ml-1">{getStatusText(displayData.status === 'working' || displayData.status === 'present' ? 'present' : 'absent')}</span>
                       </span>
                     </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
-                          {formatHours(realTimeData.expectedHours)}
+                          {formatHours(displayData.expectedHours)}
                         </span>
                     </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
-                          {formatHours(realTimeData.actualHours)}
+                          {formatHours(displayData.actualHours)}
                         </span>
                     </td>
                       <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(realTimeData.balanceHours)}`}>
-                          {realTimeData.balanceHours > 0 ? (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getBalanceColor(displayData.balanceHours)}`}>
+                          {displayData.balanceHours > 0 ? (
                             <TrendingUp className="h-3 w-3 mr-1" />
-                          ) : realTimeData.balanceHours < 0 ? (
+                          ) : displayData.balanceHours < 0 ? (
                             <TrendingDown className="h-3 w-3 mr-1" />
                           ) : null}
-                          {formatHours(realTimeData.balanceHours)}
+                          {formatHours(displayData.balanceHours)}
                       </span>
                     </td>
                     <td className="py-4 px-6">
