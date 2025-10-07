@@ -461,19 +461,28 @@ const AdminAttendance = () => {
     const today = now.toISOString().split('T')[0];
     const recordDate = record.date;
     
+    // Converti le date in oggetti Date per confronto corretto
+    const todayDate = new Date(today);
+    const recordDateObj = new Date(recordDate);
+    const isPast = recordDateObj < todayDate;
+    const isToday = recordDate === today;
+    const isFuture = recordDateObj > todayDate;
+    
     console.log('🔍 Debug calculateRealTimeHoursForRecord:', {
       recordUserId: record.user_id,
       recordDate,
       today,
-      isToday: recordDate === today,
-      isPast: recordDate < today,
-      isFuture: recordDate > today,
+      recordDateObj: recordDateObj.toISOString().split('T')[0],
+      todayDate: todayDate.toISOString().split('T')[0],
+      isToday,
+      isPast,
+      isFuture,
       recordActualHours: record.actual_hours,
       recordExpectedHours: record.expected_hours
     });
     
     // PER GIORNI PASSATI: usa i dati del database
-    if (recordDate < today) {
+    if (isPast) {
       console.log('📅 Giorno passato - uso dati DB:', {
         actualHours: record.actual_hours,
         expectedHours: record.expected_hours,
@@ -490,7 +499,7 @@ const AdminAttendance = () => {
     }
     
     // PER GIORNI FUTURI: non dovrebbero mai arrivare qui (filtrati nella cronologia)
-    if (recordDate > today) {
+    if (isFuture) {
       console.log('⚠️ Giorno futuro non dovrebbe essere qui - usando dati DB');
       return {
         expectedHours: record.expected_hours || 0,
