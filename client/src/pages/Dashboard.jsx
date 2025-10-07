@@ -194,8 +194,11 @@ const Dashboard = () => {
       const response = await apiCall('/api/attendance/current');
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 Fetched current attendance data:', data);
         setCurrentAttendance(data);
         console.log('📊 Current attendance loaded:', data.length, 'employees currently working');
+      } else {
+        console.error('❌ Failed to fetch current attendance:', response.status);
       }
     } catch (error) {
       console.error('Error fetching current attendance:', error);
@@ -218,6 +221,7 @@ const Dashboard = () => {
   // Calcolo real-time per admin dashboard (stesso sistema del dipendente)
   const calculateAdminRealTimeData = () => {
     console.log('🔄 Admin dashboard calculating real-time data...');
+    console.log('🔍 Current attendance state:', currentAttendance);
     
     if (!currentAttendance || currentAttendance.length === 0) {
       console.log('⚠️ No data available for admin real-time calculation');
@@ -233,6 +237,7 @@ const Dashboard = () => {
     }));
     
     console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
+    console.log('🔍 Real-time data:', realTimeData);
     setAdminRealTimeData(realTimeData);
   };
 
