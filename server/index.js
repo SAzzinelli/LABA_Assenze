@@ -2362,7 +2362,8 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       .from('leave_requests')
       .select(`
         *,
-        users!leave_requests_user_id_fkey(first_name, last_name, email)
+        users!leave_requests_user_id_fkey(first_name, last_name, email),
+        approver:users!leave_requests_approved_by_fkey(first_name, last_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -2395,6 +2396,11 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       submittedAt: req.created_at,
       approvedAt: req.approved_at,
       approvedBy: req.approved_by,
+      approver: req.approver ? {
+        id: req.approver.id,
+        name: `${req.approver.first_name} ${req.approver.last_name}`,
+        email: req.approver.email
+      } : null,
       notes: req.notes,
       // Campi specifici per permessi
       permissionType: req.permission_type,

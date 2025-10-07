@@ -753,7 +753,7 @@ const LeaveRequests = () => {
                       {request.approvedAt && (
                         <div className="flex items-center">
                           <CheckCircle className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Approvato da: {request.approvedBy} alle {formatDateTime(request.approvedAt)}</span>
+                          <span>Approvato da: {request.approver?.name || request.approvedBy} alle {formatDateTime(request.approvedAt)}</span>
                         </div>
                       )}
                       {request.rejectedAt && (
