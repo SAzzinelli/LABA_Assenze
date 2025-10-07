@@ -1006,7 +1006,7 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
   }
 });
 
-// Get monthly hours balance for a user
+// Get monthly hours balance for a user - HYBRID SYSTEM with real-time calculation
 app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => {
   try {
     const { year, month, userId } = req.query;
@@ -1025,7 +1025,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
 
     const { data: attendance, error } = await supabase
       .from('attendance')
-      .select('actual_hours, balance_hours, expected_hours')
+      .select('actual_hours, balance_hours, expected_hours, date')
       .eq('user_id', targetUserId)
       .gte('date', startDate)
       .lte('date', endDate);
@@ -1035,9 +1035,102 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    // Calcola le statistiche CORRETTE
-    const totalActualHours = attendance.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
-    const totalExpectedHours = attendance.reduce((sum, record) => sum + (record.expected_hours || 8), 0);
+    // Get work schedules for real-time calculation
+    const { data: workSchedules, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId);
+
+    if (scheduleError) {
+      console.error('Work schedules fetch error:', scheduleError);
+      // Continue without real-time calculation
+    }
+
+    // Calculate real-time hours for today if it's in the current month
+    const today = new Date().toISOString().split('T')[0];
+    const todayRecord = attendance.find(record => record.date === today);
+    
+    let realTimeActualHours = 0;
+    let realTimeExpectedHours = 0;
+    
+    if (todayRecord && workSchedules && workSchedules.length > 0) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const dayOfWeek = now.getDay();
+      
+      // Find today's work schedule
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.day_of_week === dayOfWeek && schedule.is_working_day
+      );
+      
+      if (todaySchedule) {
+        const { start_time, end_time, break_duration } = todaySchedule;
+        const [startHour, startMin] = start_time.split(':').map(Number);
+        const [endHour, endMin] = end_time.split(':').map(Number);
+        const breakDuration = break_duration || 60;
+        
+        // Calculate expected hours
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = totalMinutes - breakDuration;
+        realTimeExpectedHours = workMinutes / 60;
+        
+        // Calculate real-time hours (same logic as frontend)
+        if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+          realTimeActualHours = 0;
+        } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+          realTimeActualHours = realTimeExpectedHours;
+        } else {
+          // During work time - calculate with lunch break logic
+          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const hasLunchBreak = totalWorkMinutes > 300;
+          
+          let totalMinutesWorked = 0;
+          
+          if (hasLunchBreak) {
+            // FULL DAY: has lunch break
+            const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
+            const breakStartMinutes = morningEndMinutes;
+            const breakEndMinutes = morningEndMinutes + breakDuration;
+            
+            if (minutesFromStart < breakStartMinutes) {
+              totalMinutesWorked = minutesFromStart;
+            } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+              totalMinutesWorked = breakStartMinutes;
+            } else {
+              const morningMinutes = breakStartMinutes;
+              const afternoonMinutes = minutesFromStart - breakEndMinutes;
+              totalMinutesWorked = morningMinutes + afternoonMinutes;
+            }
+          } else {
+            // HALF DAY: no lunch break
+            totalMinutesWorked = minutesFromStart;
+          }
+          
+          realTimeActualHours = totalMinutesWorked / 60;
+        }
+        
+        console.log(`🕐 Real-time calculation for today: ${realTimeActualHours.toFixed(2)}h worked, ${realTimeExpectedHours.toFixed(2)}h expected`);
+      }
+    }
+
+    // Calculate statistics with real-time data for today
+    let totalActualHours = 0;
+    let totalExpectedHours = 0;
+    
+    attendance.forEach(record => {
+      if (record.date === today && realTimeActualHours > 0) {
+        // Use real-time calculation for today
+        totalActualHours += realTimeActualHours;
+        totalExpectedHours += realTimeExpectedHours;
+      } else {
+        // Use database values for other days
+        totalActualHours += record.actual_hours || 0;
+        totalExpectedHours += record.expected_hours || 8;
+      }
+    });
+    
     const totalBalance = totalActualHours - totalExpectedHours;
     
     const overtimeHours = attendance.reduce((sum, record) => {
@@ -1054,7 +1147,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     const workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
     const absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
 
-    console.log(`📊 Hours balance calculation:`, {
+    console.log(`📊 Hours balance calculation (hybrid):`, {
       totalActualHours,
       totalExpectedHours,
       totalBalance,
@@ -1062,7 +1155,8 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       deficitHours,
       workingDays,
       absentDays,
-      attendanceCount: attendance.length
+      attendanceCount: attendance.length,
+      realTimeToday: realTimeActualHours > 0 ? `${realTimeActualHours.toFixed(2)}h` : 'no'
     });
 
     res.json({
