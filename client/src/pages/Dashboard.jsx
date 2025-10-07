@@ -219,113 +219,18 @@ const Dashboard = () => {
   const calculateAdminRealTimeData = () => {
     console.log('🔄 Admin dashboard calculating real-time data...');
     
-    if (!currentAttendance || !workSchedules || currentAttendance.length === 0 || workSchedules.length === 0) {
+    if (!currentAttendance || currentAttendance.length === 0) {
       console.log('⚠️ No data available for admin real-time calculation');
       return;
     }
 
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const dayOfWeek = now.getDay();
-    
-    const realTimeData = currentAttendance.map(employee => {
-      // Trova l'orario di lavoro per questo dipendente
-      const workSchedule = workSchedules.find(schedule => 
-        schedule.user_id === employee.id && 
-        schedule.day_of_week === dayOfWeek && 
-        schedule.is_working_day
-      );
-      
-      if (!workSchedule) {
-        return {
-          ...employee,
-          is_working_day: false,
-          expected_hours: 0,
-          actual_hours: 0,
-          balance_hours: 0,
-          status: 'non_working_day'
-        };
-      }
-      
-      const { start_time, end_time, break_duration } = workSchedule;
-      const [startHour, startMin] = start_time.split(':').map(Number);
-      const [endHour, endMin] = end_time.split(':').map(Number);
-      const breakDuration = break_duration || 60;
-      
-      // Calcola ore attese totali
-      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60;
-      
-      // Calcola ore effettive real-time (stesso calcolo del dipendente)
-      let actualHours = 0;
-      let status = 'not_started';
-      
-      // Se è prima dell'inizio
-      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
-        actualHours = 0;
-        status = 'not_started';
-      }
-      // Se è dopo la fine
-      else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-        actualHours = expectedHours;
-        status = 'completed';
-      }
-      // Se è durante l'orario di lavoro
-      else {
-        // Calcola ore lavorate fino ad ora
-        let totalMinutesWorked = 0;
-        
-        // Calcola minuti dall'inizio
-        const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
-        
-        // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
-        const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-        const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
-        
-        if (hasLunchBreak) {
-          // GIORNATA COMPLETA: ha pausa pranzo (es. 9:00-18:00)
-          const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // Fine mattina
-          const breakStartMinutes = morningEndMinutes;
-          const breakEndMinutes = morningEndMinutes + breakDuration;
-          
-          if (minutesFromStart < breakStartMinutes) {
-            // Prima della pausa pranzo
-            totalMinutesWorked = minutesFromStart;
-            status = 'working';
-          } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-            // Durante la pausa pranzo
-            totalMinutesWorked = breakStartMinutes;
-            status = 'on_break';
-          } else {
-            // Dopo la pausa pranzo
-            const morningMinutes = breakStartMinutes;
-            const afternoonMinutes = minutesFromStart - breakEndMinutes;
-            totalMinutesWorked = morningMinutes + afternoonMinutes;
-            status = 'working';
-          }
-        } else {
-          // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
-          totalMinutesWorked = minutesFromStart;
-          status = 'working';
-        }
-        
-        actualHours = totalMinutesWorked / 60;
-      }
-      
-      const balanceHours = actualHours - expectedHours;
-      
-      return {
-        ...employee,
-        is_working_day: true,
-        expected_hours: Math.round(expectedHours * 10) / 10,
-        actual_hours: Math.round(actualHours * 10) / 10,
-        balance_hours: Math.round(balanceHours * 10) / 10,
-        status: status,
-        is_absent: status === 'not_started' && actualHours === 0
-      };
-    });
+    // I dati da /api/attendance/current sono già calcolati correttamente,
+    // li uso direttamente senza ricalcolare
+    const realTimeData = currentAttendance.map(employee => ({
+      ...employee,
+      is_working_day: employee.is_working_day || true,
+      is_absent: employee.status === 'not_started' && employee.actual_hours === 0
+    }));
     
     console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
     setAdminRealTimeData(realTimeData);
@@ -613,15 +518,15 @@ const Dashboard = () => {
                           isPresent ? 'bg-green-500' : 'bg-slate-500'
                         }`}>
                           <span className="text-white font-semibold text-sm">
-                            {person.first_name ? person.first_name[0] + person.last_name[0] : 'N/A'}
+                            {person.name ? person.name.split(' ').map(n => n[0]).join('') : 'N/A'}
                           </span>
                         </div>
                         <div>
                           <h4 className="text-white font-semibold">
-                            {person.first_name ? `${person.first_name} ${person.last_name}` : 'N/A'}
+                            {person.name || 'N/A'}
                           </h4>
                           <p className="text-slate-400 text-sm">
-                            {person.email || 'N/A'}
+                            {person.department || 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -630,7 +535,8 @@ const Dashboard = () => {
                           <>
                             <div className="text-green-400 font-semibold">
                               {person.status === 'working' ? 'Lavorando' : 
-                               person.status === 'on_break' ? 'In pausa' : 'Completato'}
+                               person.status === 'on_break' ? 'In pausa' : 
+                               person.status === 'completed' ? 'Completato' : 'Presente'}
                             </div>
                             <div className="text-slate-400 text-sm">
                               Ore attese: {person.expected_hours}h
