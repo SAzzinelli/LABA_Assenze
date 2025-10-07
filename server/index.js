@@ -1046,14 +1046,20 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       // Continue without real-time calculation
     }
 
-    // Calculate real-time hours for today if it's in the current month
+    // Calculate real-time hours for today (hybrid system)
     const today = new Date().toISOString().split('T')[0];
     const todayRecord = attendance.find(record => record.date === today);
     
     let realTimeActualHours = 0;
     let realTimeExpectedHours = 0;
+    let hasRealTimeCalculation = false;
     
-    if (todayRecord && workSchedules && workSchedules.length > 0) {
+    // Always calculate real-time if today is within the month range
+    const todayDate = new Date();
+    const isCurrentMonth = todayDate.getFullYear() === parseInt(targetYear) && 
+                          (todayDate.getMonth() + 1) === parseInt(targetMonth);
+    
+    if (isCurrentMonth && workSchedules && workSchedules.length > 0) {
       const now = new Date();
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
@@ -1111,6 +1117,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
           realTimeActualHours = totalMinutesWorked / 60;
         }
         
+        hasRealTimeCalculation = true;
         console.log(`🕐 Real-time calculation for today: ${realTimeActualHours.toFixed(2)}h worked, ${realTimeExpectedHours.toFixed(2)}h expected`);
       }
     }
@@ -1118,18 +1125,32 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     // Calculate statistics with real-time data for today
     let totalActualHours = 0;
     let totalExpectedHours = 0;
+    let todayIncluded = false;
     
     attendance.forEach(record => {
-      if (record.date === today && realTimeActualHours > 0) {
-        // Use real-time calculation for today
-        totalActualHours += realTimeActualHours;
-        totalExpectedHours += realTimeExpectedHours;
+      if (record.date === today) {
+        todayIncluded = true;
+        if (hasRealTimeCalculation) {
+          // Use real-time calculation for today
+          totalActualHours += realTimeActualHours;
+          totalExpectedHours += realTimeExpectedHours;
+        } else {
+          // Use database values if no real-time calculation
+          totalActualHours += record.actual_hours || 0;
+          totalExpectedHours += record.expected_hours || 8;
+        }
       } else {
         // Use database values for other days
         totalActualHours += record.actual_hours || 0;
         totalExpectedHours += record.expected_hours || 8;
       }
     });
+    
+    // If today is not in the database yet but we have real-time calculation, add it
+    if (!todayIncluded && hasRealTimeCalculation) {
+      totalActualHours += realTimeActualHours;
+      totalExpectedHours += realTimeExpectedHours;
+    }
     
     const totalBalance = totalActualHours - totalExpectedHours;
     
