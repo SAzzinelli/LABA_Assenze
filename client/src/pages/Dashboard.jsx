@@ -458,7 +458,12 @@ const Dashboard = () => {
         monthlyPresences: `${balanceData.working_days}/20`
       }));
       
-      console.log('✅ KPIs updated with today\'s hours:', { todayHours, balance: balanceData.monte_ore });
+      console.log('✅ KPIs updated with today\'s hours:', { 
+        todayHours, 
+        todayExpectedHours, 
+        todayBalance,
+        monthlyBalance: balanceData.monte_ore 
+      });
     }
   };
 
