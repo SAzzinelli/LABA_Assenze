@@ -1601,12 +1601,23 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero degli utenti' });
     }
 
+    console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
+    console.log(`🔍 Total users found: ${allUsers.length}`);
+    
     // Calculate real-time attendance for each user
     const currentAttendance = allUsers.map(user => {
+      console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
+      console.log(`🔍 User work_schedules:`, user.work_schedules?.length || 0);
+      
       // Find today's work schedule
       const todaySchedule = user.work_schedules?.find(schedule => 
         schedule.day_of_week === dayOfWeek && schedule.is_working_day
       );
+      
+      console.log(`🔍 Today schedule found:`, !!todaySchedule);
+      if (todaySchedule) {
+        console.log(`🔍 Schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}, break: ${todaySchedule.break_duration}min`);
+      }
       
       if (!todaySchedule) {
         return {
@@ -1678,7 +1689,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       
       const balanceHours = actualHours - expectedHours;
       
-      return {
+      const result = {
         user_id: user.id,
         name: `${user.first_name} ${user.last_name}`,
         department: user.department || 'Non specificato',
@@ -1691,12 +1702,21 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         end_time,
         break_duration: breakDuration
       };
+      
+      console.log(`🔍 User result: ${result.name} - Status: ${result.status}, Hours: ${result.actual_hours}h, Working day: ${result.is_working_day}`);
+      return result;
     });
+
+    console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
+    console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
     // Filter to show only those who should be working today and are currently working
     const currentlyWorking = currentAttendance.filter(emp => 
       emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
     );
+
+    console.log(`🔍 Filtered currently working: ${currentlyWorking.length}`);
+    console.log(`🔍 Currently working:`, currentlyWorking.map(emp => `${emp.name}: ${emp.status}`));
 
     res.json(currentlyWorking);
   } catch (error) {
