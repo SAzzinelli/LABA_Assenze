@@ -67,7 +67,8 @@ const LeaveRequests = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/api/leave-requests');
+      // Filtra solo le richieste di tipo "permission" (permessi orari)
+      const response = await apiCall('/api/leave-requests?type=permission');
       
       if (response.ok) {
         const data = await response.json();

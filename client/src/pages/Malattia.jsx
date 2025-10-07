@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import { 
@@ -46,9 +46,35 @@ const SickLeave = () => {
 
   // Array vuoto per le richieste di malattia
   const [sickRequests, setSickRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
+
+  // Funzione per recuperare le richieste dal backend
+  const fetchSickRequests = async () => {
+    try {
+      setLoading(true);
+      // Filtra solo le richieste di tipo "sick_leave" (malattia)
+      const response = await apiCall('/api/leave-requests?type=sick_leave');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSickRequests(data);
+      } else {
+        console.error('Errore nel recupero delle richieste di malattia');
+      }
+    } catch (error) {
+      console.error('Errore:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carica le richieste al mount
+  useEffect(() => {
+    fetchSickRequests();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -78,15 +104,6 @@ const SickLeave = () => {
       });
       
       if (response.ok) {
-        const newRequest = {
-          id: Date.now(),
-          ...formData,
-          status: 'pending',
-          submittedAt: new Date().toISOString(),
-          submittedBy: user?.firstName + ' ' + user?.lastName
-        };
-        
-        setSickRequests(prev => [newRequest, ...prev]);
         setFormData({
           startDate: '',
           endDate: '',
@@ -97,6 +114,9 @@ const SickLeave = () => {
         });
         setShowNewRequest(false);
         alert('Richiesta di malattia inviata con successo!');
+        
+        // Ricarica le richieste dal backend
+        fetchSickRequests();
       } else {
         const error = await response.json();
         alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
