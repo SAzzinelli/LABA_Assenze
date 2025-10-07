@@ -762,7 +762,6 @@ const AdminAttendance = () => {
       data = attendanceHistory.filter(record => record.date <= today);
       
       // Aggiungi dati real-time per oggi se non ci sono record nel database
-      const today = new Date().toISOString().split('T')[0];
       const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
       
       if (!hasTodayInHistory && allEmployees.length > 0) {
