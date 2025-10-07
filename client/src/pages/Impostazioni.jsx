@@ -292,7 +292,6 @@ const Settings = () => {
     ...(user?.role === 'admin' ? [{ id: 'company', name: 'Azienda', icon: Building2 }] : []),
     { id: 'notifications', name: 'Notifiche', icon: Bell },
     { id: 'privacy', name: 'Privacy', icon: Shield },
-    { id: 'security', name: 'Sicurezza', icon: Lock },
     ...(user?.role === 'admin' ? [
       { id: 'system', name: 'Sistema', icon: SettingsIcon },
       { id: 'emailManagement', name: 'Mail', icon: Mail }

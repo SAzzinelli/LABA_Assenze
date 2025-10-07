@@ -633,14 +633,7 @@ const AdminAttendance = () => {
                 className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                Genera Presenze
-              </button>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <Filter className="h-4 w-4" />
-                Filtri
+                Aggiungi presenza
               </button>
             </div>
           </div>
@@ -889,7 +882,7 @@ const AdminAttendance = () => {
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
                           {formatHours(displayData.actualHours)}
-                        </span>
+                      </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
@@ -1022,12 +1015,12 @@ const AdminAttendance = () => {
         {/* Modale Genera Presenze */}
         {showGenerateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-6 border-b border-slate-600">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Genera Presenze</h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <h3 className="text-lg font-semibold text-white">Aggiungi presenza</h3>
+                  <p className="text-sm text-slate-400 mt-1">
                     Step {generateStep} di 2
                   </p>
                 </div>
@@ -1041,7 +1034,7 @@ const AdminAttendance = () => {
                       employeeId: ''
                     });
                   }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-slate-400 hover:text-slate-300 transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1064,7 +1057,7 @@ const AdminAttendance = () => {
                     2
                   </div>
                 </div>
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
+                <div className="flex justify-between mt-2 text-xs text-slate-400">
                   <span>Seleziona Dipendente</span>
                   <span>Seleziona Date</span>
                 </div>
@@ -1074,13 +1067,13 @@ const AdminAttendance = () => {
               {generateStep === 1 && (
                 <div className="p-6">
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
                       Seleziona Dipendente
                     </label>
                     <select
                       value={generateForm.employeeId}
                       onChange={(e) => setGenerateForm({...generateForm, employeeId: e.target.value})}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option value="">Seleziona dipendente</option>
                       {employees.map((emp) => (
@@ -1102,7 +1095,7 @@ const AdminAttendance = () => {
                           employeeId: ''
                         });
                       }}
-                      className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                      className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
                     >
                       Annulla
                     </button>
@@ -1127,42 +1120,42 @@ const AdminAttendance = () => {
                 <div className="p-6">
                   <div className="space-y-4 mb-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Inizio</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Data Inizio</label>
                       <input
                         type="date"
                         value={generateForm.startDate}
                         onChange={(e) => setGenerateForm({...generateForm, startDate: e.target.value})}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Fine</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Data Fine</label>
                       <input
                         type="date"
                         value={generateForm.endDate}
                         onChange={(e) => setGenerateForm({...generateForm, endDate: e.target.value})}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       />
                     </div>
                   </div>
 
                   {/* Riepilogo */}
-                  <div className="bg-gray-50 rounded-md p-4 mb-6">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Riepilogo</h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p><span className="text-gray-500">Dipendente:</span> {
+                  <div className="bg-slate-700 rounded-md p-4 mb-6">
+                    <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
+                    <div className="text-sm text-slate-300 space-y-1">
+                      <p><span className="text-slate-400">Dipendente:</span> {
                         employees.find(emp => emp.id === generateForm.employeeId)?.firstName + ' ' + 
                         employees.find(emp => emp.id === generateForm.employeeId)?.lastName
                       }</p>
-                      <p><span className="text-gray-500">Periodo:</span> {generateForm.startDate} - {generateForm.endDate}</p>
+                      <p><span className="text-slate-400">Periodo:</span> {generateForm.startDate} - {generateForm.endDate}</p>
                     </div>
                   </div>
                   
                   <div className="flex justify-between gap-3">
                     <button
                       onClick={() => setGenerateStep(1)}
-                      className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                      className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
                     >
                       Indietro
                     </button>
@@ -1177,7 +1170,7 @@ const AdminAttendance = () => {
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      Genera Presenze
+                      Aggiungi presenza
                     </button>
                   </div>
                 </div>

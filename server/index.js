@@ -3498,6 +3498,110 @@ app.post('/api/email/scheduler/stop', authenticateToken, requireAdmin, async (re
   }
 });
 
+// Endpoint per inviare email manuali
+app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { employeeId, type, message } = req.body;
+    
+    if (!employeeId || !type) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
+
+    // Recupera i dati del dipendente
+    const { data: employee, error: employeeError } = await supabase
+      .from('users')
+      .select('first_name, last_name, email')
+      .eq('id', employeeId)
+      .single();
+
+    if (employeeError || !employee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    // Invia email in base al tipo
+    let emailTemplate;
+    let emailData;
+    
+    switch (type) {
+      case 'attendance':
+        emailTemplate = 'attendanceReminder';
+        emailData = [employee.first_name, employee.department || 'Non specificato'];
+        break;
+      case 'leave':
+        emailTemplate = 'newRequest';
+        emailData = [`${employee.first_name} ${employee.last_name}`, 'Permesso', new Date().toLocaleDateString('it-IT'), new Date().toLocaleDateString('it-IT'), 'MAN-' + Date.now()];
+        break;
+      case 'report':
+        emailTemplate = 'weeklyReport';
+        emailData = [employee.first_name, { weekNumber: new Date().getWeek(), totalHours: 40, daysPresent: 5, overtimeHours: 0, balanceHours: 0 }];
+        break;
+      case 'custom':
+        // Per messaggi personalizzati, crea un template semplice
+        const customTemplate = {
+          subject: `📧 Messaggio da HR LABA`,
+          html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px;">
+              <h2>Messaggio da HR LABA</h2>
+              <p>${message}</p>
+              <hr>
+              <p><small>LABA Firenze - Sistema HR</small></p>
+            </div>
+          `
+        };
+        
+        const { sendEmail } = require('./emailService');
+        const result = await sendEmail(employee.email, customTemplate.subject, customTemplate.html);
+        
+        if (result.success) {
+          res.json({ message: 'Email inviata con successo' });
+        } else {
+          res.status(500).json({ error: 'Errore nell\'invio dell\'email' });
+        }
+        return;
+      default:
+        return res.status(400).json({ error: 'Tipo email non valido' });
+    }
+
+    const { sendEmail } = require('./emailService');
+    const result = await sendEmail(employee.email, emailTemplate, emailData);
+    
+    if (result.success) {
+      res.json({ message: 'Email inviata con successo' });
+    } else {
+      res.status(500).json({ error: 'Errore nell\'invio dell\'email' });
+    }
+  } catch (error) {
+    console.error('Email send error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Endpoint per toggle scheduler
+app.post('/api/email/scheduler/toggle', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const currentStatus = emailScheduler.getStatus();
+    
+    if (currentStatus.active) {
+      emailScheduler.stop();
+      res.json({
+        success: true,
+        message: 'Email Scheduler fermato',
+        scheduler: { active: false }
+      });
+    } else {
+      emailScheduler.start();
+      res.json({
+        success: true,
+        message: 'Email Scheduler avviato',
+        scheduler: { active: true }
+      });
+    }
+  } catch (error) {
+    console.error('Scheduler toggle error:', error);
+    res.status(500).json({ error: 'Errore nel toggle scheduler' });
+  }
+});
+
 // Endpoint per inviare report settimanali
 app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req, res) => {
   try {

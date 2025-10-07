@@ -757,7 +757,7 @@ const LeaveRequests = () => {
                 onClick={() => setActiveTab('cronologia')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeTab === 'cronologia'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-purple-600 text-white'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -767,7 +767,7 @@ const LeaveRequests = () => {
                 onClick={() => setActiveTab('programmate')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeTab === 'programmate'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-purple-600 text-white'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
