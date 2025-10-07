@@ -433,11 +433,27 @@ const Dashboard = () => {
         }
       }
       
-      // Update KPIs with today's hours and correct balance
+      // Calculate today's expected hours for balance calculation
+      let todayExpectedHours = 0;
+      if (todaySchedule) {
+        const { start_time, end_time, break_duration } = todaySchedule;
+        const [startHour, startMin] = start_time.split(':').map(Number);
+        const [endHour, endMin] = end_time.split(':').map(Number);
+        const breakDuration = break_duration || 60;
+        
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = totalMinutes - breakDuration;
+        todayExpectedHours = workMinutes / 60;
+      }
+      
+      // Calculate today's balance (actual vs expected)
+      const todayBalance = todayHours - todayExpectedHours;
+      
+      // Update KPIs with today's hours and today's balance
       setUserKPIs(prevKPIs => ({
         ...prevKPIs,
         weeklyHours: formatHours(todayHours), // TODAY'S hours only
-        overtimeBalance: formatOvertime(balanceData.monte_ore), // Correct balance (positive/negative/zero)
+        overtimeBalance: formatOvertime(todayBalance), // TODAY'S balance (positive/negative/zero)
         remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
         monthlyPresences: `${balanceData.working_days}/20`
       }));
