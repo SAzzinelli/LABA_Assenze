@@ -506,7 +506,7 @@ router.post('/leave-requests-hours', async (req, res) => {
       return res.status(401).json({ error: 'Non autorizzato' });
     }
 
-    const { type, startDate, endDate, reason, notes } = req.body;
+    const { type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime } = req.body;
 
     // Validation
     if (!type || !startDate || !endDate || !reason) {
@@ -602,7 +602,11 @@ router.post('/leave-requests-hours', async (req, res) => {
           notes: notes || '',
           status: 'pending',
           hours_requested: totalHours,
-          work_pattern_snapshot: pattern
+          work_pattern_snapshot: pattern,
+          permission_type: permissionType || null,
+          hours: hours || null,
+          exit_time: exitTime || null,
+          entry_time: entryTime || null
         }
       ])
       .select()
