@@ -12,6 +12,7 @@ const emailScheduler = require('./emailScheduler');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const WebSocketManager = require('./websocket');
+const cron = require('node-cron');
 require('dotenv').config();
 
 // Rate limiting rimosso per facilitare i test
@@ -3900,6 +3901,263 @@ app.get('*', (req, res) => {
   }
 });
 
+// ==================== SISTEMA SALVATAGGIO AUTOMATICO PRESENZE ====================
+
+/**
+ * Salva automaticamente le presenze real-time per tutti i dipendenti
+ */
+async function saveHourlyAttendance() {
+  console.log('🕘 Salvataggio automatico presenze orarie...');
+  
+  try {
+    // Ottieni tutti i dipendenti (non admin)
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, role')
+      .eq('role', 'employee');
+    
+    if (usersError) {
+      console.error('❌ Errore nel recupero dipendenti:', usersError);
+      return;
+    }
+    
+    console.log(`👥 Trovati ${users.length} dipendenti`);
+    
+    const today = new Date().toISOString().split('T')[0];
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const user of users) {
+      try {
+        // Calcola le ore real-time per questo dipendente oggi
+        const dayOfWeek = new Date().getDay();
+        const currentHour = new Date().getHours();
+        const currentMinute = new Date().getMinutes();
+        
+        // Ottieni l'orario di lavoro per oggi
+        const { data: workSchedules, error: scheduleError } = await supabase
+          .from('work_patterns')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (scheduleError || !workSchedules || workSchedules.length === 0) {
+          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - nessun orario configurato`);
+          continue;
+        }
+        
+        const todaySchedule = workSchedules.find(schedule => 
+          schedule.day_of_week === dayOfWeek && schedule.is_working_day
+        );
+        
+        if (!todaySchedule) {
+          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo`);
+          continue;
+        }
+        
+        // Calcola ore real-time
+        const { start_time, end_time, break_duration } = todaySchedule;
+        const [startHour, startMin] = start_time.split(':').map(Number);
+        const [endHour, endMin] = end_time.split(':').map(Number);
+        const breakDuration = break_duration || 60;
+        
+        const totalWorkMinutes = (endHour * 60 + endMin - startHour * 60 - startMin);
+        const hasLunchBreak = totalWorkMinutes > 300;
+        const expectedHours = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+        
+        let actualHours = 0;
+        let status = 'not_started';
+        
+        if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+          actualHours = 0;
+          status = 'not_started';
+        } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+          actualHours = expectedHours;
+          status = 'completed';
+        } else {
+          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+          
+          if (hasLunchBreak) {
+            const effectiveWorkMinutes = totalWorkMinutes - breakDuration;
+            if (minutesFromStart <= effectiveWorkMinutes) {
+              actualHours = minutesFromStart / 60;
+              status = 'working';
+            } else {
+              actualHours = effectiveWorkMinutes / 60;
+              status = 'on_break';
+            }
+          } else {
+            actualHours = minutesFromStart / 60;
+            status = 'working';
+          }
+        }
+        
+        // Salva solo se ci sono ore da salvare
+        if (actualHours > 0) {
+          const { error: saveError } = await supabase
+            .from('attendance')
+            .upsert({
+              user_id: user.id,
+              date: today,
+              actual_hours: Math.round(actualHours * 100) / 100,
+              expected_hours: Math.round(expectedHours * 100) / 100,
+              balance_hours: Math.round((actualHours - expectedHours) * 100) / 100,
+              status: status,
+              notes: 'Salvataggio automatico orario',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,date'
+            });
+          
+          if (saveError) {
+            console.error(`❌ Errore salvataggio per ${user.first_name} ${user.last_name}:`, saveError);
+            errorCount++;
+          } else {
+            console.log(`✅ Salvato: ${user.first_name} ${user.last_name} - ${actualHours.toFixed(2)}h (${status})`);
+            successCount++;
+          }
+        } else {
+          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - nessuna attività oggi`);
+        }
+        
+      } catch (error) {
+        console.error(`❌ Errore per ${user.first_name} ${user.last_name}:`, error.message);
+        errorCount++;
+      }
+    }
+    
+    console.log(`✅ Salvataggio automatico completato: ${successCount} salvati, ${errorCount} errori`);
+    
+  } catch (error) {
+    console.error('❌ Errore durante il salvataggio automatico:', error.message);
+  }
+}
+
+/**
+ * Finalizza la giornata appena conclusa per tutti i dipendenti
+ */
+async function finalizeDailyAttendance() {
+  console.log('🌙 Finalizzazione automatica giornata appena conclusa...');
+  
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    console.log(`📅 Finalizzazione per il giorno: ${yesterdayStr}`);
+    
+    // Ottieni tutti i dipendenti (non admin)
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, role')
+      .eq('role', 'employee');
+    
+    if (usersError) {
+      console.error('❌ Errore nel recupero dipendenti:', usersError);
+      return;
+    }
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    
+    for (const user of users) {
+      try {
+        // Controlla se esiste già un record per ieri
+        const { data: existingRecord } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', yesterdayStr)
+          .single();
+        
+        if (existingRecord && existingRecord.actual_hours > 0) {
+          console.log(`✅ Già finalizzato: ${user.first_name} ${user.last_name} - ${existingRecord.actual_hours}h`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Calcola le ore finali per ieri
+        const dayOfWeek = yesterday.getDay();
+        const { data: workSchedules } = await supabase
+          .from('work_patterns')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        const yesterdaySchedule = workSchedules?.find(schedule => 
+          schedule.day_of_week === dayOfWeek && schedule.is_working_day
+        );
+        
+        if (!yesterdaySchedule) {
+          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Per una giornata completa, le ore effettive = ore attese
+        const { start_time, end_time, break_duration } = yesterdaySchedule;
+        const [startHour, startMin] = start_time.split(':').map(Number);
+        const [endHour, endMin] = end_time.split(':').map(Number);
+        const breakDuration = break_duration || 60;
+        
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = totalMinutes - breakDuration;
+        const finalExpectedHours = workMinutes / 60;
+        const finalActualHours = finalExpectedHours; // Giornata completa
+        const finalBalanceHours = 0;
+        
+        // Salva il record finale per ieri
+        const { error: saveError } = await supabase
+          .from('attendance')
+          .upsert({
+            user_id: user.id,
+            date: yesterdayStr,
+            actual_hours: Math.round(finalActualHours * 100) / 100,
+            expected_hours: Math.round(finalExpectedHours * 100) / 100,
+            balance_hours: Math.round(finalBalanceHours * 100) / 100,
+            status: 'completed',
+            notes: 'Finalizzazione automatica giornata',
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,date'
+          });
+        
+        if (saveError) {
+          console.error(`❌ Errore finalizzazione per ${user.first_name} ${user.last_name}:`, saveError);
+          errorCount++;
+        } else {
+          console.log(`✅ Finalizzato: ${user.first_name} ${user.last_name} - ${finalActualHours}h`);
+          successCount++;
+        }
+        
+      } catch (error) {
+        console.error(`❌ Errore per ${user.first_name} ${user.last_name}:`, error.message);
+        errorCount++;
+      }
+    }
+    
+    console.log(`✅ Finalizzazione automatica completata: ${successCount} finalizzati, ${skippedCount} saltati, ${errorCount} errori`);
+    
+  } catch (error) {
+    console.error('❌ Errore durante la finalizzazione automatica:', error.message);
+  }
+}
+
+// Cron job per salvataggio ogni ora (minuto 0)
+const hourlySaveJob = cron.schedule('0 * * * *', async () => {
+  await saveHourlyAttendance();
+}, {
+  scheduled: false, // Verrà avviato dopo
+  timezone: 'Europe/Rome'
+});
+
+// Cron job per finalizzazione giornata a mezzanotte
+const dailyFinalizeJob = cron.schedule('0 0 * * *', async () => {
+  await finalizeDailyAttendance();
+}, {
+  scheduled: false, // Verrà avviato dopo
+  timezone: 'Europe/Rome'
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
@@ -3913,6 +4171,14 @@ server.listen(PORT, () => {
   // Avvia Attendance Scheduler
   const attendanceScheduler = new AttendanceScheduler();
   attendanceScheduler.start();
+  
+  // Avvia Sistema Salvataggio Automatico Presenze
+  console.log('🕘 Avvio sistema salvataggio automatico presenze...');
+  hourlySaveJob.start();
+  dailyFinalizeJob.start();
+  console.log('✅ Sistema salvataggio automatico presenze attivato');
+  console.log('📅 Salvataggio ore: Ogni ora al minuto 0');
+  console.log('📅 Finalizzazione giornata: Ogni giorno a mezzanotte');
 });
 
 module.exports = app;
