@@ -565,9 +565,51 @@ const AdminAttendance = () => {
       // Per "Attualmente a lavoro" usa i dati real-time da employees
       data = employees;
     } else if (activeTab === 'today') {
+      // Per "Oggi" combina dati database + real-time
       data = attendance;
+      
+      // Aggiungi dati real-time se non ci sono record per oggi nel database
+      const today = new Date().toISOString().split('T')[0];
+      const hasTodayInDatabase = attendance.some(record => record.date === today);
+      
+      if (!hasTodayInDatabase && employees.length > 0) {
+        // Aggiungi i dati real-time per oggi
+        const todayRealTimeData = employees.map(emp => ({
+          id: `realtime-${emp.user_id}`,
+          user_id: emp.user_id,
+          date: today,
+          actual_hours: emp.actual_hours,
+          expected_hours: emp.expected_hours,
+          balance_hours: emp.balance_hours,
+          status: emp.status,
+          users: { first_name: emp.name.split(' ')[0], last_name: emp.name.split(' ')[1] || '' },
+          is_realtime: true // Flag per identificare dati real-time
+        }));
+        data = [...data, ...todayRealTimeData];
+      }
     } else {
+      // Per "Cronologia" usa attendanceHistory
       data = attendanceHistory;
+      
+      // Aggiungi dati real-time per oggi se non ci sono record nel database
+      const today = new Date().toISOString().split('T')[0];
+      const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
+      
+      if (!hasTodayInHistory && employees.length > 0) {
+        // Aggiungi i dati real-time per oggi
+        const todayRealTimeData = employees.map(emp => ({
+          id: `realtime-${emp.user_id}`,
+          user_id: emp.user_id,
+          date: today,
+          actual_hours: emp.actual_hours,
+          expected_hours: emp.expected_hours,
+          balance_hours: emp.balance_hours,
+          status: emp.status,
+          users: { first_name: emp.name.split(' ')[0], last_name: emp.name.split(' ')[1] || '' },
+          is_realtime: true // Flag per identificare dati real-time
+        }));
+        data = [...data, ...todayRealTimeData];
+      }
     }
     
     return data.filter(record => {
@@ -828,8 +870,20 @@ const AdminAttendance = () => {
                       balanceHours: record.balance_hours,
                       department: record.department
                     };
+                  } else if (record.is_realtime) {
+                    // Per dati real-time, usa direttamente i valori calcolati
+                    displayData = {
+                      name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
+                      email: record.users?.email || '',
+                      date: record.date,
+                      status: record.status,
+                      expectedHours: record.expected_hours,
+                      actualHours: record.actual_hours,
+                      balanceHours: record.balance_hours,
+                      department: record.users?.department || 'N/A'
+                    };
                   } else {
-                    // Per gli altri tab, calcola le ore real-time
+                    // Per dati database, calcola le ore real-time
                     const realTimeData = calculateRealTimeHoursForRecord(record);
                     displayData = {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
@@ -888,8 +942,13 @@ const AdminAttendance = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditRecord(record)}
-                          className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Modifica record"
+                          disabled={record.is_realtime}
+                          className={`p-2 rounded-lg transition-colors ${
+                            record.is_realtime 
+                              ? 'text-slate-500 cursor-not-allowed opacity-50' 
+                              : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20'
+                          }`}
+                          title={record.is_realtime ? "Dati real-time non modificabili" : "Modifica record"}
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
