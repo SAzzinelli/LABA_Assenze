@@ -358,6 +358,8 @@ const AdminAttendance = () => {
     switch (status) {
       case 'present': return 'bg-green-900 text-green-100 border-green-700';
       case 'completed': return 'bg-green-800 text-green-200 border-green-600';
+      case 'working': return 'bg-orange-900 text-orange-100 border-orange-700';
+      case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -456,18 +458,47 @@ const AdminAttendance = () => {
   // Calcola le ore real-time per un record
   const calculateRealTimeHoursForRecord = (record) => {
     const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const dayOfWeek = now.getDay();
+    const today = now.toISOString().split('T')[0];
+    const recordDate = record.date;
     
     console.log('🔍 Debug calculateRealTimeHoursForRecord:', {
       recordUserId: record.user_id,
-      dayOfWeek,
-      currentHour,
-      currentMinute,
-      workSchedulesCount: workSchedules.length,
-      workSchedules: workSchedules
+      recordDate,
+      today,
+      isToday: recordDate === today,
+      isPast: recordDate < today,
+      isFuture: recordDate > today,
+      recordActualHours: record.actual_hours,
+      recordExpectedHours: record.expected_hours
     });
+    
+    // PER GIORNI PASSATI: usa i dati del database
+    if (recordDate < today) {
+      console.log('📅 Giorno passato - uso dati DB:', {
+        actualHours: record.actual_hours,
+        expectedHours: record.expected_hours,
+        balanceHours: record.balance_hours
+      });
+      
+      return {
+        expectedHours: record.expected_hours || 0,
+        actualHours: record.actual_hours || 0,
+        balanceHours: record.balance_hours || 0,
+        status: record.actual_hours > 0 ? 'present' : 'absent',
+        isPresent: (record.actual_hours || 0) > 0
+      };
+    }
+    
+    // PER GIORNI FUTURI: gestione appropriata
+    if (recordDate > today) {
+      console.log('🔮 Giorno futuro - calcolo ore attese');
+      return handleFutureDay(record);
+    }
+    
+    // PER OGGI: calcolo real-time
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const dayOfWeek = now.getDay();
     
     // Trova l'orario di lavoro per questo dipendente
     const workSchedule = workSchedules.find(schedule => 
@@ -476,14 +507,15 @@ const AdminAttendance = () => {
       schedule.is_working_day
     );
     
-    console.log('📋 Found work schedule:', workSchedule);
+    console.log('📋 Found work schedule for today:', workSchedule);
     
     if (!workSchedule) {
       console.log('❌ No work schedule found for user', record.user_id, 'day', dayOfWeek);
       return {
-        expectedHours: 0,
-        actualHours: 0,
-        balanceHours: 0,
+        expectedHours: record.expected_hours || 0,
+        actualHours: record.actual_hours || 0,
+        balanceHours: record.balance_hours || 0,
+        status: 'non_working_day',
         isPresent: false
       };
     }
@@ -572,15 +604,54 @@ const AdminAttendance = () => {
       isPresent
     };
     
-    console.log('✅ Calculated real-time hours:', result);
+    console.log('✅ Calculated real-time hours for today:', result);
     
     return result;
+  };
+
+  // Gestisce i giorni futuri (non ancora arrivati)
+  const handleFutureDay = (record) => {
+    const dayOfWeek = new Date(record.date).getDay();
+    const workSchedule = workSchedules.find(schedule => 
+      schedule.user_id === record.user_id && 
+      schedule.day_of_week === dayOfWeek
+    );
+    
+    if (!workSchedule || !workSchedule.is_working_day) {
+      return {
+        expectedHours: 0,
+        actualHours: 0,
+        balanceHours: 0,
+        status: 'non_working_day',
+        isPresent: false
+      };
+    }
+    
+    // Calcola ore attese per il giorno futuro
+    const { start_time, end_time, break_duration } = workSchedule;
+    const [startHour, startMin] = start_time.split(':').map(Number);
+    const [endHour, endMin] = end_time.split(':').map(Number);
+    const breakDuration = break_duration || 60;
+    
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    const workMinutes = totalMinutes - breakDuration;
+    const expectedHours = workMinutes / 60;
+    
+    return {
+      expectedHours: Math.round(expectedHours * 10) / 10,
+      actualHours: 0,
+      balanceHours: -expectedHours,
+      status: 'not_started',
+      isPresent: false
+    };
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'present': return <CheckCircle className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'working': return <Clock className="h-4 w-4" />;
+      case 'not_started': return <Clock className="h-4 w-4" />;
       case 'absent': return <XCircle className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
