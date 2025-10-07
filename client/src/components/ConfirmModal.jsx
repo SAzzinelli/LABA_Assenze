@@ -20,18 +20,18 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="relative max-w-md w-full mx-4 bg-white rounded-lg shadow-xl border-2 border-red-200">
+      <div className="relative max-w-md w-full mx-4 bg-slate-800 rounded-lg shadow-xl border-2 border-red-500/30">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <div className="flex items-center space-x-3">
-            <AlertTriangle className="h-6 w-6 text-red-500" />
-            <h3 className="text-lg font-semibold text-red-800">
+            <AlertTriangle className="h-6 w-6 text-red-400" />
+            <h3 className="text-lg font-semibold text-white">
               {title}
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-slate-400 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -39,16 +39,16 @@ const ConfirmModal = ({
 
         {/* Body */}
         <div className="p-6">
-          <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+          <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
             {message}
           </p>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
+        <div className="flex justify-end space-x-3 p-6 border-t border-slate-700">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 rounded-lg font-medium transition-colors"
           >
             {cancelText}
           </button>

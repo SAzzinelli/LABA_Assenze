@@ -738,125 +738,124 @@ const Employees = () => {
             {detailActiveTab === 'schedule' && (
               selectedEmployee.workSchedule ? (
               <div className="space-y-6">
+                {/* Riepilogo Contratto - Prima sezione */}
+                <div className="bg-slate-700 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Briefcase className="h-5 w-5 mr-2 text-green-400" />
+                    Riepilogo Contratto
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-800 rounded-lg p-4 text-center">
+                      <div className="text-slate-400 text-sm mb-1">Tipo Contratto</div>
+                      <div className="text-xl font-bold text-white">
+                        {selectedEmployee.contractType || 'Tempo Pieno'}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">Contratto attivo</div>
+                    </div>
+                    <div className="bg-slate-800 rounded-lg p-4 text-center">
+                      <div className="text-slate-400 text-sm mb-1">Ore Settimanali</div>
+                      <div className="text-2xl font-bold text-white">
+                        {selectedEmployee.workSchedule ? 
+                          Object.values(selectedEmployee.workSchedule)
+                            .reduce((total, day) => {
+                              if (!day.active) return total;
+                              if (day.workType === 'full_day') return total + 8;
+                              if (day.workType === 'morning' || day.workType === 'afternoon') return total + 4;
+                              return total + (day.totalHours || day.hours || 8);
+                            }, 0).toFixed(1) : 
+                          selectedEmployee.weeklyHours}h
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">Totale settimana</div>
+                    </div>
+                    <div className="bg-slate-800 rounded-lg p-4 text-center">
+                      <div className="text-slate-400 text-sm mb-1">Giorni Lavorativi</div>
+                      <div className="text-2xl font-bold text-white">
+                        {selectedEmployee.workSchedule ? 
+                          Object.values(selectedEmployee.workSchedule)
+                            .filter(day => day.active).length : 
+                          5}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">Giorni/settimana</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Orario Settimanale - Seconda sezione */}
                 <div className="bg-slate-700 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Clock className="h-5 w-5 mr-2 text-blue-400" />
-                    Orario di Lavoro Settimanale
+                    Orario Settimanale
                   </h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dayOrder.map((dayKey) => {
-                      const daySchedule = selectedEmployee.workSchedule[dayKey];
-                      if (!daySchedule) return null;
-                      
-                      return (
-                        <div key={dayKey} className="bg-slate-800 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="font-medium text-white">{dayNames[dayKey]}</h5>
-                            <div className={`w-4 h-4 rounded-full ${
-                              daySchedule.active ? 'bg-green-500' : 'bg-slate-500'
-                            }`}></div>
-                          </div>
-                          
-                          {daySchedule.active ? (
-                            <div className="space-y-2">
+                  {/* Giorni Lavorativi */}
+                  <div className="mb-6">
+                    <h5 className="text-md font-medium text-white mb-3 flex items-center">
+                      <CheckSquare className="h-4 w-4 mr-2 text-green-400" />
+                      Giorni Lavorativi
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {dayOrder.map((dayKey) => {
+                        const daySchedule = selectedEmployee.workSchedule[dayKey];
+                        if (!daySchedule || !daySchedule.active) return null;
+                        
+                        return (
+                          <div key={dayKey} className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h6 className="font-medium text-white text-sm">{dayNames[dayKey]}</h6>
+                              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                            
+                            <div className="space-y-1">
                               {daySchedule.workType === 'full_day' ? (
                                 <>
-                                  <div className="space-y-1">
-                                    <div className="flex items-center text-xs">
-                                      <Sun className="h-3 w-3 text-yellow-400 mr-1" />
-                                      <span className="text-slate-400">Mattina: 09:00 - 13:00</span>
-                                    </div>
-                                    <div className="flex items-center text-xs">
-                                      <Coffee className="h-3 w-3 text-amber-400 mr-1" />
-                                      <span className="text-slate-400">Pausa: 13:00 - 14:00</span>
-                                    </div>
-                                    <div className="flex items-center text-xs">
-                                      <Moon className="h-3 w-3 text-blue-400 mr-1" />
-                                      <span className="text-slate-400">Pomeriggio: 14:00 - 18:00</span>
-                                    </div>
-                                  </div>
-                                  <div className="text-xs text-slate-500 mt-2 font-medium">
-                                    Totale: 8.0h
-                                  </div>
+                                  <div className="text-xs text-slate-300">09:00 - 13:00 (Mattina)</div>
+                                  <div className="text-xs text-slate-400">13:00 - 14:00 (Pausa)</div>
+                                  <div className="text-xs text-slate-300">14:00 - 18:00 (Pomeriggio)</div>
+                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 8.0h</div>
                                 </>
                               ) : daySchedule.workType === 'morning' ? (
                                 <>
-                                  <div className="flex items-center text-xs">
-                                    <Sun className="h-3 w-3 text-yellow-400 mr-1" />
-                                    <span className="text-slate-400">Mattina: 09:00 - 13:00</span>
-                                  </div>
-                                  <div className="text-xs text-slate-500 mt-2 font-medium">
-                                    Totale: 4.0h
-                                  </div>
+                                  <div className="text-xs text-slate-300">09:00 - 13:00 (Mattina)</div>
+                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 4.0h</div>
                                 </>
                               ) : daySchedule.workType === 'afternoon' ? (
                                 <>
-                                  <div className="flex items-center text-xs">
-                                    <Moon className="h-3 w-3 text-blue-400 mr-1" />
-                                    <span className="text-slate-400">Pomeriggio: 14:00 - 18:00</span>
-                                  </div>
-                                  <div className="text-xs text-slate-500 mt-2 font-medium">
-                                    Totale: 4.0h
-                                  </div>
+                                  <div className="text-xs text-slate-300">14:00 - 18:00 (Pomeriggio)</div>
+                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 4.0h</div>
                                 </>
                               ) : (
-                                /* Fallback per dati vecchi */
                                 <>
-                                  <div className="flex items-center text-sm">
-                                    <Clock className="h-3 w-3 text-blue-400 mr-2" />
-                                    <span className="text-slate-300">{daySchedule.hours || 8}h</span>
-                                  </div>
-                                  <div className="text-xs text-slate-400">
-                                    Giornata lavorativa
-                                  </div>
+                                  <div className="text-xs text-slate-300">{daySchedule.hours || 8}h lavorative</div>
                                 </>
                               )}
                             </div>
-                          ) : (
-                            <p className="text-slate-400 text-sm">Non lavorativo</p>
-                          )}
-                        </div>
-                      );
-                    })}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  
-                  {/* Riepilogo ore settimanali */}
-                  <div className="bg-slate-700 rounded-lg p-4 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-slate-800 rounded-lg p-3">
-                        <div className="text-slate-400 text-sm">Ore Settimanali</div>
-                        <div className="text-2xl font-bold text-white">
-                          {selectedEmployee.workSchedule ? 
-                            Object.values(selectedEmployee.workSchedule)
-                              .reduce((total, day) => {
-                                if (!day.active) return total;
-                                if (day.workType === 'full_day') return total + 8;
-                                if (day.workType === 'morning' || day.workType === 'afternoon') return total + 4;
-                                return total + (day.totalHours || day.hours || 8);
-                              }, 0).toFixed(1) : 
-                            selectedEmployee.weeklyHours}h
-                        </div>
-                        <div className="text-slate-400 text-xs">Totale settimana</div>
-                      </div>
-                      <div className="bg-slate-800 rounded-lg p-3">
-                        <div className="text-slate-400 text-sm">Tipo Contratto</div>
-                        <div className="text-lg font-semibold text-white">
-                          {selectedEmployee.contractType === 'full_time' ? 'Tempo Pieno' : 
-                           selectedEmployee.contractType === 'part_time' ? 'Part Time' : 
-                           selectedEmployee.contractType === 'apprenticeship' ? 'Apprendistato' : 
-                           selectedEmployee.contractType === 'cococo' ? 'Co.Co.Co' : 
-                           selectedEmployee.contractType}
-                        </div>
-                        <div className="text-slate-400 text-xs">Contratto attivo</div>
-                      </div>
-                      <div className="bg-slate-800 rounded-lg p-3">
-                        <div className="text-slate-400 text-sm">Giorni Lavorativi</div>
-                        <div className="text-2xl font-bold text-white">
-                          {Object.values(selectedEmployee.workSchedule).filter(day => day.active).length}
-                        </div>
-                        <div className="text-slate-400 text-xs">Giorni/settimana</div>
-                      </div>
+
+                  {/* Giorni Non Lavorativi */}
+                  <div>
+                    <h5 className="text-md font-medium text-white mb-3 flex items-center">
+                      <X className="h-4 w-4 mr-2 text-slate-400" />
+                      Giorni Non Lavorativi
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {dayOrder.map((dayKey) => {
+                        const daySchedule = selectedEmployee.workSchedule[dayKey];
+                        if (!daySchedule || daySchedule.active) return null;
+                        
+                        return (
+                          <div key={dayKey} className="bg-slate-800 border border-slate-600 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h6 className="font-medium text-slate-400 text-sm">{dayNames[dayKey]}</h6>
+                              <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                            </div>
+                            <div className="text-xs text-slate-500">Non lavorativo</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
