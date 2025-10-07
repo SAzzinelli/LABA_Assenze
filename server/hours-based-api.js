@@ -716,7 +716,16 @@ router.put('/admin/leave-requests/:id/approve', async (req, res) => {
 // Cancel approved leave request (admin only, permissions only)
 router.put('/admin/leave-requests/:id/cancel', async (req, res) => {
   try {
+    console.log('🔍 Cancel request - User:', req.user);
+    console.log('🔍 Cancel request - User role:', req.user?.role);
+    
+    if (!req.user) {
+      console.log('❌ No user in request');
+      return res.status(401).json({ error: 'Utente non autenticato' });
+    }
+    
     if (req.user.role !== 'admin') {
+      console.log('❌ User is not admin:', req.user.role);
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
