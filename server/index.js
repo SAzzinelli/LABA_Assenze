@@ -3991,32 +3991,28 @@ async function saveHourlyAttendance() {
           }
         }
         
-        // Salva solo se ci sono ore da salvare
-        if (actualHours > 0) {
-          const { error: saveError } = await supabase
-            .from('attendance')
-            .upsert({
-              user_id: user.id,
-              date: today,
-              actual_hours: Math.round(actualHours * 100) / 100,
-              expected_hours: Math.round(expectedHours * 100) / 100,
-              balance_hours: Math.round((actualHours - expectedHours) * 100) / 100,
-              status: status,
-              notes: 'Salvataggio automatico orario',
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id,date'
-            });
-          
-          if (saveError) {
-            console.error(`❌ Errore salvataggio per ${user.first_name} ${user.last_name}:`, saveError);
-            errorCount++;
-          } else {
-            console.log(`✅ Salvato: ${user.first_name} ${user.last_name} - ${actualHours.toFixed(2)}h (${status})`);
-            successCount++;
-          }
+        // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
+        const { error: saveError } = await supabase
+          .from('attendance')
+          .upsert({
+            user_id: user.id,
+            date: today,
+            actual_hours: Math.round(actualHours * 100) / 100,
+            expected_hours: Math.round(expectedHours * 100) / 100,
+            balance_hours: Math.round((actualHours - expectedHours) * 100) / 100,
+            status: status,
+            notes: 'Salvataggio automatico orario',
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,date'
+          });
+        
+        if (saveError) {
+          console.error(`❌ Errore salvataggio per ${user.first_name} ${user.last_name}:`, saveError);
+          errorCount++;
         } else {
-          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - nessuna attività oggi`);
+          console.log(`✅ Salvato: ${user.first_name} ${user.last_name} - ${actualHours.toFixed(2)}h (${status})`);
+          successCount++;
         }
         
       } catch (error) {
