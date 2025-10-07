@@ -368,7 +368,9 @@ const AdminAttendance = () => {
   const getStatusText = (status) => {
     switch (status) {
       case 'present': return 'Presente';
+      case 'working': return 'Al lavoro';
       case 'completed': return 'Giornata terminata';
+      case 'not_started': return 'Non iniziato';
       case 'absent': return 'Assente';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
@@ -544,14 +546,22 @@ const AdminAttendance = () => {
     
     // Determina lo status finale
     let finalStatus = 'absent';
-    if (actualHours > 0) {
-      if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-        finalStatus = 'completed';
-      } else if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
-        finalStatus = 'not_started';
-      } else {
-        finalStatus = 'working';
-      }
+    
+    // Prima controlla se è un giorno lavorativo
+    if (expectedHours === 0) {
+      finalStatus = 'non_working_day';
+    }
+    // Se è prima dell'inizio dell'orario di lavoro
+    else if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+      finalStatus = 'not_started';
+    }
+    // Se è dopo la fine dell'orario di lavoro
+    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+      finalStatus = actualHours > 0 ? 'completed' : 'absent';
+    }
+    // Se è durante l'orario di lavoro
+    else {
+      finalStatus = actualHours > 0 ? 'working' : 'absent';
     }
     
     const result = {
