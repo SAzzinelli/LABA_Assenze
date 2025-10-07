@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
+import CustomAlert from '../components/CustomAlert';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 import { 
   FileText, 
   Plus, 
@@ -22,6 +24,7 @@ import {
 
 const LeaveRequests = () => {
   const { user, apiCall } = useAuthStore();
+  const { alert, showSuccess, showError, showConfirm, hideAlert } = useCustomAlert();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [formData, setFormData] = useState({
     type: 'uscita_anticipata', // USCITA ANTICIPATA o ENTRATA_POSTICIPATA
@@ -44,6 +47,13 @@ const LeaveRequests = () => {
   // Array vuoto per le richieste di permessi
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Stati per dialog di approvazione/rifiuto
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
+  const [rejectionNotes, setRejectionNotes] = useState('');
   const [permissions104, setPermissions104] = useState({
     usedThisMonth: 0,
     maxPerMonth: 3,
@@ -99,9 +109,11 @@ const LeaveRequests = () => {
   // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
   const handleApproveRequest = async (requestId, notes = '') => {
     try {
-      const response = await apiCall(`/api/leave-requests/${requestId}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -111,23 +123,25 @@ const LeaveRequests = () => {
       });
 
       if (response.ok) {
-        alert('Richiesta approvata con successo');
+        showSuccess('Richiesta approvata con successo');
         fetchRequests(); // Ricarica le richieste
       } else {
         const error = await response.json();
-        alert(`Errore: ${error.error}`);
+        showError(`Errore: ${error.error || 'Errore durante l\'approvazione'}`);
       }
     } catch (error) {
       console.error('Error approving request:', error);
-      alert('Errore durante l\'approvazione della richiesta');
+      showError('Errore durante l\'approvazione della richiesta');
     }
   };
 
   const handleRejectRequest = async (requestId, notes = '') => {
     try {
-      const response = await apiCall(`/api/leave-requests/${requestId}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -137,16 +151,39 @@ const LeaveRequests = () => {
       });
 
       if (response.ok) {
-        alert('Richiesta rifiutata');
+        showSuccess('Richiesta rifiutata');
         fetchRequests(); // Ricarica le richieste
       } else {
         const error = await response.json();
-        alert(`Errore: ${error.error}`);
+        showError(`Errore: ${error.error || 'Errore durante il rifiuto'}`);
       }
     } catch (error) {
       console.error('Error rejecting request:', error);
-      alert('Errore durante il rifiuto della richiesta');
+      showError('Errore durante il rifiuto della richiesta');
     }
+  };
+
+  // Funzioni per gestire i dialog
+  const openApproveDialog = (requestId) => {
+    setSelectedRequestId(requestId);
+    setApprovalNotes('');
+    setShowApproveDialog(true);
+  };
+
+  const openRejectDialog = (requestId) => {
+    setSelectedRequestId(requestId);
+    setRejectionNotes('');
+    setShowRejectDialog(true);
+  };
+
+  const confirmApprove = () => {
+    handleApproveRequest(selectedRequestId, approvalNotes);
+    setShowApproveDialog(false);
+  };
+
+  const confirmReject = () => {
+    handleRejectRequest(selectedRequestId, rejectionNotes);
+    setShowRejectDialog(false);
   };
 
   const handleInputChange = (e) => {
@@ -782,20 +819,14 @@ const LeaveRequests = () => {
                     {user?.role === 'admin' && request.status === 'pending' && (
                       <div className="mt-4 flex gap-3">
                         <button
-                          onClick={() => {
-                            const notes = prompt('Note per l\'approvazione (opzionale):');
-                            handleApproveRequest(request.id, notes || '');
-                          }}
+                          onClick={() => openApproveDialog(request.id)}
                           className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Approva
                         </button>
                         <button
-                          onClick={() => {
-                            const notes = prompt('Motivo del rifiuto (opzionale):');
-                            handleRejectRequest(request.id, notes || '');
-                          }}
+                          onClick={() => openRejectDialog(request.id)}
                           className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                         >
                           <XCircle className="h-4 w-4 mr-2" />
@@ -811,6 +842,83 @@ const LeaveRequests = () => {
           );
         })()}
       </div>
+
+      {/* Dialog di approvazione */}
+      {showApproveDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowApproveDialog(false)} />
+          <div className="relative bg-slate-800 border border-slate-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Approva Richiesta</h3>
+            <p className="text-slate-300 mb-4">Inserisci le note per l'approvazione (opzionale):</p>
+            <textarea
+              value={approvalNotes}
+              onChange={(e) => setApprovalNotes(e.target.value)}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              rows={3}
+              placeholder="Note per l'approvazione..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setShowApproveDialog(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmApprove}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+              >
+                Approva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog di rifiuto */}
+      {showRejectDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRejectDialog(false)} />
+          <div className="relative bg-slate-800 border border-slate-600 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Rifiuta Richiesta</h3>
+            <p className="text-slate-300 mb-4">Inserisci il motivo del rifiuto (opzionale):</p>
+            <textarea
+              value={rejectionNotes}
+              onChange={(e) => setRejectionNotes(e.target.value)}
+              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              rows={3}
+              placeholder="Motivo del rifiuto..."
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setShowRejectDialog(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmReject}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Rifiuta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert custom */}
+      <CustomAlert
+        isOpen={alert.isOpen}
+        onClose={hideAlert}
+        type={alert.type}
+        title={alert.title}
+        message={alert.message}
+        onConfirm={alert.onConfirm}
+        showCancel={alert.showCancel}
+        confirmText={alert.confirmText}
+        cancelText={alert.cancelText}
+      />
     </div>
   );
 };
