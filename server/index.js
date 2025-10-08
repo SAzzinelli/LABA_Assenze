@@ -3915,6 +3915,56 @@ app.post('/api/cron/hourly-save', async (req, res) => {
   }
 });
 
+// Endpoint temporaneo per creare record di test
+app.post('/api/test/create-attendance-record', async (req, res) => {
+  try {
+    console.log('🔧 Creazione record di test...');
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Trova il primo dipendente
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('role', 'employee')
+      .limit(1);
+    
+    if (usersError || !users || users.length === 0) {
+      return res.status(500).json({ error: 'Nessun dipendente trovato' });
+    }
+    
+    const user = users[0];
+    console.log(`🔧 Creando record per: ${user.first_name} ${user.last_name}`);
+    
+    // Crea record di test
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert({
+        user_id: user.id,
+        date: today,
+        actual_hours: 0,
+        expected_hours: 8,
+        balance_hours: -8,
+        notes: 'Record di test per malattia'
+      }, {
+        onConflict: 'user_id,date'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Errore creazione record:', error);
+      return res.status(500).json({ error: 'Errore nella creazione del record' });
+    }
+    
+    console.log('✅ Record creato:', data);
+    res.json({ success: true, message: 'Record di test creato', record: data });
+    
+  } catch (error) {
+    console.error('❌ Errore endpoint test:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint per finalizzazione giornaliera
 app.post('/api/cron/daily-finalize', async (req, res) => {
   try {
