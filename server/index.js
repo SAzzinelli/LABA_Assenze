@@ -3505,6 +3505,51 @@ app.post('/api/email/scheduler/stop', authenticateToken, requireAdmin, async (re
 });
 
 // Endpoint per inviare email manuali
+// Funzione per calcolare dati report settimanale
+async function calculateWeeklyReportData(userId) {
+  try {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Lunedì
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Domenica
+    
+    // Recupera presenze della settimana
+    const { data: attendance, error } = await supabase
+      .from('attendance')
+      .select('date, actual_hours, expected_hours, balance_hours')
+      .eq('user_id', userId)
+      .gte('date', startOfWeek.toISOString().split('T')[0])
+      .lte('date', endOfWeek.toISOString().split('T')[0]);
+    
+    if (error) {
+      console.error('Error fetching weekly attendance:', error);
+      return { weekNumber: 1, totalHours: 0, daysPresent: 0, overtimeHours: 0, balanceHours: 0 };
+    }
+    
+    // Calcola statistiche
+    const totalHours = attendance.reduce((sum, day) => sum + (day.actual_hours || 0), 0);
+    const daysPresent = attendance.filter(day => (day.actual_hours || 0) > 0).length;
+    const overtimeHours = attendance.reduce((sum, day) => sum + Math.max(0, (day.balance_hours || 0)), 0);
+    const balanceHours = attendance.reduce((sum, day) => sum + (day.balance_hours || 0), 0);
+    
+    // Calcola numero settimana
+    const weekNumber = Math.ceil((today.getDate() - today.getDay() + 1) / 7);
+    
+    return {
+      weekNumber,
+      totalHours: Math.round(totalHours * 10) / 10,
+      daysPresent,
+      overtimeHours: Math.round(overtimeHours * 10) / 10,
+      balanceHours: Math.round(balanceHours * 10) / 10
+    };
+  } catch (error) {
+    console.error('Error calculating weekly report data:', error);
+    return { weekNumber: 1, totalHours: 0, daysPresent: 0, overtimeHours: 0, balanceHours: 0 };
+  }
+}
+
 app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { employeeId, type, message } = req.body;
@@ -3539,7 +3584,9 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
         break;
       case 'report':
         emailTemplate = 'weeklyReport';
-        emailData = [employee.first_name, { weekNumber: new Date().getWeek(), totalHours: 40, daysPresent: 5, overtimeHours: 0, balanceHours: 0 }];
+        // Calcola dati reali della settimana corrente
+        const weekData = await calculateWeeklyReportData(employeeId);
+        emailData = [employee.first_name, weekData];
         break;
       case 'custom':
         // Per messaggi personalizzati, crea un template semplice
