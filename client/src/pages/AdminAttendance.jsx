@@ -212,8 +212,7 @@ const AdminAttendance = () => {
 
   const fetchSickToday = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await apiCall(`/api/hours/admin/sick-leave-requests?status=approved&date=${today}`);
+      const response = await apiCall('/api/attendance/sick-today');
       if (response.ok) {
         const data = await response.json();
         console.log('🏥 Sick leave requests for today:', data);
