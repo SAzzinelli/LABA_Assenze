@@ -1164,18 +1164,34 @@ const AdminAttendance = () => {
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
                       finalBalanceHours = realTimeData.balanceHours;
+                      console.log(`🔍 Final status for TODAY (${recordDate}):`, {
+                        realTimeDataStatus: realTimeData.status,
+                        finalStatus,
+                        finalActualHours,
+                        finalExpectedHours
+                      });
                     } else if (hasActualData || isPast) {
                       // Giorno passato con dati: usa DB
                       finalActualHours = record.actual_hours || 0;
                       finalExpectedHours = record.expected_hours || 0;
                       finalBalanceHours = record.balance_hours || 0;
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
+                      console.log(`🔍 Final status for PAST (${recordDate}):`, {
+                        finalStatus,
+                        finalActualHours,
+                        finalExpectedHours
+                      });
                     } else {
                       // Fallback
                       finalStatus = realTimeData.status;
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
                       finalBalanceHours = realTimeData.balanceHours;
+                      console.log(`🔍 Final status for FALLBACK (${recordDate}):`, {
+                        finalStatus,
+                        finalActualHours,
+                        finalExpectedHours
+                      });
                     }
                     
                     displayData = {
