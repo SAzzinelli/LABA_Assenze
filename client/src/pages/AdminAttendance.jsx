@@ -1157,14 +1157,21 @@ const AdminAttendance = () => {
                     
                     const hasActualData = (record.actual_hours || 0) > 0;
                     
-                    if (hasActualData || isPast || !isToday) {
-                      // Ha dati salvati O è un giorno passato: usa DB
+                    // IMPORTANTE: Usa sempre realTimeData.status perché include il controllo malattie
+                    if (isToday) {
+                      // Oggi: usa sempre real-time (include controllo malattie)
+                      finalStatus = realTimeData.status;
+                      finalActualHours = realTimeData.actualHours;
+                      finalExpectedHours = realTimeData.expectedHours;
+                      finalBalanceHours = realTimeData.balanceHours;
+                    } else if (hasActualData || isPast) {
+                      // Giorno passato con dati: usa DB
                       finalActualHours = record.actual_hours || 0;
                       finalExpectedHours = record.expected_hours || 0;
                       finalBalanceHours = record.balance_hours || 0;
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
                     } else {
-                      // Oggi senza dati salvati: usa real-time
+                      // Fallback
                       finalStatus = realTimeData.status;
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
