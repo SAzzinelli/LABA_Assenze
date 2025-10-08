@@ -667,7 +667,12 @@ const Employees = () => {
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Data di Nascita:</span>
-                      <p className="text-white font-bold">{new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT')}</p>
+                      <p className="text-white font-bold">
+                        {selectedEmployee.birthDate ? 
+                          new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT') : 
+                          'Non specificata'
+                        }
+                      </p>
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Legge 104:</span>
@@ -697,7 +702,9 @@ const Employees = () => {
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Ore Settimanali:</span>
-                      <p className="text-white font-bold">{selectedEmployee.weeklyHours}h</p>
+                      <p className="text-white font-bold">
+                        {selectedEmployee.weeklyHours ? `${selectedEmployee.weeklyHours}h` : 'Non specificate'}
+                      </p>
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Posizione:</span>
@@ -717,17 +724,23 @@ const Employees = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-slate-600 rounded-lg p-3">
                       <div className="text-slate-400 text-sm">Ferie Godute</div>
-                      <div className="text-2xl font-bold text-white">{selectedEmployee.usedVacationDays}</div>
+                      <div className="text-2xl font-bold text-white">
+                        {selectedEmployee.usedVacationDays || 0}
+                      </div>
                       <div className="text-slate-400 text-xs">giorni</div>
                     </div>
                     <div className="bg-slate-600 rounded-lg p-3">
                       <div className="text-slate-400 text-sm">Ferie Rimanenti</div>
-                      <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays - selectedEmployee.usedVacationDays}</div>
+                      <div className="text-2xl font-bold text-white">
+                        {(selectedEmployee.totalVacationDays || 0) - (selectedEmployee.usedVacationDays || 0)}
+                      </div>
                       <div className="text-slate-400 text-xs">giorni</div>
                     </div>
                     <div className="bg-slate-600 rounded-lg p-3">
                       <div className="text-slate-400 text-sm">Totale Ferie</div>
-                      <div className="text-2xl font-bold text-white">{selectedEmployee.totalVacationDays}</div>
+                      <div className="text-2xl font-bold text-white">
+                        {selectedEmployee.totalVacationDays || 0}
+                      </div>
                       <div className="text-slate-400 text-xs">giorni annui</div>
                     </div>
                   </div>
