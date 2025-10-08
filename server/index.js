@@ -3997,16 +3997,25 @@ async function saveHourlyAttendance() {
     
     console.log(`👥 Trovati ${users.length} dipendenti`);
     
+    if (!users || users.length === 0) {
+      console.log('⚠️  Nessun dipendente trovato');
+      return;
+    }
+    
     const today = new Date().toISOString().split('T')[0];
     let successCount = 0;
     let errorCount = 0;
     
     for (const user of users) {
       try {
+        console.log(`🔍 Processando: ${user.first_name} ${user.last_name}`);
+        
         // Calcola le ore real-time per questo dipendente oggi
         const dayOfWeek = new Date().getDay();
         const currentHour = new Date().getHours();
         const currentMinute = new Date().getMinutes();
+        
+        console.log(`📅 Oggi è: giorno ${dayOfWeek}, ora ${currentHour}:${currentMinute}`);
         
         // Ottieni l'orario di lavoro per oggi
         const { data: workSchedules, error: scheduleError } = await supabase
@@ -4014,19 +4023,28 @@ async function saveHourlyAttendance() {
           .select('*')
           .eq('user_id', user.id);
         
-        if (scheduleError || !workSchedules || workSchedules.length === 0) {
+        if (scheduleError) {
+          console.error(`❌ Errore recupero orari per ${user.first_name}:`, scheduleError);
+          continue;
+        }
+        
+        if (!workSchedules || workSchedules.length === 0) {
           console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - nessun orario configurato`);
           continue;
         }
+        
+        console.log(`📋 Trovati ${workSchedules.length} orari per ${user.first_name}`);
         
         const todaySchedule = workSchedules.find(schedule => 
           schedule.day_of_week === dayOfWeek && schedule.is_working_day
         );
         
         if (!todaySchedule) {
-          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo`);
+          console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo (giorno ${dayOfWeek})`);
           continue;
         }
+        
+        console.log(`✅ Trovato orario per ${user.first_name}: ${todaySchedule.start_time} - ${todaySchedule.end_time}`);
         
         // Calcola ore real-time
         const { start_time, end_time, break_duration } = todaySchedule;
@@ -4066,6 +4084,8 @@ async function saveHourlyAttendance() {
         }
         
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
+        console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${expectedHours}h - Status: ${status}`);
+        
         const { error: saveError } = await supabase
           .from('attendance')
           .upsert({
