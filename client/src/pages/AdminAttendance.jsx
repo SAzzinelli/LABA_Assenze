@@ -146,9 +146,11 @@ const AdminAttendance = () => {
     try {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
+      console.log('🔍 Fetching attendance data for today:', today);
       const response = await apiCall(`/api/attendance?date=${today}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Attendance data for today:', data);
         setAttendance(data);
       }
       setLastUpdate(new Date());
@@ -491,6 +493,31 @@ const AdminAttendance = () => {
     const isToday = recordDate === today;
     const isFuture = recordDateObj > todayDate;
     
+    // Se è oggi, controlla prima se è in malattia (PRIORITÀ MASSIMA)
+    if (isToday) {
+      console.log('🔍 Checking sick leave for user:', record.user_id);
+      console.log('🔍 Sick today data:', sickToday);
+      
+      const isSickToday = sickToday.some(sickRequest => 
+        sickRequest.user_id === record.user_id &&
+        new Date(sickRequest.start_date) <= new Date(today) &&
+        new Date(sickRequest.end_date) >= new Date(today)
+      );
+      
+      console.log('🔍 Is sick today result:', isSickToday);
+      
+      if (isSickToday) {
+        console.log('🏥 User is sick today:', record.user_id);
+        return {
+          expectedHours: 0,
+          actualHours: 0,
+          balanceHours: 0,
+          status: 'sick_leave',
+          isPresent: false
+        };
+      }
+    }
+    
     console.log('🔍 Debug calculateRealTimeHoursForRecord:', {
       recordUserId: record.user_id,
       recordDate,
@@ -537,29 +564,6 @@ const AdminAttendance = () => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
-    
-    // Controlla se l'utente è in malattia oggi
-    console.log('🔍 Checking sick leave for user:', record.user_id);
-    console.log('🔍 Sick today data:', sickToday);
-    
-    const isSickToday = sickToday.some(sickRequest => 
-      sickRequest.user_id === record.user_id &&
-      new Date(sickRequest.start_date) <= new Date(today) &&
-      new Date(sickRequest.end_date) >= new Date(today)
-    );
-    
-    console.log('🔍 Is sick today result:', isSickToday);
-    
-    if (isSickToday) {
-      console.log('🏥 User is sick today:', record.user_id);
-      return {
-        expectedHours: 0,
-        actualHours: 0,
-        balanceHours: 0,
-        status: 'sick_leave',
-        isPresent: false
-      };
-    }
     
     // Trova l'orario di lavoro per questo dipendente
     const workSchedule = workSchedules.find(schedule => 
