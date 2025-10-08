@@ -151,6 +151,22 @@ const AdminAttendance = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('📊 Attendance data for today:', data);
+        
+        // Se non c'è un record per oggi, crea un record temporaneo per la logica di controllo
+        if (data.length === 0 && allEmployees.length > 0) {
+          console.log('🔧 No attendance record for today, creating temporary record for logic');
+          const tempRecord = {
+            user_id: allEmployees[0].id,
+            date: today,
+            actual_hours: 0,
+            expected_hours: 0,
+            balance_hours: 0,
+            users: allEmployees[0]
+          };
+          data.push(tempRecord);
+          console.log('🔧 Created temporary record:', tempRecord);
+        }
+        
         setAttendance(data);
       }
       setLastUpdate(new Date());
