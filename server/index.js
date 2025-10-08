@@ -3915,6 +3915,37 @@ app.post('/api/cron/hourly-save', async (req, res) => {
   }
 });
 
+// Endpoint di debug per vedere i log della funzione saveHourlyAttendance
+app.get('/api/debug/cron-logs', async (req, res) => {
+  try {
+    const logs = [];
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    // Intercetta i log
+    console.log = (...args) => {
+      logs.push({ type: 'log', message: args.join(' ') });
+      originalLog(...args);
+    };
+    console.error = (...args) => {
+      logs.push({ type: 'error', message: args.join(' ') });
+      originalError(...args);
+    };
+    
+    // Esegui la funzione
+    await saveHourlyAttendance();
+    
+    // Ripristina i log
+    console.log = originalLog;
+    console.error = originalError;
+    
+    res.json({ success: true, logs });
+  } catch (error) {
+    console.error('❌ Errore debug:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 // Endpoint temporaneo per creare record di test
 app.post('/api/test/create-attendance-record', async (req, res) => {
   try {
