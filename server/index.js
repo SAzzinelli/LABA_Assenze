@@ -519,7 +519,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         status: emp.is_active ? 'active' : 'inactive',
         has104: emp.has_104,
         phone: emp.phone || '',
-        birthDate: emp.date_of_birth || '',
+        birthDate: emp.birth_date || '',
         // Aggiungi dati orario di lavoro dettagliati
         workSchedule: Object.keys(detailedWorkSchedule).length > 0 ? detailedWorkSchedule : 
           (activeWorkPattern ? {
@@ -532,11 +532,16 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
             sunday: { hours: activeWorkPattern.sunday_hours, active: activeWorkPattern.sunday_hours > 0 }
           } : null),
         contractType: activeWorkPattern?.contract_type || 'full_time',
-        weeklyHours: activeWorkPattern ? 
-          (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours + 
-           activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours + 
-           activeWorkPattern.friday_hours + activeWorkPattern.saturday_hours + 
-           activeWorkPattern.sunday_hours) : 0
+        weeklyHours: Object.keys(detailedWorkSchedule).length > 0 ? 
+          Object.values(detailedWorkSchedule).reduce((total, day) => total + (day.totalHours || 0), 0) :
+          (activeWorkPattern ? 
+            (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours + 
+             activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours + 
+             activeWorkPattern.friday_hours + activeWorkPattern.saturday_hours + 
+             activeWorkPattern.sunday_hours) : emp.weekly_hours || 0),
+        // Dati ferie (per ora placeholder)
+        usedVacationDays: 0,
+        totalVacationDays: 26
       };
     });
 
