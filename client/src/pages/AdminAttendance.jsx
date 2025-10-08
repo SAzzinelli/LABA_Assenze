@@ -212,11 +212,14 @@ const AdminAttendance = () => {
 
   const fetchSickToday = async () => {
     try {
+      console.log('🔄 Fetching sick leave requests for today...');
       const response = await apiCall('/api/attendance/sick-today');
       if (response.ok) {
         const data = await response.json();
         console.log('🏥 Sick leave requests for today:', data);
         setSickToday(data);
+      } else {
+        console.error('❌ Failed to fetch sick leave requests:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('❌ Error fetching sick leave requests:', error);
@@ -536,11 +539,16 @@ const AdminAttendance = () => {
     const dayOfWeek = now.getDay();
     
     // Controlla se l'utente è in malattia oggi
+    console.log('🔍 Checking sick leave for user:', record.user_id);
+    console.log('🔍 Sick today data:', sickToday);
+    
     const isSickToday = sickToday.some(sickRequest => 
       sickRequest.user_id === record.user_id &&
       new Date(sickRequest.start_date) <= new Date(today) &&
       new Date(sickRequest.end_date) >= new Date(today)
     );
+    
+    console.log('🔍 Is sick today result:', isSickToday);
     
     if (isSickToday) {
       console.log('🏥 User is sick today:', record.user_id);
