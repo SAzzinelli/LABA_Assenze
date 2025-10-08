@@ -738,49 +738,7 @@ const Employees = () => {
             {detailActiveTab === 'schedule' && (
               selectedEmployee.workSchedule ? (
               <div className="space-y-6">
-                {/* Riepilogo Contratto - Prima sezione */}
-                <div className="bg-slate-700 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <Briefcase className="h-5 w-5 mr-2 text-green-400" />
-                    Riepilogo Contratto
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-800 rounded-lg p-4 text-center">
-                      <div className="text-slate-400 text-sm mb-1">Tipo Contratto</div>
-                      <div className="text-xl font-bold text-white">
-                        {selectedEmployee.contractType || 'Tempo Pieno'}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">Contratto attivo</div>
-                    </div>
-                    <div className="bg-slate-800 rounded-lg p-4 text-center">
-                      <div className="text-slate-400 text-sm mb-1">Ore Settimanali</div>
-                      <div className="text-2xl font-bold text-white">
-                        {selectedEmployee.workSchedule ? 
-                          Object.values(selectedEmployee.workSchedule)
-                            .reduce((total, day) => {
-                              if (!day.active) return total;
-                              if (day.workType === 'full_day') return total + 8;
-                              if (day.workType === 'morning' || day.workType === 'afternoon') return total + 4;
-                              return total + (day.totalHours || day.hours || 8);
-                            }, 0).toFixed(1) : 
-                          selectedEmployee.weeklyHours}h
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">Totale settimana</div>
-                    </div>
-                    <div className="bg-slate-800 rounded-lg p-4 text-center">
-                      <div className="text-slate-400 text-sm mb-1">Giorni Lavorativi</div>
-                      <div className="text-2xl font-bold text-white">
-                        {selectedEmployee.workSchedule ? 
-                          Object.values(selectedEmployee.workSchedule)
-                            .filter(day => day.active).length : 
-                          5}
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">Giorni/settimana</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Orario Settimanale - Seconda sezione */}
+                {/* Orario Settimanale */}
                 <div className="bg-slate-700 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Clock className="h-5 w-5 mr-2 text-blue-400" />
