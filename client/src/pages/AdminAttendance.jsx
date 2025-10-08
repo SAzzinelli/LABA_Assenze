@@ -1232,25 +1232,10 @@ const AdminAttendance = () => {
                         </div>
                     </td>
                       <td className="py-4 px-6">
-                        {(() => {
-                          // Determina lo status basandosi su actualHours e status
-                          let finalStatus = 'absent';
-                          if (displayData.actualHours > 0) {
-                            if (displayData.status === 'completed') {
-                              finalStatus = 'completed';
-                            } else if (displayData.status === 'working' || displayData.status === 'on_break' || displayData.status === 'present') {
-                              finalStatus = 'present';
-                            } else {
-                              finalStatus = 'present'; // Se ha ore ma status non definito, è presente
-                            }
-                          }
-                          return (
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(finalStatus)}`}>
-                              {getStatusIcon(finalStatus)}
-                              <span className="ml-1">{getStatusText(finalStatus)}</span>
-                            </span>
-                          );
-                        })()}
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status)}`}>
+                          {getStatusIcon(displayData.status)}
+                          <span className="ml-1">{getStatusText(displayData.status)}</span>
+                        </span>
                       </td>
                       <td className="py-4 px-6">
                         <span className="font-mono text-slate-300">
