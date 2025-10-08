@@ -78,6 +78,9 @@ const AdminAttendance = () => {
     absentToday: 0 // Chi doveva lavorare ma non ha lavorato
   });
 
+  // Malattie di oggi
+  const [sickToday, setSickToday] = useState([]);
+
   // Real-time updates
   const { emitUpdate } = useRealTimeUpdates({
     onAttendanceUpdate: (data) => {
@@ -98,6 +101,7 @@ const AdminAttendance = () => {
       await fetchEmployees();
       await fetchAllEmployees();
       await fetchWorkSchedules();
+      await fetchSickToday();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -116,6 +120,7 @@ const AdminAttendance = () => {
     fetchEmployees();
       fetchAllEmployees();
       fetchWorkSchedules();
+      fetchSickToday();
       calculateRealTimeStats();
     }, 30000);
     
@@ -202,6 +207,20 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching work schedules:', error);
+    }
+  };
+
+  const fetchSickToday = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiCall(`/api/hours/admin/sick-leave-requests?status=approved&date=${today}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🏥 Sick leave requests for today:', data);
+        setSickToday(data);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching sick leave requests:', error);
     }
   };
 
@@ -361,6 +380,7 @@ const AdminAttendance = () => {
       case 'working': return 'bg-orange-900 text-orange-100 border-orange-700';
       case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
+      case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
       default: return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -374,6 +394,7 @@ const AdminAttendance = () => {
       case 'completed': return 'Giornata terminata';
       case 'not_started': return 'Non iniziato';
       case 'absent': return 'Assente';
+      case 'sick_leave': return 'In malattia';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
       default: return 'Sconosciuto';
@@ -515,6 +536,24 @@ const AdminAttendance = () => {
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
     
+    // Controlla se l'utente è in malattia oggi
+    const isSickToday = sickToday.some(sickRequest => 
+      sickRequest.user_id === record.user_id &&
+      new Date(sickRequest.start_date) <= new Date(today) &&
+      new Date(sickRequest.end_date) >= new Date(today)
+    );
+    
+    if (isSickToday) {
+      console.log('🏥 User is sick today:', record.user_id);
+      return {
+        expectedHours: 0,
+        actualHours: 0,
+        balanceHours: 0,
+        status: 'sick_leave',
+        isPresent: false
+      };
+    }
+    
     // Trova l'orario di lavoro per questo dipendente
     const workSchedule = workSchedules.find(schedule => 
       schedule.user_id === record.user_id && 
@@ -632,6 +671,7 @@ const AdminAttendance = () => {
       case 'working': return <Clock className="h-4 w-4" />;
       case 'not_started': return <Clock className="h-4 w-4" />;
       case 'absent': return <XCircle className="h-4 w-4" />;
+      case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
@@ -900,8 +940,8 @@ const AdminAttendance = () => {
           
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-orange-600" />
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Assenti Oggi</p>
