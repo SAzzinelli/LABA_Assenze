@@ -874,9 +874,9 @@ const AdminAttendance = () => {
         // Per employees, mostra solo chi è attualmente working o on_break
         return record.status === 'working' || record.status === 'on_break';
       } else if (activeTab === 'today') {
-        // Mostra solo chi ha ore effettive > 0 (ha lavorato oggi) - calcolo real-time
+        // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso
         const realTimeData = calculateRealTimeHoursForRecord(record);
-        return realTimeData.actualHours > 0;
+        return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday';
       }
       
       return true;
