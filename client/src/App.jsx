@@ -11,6 +11,7 @@ import Presenze from './pages/Presenze';
 import AdminAttendance from './pages/AdminAttendance';
 import Permessi from './pages/Permessi';
 import Permessi104 from './pages/Permessi104';
+import AdminPermessi104 from './pages/AdminPermessi104';
 import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
 import Notifiche from './pages/Notifiche';
@@ -94,9 +95,15 @@ function App() {
                 path="/permessi-104"
                 element={
                   isAuthenticated ? (
-                    <Layout>
-                      <Permessi104 />
-                    </Layout>
+                    user?.role === 'admin' ? (
+                      <Layout>
+                        <AdminPermessi104 />
+                      </Layout>
+                    ) : (
+                      <Layout>
+                        <Permessi104 />
+                      </Layout>
+                    )
                   ) : (
                     <Navigate to="/login" replace />
                   )

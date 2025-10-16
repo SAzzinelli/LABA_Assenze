@@ -368,8 +368,15 @@ const Employees = () => {
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-white">
-                          {employee.name}
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm font-medium text-white">
+                            {employee.name}
+                          </div>
+                          {employee.has104 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
+                              104
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -605,7 +612,14 @@ const Employees = () => {
         >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Dettagli Dipendente - {selectedEmployee.name}</h3>
+              <h3 className="text-xl font-bold text-white flex items-center">
+                Dettagli Dipendente - {selectedEmployee.name}
+                {selectedEmployee.has104 && (
+                  <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
+                    Legge 104
+                  </span>
+                )}
+              </h3>
               <button 
                 onClick={() => {
                   setShowDetailsModal(false);
