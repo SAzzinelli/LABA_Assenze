@@ -248,19 +248,27 @@ const Layout = ({ children }) => {
                 {filteredNavigation.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = location.pathname === item.href;
+                  const showBadge = item.name === 'Notifiche' && unreadCount > 0;
                   return (
                     <Link
                       key={item.name}
                       to={item.href}
-                      className={`group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors ${
+                      className={`group flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors ${
                         isActive
                           ? 'bg-indigo-600 text-white'
                           : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                       }`}
                       onClick={() => setSidebarOpen(false)}
                     >
-                      <IconComponent className="mr-4 h-6 w-6" />
-                      {item.name}
+                      <div className="flex items-center">
+                        <IconComponent className="mr-4 h-6 w-6" />
+                        {item.name}
+                      </div>
+                      {showBadge && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -271,9 +279,9 @@ const Layout = ({ children }) => {
       )}
 
       {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
+      <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-slate-800 border-b border-slate-700">
+        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-slate-800 border-b border-slate-700 shadow-lg">
           <button
             className="px-4 border-r border-slate-700 text-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden"
             onClick={() => setSidebarOpen(true)}
@@ -417,8 +425,8 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Page content */}
-        <main className="flex-1">
-          <div className="py-6">
+        <main className="flex-1 overflow-x-hidden">
+          <div className="py-3 sm:py-6 px-2 sm:px-4 lg:px-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               {children}
             </div>

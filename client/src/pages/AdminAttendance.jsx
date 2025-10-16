@@ -1152,18 +1152,20 @@ const AdminAttendance = () => {
           </h2>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                <table className="min-w-full divide-y divide-slate-700">
               <thead className="bg-slate-700">
                 <tr>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Dipendente</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Data</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Stato</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Attese</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Effettive</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Saldo Giornata</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Banca Ore</th>
-                  <th className="text-left py-4 px-6 font-medium text-slate-300">Azioni</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Dipendente</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Data</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Stato</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Attese</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Effettive</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Saldo</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Banca</th>
+                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Azioni</th>
                 </tr>
               </thead>
               <tbody>
@@ -1280,22 +1282,22 @@ const AdminAttendance = () => {
                   
                   return (
                     <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-6 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 bg-slate-600 rounded-full flex items-center justify-center mr-3">
-                            <User className="h-4 w-4 text-slate-300" />
+                          <div className="h-6 w-6 sm:h-8 sm:w-8 bg-slate-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                            <User className="h-3 w-3 sm:h-4 sm:w-4 text-slate-300" />
                           </div>
-                          <div>
-                            <p className="font-medium text-white">
+                          <div className="min-w-0">
+                            <p className="font-medium text-white text-xs sm:text-sm truncate">
                               {displayData.name}
                             </p>
-                            <p className="text-sm text-slate-400">
+                            <p className="text-xs text-slate-400 truncate hidden sm:block">
                               {displayData.email || displayData.department}
                             </p>
                           </div>
                         </div>
                     </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 text-slate-400 mr-2" />
                           <span className="text-slate-300">
@@ -1303,23 +1305,23 @@ const AdminAttendance = () => {
                           </span>
                         </div>
                     </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status)}`}>
                           {getStatusIcon(displayData.status)}
                           <span className="ml-1">{getStatusText(displayData.status)}</span>
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <span className="font-mono text-slate-300">
                           {formatHours(displayData.expectedHours)}
                         </span>
                     </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <span className="font-mono text-slate-300">
                           {formatHours(displayData.actualHours)}
                       </span>
                     </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <span className={`font-mono font-semibold ${
                           displayData.balanceHours > 0 
                             ? 'text-green-400' 
@@ -1330,7 +1332,7 @@ const AdminAttendance = () => {
                           {displayData.balanceHours > 0 ? '+' : ''}{formatHours(displayData.balanceHours)}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         {(() => {
                           const userId = record.user_id || record.id;
                           const totalBalance = employeeBalances[userId] || 0;
@@ -1375,7 +1377,9 @@ const AdminAttendance = () => {
                   );
                 })}
               </tbody>
-            </table>
+                </table>
+              </div>
+            </div>
           </div>
           
           {filteredData.length === 0 && (
