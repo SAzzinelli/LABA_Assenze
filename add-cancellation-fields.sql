@@ -64,3 +64,4 @@ CREATE TRIGGER restore_hours_trigger
     AFTER UPDATE ON leave_requests
     FOR EACH ROW
     EXECUTE FUNCTION restore_hours_balance();
+

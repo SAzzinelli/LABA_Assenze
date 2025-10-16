@@ -3,6 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import AdminCreateLeaveRequestModal from '../components/AdminCreateLeaveRequestModal';
 import { 
   FileText, 
   Plus, 
@@ -19,13 +20,15 @@ import {
   ChevronUp,
   Filter,
   User,
-  Search
+  Search,
+  UserPlus
 } from 'lucide-react';
 
 const LeaveRequests = () => {
   const { user, apiCall } = useAuthStore();
   const { alert, showSuccess, showError, showConfirm, hideAlert } = useCustomAlert();
   const [showNewRequest, setShowNewRequest] = useState(false);
+  const [showAdminCreateModal, setShowAdminCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     type: 'uscita_anticipata', // USCITA ANTICIPATA o ENTRATA_POSTICIPATA
     permissionDate: '',
@@ -540,28 +543,37 @@ const LeaveRequests = () => {
             </p>
           </div>
           
-          {/* Tab per Admin */}
+          {/* Tab e Pulsante per Admin */}
           {user?.role === 'admin' && (
-            <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex items-center space-x-4">
+              <div className="flex bg-slate-700 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTab('imminenti')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'imminenti'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Imminenti
+                </button>
+                <button
+                  onClick={() => setActiveTab('cronologia')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeTab === 'cronologia'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Cronologia
+                </button>
+              </div>
               <button
-                onClick={() => setActiveTab('imminenti')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'imminenti'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => setShowAdminCreateModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
               >
-                Imminenti
-              </button>
-              <button
-                onClick={() => setActiveTab('cronologia')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'cronologia'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Cronologia
+                <UserPlus className="h-5 w-5 mr-2" />
+                Aggiungi per Dipendente
               </button>
             </div>
           )}
@@ -1070,6 +1082,16 @@ const LeaveRequests = () => {
         showCancel={alert.showCancel}
         confirmText={alert.confirmText}
         cancelText={alert.cancelText}
+      />
+
+      {/* Modal Admin Crea Richiesta per Dipendente */}
+      <AdminCreateLeaveRequestModal
+        isOpen={showAdminCreateModal}
+        onClose={() => setShowAdminCreateModal(false)}
+        onSuccess={() => {
+          fetchRequests();
+          showSuccess('Richiesta creata!', 'La richiesta è stata creata e il dipendente è stato notificato.');
+        }}
       />
     </div>
   );

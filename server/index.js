@@ -2831,6 +2831,132 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
   }
 });
 
+// Admin creates leave request for employee
+app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor } = req.body;
+
+    // Validation
+    if (!userId || !type || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti (userId, type, startDate, endDate)' });
+    }
+
+    // Verifica che il dipendente esista
+    const { data: employee, error: employeeError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, role')
+      .eq('id', userId)
+      .single();
+
+    if (employeeError || !employee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    if (employee.role === 'admin') {
+      return res.status(400).json({ error: 'Non puoi creare richieste per un admin' });
+    }
+
+    // Calcola i giorni richiesti
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+    // Prepara i dati per l'inserimento
+    const insertData = {
+      user_id: userId,
+      type: type,
+      start_date: startDate,
+      end_date: endDate,
+      reason: reason || (type === 'vacation' ? 'Ferie' : ''),
+      status: 'approved', // Auto-approvato perché creato dall'admin
+      submitted_at: new Date().toISOString(),
+      approved_at: new Date().toISOString(),
+      approved_by: req.user.id, // ID dell'admin che ha creato
+      days_requested: daysRequested,
+      notes: notes ? `[Creato dall'admin] ${notes}` : '[Creato dall\'admin]'
+    };
+
+    // Aggiungi campi opzionali
+    if (doctor !== undefined) insertData.doctor = doctor;
+    if (permissionType !== undefined) insertData.permission_type = permissionType;
+    if (hours !== undefined) insertData.hours = hours;
+    if (exitTime !== undefined) insertData.exit_time = exitTime;
+    if (entryTime !== undefined) insertData.entry_time = entryTime;
+
+    console.log('🔧 Admin creating leave request for employee:', employee.email, insertData);
+
+    const { data: newRequest, error } = await supabase
+      .from('leave_requests')
+      .insert([insertData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ Admin leave request creation error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
+    }
+
+    console.log('✅ Admin leave request created successfully:', newRequest.id);
+
+    // Crea notifica per il dipendente
+    try {
+      const notificationData = {
+        user_id: userId,
+        type: 'leave_approved',
+        title: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso'} aggiunto dall'admin`,
+        message: `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'una malattia' : 'un permesso'} dal ${new Date(startDate).toLocaleDateString('it-IT')} al ${new Date(endDate).toLocaleDateString('it-IT')}. ${reason ? `Motivo: ${reason}` : ''}`,
+        related_id: newRequest.id,
+        is_read: false,
+        created_at: new Date().toISOString()
+      };
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert([notificationData]);
+
+      if (notifError) {
+        console.error('❌ Notification creation error:', notifError);
+      } else {
+        console.log('✅ Notification created for employee:', employee.email);
+      }
+    } catch (notifError) {
+      console.error('❌ Notification error:', notifError);
+    }
+
+    // Invia email al dipendente
+    try {
+      const { sendEmail } = require('./emailService');
+      const typeLabel = type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso';
+      
+      await sendEmail(
+        employee.email,
+        'leaveApproved',
+        [
+          `${employee.first_name} ${employee.last_name}`,
+          typeLabel,
+          new Date(startDate).toLocaleDateString('it-IT'),
+          new Date(endDate).toLocaleDateString('it-IT'),
+          reason || 'Non specificato',
+          '[Registrato dall\'amministratore]'
+        ]
+      );
+      
+      console.log('✅ Email sent to employee:', employee.email);
+    } catch (emailError) {
+      console.error('❌ Email send error:', emailError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso'} aggiunto con successo per ${employee.first_name} ${employee.last_name}`,
+      request: newRequest
+    });
+  } catch (error) {
+    console.error('Admin leave request creation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Approve/Reject leave request (admin only)
 app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {

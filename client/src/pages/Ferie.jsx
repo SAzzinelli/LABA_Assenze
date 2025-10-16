@@ -3,6 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import VacationCalendar from '../components/VacationCalendar';
+import AdminCreateLeaveRequestModal from '../components/AdminCreateLeaveRequestModal';
 import { 
   Plane, 
   Plus, 
@@ -26,7 +27,8 @@ import {
   Calculator,
   TrendingUp,
   CalendarDays,
-  List
+  List,
+  UserPlus
 } from 'lucide-react';
 import { 
   calculateVacationHoursForDay, 
@@ -39,6 +41,7 @@ import {
 const Vacation = () => {
   const { user, apiCall } = useAuthStore();
   const [showNewRequest, setShowNewRequest] = useState(false);
+  const [showAdminCreateModal, setShowAdminCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     startDate: '',
     endDate: '',
@@ -573,7 +576,15 @@ const Vacation = () => {
               </button>
             </div>
             
-            {user?.role !== 'admin' && (
+            {user?.role === 'admin' ? (
+              <button
+                onClick={() => setShowAdminCreateModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+              >
+                <UserPlus className="h-5 w-5 mr-2" />
+                Aggiungi per Dipendente
+              </button>
+            ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
@@ -979,6 +990,16 @@ const Vacation = () => {
         })()}
       </div>
       )}
+
+      {/* Modal Admin Crea Richiesta per Dipendente */}
+      <AdminCreateLeaveRequestModal
+        isOpen={showAdminCreateModal}
+        onClose={() => setShowAdminCreateModal(false)}
+        onSuccess={() => {
+          fetchVacationRequests();
+          // Mostra un alert di successo se disponibile
+        }}
+      />
     </div>
   );
 };
