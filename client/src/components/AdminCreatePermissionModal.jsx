@@ -15,8 +15,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     endDate: '',
     reason: '',
     notes: '',
-    permissionType: 'hourly',
-    hours: '',
+    permissionType: '',
     exitTime: '',
     entryTime: ''
   });
@@ -31,8 +30,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
         endDate: '',
         reason: '',
         notes: '',
-        permissionType: 'hourly',
-        hours: '',
+        permissionType: '',
         exitTime: '',
         entryTime: ''
       });
@@ -208,32 +206,10 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
                     <option value="">Seleziona tipo</option>
-                    <option value="hourly">Permesso Orario</option>
                     <option value="late_entry">Entrata Posticipata</option>
                     <option value="early_exit">Uscita Anticipata</option>
-                    <option value="personal">Motivi Personali</option>
                   </select>
                 </div>
-
-                {formData.permissionType === 'hourly' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      <Clock className="h-4 w-4 inline mr-1" />
-                      Ore Permesso
-                    </label>
-                    <input
-                      type="number"
-                      name="hours"
-                      value={formData.hours}
-                      onChange={handleInputChange}
-                      step="0.5"
-                      min="0.5"
-                      max="8"
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      placeholder="Es. 2"
-                    />
-                  </div>
-                )}
 
                 {formData.permissionType === 'late_entry' && (
                   <div>

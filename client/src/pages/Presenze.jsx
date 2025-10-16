@@ -41,6 +41,8 @@ const Attendance = () => {
     deficit: 0,
     workingDays: 0
   });
+  
+  const [totalBalance, setTotalBalance] = useState(0);
 
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
@@ -51,6 +53,7 @@ const Attendance = () => {
       await Promise.all([
         fetchAttendance(),
         fetchHoursBalance(),
+        fetchTotalBalance(),
         fetchWorkSchedules()
       ]);
       
@@ -176,6 +179,19 @@ const Attendance = () => {
       }
     } catch (error) {
       console.error('Error fetching hours balance:', error);
+    }
+  };
+
+  const fetchTotalBalance = async () => {
+    try {
+      const response = await apiCall('/api/attendance/total-balance');
+      if (response.ok) {
+        const data = await response.json();
+        setTotalBalance(data.totalBalanceHours || 0);
+        console.log('💰 Total balance loaded:', data.totalBalanceHours);
+      }
+    } catch (error) {
+      console.error('Error fetching total balance:', error);
     }
   };
 
@@ -716,7 +732,7 @@ const Attendance = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* TOTALE ORE LAVORATE */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
@@ -732,20 +748,38 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* MONTE ORE */}
+          {/* SALDO OGGI */}
           <div className="bg-slate-800 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">MONTE ORE</p>
+                <p className="text-slate-400 text-sm">SALDO OGGI</p>
                 <p className={`text-2xl font-bold ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {(currentHours?.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours?.balanceHours || 0)}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
+                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito giornata' : 'Debito giornata'}
                 </p>
               </div>
               <div className={`p-3 rounded-full ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {(currentHours?.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              </div>
+            </div>
+          </div>
+
+          {/* BANCA ORE TOTALE */}
+          <div className="bg-slate-800 rounded-lg p-6 border-2 border-indigo-500/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm font-semibold">💰 BANCA ORE TOTALE</p>
+                <p className={`text-3xl font-bold ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {totalBalance >= 0 ? '+' : ''}{formatHours(totalBalance)}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {totalBalance >= 0 ? 'Credito verso azienda' : 'Debito da recuperare'}
+                </p>
+              </div>
+              <div className={`p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
               </div>
             </div>
           </div>
