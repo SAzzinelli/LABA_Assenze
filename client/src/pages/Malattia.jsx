@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
-import AdminCreateLeaveRequestModal from '../components/AdminCreateLeaveRequestModal';
+import AdminCreateSickLeaveModal from '../components/AdminCreateSickLeaveModal';
 import { 
   Heart, 
   Plus, 
@@ -715,8 +715,8 @@ const SickLeave = () => {
         })()}
       </div>
 
-      {/* Modal Admin Crea Richiesta per Dipendente */}
-      <AdminCreateLeaveRequestModal
+      {/* Modal Admin Crea Malattia per Dipendente */}
+      <AdminCreateSickLeaveModal
         isOpen={showAdminCreateModal}
         onClose={() => setShowAdminCreateModal(false)}
         onSuccess={() => {

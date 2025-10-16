@@ -3,7 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
-import AdminCreateLeaveRequestModal from '../components/AdminCreateLeaveRequestModal';
+import AdminCreatePermissionModal from '../components/AdminCreatePermissionModal';
 import { 
   FileText, 
   Plus, 
@@ -1084,13 +1084,13 @@ const LeaveRequests = () => {
         cancelText={alert.cancelText}
       />
 
-      {/* Modal Admin Crea Richiesta per Dipendente */}
-      <AdminCreateLeaveRequestModal
+      {/* Modal Admin Crea Permesso per Dipendente */}
+      <AdminCreatePermissionModal
         isOpen={showAdminCreateModal}
         onClose={() => setShowAdminCreateModal(false)}
         onSuccess={() => {
           fetchRequests();
-          showSuccess('Richiesta creata!', 'La richiesta è stata creata e il dipendente è stato notificato.');
+          showSuccess('Permesso registrato!', 'Il permesso è stato registrato e il dipendente è stato notificato.');
         }}
       />
     </div>

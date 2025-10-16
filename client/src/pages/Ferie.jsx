@@ -3,7 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import VacationCalendar from '../components/VacationCalendar';
-import AdminCreateLeaveRequestModal from '../components/AdminCreateLeaveRequestModal';
+import AdminCreateVacationModal from '../components/AdminCreateVacationModal';
 import { 
   Plane, 
   Plus, 
@@ -991,8 +991,8 @@ const Vacation = () => {
       </div>
       )}
 
-      {/* Modal Admin Crea Richiesta per Dipendente */}
-      <AdminCreateLeaveRequestModal
+      {/* Modal Admin Crea Ferie per Dipendente */}
+      <AdminCreateVacationModal
         isOpen={showAdminCreateModal}
         onClose={() => setShowAdminCreateModal(false)}
         onSuccess={() => {

@@ -2834,7 +2834,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 // Admin creates leave request for employee
 app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { userId, type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor } = req.body;
+    const { userId, type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor, medicalCode } = req.body;
 
     // Validation
     if (!userId || !type || !startDate || !endDate) {
@@ -2878,6 +2878,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
 
     // Aggiungi campi opzionali
     if (doctor !== undefined) insertData.doctor = doctor;
+    if (medicalCode !== undefined) insertData.medical_code = medicalCode;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
     if (hours !== undefined) insertData.hours = hours;
     if (exitTime !== undefined) insertData.exit_time = exitTime;

@@ -3,7 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { X, Calendar, AlertCircle, User, FileText, Clock } from 'lucide-react';
 import CustomAlert from './CustomAlert';
 
-const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
+const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
   const { apiCall } = useAuthStore();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -11,16 +11,14 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
   
   const [formData, setFormData] = useState({
     userId: '',
-    type: 'vacation',
     startDate: '',
     endDate: '',
     reason: '',
     notes: '',
-    permissionType: '',
+    permissionType: 'hourly',
     hours: '',
     exitTime: '',
-    entryTime: '',
-    doctor: ''
+    entryTime: ''
   });
 
   useEffect(() => {
@@ -29,16 +27,14 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
       // Reset form
       setFormData({
         userId: '',
-        type: 'vacation',
         startDate: '',
         endDate: '',
         reason: '',
         notes: '',
-        permissionType: '',
+        permissionType: 'hourly',
         hours: '',
         exitTime: '',
-        entryTime: '',
-        doctor: ''
+        entryTime: ''
       });
     }
   }, [isOpen]);
@@ -79,10 +75,15 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
+      const payload = {
+        ...formData,
+        type: 'permission'
+      };
+
       const response = await apiCall('/api/admin/leave-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
@@ -130,8 +131,8 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
         <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white flex items-center">
-              <Calendar className="h-6 w-6 mr-2 text-indigo-400" />
-              Aggiungi Permesso/Malattia/Ferie per Dipendente
+              <FileText className="h-6 w-6 mr-2 text-purple-400" />
+              Registra Permesso per Dipendente
             </h3>
             <button 
               onClick={onClose}
@@ -161,25 +162,6 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
                     {emp.name} - {emp.department}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            {/* Tipo Richiesta */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                <FileText className="h-4 w-4 inline mr-1" />
-                Tipo *
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="vacation">Ferie</option>
-                <option value="sick_leave">Malattia</option>
-                <option value="permission">Permesso</option>
               </select>
             </div>
 
@@ -214,8 +196,7 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
             </div>
 
             {/* Campi specifici per Permesso */}
-            {formData.type === 'permission' && (
-              <>
+            <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Tipo Permesso
@@ -284,42 +265,19 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 )}
               </>
-            )}
-
-            {/* Campi specifici per Malattia */}
-            {formData.type === 'sick_leave' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Medico / Struttura
-                </label>
-                <input
-                  type="text"
-                  name="doctor"
-                  value={formData.doctor}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  placeholder="Es. Dr. Rossi / Ospedale Santa Maria"
-                />
-              </div>
-            )}
 
             {/* Motivo */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Motivo {formData.type === 'sick_leave' && '*'}
+                Motivo
               </label>
               <textarea
                 name="reason"
                 value={formData.reason}
                 onChange={handleInputChange}
-                required={formData.type === 'sick_leave'}
                 rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                placeholder={
-                  formData.type === 'vacation' ? 'Es. Ferie estive' :
-                  formData.type === 'sick_leave' ? 'Es. Influenza, Infortunio, ecc.' :
-                  'Es. Visita medica, Motivi personali'
-                }
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Es. Visita medica, Motivi personali, ecc."
               />
             </div>
 
@@ -399,5 +357,5 @@ const AdminCreateLeaveRequestModal = ({ isOpen, onClose, onSuccess }) => {
   );
 };
 
-export default AdminCreateLeaveRequestModal;
+export default AdminCreatePermissionModal;
 
