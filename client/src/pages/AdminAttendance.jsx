@@ -81,8 +81,8 @@ const AdminAttendance = () => {
   // Malattie di oggi
   const [sickToday, setSickToday] = useState([]);
   
-  // Permessi di oggi
-  const [permissionsToday, setPermissionsToday] = useState([]);
+  // Saldi banca ore per tutti i dipendenti
+  const [employeeBalances, setEmployeeBalances] = useState({});
 
   // Real-time updates
   const { emitUpdate } = useRealTimeUpdates({
@@ -105,7 +105,6 @@ const AdminAttendance = () => {
       await fetchAllEmployees();
       await fetchWorkSchedules();
       await fetchSickToday();
-      await fetchPermissionsToday();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -125,7 +124,6 @@ const AdminAttendance = () => {
       fetchAllEmployees();
       fetchWorkSchedules();
       fetchSickToday();
-      fetchPermissionsToday();
       calculateRealTimeStats();
     }, 30000);
     
@@ -195,9 +193,33 @@ const AdminAttendance = () => {
         const data = await response.json();
         setAllEmployees(data);
         console.log('👥 All employees loaded for admin:', data.length, 'total employees');
+        
+        // Dopo aver caricato i dipendenti, carica i loro saldi
+        await fetchEmployeeBalancesForList(data);
       }
     } catch (error) {
       console.error('Error fetching all employees:', error);
+    }
+  };
+
+  const fetchEmployeeBalancesForList = async (employees) => {
+    try {
+      console.log('🔄 Fetching total balances for all employees...');
+      const balances = {};
+      
+      // Carica il saldo per ogni dipendente
+      for (const emp of employees) {
+        const response = await apiCall(`/api/attendance/total-balance?userId=${emp.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          balances[emp.id] = data.totalBalanceHours || 0;
+        }
+      }
+      
+      console.log('💰 Employee balances loaded:', balances);
+      setEmployeeBalances(balances);
+    } catch (error) {
+      console.error('❌ Error fetching employee balances:', error);
     }
   };
 
@@ -230,22 +252,6 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching sick leave requests:', error);
-    }
-  };
-
-  const fetchPermissionsToday = async () => {
-    try {
-      console.log('🔄 Fetching approved permissions for today...');
-      const response = await apiCall('/api/attendance/permissions-today');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📝 Approved permissions for today:', data);
-        setPermissionsToday(data);
-      } else {
-        console.error('❌ Failed to fetch permissions:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching permissions:', error);
     }
   };
 
@@ -611,7 +617,7 @@ const AdminAttendance = () => {
     const [endHour, endMin] = end_time.split(':').map(Number);
     const breakDuration = break_duration || 60;
     
-    // Calcola ore attese totali
+    // Calcola ore attese totali (SEMPRE dall'orario contrattuale - NON modificato da permessi!)
     const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
     const workMinutes = totalMinutes - breakDuration;
     const expectedHours = workMinutes / 60;
@@ -1112,6 +1118,8 @@ const AdminAttendance = () => {
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Stato</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Attese</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Ore Effettive</th>
+                  <th className="text-left py-4 px-6 font-medium text-slate-300">Saldo Giornata</th>
+                  <th className="text-left py-4 px-6 font-medium text-slate-300">Banca Ore</th>
                   <th className="text-left py-4 px-6 font-medium text-slate-300">Azioni</th>
                 </tr>
               </thead>
@@ -1268,6 +1276,35 @@ const AdminAttendance = () => {
                           {formatHours(displayData.actualHours)}
                       </span>
                     </td>
+                      <td className="py-4 px-6">
+                        <span className={`font-mono font-semibold ${
+                          displayData.balanceHours > 0 
+                            ? 'text-green-400' 
+                            : displayData.balanceHours < 0 
+                              ? 'text-red-400' 
+                              : 'text-slate-400'
+                        }`}>
+                          {displayData.balanceHours > 0 ? '+' : ''}{formatHours(displayData.balanceHours)}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        {(() => {
+                          const userId = record.user_id || record.id;
+                          const totalBalance = employeeBalances[userId] || 0;
+                          
+                          return (
+                            <span className={`font-mono font-bold text-lg ${
+                              totalBalance > 0 
+                                ? 'text-green-400' 
+                                : totalBalance < 0 
+                                  ? 'text-red-400' 
+                                  : 'text-slate-400'
+                            }`}>
+                              {totalBalance > 0 ? '+' : ''}{formatHours(totalBalance)}
+                            </span>
+                          );
+                        })()}
+                      </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
                         <button

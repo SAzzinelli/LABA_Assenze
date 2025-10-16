@@ -1861,6 +1861,48 @@ app.get('/api/attendance/sick-today', authenticateToken, async (req, res) => {
   }
 });
 
+// Get total hours bank balance for user (cumulative from all time)
+app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const targetUserId = userId || req.user.id;
+    
+    // Verifica permessi
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Calcola il saldo totale da TUTTE le presenze
+    const { data: allAttendance, error } = await supabase
+      .from('attendance')
+      .select('balance_hours')
+      .eq('user_id', targetUserId);
+    
+    if (error) {
+      console.error('Total balance fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero del saldo' });
+    }
+
+    // Somma tutti i saldi (positivi e negativi)
+    const totalBalance = allAttendance.reduce((sum, record) => 
+      sum + (record.balance_hours || 0), 0
+    );
+
+    console.log(`💰 Total balance for user ${targetUserId}: ${totalBalance.toFixed(2)}h`);
+
+    res.json({
+      userId: targetUserId,
+      totalBalanceHours: Math.round(totalBalance * 100) / 100,
+      totalBalanceMinutes: Math.round(totalBalance * 60),
+      isCredit: totalBalance > 0,
+      isDebt: totalBalance < 0
+    });
+  } catch (error) {
+    console.error('Total balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get approved permissions for today (early exit / late entry)
 app.get('/api/attendance/permissions-today', authenticateToken, async (req, res) => {
   try {
