@@ -732,68 +732,68 @@ const Attendance = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           {/* TOTALE ORE LAVORATE */}
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">TOTALE ORE LAVORATE</p>
-                <p className="text-2xl font-bold text-blue-400">
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Lavorate</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-400">
                   {formatHours(currentHours?.actualHours || 0)}
                 </p>
               </div>
-              <div className="p-3 rounded-full text-blue-400">
+              <div className="hidden sm:block p-3 rounded-full text-blue-400">
                 <Clock className="h-4 w-4" />
               </div>
             </div>
           </div>
 
           {/* SALDO OGGI */}
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">SALDO OGGI</p>
-                <p className={`text-2xl font-bold ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Saldo</p>
+                <p className={`text-xl sm:text-2xl font-bold ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {(currentHours?.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours?.balanceHours || 0)}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito giornata' : 'Debito giornata'}
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`hidden sm:block p-3 rounded-full ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {(currentHours?.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
               </div>
             </div>
           </div>
 
           {/* BANCA ORE TOTALE */}
-          <div className="bg-slate-800 rounded-lg p-6 border-2 border-indigo-500/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-semibold">💰 BANCA ORE TOTALE</p>
-                <p className={`text-3xl font-bold ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border-2 border-indigo-500/30 col-span-2 sm:col-span-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm font-semibold uppercase mb-1">💰 Banca Ore</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {totalBalance >= 0 ? '+' : ''}{formatHours(totalBalance)}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {totalBalance >= 0 ? 'Credito verso azienda' : 'Debito da recuperare'}
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
+                  {totalBalance >= 0 ? 'Credito' : 'Debito'}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className={`hidden sm:block p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
               </div>
             </div>
           </div>
 
           {/* Giorni Lavorativi */}
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm">Giorni Lavorativi</p>
-                <p className="text-2xl font-bold text-purple-400">
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 col-span-2 sm:col-span-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-400">
                   {hoursBalance.working_days || 0}
                 </p>
               </div>
-              <div className="p-3 rounded-full text-purple-400">
+              <div className="hidden sm:block p-3 rounded-full text-purple-400">
                 <Calendar className="h-4 w-4" />
               </div>
             </div>
@@ -801,9 +801,9 @@ const Attendance = () => {
         </div>
 
         {/* Today's Status */}
-        <div className="bg-slate-800 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <Clock className="h-5 w-5 mr-2" />
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center">
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Stato Oggi
           </h2>
           

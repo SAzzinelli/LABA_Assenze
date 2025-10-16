@@ -477,7 +477,7 @@ const Dashboard = () => {
       {user?.role !== 'admin' && (
         <div className="space-y-4">
           
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat, index) => {
             const IconComponent = stat.icon;
             const colorClasses = {
@@ -560,7 +560,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Presenti adesso */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
