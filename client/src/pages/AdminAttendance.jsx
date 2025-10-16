@@ -81,6 +81,9 @@ const AdminAttendance = () => {
   // Malattie di oggi
   const [sickToday, setSickToday] = useState([]);
   
+  // Permessi 104 di oggi
+  const [permissions104Today, setPermissions104Today] = useState([]);
+  
   // Saldi banca ore per tutti i dipendenti
   const [employeeBalances, setEmployeeBalances] = useState({});
 
@@ -105,6 +108,7 @@ const AdminAttendance = () => {
       await fetchAllEmployees();
       await fetchWorkSchedules();
       await fetchSickToday();
+      await fetch104Today();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -124,6 +128,7 @@ const AdminAttendance = () => {
       fetchAllEmployees();
       fetchWorkSchedules();
       fetchSickToday();
+      fetch104Today();
       calculateRealTimeStats();
     }, 30000);
     
@@ -252,6 +257,22 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching sick leave requests:', error);
+    }
+  };
+
+  const fetch104Today = async () => {
+    try {
+      console.log('🔄 Fetching 104 permissions for today...');
+      const response = await apiCall('/api/attendance/104-today');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔵 104 permissions for today:', data);
+        setPermissions104Today(data);
+      } else {
+        console.error('❌ Failed to fetch 104 permissions:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching 104 permissions:', error);
     }
   };
 
@@ -412,6 +433,7 @@ const AdminAttendance = () => {
       case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';
+      case 'permission_104': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
       default: return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -426,6 +448,7 @@ const AdminAttendance = () => {
       case 'not_started': return 'Non iniziato';
       case 'absent': return 'Assente';
       case 'sick_leave': return 'In malattia';
+      case 'permission_104': return 'Permesso 104';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
       default: return 'Sconosciuto';
@@ -540,6 +563,24 @@ const AdminAttendance = () => {
           actualHours: 0,
           balanceHours: 0,
           status: 'sick_leave',
+          isPresent: false
+        };
+      }
+
+      // Controlla se ha permesso 104 oggi
+      const has104Today = permissions104Today.some(perm104 => 
+        perm104.user_id === record.user_id &&
+        new Date(perm104.start_date) <= new Date(today) &&
+        new Date(perm104.end_date) >= new Date(today)
+      );
+
+      if (has104Today) {
+        console.log('🔵 User has 104 permission today:', record.user_id);
+        return {
+          expectedHours: 0,
+          actualHours: 0,
+          balanceHours: 0,
+          status: 'permission_104',
           isPresent: false
         };
       }
@@ -710,6 +751,7 @@ const AdminAttendance = () => {
       case 'not_started': return <Clock className="h-4 w-4" />;
       case 'absent': return <XCircle className="h-4 w-4" />;
       case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
+      case 'permission_104': return <Heart className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
@@ -901,9 +943,9 @@ const AdminAttendance = () => {
         // Per employees, mostra solo chi è attualmente working o on_break
         return record.status === 'working' || record.status === 'on_break';
       } else if (activeTab === 'today') {
-        // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso
+        // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
         const realTimeData = calculateRealTimeHoursForRecord(record);
-        return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday';
+        return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday' || realTimeData.status === 'permission_104';
       }
       
       return true;

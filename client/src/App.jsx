@@ -10,6 +10,7 @@ import Dipendenti from './pages/Dipendenti';
 import Presenze from './pages/Presenze';
 import AdminAttendance from './pages/AdminAttendance';
 import Permessi from './pages/Permessi';
+import Permessi104 from './pages/Permessi104';
 import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
 import Notifiche from './pages/Notifiche';
@@ -83,6 +84,18 @@ function App() {
                   isAuthenticated ? (
                     <Layout>
                       <Permessi />
+                    </Layout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/permessi-104"
+                element={
+                  isAuthenticated ? (
+                    <Layout>
+                      <Permessi104 />
                     </Layout>
                   ) : (
                     <Navigate to="/login" replace />

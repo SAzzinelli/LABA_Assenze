@@ -125,6 +125,7 @@ const Layout = ({ children }) => {
     { name: 'Dipendenti', href: '/dipendenti', icon: Users, roles: ['admin', 'supervisor'] },
     { name: 'Presenze', href: (user?.role === 'admin' || user?.role === 'supervisor') ? '/admin-attendance' : '/presenze', icon: Clock },
     { name: 'Permessi', href: '/permessi', icon: FileText },
+    { name: 'Permessi 104', href: '/permessi-104', icon: Heart, showIf: (u) => u?.has_104 === true },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
     { name: 'Notifiche', href: '/notifiche', icon: Bell, hideForAdmin: true },
@@ -140,6 +141,11 @@ const Layout = ({ children }) => {
     // Controlla ruoli specifici
     if (item.roles && user) {
       return item.roles.includes(user.role);
+    }
+    
+    // Controlla condizione showIf
+    if (item.showIf && user) {
+      return item.showIf(user);
     }
     
     return true;

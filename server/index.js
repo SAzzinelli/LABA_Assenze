@@ -1952,6 +1952,51 @@ app.get('/api/attendance/permissions-today', authenticateToken, async (req, res)
   }
 });
 
+// Get approved 104 permissions for today
+app.get('/api/attendance/104-today', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all approved 104 permissions for today
+    const { data: permissions104, error: perm104Error } = await supabase
+      .from('leave_requests')
+      .select(`
+        *,
+        users!leave_requests_user_id_fkey(id, first_name, last_name, department, email)
+      `)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    if (perm104Error) {
+      console.error('104 permissions fetch error:', perm104Error);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi 104' });
+    }
+
+    const employeesOn104 = permissions104.map(perm => ({
+      user_id: perm.users.id,
+      name: `${perm.users.first_name} ${perm.users.last_name}`,
+      department: perm.users.department || 'Non specificato',
+      email: perm.users.email,
+      reason: perm.reason || 'Permesso Legge 104',
+      start_date: perm.start_date,
+      end_date: perm.end_date,
+      notes: perm.notes
+    }));
+
+    console.log(`🔵 Employees using 104 permission today: ${employeesOn104.length}`);
+    res.json(employeesOn104);
+  } catch (error) {
+    console.error('104 permissions today error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Upcoming departures (next 2 hours)
 app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, res) => {
   try {
@@ -2860,8 +2905,49 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     }
     
     // Reason is required only for certain types
-    if (type !== 'vacation' && type !== 'permission' && !reason) {
+    if (type !== 'vacation' && type !== 'permission' && type !== 'permission_104' && !reason) {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
+    }
+
+    // Validazione specifica per permessi 104
+    if (type === 'permission_104') {
+      // Verifica che l'utente abbia la 104
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('has_104')
+        .eq('id', req.user.id)
+        .single();
+
+      if (userError || !userData || !userData.has_104) {
+        return res.status(403).json({ error: 'Non hai diritto ai permessi legge 104' });
+      }
+
+      // Verifica limite mensile (3 permessi al mese)
+      const currentMonth = new Date(startDate).getMonth() + 1;
+      const currentYear = new Date(startDate).getFullYear();
+      
+      const { count, error: countError } = await supabase
+        .from('leave_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', req.user.id)
+        .eq('type', 'permission_104')
+        .in('status', ['approved', 'pending'])
+        .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+        .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+      if (countError) {
+        console.error('Error checking 104 limit:', countError);
+        return res.status(500).json({ error: 'Errore nella verifica del limite permessi 104' });
+      }
+
+      if (count >= 3) {
+        const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleDateString('it-IT', { month: 'long' });
+        return res.status(400).json({ 
+          error: `Hai già utilizzato tutti e 3 i permessi 104 per ${monthName} ${currentYear}`,
+          usedCount: count,
+          maxCount: 3
+        });
+      }
     }
 
     // Calcola i giorni richiesti
@@ -2872,14 +2958,20 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     // Prepara i dati per l'inserimento, escludendo i campi che potrebbero non esistere
     const insertData = {
       user_id: req.user.id,
-      type: type, // 'permission', 'sick', 'vacation'
+      type: type, // 'permission', 'sick', 'vacation', 'permission_104'
       start_date: startDate,
       end_date: endDate,
-      reason: reason || (type === 'vacation' ? 'Ferie' : ''),
-      status: 'pending',
+      reason: reason || (type === 'vacation' ? 'Ferie' : type === 'permission_104' ? 'Permesso Legge 104' : ''),
+      status: type === 'permission_104' ? 'approved' : 'pending', // Auto-approva permessi 104
       submitted_at: new Date().toISOString(),
       days_requested: daysRequested
     };
+
+    // Se è permesso 104, aggiungi auto-approvazione
+    if (type === 'permission_104') {
+      insertData.approved_at = new Date().toISOString();
+      insertData.approved_by = req.user.id; // Auto-approvato
+    }
 
     // Aggiungi campi opzionali solo se sono definiti
     if (notes !== undefined) insertData.notes = notes;
