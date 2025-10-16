@@ -127,6 +127,7 @@ const Layout = ({ children }) => {
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
+    { name: 'Notifiche', href: '/notifiche', icon: Bell, hideForAdmin: true },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
@@ -162,18 +163,26 @@ const Layout = ({ children }) => {
             {filteredNavigation.map((item) => {
               const IconComponent = item.icon;
               const isActive = location.pathname === item.href;
+              const showBadge = item.name === 'Notifiche' && unreadCount > 0;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
+                  className={`group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-lg'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:shadow-md'
                   }`}
                 >
-                  <IconComponent className="mr-3 h-5 w-5" />
-                  {item.name}
+                  <div className="flex items-center">
+                    <IconComponent className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </div>
+                  {showBadge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

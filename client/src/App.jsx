@@ -12,6 +12,7 @@ import AdminAttendance from './pages/AdminAttendance';
 import Permessi from './pages/Permessi';
 import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
+import Notifiche from './pages/Notifiche';
 import Impostazioni from './pages/Impostazioni';
 import Layout from './components/Layout';
 
@@ -128,6 +129,18 @@ function App() {
                   )
                 }
               />
+          <Route
+            path="/notifiche"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <Notifiche />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
           <Route
             path="/impostazioni"
             element={
