@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { X, Calendar, AlertCircle, User, Heart } from 'lucide-react';
+import { X, Calendar, AlertCircle, User, Accessibility } from 'lucide-react';
 import CustomAlert from './CustomAlert';
 
 const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
@@ -124,7 +124,7 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
         <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white flex items-center">
-              <Heart className="h-6 w-6 mr-2 text-blue-400" />
+              <Accessibility className="h-6 w-6 mr-2 text-blue-400" />
               Registra Permesso 104 per Dipendente
             </h3>
             <button 
@@ -238,7 +238,7 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     </>
                   ) : (
                     <>
-                      <Heart className="h-4 w-4 mr-2" />
+                      <Accessibility className="h-4 w-4 mr-2" />
                       Registra Permesso 104
                     </>
                   )}

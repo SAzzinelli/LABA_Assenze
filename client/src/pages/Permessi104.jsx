@@ -3,7 +3,7 @@ import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import CustomAlert from '../components/CustomAlert';
 import { 
-  Heart, 
+  Accessibility, 
   Plus, 
   Calendar, 
   AlertCircle,
@@ -157,7 +157,7 @@ const Permessi104 = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Heart className="h-8 w-8 mr-3 text-blue-400" />
+              <Accessibility className="h-8 w-8 mr-3 text-blue-400" />
               Permessi Legge 104
             </h1>
             <p className="text-slate-400 mt-2">
@@ -305,7 +305,7 @@ const Permessi104 = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <Heart className="h-6 w-6 mr-2 text-blue-400" />
+              <Accessibility className="h-6 w-6 mr-2 text-blue-400" />
               Richiedi Permesso 104
             </h3>
 

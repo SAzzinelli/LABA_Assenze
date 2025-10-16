@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import AdminCreate104PermissionModal from '../components/AdminCreate104PermissionModal';
 import { 
-  Heart, 
+  Accessibility, 
   Plus, 
   Calendar, 
   Users,
@@ -78,7 +78,7 @@ const AdminPermessi104 = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Heart className="h-8 w-8 mr-3 text-blue-400" />
+              <Accessibility className="h-8 w-8 mr-3 text-blue-400" />
               Gestione Permessi Legge 104
             </h1>
             <p className="text-slate-400 mt-2">
@@ -119,7 +119,7 @@ const AdminPermessi104 = () => {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center">
                     <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-                      <Heart className="h-5 w-5 text-white" />
+                      <Accessibility className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <p className="font-semibold text-white">{employee.name}</p>

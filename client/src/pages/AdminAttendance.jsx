@@ -25,7 +25,8 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Clock
+  Clock,
+  Accessibility
 } from 'lucide-react';
 
 const AdminAttendance = () => {
@@ -751,7 +752,7 @@ const AdminAttendance = () => {
       case 'not_started': return <Clock className="h-4 w-4" />;
       case 'absent': return <XCircle className="h-4 w-4" />;
       case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
-      case 'permission_104': return <Heart className="h-4 w-4" />;
+      case 'permission_104': return <Accessibility className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
