@@ -1861,6 +1861,55 @@ app.get('/api/attendance/sick-today', authenticateToken, async (req, res) => {
   }
 });
 
+// Get approved permissions for today (early exit / late entry)
+app.get('/api/attendance/permissions-today', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get all approved permission requests for today
+    const { data: permissions, error: permError } = await supabase
+      .from('leave_requests')
+      .select(`
+        *,
+        users!leave_requests_user_id_fkey(id, first_name, last_name, department, email)
+      `)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    if (permError) {
+      console.error('Permissions fetch error:', permError);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    const approvedPermissions = permissions.map(perm => ({
+      user_id: perm.users.id,
+      name: `${perm.users.first_name} ${perm.users.last_name}`,
+      department: perm.users.department || 'Non specificato',
+      email: perm.users.email,
+      permission_type: perm.permission_type, // 'early_exit', 'late_entry', 'hourly', 'personal'
+      exit_time: perm.exit_time, // Es. "16:45"
+      entry_time: perm.entry_time, // Es. "10:00"
+      hours: perm.hours, // Ore permesso (se hourly)
+      reason: perm.reason,
+      start_date: perm.start_date,
+      end_date: perm.end_date,
+      notes: perm.notes
+    }));
+
+    console.log(`📝 Approved permissions today: ${approvedPermissions.length}`);
+    res.json(approvedPermissions);
+  } catch (error) {
+    console.error('Permissions today error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Upcoming departures (next 2 hours)
 app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, res) => {
   try {

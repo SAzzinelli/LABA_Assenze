@@ -80,6 +80,9 @@ const AdminAttendance = () => {
 
   // Malattie di oggi
   const [sickToday, setSickToday] = useState([]);
+  
+  // Permessi di oggi
+  const [permissionsToday, setPermissionsToday] = useState([]);
 
   // Real-time updates
   const { emitUpdate } = useRealTimeUpdates({
@@ -102,6 +105,7 @@ const AdminAttendance = () => {
       await fetchAllEmployees();
       await fetchWorkSchedules();
       await fetchSickToday();
+      await fetchPermissionsToday();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
@@ -121,6 +125,7 @@ const AdminAttendance = () => {
       fetchAllEmployees();
       fetchWorkSchedules();
       fetchSickToday();
+      fetchPermissionsToday();
       calculateRealTimeStats();
     }, 30000);
     
@@ -225,6 +230,22 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching sick leave requests:', error);
+    }
+  };
+
+  const fetchPermissionsToday = async () => {
+    try {
+      console.log('🔄 Fetching approved permissions for today...');
+      const response = await apiCall('/api/attendance/permissions-today');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📝 Approved permissions for today:', data);
+        setPermissionsToday(data);
+      } else {
+        console.error('❌ Failed to fetch permissions:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching permissions:', error);
     }
   };
 
