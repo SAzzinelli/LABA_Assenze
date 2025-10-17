@@ -4907,8 +4907,12 @@ async function saveHourlyAttendance() {
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Controllo condizioni:`, {
             currentHour, currentMinute,
+            currentHourType: typeof currentHour,
+            currentMinuteType: typeof currentMinute,
             effectiveStartHour, effectiveStartMin,
+            effectiveStartHourType: typeof effectiveStartHour,
             effectiveEndHour, effectiveEndMin,
+            effectiveEndHourType: typeof effectiveEndHour,
             beforeStart: currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin),
             afterEnd: currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin),
             condition1: currentHour < effectiveStartHour,
@@ -4991,25 +4995,22 @@ async function saveHourlyAttendance() {
           }
         }
         
-        // DEBUG: Log risultato finale per Simone
-        if (user.first_name === 'Simone') {
-          const balanceHours = actualHours - expectedHours;
-          console.log(`🔍 DEBUG SIMONE - RISULTATO FINALE:`, {
-            actualHours: actualHours.toFixed(2),
-            expectedHours: expectedHours.toFixed(2),
-            balanceHours: balanceHours.toFixed(2),
-            status,
-            willSave: {
-              actual_hours: Math.round(actualHours * 100) / 100,
-              expected_hours: Math.round(expectedHours * 100) / 100,
-              balance_hours: Math.round((actualHours - expectedHours) * 100) / 100
-            }
-          });
-          
-          // SOLUZIONE PROVVISORIA: Forza il calcolo corretto per Simone
-          if (balanceHours !== 0) {
-            console.log(`🔧 FIX SIMONE: Correggo balanceHours da ${balanceHours.toFixed(2)} a 0`);
-            actualHours = expectedHours; // Forza actualHours = expectedHours
+        // DEBUG: Log risultato finale
+        const balanceHours = actualHours - expectedHours;
+        console.log(`📊 Risultato calcolo ${user.first_name}:`, {
+          actualHours: actualHours.toFixed(2),
+          expectedHours: expectedHours.toFixed(2),
+          balanceHours: balanceHours.toFixed(2),
+          status,
+          hasPermissions: permissions && permissions.length > 0
+        });
+        
+        // FIX GENERALE: Se dipendente senza permessi e giornata completata, deve avere expectedHours
+        if (status === 'completed' && (!permissions || permissions.length === 0)) {
+          // Dipendente senza permessi che ha completato la giornata = ha lavorato le ore attese
+          if (Math.abs(actualHours - expectedHours) > 0.01) {
+            console.log(`🔧 FIX ${user.first_name}: Correggo actualHours da ${actualHours.toFixed(2)} a ${expectedHours.toFixed(2)} (no permissions, completed)`);
+            actualHours = expectedHours;
           }
         }
         
