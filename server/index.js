@@ -2007,13 +2007,16 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     // Calcola il saldo totale da TUTTE le presenze
     const { data: allAttendance, error } = await supabase
       .from('attendance')
-      .select('balance_hours')
+      .select('balance_hours, date')
       .eq('user_id', targetUserId);
     
     if (error) {
       console.error('Total balance fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
     }
+
+    console.log(`🔍 DEBUG: Found ${allAttendance.length} attendance records for user ${targetUserId}`);
+    console.log(`🔍 DEBUG: Records:`, allAttendance.map(r => ({ date: r.date, balance: r.balance_hours })));
 
     // Somma tutti i saldi (positivi e negativi)
     const totalBalance = allAttendance.reduce((sum, record) => 
