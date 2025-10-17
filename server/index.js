@@ -378,16 +378,32 @@ app.post('/api/auth/register', async (req, res) => {
         friday: 5, saturday: 6, sunday: 0
       };
       
-      workSchedulesToCreate = Object.entries(workSchedules).map(([day, schedule]) => ({
-        user_id: newUser.id,
-        day_of_week: dayMapping[day],
-        is_working_day: schedule.isWorking,
-        work_type: 'full_day',
-        start_time: schedule.isWorking ? schedule.startTime : null,
-        end_time: schedule.isWorking ? schedule.endTime : null,
-        break_duration: schedule.isWorking ? schedule.breakDuration : 0,
-        break_start_time: schedule.isWorking ? (schedule.breakStartTime || '13:00') : null
-      }));
+      workSchedulesToCreate = Object.entries(workSchedules).map(([day, schedule]) => {
+        // Calcola automaticamente break_start_time a metà della giornata lavorativa
+        let breakStartTime = null;
+        if (schedule.isWorking && schedule.breakDuration > 0) {
+          const [startH, startM] = schedule.startTime.split(':').map(Number);
+          const [endH, endM] = schedule.endTime.split(':').map(Number);
+          const totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+          const workMinutes = totalMinutes - schedule.breakDuration;
+          const halfWorkMinutes = workMinutes / 2;
+          const breakStartMinutes = (startH * 60 + startM) + halfWorkMinutes;
+          const breakStartH = Math.floor(breakStartMinutes / 60);
+          const breakStartM = Math.round(breakStartMinutes % 60);
+          breakStartTime = `${breakStartH.toString().padStart(2, '0')}:${breakStartM.toString().padStart(2, '0')}`;
+        }
+        
+        return {
+          user_id: newUser.id,
+          day_of_week: dayMapping[day],
+          is_working_day: schedule.isWorking,
+          work_type: 'full_day',
+          start_time: schedule.isWorking ? schedule.startTime : null,
+          end_time: schedule.isWorking ? schedule.endTime : null,
+          break_duration: schedule.isWorking ? schedule.breakDuration : 0,
+          break_start_time: breakStartTime
+        };
+      });
     } else {
       // Fallback: orari di default se non forniti
       workSchedulesToCreate = [

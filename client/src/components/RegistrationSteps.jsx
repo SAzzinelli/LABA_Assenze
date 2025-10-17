@@ -24,13 +24,13 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     
     // Step 3: Orario di Lavoro
     workSchedules: {
-      monday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      tuesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      wednesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      thursday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      friday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      saturday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' },
-      sunday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60, breakStartTime: '13:00' }
+      monday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      tuesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      wednesday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      thursday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      friday: { isWorking: true, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      saturday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60 },
+      sunday: { isWorking: false, startTime: '09:00', endTime: '18:00', breakDuration: 60 }
     }
   });
 
@@ -404,7 +404,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               </div>
 
               {schedule.isWorking && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Ora Inizio</label>
                     <input
@@ -425,29 +425,18 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Inizio Pausa
-                      <span className="text-xs text-slate-400 ml-1">(es. 13:00)</span>
-                    </label>
-                    <input
-                      type="time"
-                      value={schedule.breakStartTime}
-                      onChange={(e) => handleWorkScheduleChange(day, 'breakStartTime', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Durata Pausa
-                      <span className="text-xs text-slate-400 ml-1">(minuti)</span>
+                      Pausa (minuti)
                     </label>
                     <input
                       type="number"
                       min="0"
                       max="180"
+                      step="15"
                       value={schedule.breakDuration}
                       onChange={(e) => handleWorkScheduleChange(day, 'breakDuration', parseInt(e.target.value))}
                       className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
+                    <p className="text-xs text-slate-400 mt-1">La pausa sarà automaticamente a metà giornata</p>
                   </div>
                 </div>
               )}
@@ -531,7 +520,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                   </p>
                   {schedule.breakDuration > 0 && (
                     <p className="text-slate-400 text-xs mt-1">
-                      Pausa: {schedule.breakStartTime} ({schedule.breakDuration}min)
+                      Pausa: {schedule.breakDuration}min (calcolata automaticamente a metà giornata)
                     </p>
                   )}
                 </div>
