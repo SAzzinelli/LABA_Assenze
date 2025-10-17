@@ -5325,6 +5325,30 @@ app.post('/api/admin/migrate/break-start-time', authenticateToken, requireAdmin,
   }
 });
 
+// 🔐 Endpoint temporaneo per resettare password di Adriano
+app.post('/api/admin/reset-adriano-password', async (req, res) => {
+  try {
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash('adriano26', 10);
+
+    const { data: updated, error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('email', 'adriano.toccafondi@labafirenze.com')
+      .select();
+
+    if (updateError) {
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    console.log(`✅ Password di Adriano resettata a "adriano26"`);
+    res.json({ success: true, message: 'Password resettata a "adriano26"' });
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
