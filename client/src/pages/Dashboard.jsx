@@ -243,6 +243,8 @@ const Dashboard = () => {
 
     // Ricalcola lo status real-time per ogni employee
     const realTimeData = currentAttendance.map(employee => {
+      console.log('🔍 DEBUG employee data:', employee);
+      
       // Trova lo schedule per oggi
       const todaySchedule = workSchedules.find(schedule => 
         schedule.user_id === employee.user_id && 
