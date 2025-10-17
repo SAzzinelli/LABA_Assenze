@@ -1771,13 +1771,16 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         console.log(`🤒 ${user.first_name} è in malattia oggi`);
         return {
           user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
           name: `${user.first_name} ${user.last_name}`,
           department: user.department || 'Non specificato',
           is_working_day: true,
           status: 'sick_leave',
           actual_hours: 0,
           expected_hours: 0,
-          balance_hours: 0
+          balance_hours: 0,
+          permission_end_time: null
         };
       }
       
@@ -1786,13 +1789,16 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         console.log(`🔵 ${user.first_name} ha permesso 104 oggi`);
         return {
           user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
           name: `${user.first_name} ${user.last_name}`,
           department: user.department || 'Non specificato',
           is_working_day: true,
           status: 'permission_104',
           actual_hours: 0,
           expected_hours: 0,
-          balance_hours: 0
+          balance_hours: 0,
+          permission_end_time: null
         };
       }
       
@@ -1809,13 +1815,16 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       if (!todaySchedule) {
         return {
           user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
           name: `${user.first_name} ${user.last_name}`,
           department: user.department || 'Non specificato',
           is_working_day: false,
           status: 'non_working_day',
           actual_hours: 0,
           expected_hours: 0,
-          balance_hours: 0
+          balance_hours: 0,
+          permission_end_time: null
         };
       }
 
@@ -1916,6 +1925,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       
       const result = {
         user_id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
         name: `${user.first_name} ${user.last_name}`,
         department: user.department || 'Non specificato',
         is_working_day: true,
@@ -1925,7 +1936,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         balance_hours: Math.round(balanceHours * 10) / 10,
         start_time,
         end_time,
-        break_duration: breakDuration
+        break_duration: breakDuration,
+        permission_end_time: permissionData?.permission_type === 'early_exit' && permissionData.exit_time ? permissionData.exit_time : null
       };
       
       console.log(`🔍 User result: ${result.name} - Status: ${result.status}, Hours: ${result.actual_hours}h, Working day: ${result.is_working_day}`);
