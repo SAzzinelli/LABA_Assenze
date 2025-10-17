@@ -287,6 +287,7 @@ const AdminAttendance = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
       console.log('🔄 Fetching permission hours for all employees...');
+      console.log('📊 Total employees to check:', allEmployees.length);
       
       // Recupera permessi per ogni dipendente
       const permissionsMap = {};
@@ -296,18 +297,24 @@ const AdminAttendance = () => {
           const response = await apiCall(`/api/leave-requests/permission-hours?userId=${emp.id}&date=${today}`);
           if (response.ok) {
             const data = await response.json();
+            console.log(`📋 ${emp.firstName} ${emp.lastName} - Permission data:`, data);
             if (data.totalPermissionHours > 0) {
               permissionsMap[emp.id] = data.totalPermissionHours;
-              console.log(`🕐 Employee ${emp.firstName} ${emp.lastName}: ${data.totalPermissionHours}h permission`);
+              console.log(`🕐 ✅ Employee ${emp.firstName} ${emp.lastName}: ${data.totalPermissionHours}h permission FOUND!`);
+            } else {
+              console.log(`⚪ Employee ${emp.firstName} ${emp.lastName}: no permission today`);
             }
+          } else {
+            console.warn(`⚠️ Failed to fetch permissions for ${emp.firstName} ${emp.lastName}:`, response.status);
           }
         } catch (err) {
           console.error(`❌ Error fetching permissions for ${emp.id}:`, err);
         }
       }
       
+      console.log('✅ Final permission hours map:', permissionsMap);
+      console.log('📊 Total permissions found:', Object.keys(permissionsMap).length);
       setPermissionsHoursToday(permissionsMap);
-      console.log('✅ Permission hours map:', permissionsMap);
     } catch (error) {
       console.error('❌ Error fetching permission hours:', error);
     }
@@ -702,9 +709,12 @@ const AdminAttendance = () => {
     
     // Sottrai le ore di permesso approvato per questo dipendente (se esistono)
     const permissionHours = permissionsHoursToday[record.user_id] || 0;
+    console.log(`🔍 Checking permission for user ${record.user_id}:`, permissionHours);
     if (permissionHours > 0) {
       expectedHours = Math.max(0, expectedHours - permissionHours);
-      console.log(`🕐 Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHours}h = ${expectedHours}h`);
+      console.log(`🕐 ✅ Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHours}h = ${expectedHours}h`);
+    } else {
+      console.log(`⚪ No permission hours for user ${record.user_id}`);
     }
     
     // Calcola ore effettive real-time (stessa logica del dipendente)
