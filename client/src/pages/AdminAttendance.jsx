@@ -709,50 +709,60 @@ const AdminAttendance = () => {
     const [endHour, endMin] = end_time.split(':').map(Number);
     const breakDuration = break_duration || 60;
     
-    // Calcola ore attese totali dall'orario contrattuale
+    // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
     const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
     const workMinutes = totalMinutes - breakDuration;
-    let expectedHours = workMinutes / 60;
+    const expectedHours = workMinutes / 60; // NON ridurre per permessi early_exit/late_entry!
     
-    // Sottrai le ore di permesso approvato per questo dipendente (se esistono)
+    // Trova permessi per questo dipendente
     const permissionData = permissionsHoursToday[record.user_id];
     const permissionHours = permissionData?.hours || 0;
     console.log(`🔍 Checking permission for user ${record.user_id}:`, permissionHours);
-    if (permissionHours > 0) {
-      expectedHours = Math.max(0, expectedHours - permissionHours);
-      console.log(`🕐 ✅ Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHours}h = ${expectedHours}h`);
-    } else {
-      console.log(`⚪ No permission hours for user ${record.user_id}`);
-    }
     
-    // Trova se c'è un permesso di uscita anticipata
+    // Trova orari effettivi considerando permessi
     let effectiveEndHour = endHour;
     let effectiveEndMin = endMin;
+    let effectiveStartHour = startHour;
+    let effectiveStartMin = startMin;
     
+    // PERMESSO USCITA ANTICIPATA: non riduce expectedHours, solo cambia orario effettivo
     if (permissionData?.permissions) {
       const earlyExitPerm = permissionData.permissions.find(p => p.type === 'early_exit' && p.exitTime);
       if (earlyExitPerm) {
         const [exitHour, exitMin] = earlyExitPerm.exitTime.split(':').map(Number);
         effectiveEndHour = exitHour;
         effectiveEndMin = exitMin;
-        console.log(`🚪 ${record.user_id} ha permesso uscita anticipata alle ${earlyExitPerm.exitTime}`);
+        console.log(`🚪 ${record.user_id} ha permesso uscita anticipata alle ${earlyExitPerm.exitTime} → DEBITO`);
+      }
+      
+      // PERMESSO ENTRATA POSTICIPATA: non riduce expectedHours, solo cambia orario effettivo
+      const lateEntryPerm = permissionData.permissions.find(p => p.type === 'late_entry' && p.entryTime);
+      if (lateEntryPerm) {
+        const [entryHour, entryMin] = lateEntryPerm.entryTime.split(':').map(Number);
+        effectiveStartHour = entryHour;
+        effectiveStartMin = entryMin;
+        console.log(`🚪 ${record.user_id} ha permesso entrata posticipata alle ${lateEntryPerm.entryTime} → DEBITO`);
       }
     }
     
-    // Calcola ore effettive real-time (stessa logica del dipendente)
+    // Calcola ore effettive real-time
     let actualHours = 0;
     
-    // Se è prima dell'inizio
-    if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+    // Se è prima dell'inizio effettivo (considerando late_entry)
+    if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
       actualHours = 0;
     }
-    // Se è dopo la fine (o dopo l'orario di uscita del permesso)
+    // Se è dopo la fine effettiva (considerando early_exit)
     else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
-      actualHours = expectedHours;
+      // Calcola le ore REALMENTE lavorate (da effectiveStart a effectiveEnd)
+      const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
+      actualHours = effectiveWorkMinutes / 60;
+      console.log(`✅ COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
     }
     // Se è durante l'orario di lavoro
     else {
-      const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+      // Usa effectiveStartHour perché potrebbe essere entrato in ritardo
+      const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
       
       // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
       const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
