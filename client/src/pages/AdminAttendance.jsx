@@ -36,6 +36,7 @@ const AdminAttendance = () => {
   const [allEmployees, setAllEmployees] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [activeTab, setActiveTab] = useState('today');
   
@@ -120,6 +121,9 @@ const AdminAttendance = () => {
         console.log('🔄 Secondary admin data update...');
         fetchStats();
       }, 1000);
+      
+      // Nasconde il loading iniziale dopo che tutti i dati sono caricati
+      setLoading(false);
     };
     
     initializeData();
@@ -156,7 +160,7 @@ const AdminAttendance = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       const today = new Date().toISOString().split('T')[0];
       console.log('🔍 Fetching attendance data for today:', today);
       const response = await apiCall(`/api/attendance?date=${today}`);
@@ -169,7 +173,7 @@ const AdminAttendance = () => {
     } catch (error) {
       console.error('Error fetching attendance data:', error);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -1029,9 +1033,15 @@ const AdminAttendance = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
-          <div className="text-white text-xl">Caricamento presenze...</div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
+          <div className="text-white text-xl font-semibold">Caricamento dati...</div>
+          <div className="text-slate-400 text-sm">Preparazione sistema presenze</div>
+          <div className="flex space-x-1">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          </div>
         </div>
       </div>
     );
@@ -1048,9 +1058,17 @@ const AdminAttendance = () => {
               <p className="text-slate-400">
                 Sistema di gestione presenze avanzato per amministratori
               </p>
-              <p className="text-slate-500 text-sm mt-1">
-                Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-slate-500 text-sm">
+                  Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
+                </p>
+                {dataLoading && (
+                  <div className="flex items-center gap-1 text-indigo-400 text-sm">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-indigo-400 border-t-transparent"></div>
+                    <span>Aggiornamento...</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
               <button
