@@ -2955,6 +2955,55 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     const end = new Date(endDate);
     const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
+    // Calcola le ore effettive per i permessi con orari specifici
+    let calculatedHours = hours;
+    if (type === 'permission' && (exitTime || entryTime) && permissionType) {
+      try {
+        // Ottieni il work_schedule dell'utente per il giorno specifico
+        const permissionDate = new Date(startDate);
+        const dayOfWeek = permissionDate.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
+
+        const { data: workSchedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, is_working_day')
+          .eq('user_id', req.user.id)
+          .eq('day_of_week', dayOfWeek)
+          .single();
+
+        if (!scheduleError && workSchedule && workSchedule.is_working_day) {
+          // Funzione helper per convertire HH:MM in minuti
+          const timeToMinutes = (timeStr) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+          };
+
+          const standardStartMinutes = timeToMinutes(workSchedule.start_time);
+          const standardEndMinutes = timeToMinutes(workSchedule.end_time);
+
+          if (permissionType === 'early_exit' && exitTime) {
+            // Uscita anticipata: calcola da exitTime alla fine standard
+            const exitMinutes = timeToMinutes(exitTime);
+            const minutesDiff = standardEndMinutes - exitMinutes;
+            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+            console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} = ${calculatedHours} ore`);
+          } else if (permissionType === 'late_entry' && entryTime) {
+            // Entrata posticipata: calcola dall'inizio standard a entryTime
+            const entryMinutes = timeToMinutes(entryTime);
+            const minutesDiff = entryMinutes - standardStartMinutes;
+            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+            console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} = ${calculatedHours} ore`);
+          }
+        } else {
+          console.warn('⚠️ Orario di lavoro non trovato per questo giorno, usando 0 ore');
+          calculatedHours = 0;
+        }
+      } catch (calcError) {
+        console.error('❌ Errore nel calcolo delle ore:', calcError);
+        // Se c'è un errore, mantieni il valore passato o usa 0
+        calculatedHours = hours || 0;
+      }
+    }
+
     // Prepara i dati per l'inserimento, escludendo i campi che potrebbero non esistere
     const insertData = {
       user_id: req.user.id,
@@ -2977,7 +3026,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (notes !== undefined) insertData.notes = notes;
     if (doctor !== undefined) insertData.doctor = doctor;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    if (hours !== undefined) insertData.hours = hours;
+    if (calculatedHours !== undefined) insertData.hours = calculatedHours; // Usa le ore calcolate
     if (exitTime !== undefined) insertData.exit_time = exitTime;
     if (entryTime !== undefined) insertData.entry_time = entryTime;
 
@@ -3044,6 +3093,55 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     const end = new Date(endDate);
     const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
+    // Calcola le ore effettive per i permessi con orari specifici
+    let calculatedHours = hours;
+    if (type === 'permission' && (exitTime || entryTime) && permissionType) {
+      try {
+        // Ottieni il work_schedule del dipendente per il giorno specifico
+        const permissionDate = new Date(startDate);
+        const dayOfWeek = permissionDate.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
+
+        const { data: workSchedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, is_working_day')
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek)
+          .single();
+
+        if (!scheduleError && workSchedule && workSchedule.is_working_day) {
+          // Funzione helper per convertire HH:MM in minuti
+          const timeToMinutes = (timeStr) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+          };
+
+          const standardStartMinutes = timeToMinutes(workSchedule.start_time);
+          const standardEndMinutes = timeToMinutes(workSchedule.end_time);
+
+          if (permissionType === 'early_exit' && exitTime) {
+            // Uscita anticipata: calcola da exitTime alla fine standard
+            const exitMinutes = timeToMinutes(exitTime);
+            const minutesDiff = standardEndMinutes - exitMinutes;
+            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+            console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} = ${calculatedHours} ore`);
+          } else if (permissionType === 'late_entry' && entryTime) {
+            // Entrata posticipata: calcola dall'inizio standard a entryTime
+            const entryMinutes = timeToMinutes(entryTime);
+            const minutesDiff = entryMinutes - standardStartMinutes;
+            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+            console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} = ${calculatedHours} ore`);
+          }
+        } else {
+          console.warn('⚠️ Orario di lavoro non trovato per questo giorno, usando 0 ore');
+          calculatedHours = 0;
+        }
+      } catch (calcError) {
+        console.error('❌ Errore nel calcolo delle ore:', calcError);
+        // Se c'è un errore, mantieni il valore passato o usa 0
+        calculatedHours = hours || 0;
+      }
+    }
+
     // Prepara i dati per l'inserimento
     const insertData = {
       user_id: userId,
@@ -3063,7 +3161,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (doctor !== undefined) insertData.doctor = doctor;
     if (medicalCode !== undefined) insertData.medical_code = medicalCode;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    if (hours !== undefined) insertData.hours = hours;
+    if (calculatedHours !== undefined) insertData.hours = calculatedHours; // Usa le ore calcolate
     if (exitTime !== undefined) insertData.exit_time = exitTime;
     if (entryTime !== undefined) insertData.entry_time = entryTime;
 
