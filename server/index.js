@@ -1797,7 +1797,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
 
-      const { start_time, end_time, break_duration } = todaySchedule;
+      const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
       const breakDuration = break_duration || 60;
@@ -1833,27 +1833,34 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         let totalMinutesWorked = 0;
         
         if (hasLunchBreak) {
-          // FULL DAY: has lunch break FISSA 13:00-14:00
+          // FULL DAY: usa break_start_time se disponibile, altrimenti 13:00
           const currentTimeInMinutes = currentHour * 60 + currentMinute;
-          const breakStartHour = 13;
-          const breakStartMinute = 0;
-          const breakStartInMinutes = breakStartHour * 60 + breakStartMinute;
+          
+          let breakStartInMinutes;
+          if (break_start_time) {
+            const [breakHour, breakMin] = break_start_time.split(':').map(Number);
+            breakStartInMinutes = breakHour * 60 + breakMin;
+          } else {
+            // Default: 13:00
+            breakStartInMinutes = 13 * 60;
+          }
+          
           const breakEndInMinutes = breakStartInMinutes + breakDuration;
           
-          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute} (${currentTimeInMinutes}min), Break: 13:00-14:00 (${breakStartInMinutes}-${breakEndInMinutes}min)`);
+          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute} (${currentTimeInMinutes}min), Break: ${break_start_time || '13:00'} (${breakStartInMinutes}-${breakEndInMinutes}min)`);
           
           if (currentTimeInMinutes < breakStartInMinutes) {
-            // Prima della pausa pranzo (prima delle 13:00)
+            // Prima della pausa pranzo
             totalMinutesWorked = minutesFromStart;
             status = 'working';
             console.log(`✅ ${user.first_name} - WORKING (before break)`);
           } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
-            // Durante la pausa pranzo (13:00-14:00)
+            // Durante la pausa pranzo
             totalMinutesWorked = (breakStartInMinutes - (startHour * 60 + startMin));
             status = 'on_break';
-            console.log(`⏸️ ${user.first_name} - ON BREAK (13:00-14:00)`);
+            console.log(`⏸️ ${user.first_name} - ON BREAK (${break_start_time || '13:00'})`);
           } else {
-            // Dopo la pausa pranzo (dopo le 14:00)
+            // Dopo la pausa pranzo
             const morningMinutes = breakStartInMinutes - (startHour * 60 + startMin);
             const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
             totalMinutesWorked = morningMinutes + afternoonMinutes;
@@ -4889,6 +4896,56 @@ const dailyFinalizeJob = cron.schedule('0 0 * * *', async () => {
 }, {
   scheduled: false, // Verrà avviato dopo
   timezone: 'Europe/Rome'
+});
+
+// Endpoint temporaneo per applicare migration break_start_time
+app.post('/api/admin/migrate/break-start-time', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔧 Applicazione migration break_start_time...');
+
+    // 1. Verifica se la colonna esiste già
+    const { data: checkData, error: checkError } = await supabase
+      .from('work_schedules')
+      .select('break_start_time')
+      .limit(1);
+
+    let columnExists = !checkError;
+    
+    if (!columnExists) {
+      console.log('➕ Colonna non esiste, creazione in corso...');
+      // Crea la colonna con RawSQL (se Supabase lo supporta)
+      // Altrimenti dovrà essere fatto manualmente su Supabase dashboard
+      return res.json({
+        success: false,
+        message: 'La colonna break_start_time deve essere aggiunta manualmente su Supabase Dashboard',
+        sql: 'ALTER TABLE work_schedules ADD COLUMN break_start_time TIME DEFAULT \'13:00\';'
+      });
+    }
+
+    // 2. Aggiorna i record esistenti con 13:00 come default
+    const { data: updated, error: updateError } = await supabase
+      .from('work_schedules')
+      .update({ break_start_time: '13:00' })
+      .is('break_start_time', null)
+      .eq('is_working_day', true)
+      .select();
+
+    if (updateError) {
+      console.error('❌ Errore aggiornamento:', updateError);
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    console.log(`✅ ${updated?.length || 0} record aggiornati`);
+    
+    res.json({
+      success: true,
+      message: `Migration completata! ${updated?.length || 0} orari aggiornati con break_start_time = 13:00`,
+      updated: updated?.length || 0
+    });
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 server.listen(PORT, () => {
