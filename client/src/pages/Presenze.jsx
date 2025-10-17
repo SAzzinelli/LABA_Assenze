@@ -201,16 +201,23 @@ const Attendance = () => {
   const fetchPermissionHoursToday = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
+      console.log(`🔄 DIPENDENTE - Fetching permission hours for date: ${today}`);
       const response = await apiCall(`/api/leave-requests/permission-hours?date=${today}`);
+      console.log(`📋 DIPENDENTE - Response status:`, response.status);
       if (response.ok) {
         const data = await response.json();
+        console.log(`📊 DIPENDENTE - Permission data received:`, data);
         setPermissionHoursToday(data.totalPermissionHours || 0);
         if (data.totalPermissionHours > 0) {
-          console.log(`🕐 Permessi oggi: ${data.totalPermissionHours}h`);
+          console.log(`🕐 ✅ DIPENDENTE - Permessi oggi: ${data.totalPermissionHours}h`);
+        } else {
+          console.log(`⚪ DIPENDENTE - No permission hours found for today`);
         }
+      } else {
+        console.warn(`⚠️ DIPENDENTE - Failed to fetch permission hours:`, response.status);
       }
     } catch (error) {
-      console.error('❌ Error fetching permission hours:', error);
+      console.error('❌ DIPENDENTE - Error fetching permission hours:', error);
     }
   };
 
@@ -314,9 +321,12 @@ const Attendance = () => {
     let expectedHours = workMinutes / 60;
     
     // Sottrai le ore di permesso approvato per oggi (se esistono)
+    console.log(`🔍 DIPENDENTE - permissionHoursToday vale:`, permissionHoursToday);
     if (permissionHoursToday > 0) {
       expectedHours = Math.max(0, expectedHours - permissionHoursToday);
-      console.log(`🕐 Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHoursToday}h = ${expectedHours}h`);
+      console.log(`🕐 ✅ Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHoursToday}h = ${expectedHours}h`);
+    } else {
+      console.log(`⚪ DIPENDENTE - Nessun permesso oggi, expectedHours rimane: ${expectedHours}h`);
     }
 
     let actualHours = 0;
