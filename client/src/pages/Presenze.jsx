@@ -43,6 +43,7 @@ const Attendance = () => {
   });
   
   const [totalBalance, setTotalBalance] = useState(0);
+  const [permissionHoursToday, setPermissionHoursToday] = useState(0);
 
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
@@ -54,7 +55,8 @@ const Attendance = () => {
         fetchAttendance(),
         fetchHoursBalance(),
         fetchTotalBalance(),
-        fetchWorkSchedules()
+        fetchWorkSchedules(),
+        fetchPermissionHoursToday()
       ]);
       
       // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
@@ -114,6 +116,7 @@ const Attendance = () => {
       fetchAttendance();
       fetchHoursBalance();
       fetchWorkSchedules();
+      fetchPermissionHoursToday();
       calculateRealTimeHours();
     }, 30000); // 30 secondi
     
@@ -192,6 +195,22 @@ const Attendance = () => {
       }
     } catch (error) {
       console.error('Error fetching total balance:', error);
+    }
+  };
+
+  const fetchPermissionHoursToday = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await apiCall(`/api/leave-requests/permission-hours?date=${today}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPermissionHoursToday(data.totalPermissionHours || 0);
+        if (data.totalPermissionHours > 0) {
+          console.log(`🕐 Permessi oggi: ${data.totalPermissionHours}h`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching permission hours:', error);
     }
   };
 
@@ -292,7 +311,13 @@ const Attendance = () => {
     // Calcola ore attese totali
     const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
     const workMinutes = totalMinutes - breakDuration;
-    const expectedHours = workMinutes / 60;
+    let expectedHours = workMinutes / 60;
+    
+    // Sottrai le ore di permesso approvato per oggi (se esistono)
+    if (permissionHoursToday > 0) {
+      expectedHours = Math.max(0, expectedHours - permissionHoursToday);
+      console.log(`🕐 Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHoursToday}h = ${expectedHours}h`);
+    }
 
     let actualHours = 0;
     let status = 'not_started';
