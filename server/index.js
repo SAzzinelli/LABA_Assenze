@@ -4910,7 +4910,11 @@ async function saveHourlyAttendance() {
             effectiveStartHour, effectiveStartMin,
             effectiveEndHour, effectiveEndMin,
             beforeStart: currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin),
-            afterEnd: currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)
+            afterEnd: currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin),
+            condition1: currentHour < effectiveStartHour,
+            condition2: currentHour === effectiveStartHour && currentMinute < effectiveStartMin,
+            condition3: currentHour > effectiveEndHour,
+            condition4: currentHour === effectiveEndHour && currentMinute >= effectiveEndMin
           });
         }
         
@@ -4936,6 +4940,9 @@ async function saveHourlyAttendance() {
         }
         // Se è durante l'orario di lavoro
         else {
+          if (user.first_name === 'Simone') {
+            console.log(`🔍 DEBUG SIMONE - DURANTE LAVORO: Questo NON dovrebbe succedere alle 19:04!`);
+          }
           // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
           const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
           const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
