@@ -3067,7 +3067,8 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (exitTime !== undefined) insertData.exit_time = exitTime;
     if (entryTime !== undefined) insertData.entry_time = entryTime;
 
-    console.log('🔧 Admin creating leave request for employee:', employee.email, insertData);
+    console.log('🔧 Admin creating leave request for employee:', employee.email);
+    console.log('📋 Insert data:', JSON.stringify(insertData, null, 2));
 
     const { data: newRequest, error } = await supabase
       .from('leave_requests')
@@ -3077,7 +3078,12 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
 
     if (error) {
       console.error('❌ Admin leave request creation error:', error);
-      return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
+      console.error('❌ Insert data that failed:', JSON.stringify(insertData, null, 2));
+      return res.status(500).json({ 
+        error: 'Errore nella creazione della richiesta',
+        details: error.message || 'Errore sconosciuto'
+      });
     }
 
     console.log('✅ Admin leave request created successfully:', newRequest.id);

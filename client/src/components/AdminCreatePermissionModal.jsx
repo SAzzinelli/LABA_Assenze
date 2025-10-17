@@ -11,8 +11,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
   
   const [formData, setFormData] = useState({
     userId: '',
-    startDate: '',
-    endDate: '',
+    date: '', // Solo una data per i permessi
     reason: '',
     notes: '',
     permissionType: '',
@@ -23,11 +22,11 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
-      // Reset form
+      // Reset form e imposta data di oggi
+      const today = new Date().toISOString().split('T')[0];
       setFormData({
         userId: '',
-        startDate: '',
-        endDate: '',
+        date: today, // Imposta automaticamente oggi
         reason: '',
         notes: '',
         permissionType: '',
@@ -60,12 +59,22 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.userId || !formData.startDate || !formData.endDate) {
+    if (!formData.userId || !formData.date) {
       setAlert({
         isOpen: true,
         type: 'error',
         title: 'Errore',
-        message: 'Seleziona dipendente, data inizio e data fine'
+        message: 'Seleziona dipendente e data'
+      });
+      return;
+    }
+
+    if (!formData.permissionType) {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        title: 'Errore',
+        message: 'Seleziona il tipo di permesso (entrata o uscita)'
       });
       return;
     }
@@ -73,9 +82,17 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     setLoading(true);
 
     try {
+      // Per i permessi, startDate e endDate sono la stessa data
       const payload = {
-        ...formData,
-        type: 'permission'
+        userId: formData.userId,
+        startDate: formData.date,
+        endDate: formData.date,
+        type: 'permission',
+        reason: formData.reason || 'Permesso',
+        notes: formData.notes || '',
+        permissionType: formData.permissionType,
+        exitTime: formData.exitTime || null,
+        entryTime: formData.entryTime || null
       };
 
       const response = await apiCall('/api/admin/leave-requests', {
@@ -163,49 +180,40 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
               </select>
             </div>
 
-            {/* Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Data Inizio *
-                </label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Data Fine *
-                </label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                />
-              </div>
+            {/* Data del Permesso */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                <Calendar className="h-4 w-4 inline mr-1" />
+                Data del Permesso *
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                required
+                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Il permesso si applica solo a questo giorno specifico
+              </p>
             </div>
 
             {/* Campi specifici per Permesso */}
             <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Tipo Permesso
+                    <Clock className="h-4 w-4 inline mr-1" />
+                    Tipo Permesso *
                   </label>
                   <select
                     name="permissionType"
                     value={formData.permissionType}
                     onChange={handleInputChange}
+                    required
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
-                    <option value="">Seleziona tipo</option>
+                    <option value="">-- Seleziona tipo permesso --</option>
                     <option value="late_entry">Entrata Posticipata</option>
                     <option value="early_exit">Uscita Anticipata</option>
                   </select>
