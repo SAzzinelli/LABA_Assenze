@@ -1833,44 +1833,54 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       const [endHour, endMin] = end_time.split(':').map(Number);
       const breakDuration = break_duration || 60;
       
-      // Calculate expected hours
+      // Calculate expected hours (ORE CONTRATTUALI - sempre fisse)
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = totalMinutes - breakDuration;
-      let expectedHours = workMinutes / 60;
+      const expectedHours = workMinutes / 60; // NON modificare per permessi early_exit/late_entry!
       
-      // Sottrai le ore di permesso approvato per questo utente (se esistono)
+      // Controlla se c'è un permesso
       const permissionData = permissionsMap[user.id];
-      const permissionHours = permissionData?.hours || 0;
-      if (permissionHours > 0) {
-        expectedHours = Math.max(0, expectedHours - permissionHours);
-        console.log(`🕐 ${user.first_name}: ore attese ridotte da ${workMinutes / 60}h a ${expectedHours}h (permesso: ${permissionHours}h)`);
-      }
       
-      // Calcola l'orario di fine effettivo considerando i permessi di uscita anticipata
+      // Calcola l'orario di fine/inizio effettivo considerando i permessi
       let effectiveEndHour = endHour;
       let effectiveEndMin = endMin;
+      let effectiveStartHour = startHour;
+      let effectiveStartMin = startMin;
       
+      // PERMESSO USCITA ANTICIPATA: non riduce expectedHours, crea solo debito
       if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
         const [exitHour, exitMin] = permissionData.exit_time.split(':').map(Number);
         effectiveEndHour = exitHour;
         effectiveEndMin = exitMin;
-        console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time}`);
+        console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time} → DEBITO di ${permissionData.hours}h`);
+      }
+      
+      // PERMESSO ENTRATA POSTICIPATA: non riduce expectedHours, crea solo debito
+      if (permissionData?.permission_type === 'late_entry' && permissionData.entry_time) {
+        const [entryHour, entryMin] = permissionData.entry_time.split(':').map(Number);
+        effectiveStartHour = entryHour;
+        effectiveStartMin = entryMin;
+        console.log(`🚪 ${user.first_name} ha permesso entrata posticipata alle ${permissionData.entry_time} → DEBITO di ${permissionData.hours}h`);
       }
       
       // Calculate real-time hours (same logic as employee page)
       let actualHours = 0;
       let status = 'not_started';
       
-      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+      // Controlla se ha iniziato (usa effectiveStartHour per late_entry)
+      if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
         actualHours = 0;
         status = 'not_started';
       } else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
-        // Se ha superato l'orario di fine (o l'orario di uscita del permesso), usa expectedHours
-        actualHours = expectedHours;
+        // Giornata finita: calcola le ore effettivamente lavorate fino a effectiveEndHour
+        const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
+        actualHours = effectiveWorkMinutes / 60;
         status = 'completed';
+        console.log(`✅ ${user.first_name} - COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
       } else {
-        // During work time - calculate with lunch break logic
-        const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+        // Durante la giornata lavorativa - calcola ore real-time
+        // USA effectiveStartHour perché potrebbe essere entrato in ritardo
+        const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
         const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const hasLunchBreak = totalWorkMinutes > 300;
         
@@ -1891,31 +1901,34 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           
           const breakEndInMinutes = breakStartInMinutes + breakDuration;
           
-          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute} (${currentTimeInMinutes}min), Break: ${break_start_time || '13:00'} (${breakStartInMinutes}-${breakEndInMinutes}min)`);
+          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute}, Start: ${effectiveStartHour}:${effectiveStartMin}, Break: ${break_start_time || '13:00'}`);
+          
+          // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
+          const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
           
           if (currentTimeInMinutes < breakStartInMinutes) {
             // Prima della pausa pranzo
-            totalMinutesWorked = minutesFromStart;
+            totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
             status = 'working';
-            console.log(`✅ ${user.first_name} - WORKING (before break)`);
+            console.log(`✅ ${user.first_name} - WORKING (before break): ${totalMinutesWorked}min`);
           } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
             // Durante la pausa pranzo
-            totalMinutesWorked = (breakStartInMinutes - (startHour * 60 + startMin));
+            totalMinutesWorked = breakStartInMinutes - startTimeInMinutes;
             status = 'on_break';
-            console.log(`⏸️ ${user.first_name} - ON BREAK (${break_start_time || '13:00'})`);
+            console.log(`⏸️ ${user.first_name} - ON BREAK: worked ${totalMinutesWorked}min before break`);
           } else {
             // Dopo la pausa pranzo
-            const morningMinutes = breakStartInMinutes - (startHour * 60 + startMin);
+            const morningMinutes = breakStartInMinutes - startTimeInMinutes;
             const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
             totalMinutesWorked = morningMinutes + afternoonMinutes;
             status = 'working';
-            console.log(`✅ ${user.first_name} - WORKING (after break) - morning: ${morningMinutes}min, afternoon: ${afternoonMinutes}min`);
+            console.log(`✅ ${user.first_name} - WORKING (after break): morning ${morningMinutes}min + afternoon ${afternoonMinutes}min = ${totalMinutesWorked}min`);
           }
         } else {
           // HALF DAY: no lunch break
           totalMinutesWorked = minutesFromStart;
           status = 'working';
-          console.log(`✅ ${user.first_name} - WORKING (half day, no break)`);
+          console.log(`✅ ${user.first_name} - WORKING (half day): ${totalMinutesWorked}min`);
         }
         
         actualHours = totalMinutesWorked / 60;
@@ -2502,35 +2515,40 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
     }
     
-    // Calcola ore attese
+    // Calcola ore attese (ORE CONTRATTUALI - sempre fisse!)
     const startTime = new Date(`2000-01-01T${start_time}`);
     const endTime = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (endTime - startTime) / (1000 * 60);
     const workMinutes = totalMinutes - (break_duration || 60);
-    let expectedHours = workMinutes / 60;
+    const expectedHours = workMinutes / 60; // NON ridurre per permessi early_exit/late_entry!
     
-    // Sottrai le ore di permesso dalle ore attese
-    if (permissionData && permissionData.hours > 0) {
-      expectedHours = Math.max(0, expectedHours - permissionData.hours);
-      console.log(`🕐 Ore attese ridotte a ${expectedHours}h (permesso: ${permissionData.hours}h)`);
-    }
-    
-    // Calcola l'orario di fine effettivo considerando i permessi di uscita anticipata
+    // Calcola orari effettivi considerando i permessi
+    let effectiveStartTime = start_time;
     let effectiveEndTime = end_time;
+    
+    // PERMESSO USCITA ANTICIPATA: crea debito, non riduce expectedHours
     if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
       effectiveEndTime = permissionData.exit_time;
-      console.log(`🚪 Permesso uscita anticipata alle ${effectiveEndTime}`);
+      console.log(`🚪 Permesso uscita anticipata alle ${effectiveEndTime} → DEBITO di ${permissionData.hours}h`);
+    }
+    
+    // PERMESSO ENTRATA POSTICIPATA: crea debito, non riduce expectedHours
+    if (permissionData?.permission_type === 'late_entry' && permissionData.entry_time) {
+      effectiveStartTime = permissionData.entry_time;
+      console.log(`🚪 Permesso entrata posticipata alle ${effectiveStartTime} → DEBITO di ${permissionData.hours}h`);
     }
 
     // Calcola ore effettive basate sull'orario corrente
     let actualHours = 0;
     let status = 'not_started';
     
-    if (currentTime >= start_time) {
+    const effectiveStartTimeObj = new Date(`2000-01-01T${effectiveStartTime}`);
+    const effectiveEndTimeObj = new Date(`2000-01-01T${effectiveEndTime}`);
+    
+    if (currentTime >= effectiveStartTime) {
       if (currentTime <= effectiveEndTime) {
         // Durante l'orario di lavoro
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
-        const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
         
         // Pausa pranzo fissa dalle 13:00 alle 14:00 (o come configurato)
         const breakStartTime = new Date(`2000-01-01T13:00`);
@@ -2538,23 +2556,26 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         
         if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
           // Durante la pausa pranzo
-          actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
+          actualHours = (breakStartTime - effectiveStartTimeObj) / (1000 * 60) / 60;
           status = 'on_break';
         } else if (currentTimeObj > breakEndTime) {
           // Dopo la pausa pranzo
-          const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
+          const morningMinutes = (breakStartTime - effectiveStartTimeObj) / (1000 * 60);
           const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
           actualHours = (morningMinutes + afternoonMinutes) / 60;
           status = 'working';
         } else {
           // Prima della pausa pranzo
+          const workedMinutes = (currentTimeObj - effectiveStartTimeObj) / (1000 * 60);
           actualHours = workedMinutes / 60;
           status = 'working';
         }
       } else {
-        // Dopo l'orario di lavoro
-        actualHours = expectedHours;
+        // Dopo l'orario effettivo: calcola le ore REALMENTE lavorate (non expectedHours!)
+        const effectiveWorkMinutes = (effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60) - (break_duration || 60);
+        actualHours = effectiveWorkMinutes / 60;
         status = 'completed';
+        console.log(`✅ COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
       }
     }
 
