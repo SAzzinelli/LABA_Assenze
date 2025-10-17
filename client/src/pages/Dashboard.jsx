@@ -603,6 +603,18 @@ const Dashboard = () => {
                   badgeColor = 'bg-slate-500';
                   statusText = 'Non iniziato';
                   statusColor = 'text-slate-400';
+                } else if (person.status === 'sick_leave') {
+                  badgeColor = 'bg-red-500';
+                  statusText = 'In malattia';
+                  statusColor = 'text-red-400';
+                } else if (person.status === 'permission_104') {
+                  badgeColor = 'bg-blue-600';
+                  statusText = 'Permesso 104';
+                  statusColor = 'text-blue-300';
+                } else if (person.status === 'non_working_day') {
+                  badgeColor = 'bg-gray-600';
+                  statusText = 'Non lavorativo';
+                  statusColor = 'text-gray-400';
                 }
                 
                 return (

@@ -1695,6 +1695,30 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
+    // Recupera malattie per oggi
+    const { data: sickToday, error: sickError } = await supabase
+      .from('leave_requests')
+      .select('user_id')
+      .eq('type', 'sick_leave')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    const sickUserIds = new Set(sickToday?.map(s => s.user_id) || []);
+    console.log(`🤒 Malattie oggi:`, sickUserIds.size);
+    
+    // Recupera permessi 104 per oggi
+    const { data: perm104Today, error: perm104Error } = await supabase
+      .from('leave_requests')
+      .select('user_id')
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    const perm104UserIds = new Set(perm104Today?.map(p => p.user_id) || []);
+    console.log(`🔵 Permessi 104 oggi:`, perm104UserIds.size);
+    
     // Recupera permessi approvati per oggi per tutti gli utenti
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
@@ -1719,6 +1743,36 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     const currentAttendance = allUsers.map(user => {
       console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
       console.log(`🔍 User work_schedules:`, user.work_schedules?.length || 0);
+      
+      // Controlla se è in malattia
+      if (sickUserIds.has(user.id)) {
+        console.log(`🤒 ${user.first_name} è in malattia oggi`);
+        return {
+          user_id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: true,
+          status: 'sick_leave',
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0
+        };
+      }
+      
+      // Controlla se ha permesso 104
+      if (perm104UserIds.has(user.id)) {
+        console.log(`🔵 ${user.first_name} ha permesso 104 oggi`);
+        return {
+          user_id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: true,
+          status: 'permission_104',
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0
+        };
+      }
       
       // Find today's work schedule
       const todaySchedule = user.work_schedules?.find(schedule => 
