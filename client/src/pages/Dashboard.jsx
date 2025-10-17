@@ -311,9 +311,43 @@ const Dashboard = () => {
     return `${sign}${formatHours(Math.abs(hours))}`;
   };
 
-  const updateKPIsWithBalance = (balanceData) => {
+  const updateKPIsWithBalance = async (balanceData) => {
     if (user?.role === 'employee') {
-      // Calculate today's hours only (not weekly)
+      // Usa gli stessi dati real-time dell'endpoint /api/attendance/current
+      // Questo garantisce coerenza con la pagina Presenze
+      try {
+        const response = await apiCall('/api/attendance/current-hours');
+        if (response.ok) {
+          const currentHoursData = await response.json();
+          
+          if (currentHoursData.isWorkingDay) {
+            const todayHours = currentHoursData.actualHours || 0;
+            const todayExpectedHours = currentHoursData.expectedHours || 0;
+            const todayBalance = currentHoursData.balanceHours || 0;
+            
+            // Update KPIs with today's hours from the same endpoint
+            setUserKPIs(prevKPIs => ({
+              ...prevKPIs,
+              weeklyHours: formatHours(todayHours),
+              overtimeBalance: formatOvertime(todayBalance),
+              remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
+              monthlyPresences: `${balanceData.working_days}/20`
+            }));
+            
+            console.log('✅ KPIs updated with current-hours endpoint:', { 
+              todayHours, 
+              todayExpectedHours, 
+              todayBalance,
+              monthlyBalance: balanceData.monte_ore 
+            });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching current hours, falling back to local calculation:', error);
+      }
+      
+      // FALLBACK: Calculate today's hours only (not weekly)
       const today = new Date();
       const todaySchedule = workSchedules.find(schedule => 
         schedule.day_of_week === today.getDay() && schedule.is_working_day
@@ -560,109 +594,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Presenti adesso */}
-          <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <Clock className="h-6 w-6 mr-3 text-green-400" />
-              Presenti adesso
-              <div className="ml-auto flex items-center text-sm text-slate-400">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                Live
-              </div>
-            </h3>
-          
-          {adminRealTimeData.length > 0 ? (
-            <div className="space-y-3">
-              {adminRealTimeData.map((person) => {
-                const isWorking = person.status === 'working';
-                const isOnBreak = person.status === 'on_break';
-                const isCompleted = person.status === 'completed';
-                const isNotStarted = person.status === 'not_started';
-                const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
-                                   person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
-                
-                // Determina colore badge e icona
-                let badgeColor = 'bg-slate-500';
-                let statusText = 'Sconosciuto';
-                let statusColor = 'text-slate-400';
-                
-                if (isWorking) {
-                  badgeColor = 'bg-green-500';
-                  statusText = 'Lavorando';
-                  statusColor = 'text-green-400';
-                } else if (isOnBreak) {
-                  badgeColor = 'bg-yellow-500';
-                  statusText = 'In pausa';
-                  statusColor = 'text-yellow-400';
-                } else if (isCompleted) {
-                  badgeColor = 'bg-blue-500';
-                  statusText = 'Giornata terminata';
-                  statusColor = 'text-blue-400';
-                } else if (isNotStarted) {
-                  badgeColor = 'bg-slate-500';
-                  statusText = 'Non iniziato';
-                  statusColor = 'text-slate-400';
-                } else if (person.status === 'sick_leave') {
-                  badgeColor = 'bg-red-500';
-                  statusText = 'In malattia';
-                  statusColor = 'text-red-400';
-                } else if (person.status === 'permission_104') {
-                  badgeColor = 'bg-blue-600';
-                  statusText = 'Permesso 104';
-                  statusColor = 'text-blue-300';
-                } else if (person.status === 'non_working_day') {
-                  badgeColor = 'bg-gray-600';
-                  statusText = 'Non lavorativo';
-                  statusColor = 'text-gray-400';
-                }
-                
-                return (
-                  <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${badgeColor}`}>
-                          <span className="text-white font-semibold text-sm">
-                            {person.name ? person.name.split(' ').map(n => n[0]).join('') : 'N/A'}
-                          </span>
-                        </div>
-                        <div>
-                          <h4 className="text-white font-semibold">
-                            {person.name || 'N/A'}
-                          </h4>
-                          <p className="text-slate-400 text-sm">
-                            {person.department || 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`font-semibold ${statusColor}`}>
-                          {statusText}
-                        </div>
-                        <div className="text-slate-400 text-sm">
-                          Ore attese: {person.expected_hours}h
-                        </div>
-                        <div className="text-slate-400 text-sm">
-                          Ore effettive: {person.actual_hours}h
-                        </div>
-                        <div className={`text-sm font-semibold ${balanceColor}`}>
-                          Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400">Nessuno presente attualmente</p>
-            </div>
-          )}
-          </div>
-
-          {/* Richieste Recenti */}
+          {/* Richieste Recenti - Full Width */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
               <FileText className="h-6 w-6 mr-3 text-yellow-400" />
@@ -739,10 +671,8 @@ const Dashboard = () => {
             )}
           </div>
           </div>
-        </div>
         </>
       )}
-
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />
