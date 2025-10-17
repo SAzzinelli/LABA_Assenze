@@ -288,7 +288,7 @@ const AdminAttendance = () => {
       console.log('🔄 Fetching permission hours for all employees...');
       console.log('📊 Total employees to check:', employees.length);
       
-      // Recupera permessi per ogni dipendente
+      // Recupera permessi per ogni dipendente CON DETTAGLI (exit_time, entry_time)
       const permissionsMap = {};
       
       for (const emp of employees) {
@@ -298,7 +298,11 @@ const AdminAttendance = () => {
             const data = await response.json();
             console.log(`📋 ${emp.firstName} ${emp.lastName} - Permission data:`, data);
             if (data.totalPermissionHours > 0) {
-              permissionsMap[emp.id] = data.totalPermissionHours;
+              // Salva ore E dettagli (tipo, orari)
+              permissionsMap[emp.id] = {
+                hours: data.totalPermissionHours,
+                permissions: data.permissions || []
+              };
               console.log(`🕐 ✅ Employee ${emp.firstName} ${emp.lastName}: ${data.totalPermissionHours}h permission FOUND!`);
             } else {
               console.log(`⚪ Employee ${emp.firstName} ${emp.lastName}: no permission today`);
@@ -707,13 +711,28 @@ const AdminAttendance = () => {
     let expectedHours = workMinutes / 60;
     
     // Sottrai le ore di permesso approvato per questo dipendente (se esistono)
-    const permissionHours = permissionsHoursToday[record.user_id] || 0;
+    const permissionData = permissionsHoursToday[record.user_id];
+    const permissionHours = permissionData?.hours || 0;
     console.log(`🔍 Checking permission for user ${record.user_id}:`, permissionHours);
     if (permissionHours > 0) {
       expectedHours = Math.max(0, expectedHours - permissionHours);
       console.log(`🕐 ✅ Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHours}h = ${expectedHours}h`);
     } else {
       console.log(`⚪ No permission hours for user ${record.user_id}`);
+    }
+    
+    // Trova se c'è un permesso di uscita anticipata
+    let effectiveEndHour = endHour;
+    let effectiveEndMin = endMin;
+    
+    if (permissionData?.permissions) {
+      const earlyExitPerm = permissionData.permissions.find(p => p.type === 'early_exit' && p.exitTime);
+      if (earlyExitPerm) {
+        const [exitHour, exitMin] = earlyExitPerm.exitTime.split(':').map(Number);
+        effectiveEndHour = exitHour;
+        effectiveEndMin = exitMin;
+        console.log(`🚪 ${record.user_id} ha permesso uscita anticipata alle ${earlyExitPerm.exitTime}`);
+      }
     }
     
     // Calcola ore effettive real-time (stessa logica del dipendente)
@@ -723,8 +742,8 @@ const AdminAttendance = () => {
     if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
       actualHours = 0;
     }
-    // Se è dopo la fine
-    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+    // Se è dopo la fine (o dopo l'orario di uscita del permesso)
+    else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
       actualHours = expectedHours;
     }
     // Se è durante l'orario di lavoro

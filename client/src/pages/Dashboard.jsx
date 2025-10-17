@@ -613,8 +613,6 @@ const Dashboard = () => {
                 const isOnBreak = person.status === 'on_break';
                 const isCompleted = person.status === 'completed';
                 const isNotStarted = person.status === 'not_started';
-                const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
-                                   person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
                 
                 // Determina colore badge e icona
                 let badgeColor = 'bg-slate-500';
@@ -670,17 +668,8 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`font-semibold ${statusColor}`}>
+                        <div className={`font-semibold text-lg ${statusColor}`}>
                           {statusText}
-                        </div>
-                        <div className="text-slate-400 text-sm">
-                          Ore attese: {person.expected_hours}h
-                        </div>
-                        <div className="text-slate-400 text-sm">
-                          Ore effettive: {person.actual_hours}h
-                        </div>
-                        <div className={`text-sm font-semibold ${balanceColor}`}>
-                          Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
                         </div>
                       </div>
                     </div>
