@@ -37,7 +37,7 @@ const AdminAttendance = () => {
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [activeTab, setActiveTab] = useState('currently');
+  const [activeTab, setActiveTab] = useState('today');
   
   // Stati per cronologia
   const [attendanceHistory, setAttendanceHistory] = useState([]);
@@ -892,10 +892,7 @@ const AdminAttendance = () => {
 
   const filteredData = (() => {
     let data = [];
-    if (activeTab === 'currently') {
-      // Per "Attualmente a lavoro" usa i dati real-time da employees
-      data = employees;
-    } else if (activeTab === 'today') {
+    if (activeTab === 'today') {
       // Per "Oggi" combina dati database + real-time
       data = attendance;
       
@@ -969,24 +966,16 @@ const AdminAttendance = () => {
       // Filtro per ricerca
       if (searchTerm) {
         let employeeName = '';
-        if (activeTab === 'currently') {
-          // Per employees (current attendance), usa la struttura diversa
-          employeeName = record.name ? record.name.toLowerCase() : '';
-        } else {
-          // Per attendance records, usa la struttura normale
-          employeeName = record.users ? 
-            `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
-        }
+        // Per attendance records, usa la struttura normale
+        employeeName = record.users ? 
+          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
         if (!employeeName.includes(searchTerm.toLowerCase())) {
           return false;
         }
       }
       
       // Logica specifica per ogni tab
-      if (activeTab === 'currently') {
-        // Per employees, mostra solo chi è attualmente working o on_break
-        return record.status === 'working' || record.status === 'on_break';
-      } else if (activeTab === 'today') {
+      if (activeTab === 'today') {
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
         const realTimeData = calculateRealTimeHoursForRecord(record);
         return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday' || realTimeData.status === 'permission_104';
@@ -1079,17 +1068,6 @@ const AdminAttendance = () => {
         {/* Tabs */}
         <div className="mb-6">
           <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
-            <button
-              onClick={() => setActiveTab('currently')}
-              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${
-                activeTab === 'currently' 
-                  ? 'bg-indigo-600 text-white shadow-lg' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              <Clock className="h-4 w-4" />
-              Attualmente a lavoro
-            </button>
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${
@@ -1188,10 +1166,9 @@ const AdminAttendance = () => {
         {/* Tabella Presenze */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-700">
-            <h2 className="text-xl font-semibold text-white flex items-center">
+              <h2 className="text-xl font-semibold text-white flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              {activeTab === 'currently' ? 'Attualmente a lavoro' : 
-               activeTab === 'today' ? 'Chi ha lavorato oggi' : 'Cronologia Presenze'}
+              {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
           </h2>
           </div>
           
@@ -1213,21 +1190,9 @@ const AdminAttendance = () => {
               </thead>
               <tbody>
                 {filteredData.map((record) => {
-                  // Per il tab "currently" usa i dati direttamente, per gli altri calcola real-time
+                  // Calcola real-time o usa dati esistenti
                   let displayData;
-                  if (activeTab === 'currently') {
-                    // Usa i dati direttamente da employees
-                    displayData = {
-                      name: record.name,
-                      email: '', // Non disponibile nei dati employees
-                      date: new Date().toISOString().split('T')[0],
-                      status: record.status,
-                      expectedHours: record.expected_hours,
-                      actualHours: record.actual_hours,
-                      balanceHours: record.balance_hours,
-                      department: record.department
-                    };
-                  } else if (record.is_realtime) {
+                  if (record.is_realtime) {
                     // Per dati real-time, usa direttamente i valori calcolati
                     displayData = {
                       name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',

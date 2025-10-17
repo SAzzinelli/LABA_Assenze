@@ -1833,27 +1833,32 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         let totalMinutesWorked = 0;
         
         if (hasLunchBreak) {
-          // FULL DAY: has lunch break
-          const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
-          const breakStartMinutes = morningEndMinutes;
-          const breakEndMinutes = morningEndMinutes + breakDuration;
+          // FULL DAY: has lunch break FISSA 13:00-14:00
+          const currentTimeInMinutes = currentHour * 60 + currentMinute;
+          const breakStartHour = 13;
+          const breakStartMinute = 0;
+          const breakStartInMinutes = breakStartHour * 60 + breakStartMinute;
+          const breakEndInMinutes = breakStartInMinutes + breakDuration;
           
-          console.log(`🔍 ${user.first_name} - Break calc: morningEnd=${morningEndMinutes}min, breakStart=${breakStartMinutes}min, breakEnd=${breakEndMinutes}min, minutesFromStart=${minutesFromStart}min`);
+          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute} (${currentTimeInMinutes}min), Break: 13:00-14:00 (${breakStartInMinutes}-${breakEndInMinutes}min)`);
           
-          if (minutesFromStart < breakStartMinutes) {
+          if (currentTimeInMinutes < breakStartInMinutes) {
+            // Prima della pausa pranzo (prima delle 13:00)
             totalMinutesWorked = minutesFromStart;
             status = 'working';
             console.log(`✅ ${user.first_name} - WORKING (before break)`);
-          } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-            totalMinutesWorked = breakStartMinutes;
+          } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
+            // Durante la pausa pranzo (13:00-14:00)
+            totalMinutesWorked = (breakStartInMinutes - (startHour * 60 + startMin));
             status = 'on_break';
-            console.log(`⏸️ ${user.first_name} - ON BREAK`);
+            console.log(`⏸️ ${user.first_name} - ON BREAK (13:00-14:00)`);
           } else {
-            const morningMinutes = breakStartMinutes;
-            const afternoonMinutes = minutesFromStart - breakEndMinutes;
+            // Dopo la pausa pranzo (dopo le 14:00)
+            const morningMinutes = breakStartInMinutes - (startHour * 60 + startMin);
+            const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
             totalMinutesWorked = morningMinutes + afternoonMinutes;
             status = 'working';
-            console.log(`✅ ${user.first_name} - WORKING (after break)`);
+            console.log(`✅ ${user.first_name} - WORKING (after break) - morning: ${morningMinutes}min, afternoon: ${afternoonMinutes}min`);
           }
         } else {
           // HALF DAY: no lunch break
