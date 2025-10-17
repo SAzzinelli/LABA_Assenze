@@ -748,16 +748,19 @@ const AdminAttendance = () => {
     // Calcola ore effettive real-time
     let actualHours = 0;
     
+    console.log(`🔍 DEBUG ${record.user_id}: currentTime=${currentHour}:${currentMinute}, effectiveStart=${effectiveStartHour}:${effectiveStartMin}, effectiveEnd=${effectiveEndHour}:${effectiveEndMin}, breakDuration=${breakDuration}, break_start_time=${break_start_time}`);
+    
     // Se è prima dell'inizio effettivo (considerando late_entry)
     if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
       actualHours = 0;
+      console.log(`⏰ ${record.user_id}: NOT STARTED (before ${effectiveStartHour}:${effectiveStartMin})`);
     }
     // Se è dopo la fine effettiva (considerando early_exit)
     else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
       // Calcola le ore REALMENTE lavorate (da effectiveStart a effectiveEnd)
       const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
       actualHours = effectiveWorkMinutes / 60;
-      console.log(`✅ COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
+      console.log(`✅ ${record.user_id} COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
     }
     // Se è durante l'orario di lavoro
     else {
@@ -783,25 +786,31 @@ const AdminAttendance = () => {
         // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
         const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
         
+        console.log(`🍽️ ${record.user_id}: currentTime=${currentTimeInMinutes}min, breakStart=${breakStartInMinutes}min, breakEnd=${breakEndInMinutes}min, startTime=${startTimeInMinutes}min`);
+        
         if (currentTimeInMinutes < breakStartInMinutes) {
           // Prima della pausa pranzo
           const totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
           actualHours = totalMinutesWorked / 60;
+          console.log(`🌅 ${record.user_id}: BEFORE BREAK - worked ${totalMinutesWorked}min = ${actualHours}h`);
         } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
           // Durante la pausa pranzo
           const totalMinutesWorked = breakStartInMinutes - startTimeInMinutes;
           actualHours = totalMinutesWorked / 60;
+          console.log(`⏸️ ${record.user_id}: ON BREAK - worked ${totalMinutesWorked}min = ${actualHours}h`);
         } else {
           // Dopo la pausa pranzo
           const morningMinutes = breakStartInMinutes - startTimeInMinutes;
           const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
           const totalMinutesWorked = morningMinutes + afternoonMinutes;
           actualHours = totalMinutesWorked / 60;
+          console.log(`🌆 ${record.user_id}: AFTER BREAK - morning ${morningMinutes}min + afternoon ${afternoonMinutes}min = ${totalMinutesWorked}min = ${actualHours}h`);
         }
       } else {
         // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
         const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
         actualHours = minutesFromStart / 60;
+        console.log(`☀️ ${record.user_id}: HALF DAY - worked ${minutesFromStart}min = ${actualHours}h`);
       }
     }
     
