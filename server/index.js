@@ -1838,22 +1838,28 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           const breakStartMinutes = morningEndMinutes;
           const breakEndMinutes = morningEndMinutes + breakDuration;
           
+          console.log(`🔍 ${user.first_name} - Break calc: morningEnd=${morningEndMinutes}min, breakStart=${breakStartMinutes}min, breakEnd=${breakEndMinutes}min, minutesFromStart=${minutesFromStart}min`);
+          
           if (minutesFromStart < breakStartMinutes) {
             totalMinutesWorked = minutesFromStart;
             status = 'working';
+            console.log(`✅ ${user.first_name} - WORKING (before break)`);
           } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
             totalMinutesWorked = breakStartMinutes;
             status = 'on_break';
+            console.log(`⏸️ ${user.first_name} - ON BREAK`);
           } else {
             const morningMinutes = breakStartMinutes;
             const afternoonMinutes = minutesFromStart - breakEndMinutes;
             totalMinutesWorked = morningMinutes + afternoonMinutes;
             status = 'working';
+            console.log(`✅ ${user.first_name} - WORKING (after break)`);
           }
         } else {
           // HALF DAY: no lunch break
           totalMinutesWorked = minutesFromStart;
           status = 'working';
+          console.log(`✅ ${user.first_name} - WORKING (half day, no break)`);
         }
         
         actualHours = totalMinutesWorked / 60;
