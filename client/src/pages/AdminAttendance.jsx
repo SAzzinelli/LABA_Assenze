@@ -219,10 +219,14 @@ const AdminAttendance = () => {
       
       // Carica il saldo per ogni dipendente
       for (const emp of employees) {
+        console.log(`💰 Fetching balance for ${emp.first_name} ${emp.last_name} (ID: ${emp.id})`);
         const response = await apiCall(`/api/attendance/total-balance?userId=${emp.id}`);
         if (response.ok) {
           const data = await response.json();
           balances[emp.id] = data.totalBalanceHours || 0;
+          console.log(`💰 Balance for ${emp.first_name}: ${data.totalBalanceHours}h`);
+        } else {
+          console.error(`❌ Failed to fetch balance for ${emp.first_name}:`, response.status);
         }
       }
       
@@ -792,8 +796,8 @@ const AdminAttendance = () => {
     else if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
       finalStatus = 'not_started';
     }
-    // Se è dopo la fine dell'orario di lavoro
-    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+    // Se è dopo la fine dell'orario di lavoro (o dopo l'orario di uscita del permesso)
+    else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
       finalStatus = actualHours > 0 ? 'completed' : 'absent';
     }
     // Se è durante l'orario di lavoro
