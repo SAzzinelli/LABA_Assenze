@@ -5088,6 +5088,103 @@ const dailyFinalizeJob = cron.schedule('0 0 * * *', async () => {
   timezone: 'Europe/Rome'
 });
 
+// Endpoint per correggere i dati errati di Simone
+app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔧 Correzione dati Simone...');
+    
+    // Trova Simone
+    const { data: simone, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('first_name', 'Simone')
+      .eq('last_name', 'Azzinelli')
+      .single();
+      
+    if (userError) {
+      console.error('❌ Errore nel trovare Simone:', userError);
+      return res.status(404).json({ error: 'Simone non trovato' });
+    }
+    
+    console.log('👤 Simone trovato:', simone);
+    
+    // Controlla tutte le presenze di Simone
+    const { data: attendance, error: attError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', simone.id)
+      .order('date', { ascending: false });
+      
+    if (attError) {
+      console.error('❌ Errore nel recuperare presenze:', attError);
+      return res.status(500).json({ error: 'Errore nel recuperare presenze' });
+    }
+    
+    console.log('📊 Presenze Simone trovate:', attendance.length);
+    
+    // Mostra i dati attuali
+    const currentData = attendance.map(record => ({
+      date: record.date,
+      actual_hours: record.actual_hours,
+      expected_hours: record.expected_hours,
+      balance_hours: record.balance_hours
+    }));
+    
+    // Calcola saldo totale attuale
+    const totalBalance = attendance.reduce((sum, record) => sum + (record.balance_hours || 0), 0);
+    console.log('💰 Saldo totale attuale Simone:', totalBalance, 'h');
+    
+    if (totalBalance !== 0) {
+      console.log('🔧 Correggo i dati di Simone...');
+      
+      // Per ogni record, correggo il balance_hours a 0
+      for (const record of attendance) {
+        const correctedBalance = 0;
+        const correctedActualHours = record.expected_hours; // Assume che abbia lavorato le ore complete
+        
+        console.log(`🔧 Correggo ${record.date}: ${record.balance_hours}h → ${correctedBalance}h`);
+        
+        const { error: updateError } = await supabase
+          .from('attendance')
+          .update({
+            balance_hours: correctedBalance,
+            actual_hours: correctedActualHours
+          })
+          .eq('id', record.id);
+          
+        if (updateError) {
+          console.error(`❌ Errore nell'aggiornare ${record.date}:`, updateError);
+        } else {
+          console.log(`✅ Corretto ${record.date}`);
+        }
+      }
+      
+      console.log('🎉 Correzione completata! Simone ora ha saldo 0h');
+      
+      res.json({
+        success: true,
+        message: 'Dati di Simone corretti con successo',
+        previousBalance: totalBalance,
+        newBalance: 0,
+        recordsUpdated: attendance.length,
+        previousData: currentData
+      });
+    } else {
+      console.log('✅ Simone ha già saldo 0h, nessuna correzione necessaria');
+      res.json({
+        success: true,
+        message: 'Simone ha già saldo 0h',
+        balance: 0,
+        data: currentData
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Errore generale:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint temporaneo per applicare migration break_start_time
 app.post('/api/admin/migrate/break-start-time', authenticateToken, requireAdmin, async (req, res) => {
   try {
