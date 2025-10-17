@@ -704,7 +704,7 @@ const AdminAttendance = () => {
       };
     }
     
-    const { start_time, end_time, break_duration } = workSchedule;
+    const { start_time, end_time, break_duration, break_start_time } = workSchedule;
     const [startHour, startMin] = start_time.split(':').map(Number);
     const [endHour, endMin] = end_time.split(':').map(Number);
     const breakDuration = break_duration || 60;
@@ -761,33 +761,46 @@ const AdminAttendance = () => {
     }
     // Se è durante l'orario di lavoro
     else {
-      // Usa effectiveStartHour perché potrebbe essere entrato in ritardo
-      const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
-      
       // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
       const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
       
       if (hasLunchBreak) {
-        // GIORNATA COMPLETA: ha pausa pranzo (es. 9:00-18:00)
-        const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // Fine mattina
-        const breakStartMinutes = morningEndMinutes;
-        const breakEndMinutes = morningEndMinutes + breakDuration;
+        // GIORNATA COMPLETA: usa break_start_time se disponibile, altrimenti 13:00
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
         
-        if (minutesFromStart < breakStartMinutes) {
+        let breakStartInMinutes;
+        if (break_start_time) {
+          const [breakHour, breakMin] = break_start_time.split(':').map(Number);
+          breakStartInMinutes = breakHour * 60 + breakMin;
+        } else {
+          // Default: 13:00
+          breakStartInMinutes = 13 * 60;
+        }
+        
+        const breakEndInMinutes = breakStartInMinutes + breakDuration;
+        
+        // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
+        const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
+        
+        if (currentTimeInMinutes < breakStartInMinutes) {
           // Prima della pausa pranzo
-          actualHours = minutesFromStart / 60;
-        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
+          const totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
+          actualHours = totalMinutesWorked / 60;
+        } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
           // Durante la pausa pranzo
-          actualHours = breakStartMinutes / 60;
+          const totalMinutesWorked = breakStartInMinutes - startTimeInMinutes;
+          actualHours = totalMinutesWorked / 60;
         } else {
           // Dopo la pausa pranzo
-          const morningMinutes = breakStartMinutes;
-          const afternoonMinutes = minutesFromStart - breakEndMinutes;
-          actualHours = (morningMinutes + afternoonMinutes) / 60;
+          const morningMinutes = breakStartInMinutes - startTimeInMinutes;
+          const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
+          const totalMinutesWorked = morningMinutes + afternoonMinutes;
+          actualHours = totalMinutesWorked / 60;
         }
       } else {
         // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
+        const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
         actualHours = minutesFromStart / 60;
       }
     }
