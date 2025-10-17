@@ -109,17 +109,15 @@ const AdminAttendance = () => {
     const initializeData = async () => {
       await fetchAttendanceData();
       await fetchEmployees();
-      await fetchAllEmployees();
+      await fetchAllEmployees();  // Questo ora carica anche i permessi internamente
       await fetchWorkSchedules();
       await fetchSickToday();
       await fetch104Today();
-      await fetchPermissionHoursForEmployees();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
       setTimeout(() => {
         console.log('🔄 Secondary admin data update...');
-        fetchPermissionHoursForEmployees();
         fetchStats();
       }, 1000);
     };
@@ -129,13 +127,12 @@ const AdminAttendance = () => {
     // Polling ogni 30s per sincronizzazione con dipendenti
     const syncInterval = setInterval(() => {
       console.log('🔄 Admin sync polling...');
-    fetchAttendanceData();
-    fetchEmployees();
-      fetchAllEmployees();
+      fetchAttendanceData();
+      fetchEmployees();
+      fetchAllEmployees();  // Ricarica dipendenti, saldi e permessi insieme
       fetchWorkSchedules();
       fetchSickToday();
       fetch104Today();
-      fetchPermissionHoursForEmployees();
       calculateRealTimeStats();
     }, 30000);
     
@@ -206,8 +203,9 @@ const AdminAttendance = () => {
         setAllEmployees(data);
         console.log('👥 All employees loaded for admin:', data.length, 'total employees');
         
-        // Dopo aver caricato i dipendenti, carica i loro saldi
+        // Dopo aver caricato i dipendenti, carica i loro saldi E i permessi!
         await fetchEmployeeBalancesForList(data);
+        await fetchPermissionHoursForEmployeesList(data);  // Passa direttamente i dati invece di usare state
       }
     } catch (error) {
       console.error('Error fetching all employees:', error);
@@ -283,16 +281,17 @@ const AdminAttendance = () => {
     }
   };
 
-  const fetchPermissionHoursForEmployees = async () => {
+  const fetchPermissionHoursForEmployeesList = async (employeesList) => {
     try {
+      const employees = employeesList || allEmployees;
       const today = new Date().toISOString().split('T')[0];
       console.log('🔄 Fetching permission hours for all employees...');
-      console.log('📊 Total employees to check:', allEmployees.length);
+      console.log('📊 Total employees to check:', employees.length);
       
       // Recupera permessi per ogni dipendente
       const permissionsMap = {};
       
-      for (const emp of allEmployees) {
+      for (const emp of employees) {
         try {
           const response = await apiCall(`/api/leave-requests/permission-hours?userId=${emp.id}&date=${today}`);
           if (response.ok) {
