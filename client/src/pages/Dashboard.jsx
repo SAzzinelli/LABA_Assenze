@@ -606,9 +606,14 @@ const Dashboard = () => {
               </div>
             </h3>
           
-          {adminRealTimeData.length > 0 ? (
-            <div className="space-y-3">
-              {adminRealTimeData.map((person) => {
+          {(() => {
+            const presentNow = adminRealTimeData.filter(person => 
+              person.status === 'working' || person.status === 'on_break'
+            );
+            
+            return presentNow.length > 0 ? (
+              <div className="space-y-3">
+                {presentNow.map((person) => {
                 const isWorking = person.status === 'working';
                 const isOnBreak = person.status === 'on_break';
                 const isCompleted = person.status === 'completed';
@@ -680,9 +685,10 @@ const Dashboard = () => {
           ) : (
             <div className="text-center py-8">
               <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400">Nessuno presente attualmente</p>
+              <p className="text-slate-400">Nessun dipendente presente in questo momento</p>
             </div>
-          )}
+          );
+          })()}
           </div>
 
           {/* Richieste Recenti */}
