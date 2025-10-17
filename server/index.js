@@ -2894,6 +2894,66 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   }
 });
 
+// Get permission hours for a specific user and date
+app.get('/api/leave-requests/permission-hours', authenticateToken, async (req, res) => {
+  try {
+    const { userId, date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Data richiesta mancante' });
+    }
+
+    // Se non è admin, può vedere solo i propri permessi
+    const targetUserId = req.user.role === 'admin' && userId ? userId : req.user.id;
+
+    // Recupera permessi approvati per questo giorno
+    const { data: permissions, error } = await supabase
+      .from('leave_requests')
+      .select('type, hours, permission_type, exit_time, entry_time')
+      .eq('user_id', targetUserId)
+      .eq('status', 'approved')
+      .lte('start_date', date)
+      .gte('end_date', date);
+
+    if (error) {
+      console.error('Permission hours fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    // Calcola le ore totali di permesso per questo giorno
+    let totalPermissionHours = 0;
+    const permissionDetails = [];
+
+    if (permissions && permissions.length > 0) {
+      permissions.forEach(perm => {
+        // Solo per permessi normali (non 104, non malattia, non ferie)
+        if (perm.type === 'permission' && perm.hours && perm.hours > 0) {
+          totalPermissionHours += parseFloat(perm.hours);
+          permissionDetails.push({
+            type: perm.permission_type,
+            hours: perm.hours,
+            exitTime: perm.exit_time,
+            entryTime: perm.entry_time
+          });
+        }
+      });
+    }
+
+    console.log(`📊 Permission hours for user ${targetUserId} on ${date}:`, totalPermissionHours);
+
+    res.json({
+      success: true,
+      date,
+      userId: targetUserId,
+      totalPermissionHours: parseFloat(totalPermissionHours.toFixed(2)),
+      permissions: permissionDetails
+    });
+  } catch (error) {
+    console.error('Permission hours error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Create leave request
 app.post('/api/leave-requests', authenticateToken, async (req, res) => {
   try {

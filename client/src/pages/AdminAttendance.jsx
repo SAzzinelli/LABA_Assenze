@@ -85,6 +85,9 @@ const AdminAttendance = () => {
   // Permessi 104 di oggi
   const [permissions104Today, setPermissions104Today] = useState([]);
   
+  // Permessi con ore (entrata/uscita) per oggi
+  const [permissionsHoursToday, setPermissionsHoursToday] = useState({});
+  
   // Saldi banca ore per tutti i dipendenti
   const [employeeBalances, setEmployeeBalances] = useState({});
 
@@ -110,11 +113,13 @@ const AdminAttendance = () => {
       await fetchWorkSchedules();
       await fetchSickToday();
       await fetch104Today();
+      await fetchPermissionHoursForEmployees();
       await fetchStats();
       
       // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
       setTimeout(() => {
         console.log('🔄 Secondary admin data update...');
+        fetchPermissionHoursForEmployees();
         fetchStats();
       }, 1000);
     };
@@ -130,6 +135,7 @@ const AdminAttendance = () => {
       fetchWorkSchedules();
       fetchSickToday();
       fetch104Today();
+      fetchPermissionHoursForEmployees();
       calculateRealTimeStats();
     }, 30000);
     
@@ -274,6 +280,36 @@ const AdminAttendance = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching 104 permissions:', error);
+    }
+  };
+
+  const fetchPermissionHoursForEmployees = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      console.log('🔄 Fetching permission hours for all employees...');
+      
+      // Recupera permessi per ogni dipendente
+      const permissionsMap = {};
+      
+      for (const emp of allEmployees) {
+        try {
+          const response = await apiCall(`/api/leave-requests/permission-hours?userId=${emp.id}&date=${today}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.totalPermissionHours > 0) {
+              permissionsMap[emp.id] = data.totalPermissionHours;
+              console.log(`🕐 Employee ${emp.firstName} ${emp.lastName}: ${data.totalPermissionHours}h permission`);
+            }
+          }
+        } catch (err) {
+          console.error(`❌ Error fetching permissions for ${emp.id}:`, err);
+        }
+      }
+      
+      setPermissionsHoursToday(permissionsMap);
+      console.log('✅ Permission hours map:', permissionsMap);
+    } catch (error) {
+      console.error('❌ Error fetching permission hours:', error);
     }
   };
 
@@ -659,10 +695,17 @@ const AdminAttendance = () => {
     const [endHour, endMin] = end_time.split(':').map(Number);
     const breakDuration = break_duration || 60;
     
-    // Calcola ore attese totali (SEMPRE dall'orario contrattuale - NON modificato da permessi!)
+    // Calcola ore attese totali dall'orario contrattuale
     const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
     const workMinutes = totalMinutes - breakDuration;
-    const expectedHours = workMinutes / 60;
+    let expectedHours = workMinutes / 60;
+    
+    // Sottrai le ore di permesso approvato per questo dipendente (se esistono)
+    const permissionHours = permissionsHoursToday[record.user_id] || 0;
+    if (permissionHours > 0) {
+      expectedHours = Math.max(0, expectedHours - permissionHours);
+      console.log(`🕐 Ore attese ridotte per permesso: ${workMinutes / 60}h - ${permissionHours}h = ${expectedHours}h`);
+    }
     
     // Calcola ore effettive real-time (stessa logica del dipendente)
     let actualHours = 0;
