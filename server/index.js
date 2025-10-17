@@ -1695,6 +1695,26 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
+    // Recupera permessi approvati per oggi per tutti gli utenti
+    const { data: permissionsToday, error: permError } = await supabase
+      .from('leave_requests')
+      .select('user_id, hours, permission_type')
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    // Crea una mappa user_id -> ore permesso
+    const permissionsMap = {};
+    if (permissionsToday && !permError) {
+      permissionsToday.forEach(perm => {
+        if (perm.hours && perm.hours > 0) {
+          permissionsMap[perm.user_id] = (permissionsMap[perm.user_id] || 0) + parseFloat(perm.hours);
+        }
+      });
+      console.log(`🕐 Permessi oggi:`, permissionsMap);
+    }
+    
     // Calculate real-time attendance for each user
     const currentAttendance = allUsers.map(user => {
       console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
@@ -1731,7 +1751,14 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       // Calculate expected hours
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60;
+      let expectedHours = workMinutes / 60;
+      
+      // Sottrai le ore di permesso approvato per questo utente (se esistono)
+      const permissionHours = permissionsMap[user.id] || 0;
+      if (permissionHours > 0) {
+        expectedHours = Math.max(0, expectedHours - permissionHours);
+        console.log(`🕐 ${user.first_name}: ore attese ridotte da ${workMinutes / 60}h a ${expectedHours}h (permesso: ${permissionHours}h)`);
+      }
       
       // Calculate real-time hours (same logic as employee page)
       let actualHours = 0;
@@ -1801,15 +1828,13 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
-    // Filter to show only those who should be working today and are currently working (not completed)
-    const currentlyWorking = currentAttendance.filter(emp => 
-      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
-    );
+    // Restituisci TUTTI i dipendenti che dovrebbero lavorare oggi (inclusi completed e not_started)
+    const allWorkingToday = currentAttendance.filter(emp => emp.is_working_day);
 
-    console.log(`🔍 Filtered currently working: ${currentlyWorking.length}`);
-    console.log(`🔍 Currently working:`, currentlyWorking.map(emp => `${emp.name}: ${emp.status}`));
+    console.log(`🔍 All employees working today: ${allWorkingToday.length}`);
+    console.log(`🔍 All records:`, allWorkingToday.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h/${emp.expected_hours}h)`));
 
-    res.json(currentlyWorking);
+    res.json(allWorkingToday);
   } catch (error) {
     console.error('Current attendance error:', error);
     res.status(500).json({ error: 'Errore interno del server' });

@@ -575,17 +575,41 @@ const Dashboard = () => {
           {adminRealTimeData.length > 0 ? (
             <div className="space-y-3">
               {adminRealTimeData.map((person) => {
-                const isPresent = person.status === 'working' || person.status === 'on_break';
+                const isWorking = person.status === 'working';
+                const isOnBreak = person.status === 'on_break';
+                const isCompleted = person.status === 'completed';
+                const isNotStarted = person.status === 'not_started';
                 const balanceColor = person.balance_hours > 0 ? 'text-green-400' : 
                                    person.balance_hours < 0 ? 'text-red-400' : 'text-gray-400';
+                
+                // Determina colore badge e icona
+                let badgeColor = 'bg-slate-500';
+                let statusText = 'Sconosciuto';
+                let statusColor = 'text-slate-400';
+                
+                if (isWorking) {
+                  badgeColor = 'bg-green-500';
+                  statusText = 'Lavorando';
+                  statusColor = 'text-green-400';
+                } else if (isOnBreak) {
+                  badgeColor = 'bg-yellow-500';
+                  statusText = 'In pausa';
+                  statusColor = 'text-yellow-400';
+                } else if (isCompleted) {
+                  badgeColor = 'bg-blue-500';
+                  statusText = 'Giornata terminata';
+                  statusColor = 'text-blue-400';
+                } else if (isNotStarted) {
+                  badgeColor = 'bg-slate-500';
+                  statusText = 'Non iniziato';
+                  statusColor = 'text-slate-400';
+                }
                 
                 return (
                   <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                          isPresent ? 'bg-green-500' : 'bg-slate-500'
-                        }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${badgeColor}`}>
                           <span className="text-white font-semibold text-sm">
                             {person.name ? person.name.split(' ').map(n => n[0]).join('') : 'N/A'}
                           </span>
@@ -600,33 +624,18 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        {isPresent ? (
-                          <>
-                            <div className="text-green-400 font-semibold">
-                              {person.status === 'working' ? 'Lavorando' : 
-                               person.status === 'on_break' ? 'In pausa' : 
-                               person.status === 'completed' ? 'Giornata terminata' : 'Presente'}
-                            </div>
-                            <div className="text-slate-400 text-sm">
-                              Ore attese: {person.expected_hours}h
-                            </div>
-                            <div className="text-slate-400 text-sm">
-                              Ore effettive: {person.actual_hours}h
-                            </div>
-                            <div className={`text-sm font-semibold ${balanceColor}`}>
-                              Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-slate-400 font-semibold">
-                              {person.status === 'not_started' ? 'Non iniziato' : 'Non lavorativo'}
-                            </div>
-                            <div className="text-slate-500 text-sm">
-                              {person.is_working_day ? 'Giorno lavorativo' : 'Giorno non lavorativo'}
-                            </div>
-                          </>
-                        )}
+                        <div className={`font-semibold ${statusColor}`}>
+                          {statusText}
+                        </div>
+                        <div className="text-slate-400 text-sm">
+                          Ore attese: {person.expected_hours}h
+                        </div>
+                        <div className="text-slate-400 text-sm">
+                          Ore effettive: {person.actual_hours}h
+                        </div>
+                        <div className={`text-sm font-semibold ${balanceColor}`}>
+                          Saldo: {person.balance_hours > 0 ? '+' : ''}{person.balance_hours}h
+                        </div>
                       </div>
                     </div>
                   </div>
