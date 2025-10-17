@@ -237,16 +237,46 @@ const Dashboard = () => {
       return;
     }
 
-    // I dati da /api/attendance/current sono già calcolati correttamente,
-    // li uso direttamente senza ricalcolare
-    const realTimeData = currentAttendance.map(employee => ({
-      ...employee,
-      is_working_day: employee.is_working_day || true,
-      is_absent: employee.status === 'not_started' && employee.actual_hours === 0
-    }));
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Ricalcola lo status real-time per ogni employee
+    const realTimeData = currentAttendance.map(employee => {
+      // Trova lo schedule per oggi
+      const todaySchedule = workSchedules.find(schedule => 
+        schedule.user_id === employee.user_id && 
+        schedule.day_of_week === now.getDay()
+      );
+
+      let finalStatus = employee.status;
+
+      if (todaySchedule && employee.is_working_day) {
+        const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
+        
+        // Controlla se c'è un permesso di uscita anticipata
+        const permissionEndTime = employee.permission_end_time;
+        const effectiveEndHour = permissionEndTime ? parseInt(permissionEndTime.split(':')[0]) : endHour;
+        const effectiveEndMin = permissionEndTime ? parseInt(permissionEndTime.split(':')[1]) : endMin;
+
+        // Se l'ora attuale è dopo l'ora di fine (considerando permessi)
+        if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
+          // Se ha lavorato, status è completed, altrimenti absent
+          finalStatus = employee.actual_hours > 0 ? 'completed' : 'absent';
+        }
+      }
+
+      console.log(`👤 ${employee.first_name} ${employee.last_name}: status=${employee.status} -> ${finalStatus}, permissionEnd=${employee.permission_end_time}`);
+
+      return {
+        ...employee,
+        status: finalStatus,
+        is_working_day: employee.is_working_day || true,
+        is_absent: finalStatus === 'not_started' && employee.actual_hours === 0
+      };
+    });
     
     console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
-    console.log('🔍 Real-time data:', realTimeData);
     setAdminRealTimeData(realTimeData);
   };
 
