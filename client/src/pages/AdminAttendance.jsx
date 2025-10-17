@@ -637,18 +637,6 @@ const AdminAttendance = () => {
       }
     }
     
-    console.log('🔍 Debug calculateRealTimeHoursForRecord:', {
-      recordUserId: record.user_id,
-      recordDate,
-      today,
-      recordDateObj: recordDateObj.toISOString().split('T')[0],
-      todayDate: todayDate.toISOString().split('T')[0],
-      isToday,
-      isPast,
-      isFuture,
-      recordActualHours: record.actual_hours,
-      recordExpectedHours: record.expected_hours
-    });
     
     // PER GIORNI PASSATI: usa i dati del database
     if (isPast) {
@@ -717,7 +705,6 @@ const AdminAttendance = () => {
     // Trova permessi per questo dipendente
     const permissionData = permissionsHoursToday[record.user_id];
     const permissionHours = permissionData?.hours || 0;
-    console.log(`🔍 Checking permission for user ${record.user_id}:`, permissionHours);
     
     // Trova orari effettivi considerando permessi
     let effectiveEndHour = endHour;
@@ -748,19 +735,15 @@ const AdminAttendance = () => {
     // Calcola ore effettive real-time
     let actualHours = 0;
     
-    console.log(`🔍 DEBUG ${record.user_id}: currentTime=${currentHour}:${currentMinute}, effectiveStart=${effectiveStartHour}:${effectiveStartMin}, effectiveEnd=${effectiveEndHour}:${effectiveEndMin}, breakDuration=${breakDuration}, break_start_time=${break_start_time}`);
-    
     // Se è prima dell'inizio effettivo (considerando late_entry)
     if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
       actualHours = 0;
-      console.log(`⏰ ${record.user_id}: NOT STARTED (before ${effectiveStartHour}:${effectiveStartMin})`);
     }
     // Se è dopo la fine effettiva (considerando early_exit)
     else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
       // Calcola le ore REALMENTE lavorate (da effectiveStart a effectiveEnd)
       const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
       actualHours = effectiveWorkMinutes / 60;
-      console.log(`✅ ${record.user_id} COMPLETED: worked ${actualHours}h (expected: ${expectedHours}h) → balance: ${actualHours - expectedHours}h`);
     }
     // Se è durante l'orario di lavoro
     else {
@@ -786,31 +769,25 @@ const AdminAttendance = () => {
         // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
         const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
         
-        console.log(`🍽️ ${record.user_id}: currentTime=${currentTimeInMinutes}min, breakStart=${breakStartInMinutes}min, breakEnd=${breakEndInMinutes}min, startTime=${startTimeInMinutes}min`);
-        
         if (currentTimeInMinutes < breakStartInMinutes) {
           // Prima della pausa pranzo
           const totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
           actualHours = totalMinutesWorked / 60;
-          console.log(`🌅 ${record.user_id}: BEFORE BREAK - worked ${totalMinutesWorked}min = ${actualHours}h`);
         } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
           // Durante la pausa pranzo
           const totalMinutesWorked = breakStartInMinutes - startTimeInMinutes;
           actualHours = totalMinutesWorked / 60;
-          console.log(`⏸️ ${record.user_id}: ON BREAK - worked ${totalMinutesWorked}min = ${actualHours}h`);
         } else {
           // Dopo la pausa pranzo
           const morningMinutes = breakStartInMinutes - startTimeInMinutes;
           const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
           const totalMinutesWorked = morningMinutes + afternoonMinutes;
           actualHours = totalMinutesWorked / 60;
-          console.log(`🌆 ${record.user_id}: AFTER BREAK - morning ${morningMinutes}min + afternoon ${afternoonMinutes}min = ${totalMinutesWorked}min = ${actualHours}h`);
         }
       } else {
         // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
         const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
         actualHours = minutesFromStart / 60;
-        console.log(`☀️ ${record.user_id}: HALF DAY - worked ${minutesFromStart}min = ${actualHours}h`);
       }
     }
     
@@ -1271,15 +1248,6 @@ const AdminAttendance = () => {
                   } else {
                     // Per dati database, calcola le ore real-time
                     const realTimeData = calculateRealTimeHoursForRecord(record);
-                    console.log('🔍 DisplayData creation for', record.date, ':', {
-                      realTimeData: {
-                        actualHours: realTimeData.actualHours,
-                        expectedHours: realTimeData.expectedHours,
-                        status: realTimeData.status
-                      },
-                      recordActualHours: record.actual_hours,
-                      recordExpectedHours: record.expected_hours
-                    });
                     
                     // Usa i dati del database per giorni passati, real-time per oggi
                     const now = new Date();
@@ -1310,34 +1278,18 @@ const AdminAttendance = () => {
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
                       finalBalanceHours = realTimeData.balanceHours;
-                      console.log(`🔍 Final status for TODAY (${recordDate}):`, {
-                        realTimeDataStatus: realTimeData.status,
-                        finalStatus,
-                        finalActualHours,
-                        finalExpectedHours
-                      });
                     } else if (hasActualData || isPast) {
                       // Giorno passato con dati: usa DB
                       finalActualHours = record.actual_hours || 0;
                       finalExpectedHours = record.expected_hours || 0;
                       finalBalanceHours = record.balance_hours || 0;
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
-                      console.log(`🔍 Final status for PAST (${recordDate}):`, {
-                        finalStatus,
-                        finalActualHours,
-                        finalExpectedHours
-                      });
                     } else {
                       // Fallback
                       finalStatus = realTimeData.status;
                       finalActualHours = realTimeData.actualHours;
                       finalExpectedHours = realTimeData.expectedHours;
                       finalBalanceHours = realTimeData.balanceHours;
-                      console.log(`🔍 Final status for FALLBACK (${recordDate}):`, {
-                        finalStatus,
-                        finalActualHours,
-                        finalExpectedHours
-                      });
                     }
                     
                     displayData = {
