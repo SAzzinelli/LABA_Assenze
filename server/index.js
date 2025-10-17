@@ -4817,38 +4817,111 @@ async function saveHourlyAttendance() {
         
         console.log(`✅ Trovato orario per ${user.first_name}: ${todaySchedule.start_time} - ${todaySchedule.end_time}`);
         
-        // Calcola ore real-time
-        const { start_time, end_time, break_duration } = todaySchedule;
+        // Calcola ore real-time usando la STESSA LOGICA del frontend
+        const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
         const breakDuration = break_duration || 60;
         
-        const totalWorkMinutes = (endHour * 60 + endMin - startHour * 60 - startMin);
-        const hasLunchBreak = totalWorkMinutes > 300;
-        const expectedHours = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+        // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = totalMinutes - breakDuration;
+        const expectedHours = workMinutes / 60; // NON ridurre per permessi!
         
+        // Controlla se ci sono permessi per questo dipendente oggi
+        const { data: permissions, error: permError } = await supabase
+          .from('leave_requests')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('type', 'permission')
+          .eq('status', 'approved')
+          .lte('start_date', today)
+          .gte('end_date', today);
+        
+        // Trova orari effettivi considerando permessi
+        let effectiveEndHour = endHour;
+        let effectiveEndMin = endMin;
+        let effectiveStartHour = startHour;
+        let effectiveStartMin = startMin;
+        
+        if (permissions && permissions.length > 0) {
+          for (const perm of permissions) {
+            if (perm.permission_type === 'early_exit' && perm.exit_time) {
+              const [exitHour, exitMin] = perm.exit_time.split(':').map(Number);
+              effectiveEndHour = exitHour;
+              effectiveEndMin = exitMin;
+              console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${perm.exit_time}`);
+            }
+            if (perm.permission_type === 'late_entry' && perm.entry_time) {
+              const [entryHour, entryMin] = perm.entry_time.split(':').map(Number);
+              effectiveStartHour = entryHour;
+              effectiveStartMin = entryMin;
+              console.log(`🚪 ${user.first_name} ha permesso entrata posticipata alle ${perm.entry_time}`);
+            }
+          }
+        }
+        
+        // Calcola ore effettive real-time
         let actualHours = 0;
         let status = 'not_started';
         
-        if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
+        // Se è prima dell'inizio effettivo (considerando late_entry)
+        if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
           actualHours = 0;
           status = 'not_started';
-        } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-          actualHours = expectedHours;
+        }
+        // Se è dopo la fine effettiva (considerando early_exit)
+        else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
+          // Calcola le ore REALMENTE lavorate (da effectiveStart a effectiveEnd)
+          const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
+          actualHours = effectiveWorkMinutes / 60;
           status = 'completed';
-        } else {
-          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+        }
+        // Se è durante l'orario di lavoro
+        else {
+          // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
+          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
           
           if (hasLunchBreak) {
-            const effectiveWorkMinutes = totalWorkMinutes - breakDuration;
-            if (minutesFromStart <= effectiveWorkMinutes) {
-              actualHours = minutesFromStart / 60;
-              status = 'working';
+            // GIORNATA COMPLETA: usa break_start_time se disponibile, altrimenti 13:00
+            const currentTimeInMinutes = currentHour * 60 + currentMinute;
+            
+            let breakStartInMinutes;
+            if (break_start_time) {
+              const [breakHour, breakMin] = break_start_time.split(':').map(Number);
+              breakStartInMinutes = breakHour * 60 + breakMin;
             } else {
-              actualHours = effectiveWorkMinutes / 60;
+              // Default: 13:00
+              breakStartInMinutes = 13 * 60;
+            }
+            
+            const breakEndInMinutes = breakStartInMinutes + breakDuration;
+            
+            // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
+            const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
+            
+            if (currentTimeInMinutes < breakStartInMinutes) {
+              // Prima della pausa pranzo
+              const totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
+              actualHours = totalMinutesWorked / 60;
+              status = 'working';
+            } else if (currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes) {
+              // Durante la pausa pranzo
+              const totalMinutesWorked = breakStartInMinutes - startTimeInMinutes;
+              actualHours = totalMinutesWorked / 60;
               status = 'on_break';
+            } else {
+              // Dopo la pausa pranzo
+              const morningMinutes = breakStartInMinutes - startTimeInMinutes;
+              const afternoonMinutes = currentTimeInMinutes - breakEndInMinutes;
+              const totalMinutesWorked = morningMinutes + afternoonMinutes;
+              actualHours = totalMinutesWorked / 60;
+              status = 'working';
             }
           } else {
+            // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
+            const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
             actualHours = minutesFromStart / 60;
             status = 'working';
           }
