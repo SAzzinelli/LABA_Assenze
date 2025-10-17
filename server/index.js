@@ -1739,18 +1739,23 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     // Recupera permessi approvati per oggi per tutti gli utenti
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
-      .select('user_id, hours, permission_type')
+      .select('user_id, hours, permission_type, exit_time, entry_time')
       .eq('type', 'permission')
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
     
-    // Crea una mappa user_id -> ore permesso
+    // Crea una mappa user_id -> { ore permesso, orari }
     const permissionsMap = {};
     if (permissionsToday && !permError) {
       permissionsToday.forEach(perm => {
         if (perm.hours && perm.hours > 0) {
-          permissionsMap[perm.user_id] = (permissionsMap[perm.user_id] || 0) + parseFloat(perm.hours);
+          permissionsMap[perm.user_id] = {
+            hours: (permissionsMap[perm.user_id]?.hours || 0) + parseFloat(perm.hours),
+            permission_type: perm.permission_type,
+            exit_time: perm.exit_time || permissionsMap[perm.user_id]?.exit_time,
+            entry_time: perm.entry_time || permissionsMap[perm.user_id]?.entry_time
+          };
         }
       });
       console.log(`🕐 Permessi oggi:`, permissionsMap);
@@ -1825,10 +1830,22 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       let expectedHours = workMinutes / 60;
       
       // Sottrai le ore di permesso approvato per questo utente (se esistono)
-      const permissionHours = permissionsMap[user.id] || 0;
+      const permissionData = permissionsMap[user.id];
+      const permissionHours = permissionData?.hours || 0;
       if (permissionHours > 0) {
         expectedHours = Math.max(0, expectedHours - permissionHours);
         console.log(`🕐 ${user.first_name}: ore attese ridotte da ${workMinutes / 60}h a ${expectedHours}h (permesso: ${permissionHours}h)`);
+      }
+      
+      // Calcola l'orario di fine effettivo considerando i permessi di uscita anticipata
+      let effectiveEndHour = endHour;
+      let effectiveEndMin = endMin;
+      
+      if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
+        const [exitHour, exitMin] = permissionData.exit_time.split(':').map(Number);
+        effectiveEndHour = exitHour;
+        effectiveEndMin = exitMin;
+        console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time}`);
       }
       
       // Calculate real-time hours (same logic as employee page)
@@ -1838,7 +1855,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
         actualHours = 0;
         status = 'not_started';
-      } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
+      } else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
+        // Se ha superato l'orario di fine (o l'orario di uscita del permesso), usa expectedHours
         actualHours = expectedHours;
         status = 'completed';
       } else {
@@ -2436,19 +2454,65 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
 
     const { start_time, end_time, break_duration } = schedule;
     
+    // Recupera permessi approvati per oggi per questo utente
+    const { data: permissionsToday, error: permError } = await supabase
+      .from('leave_requests')
+      .select('hours, permission_type, exit_time, entry_time')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    let permissionData = null;
+    if (permissionsToday && !permError && permissionsToday.length > 0) {
+      // Aggrega i permessi per oggi
+      let totalHours = 0;
+      let exitTime = null;
+      let entryTime = null;
+      let permType = null;
+      
+      permissionsToday.forEach(perm => {
+        totalHours += parseFloat(perm.hours || 0);
+        if (perm.permission_type === 'early_exit' && perm.exit_time) {
+          exitTime = perm.exit_time;
+          permType = 'early_exit';
+        }
+        if (perm.permission_type === 'late_entry' && perm.entry_time) {
+          entryTime = perm.entry_time;
+          permType = 'late_entry';
+        }
+      });
+      
+      permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+    }
+    
     // Calcola ore attese
     const startTime = new Date(`2000-01-01T${start_time}`);
     const endTime = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (endTime - startTime) / (1000 * 60);
     const workMinutes = totalMinutes - (break_duration || 60);
-    const expectedHours = workMinutes / 60;
+    let expectedHours = workMinutes / 60;
+    
+    // Sottrai le ore di permesso dalle ore attese
+    if (permissionData && permissionData.hours > 0) {
+      expectedHours = Math.max(0, expectedHours - permissionData.hours);
+      console.log(`🕐 Ore attese ridotte a ${expectedHours}h (permesso: ${permissionData.hours}h)`);
+    }
+    
+    // Calcola l'orario di fine effettivo considerando i permessi di uscita anticipata
+    let effectiveEndTime = end_time;
+    if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
+      effectiveEndTime = permissionData.exit_time;
+      console.log(`🚪 Permesso uscita anticipata alle ${effectiveEndTime}`);
+    }
 
     // Calcola ore effettive basate sull'orario corrente
     let actualHours = 0;
     let status = 'not_started';
     
     if (currentTime >= start_time) {
-      if (currentTime <= end_time) {
+      if (currentTime <= effectiveEndTime) {
         // Durante l'orario di lavoro
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
         const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
