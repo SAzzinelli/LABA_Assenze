@@ -5005,12 +5005,15 @@ async function saveHourlyAttendance() {
           hasPermissions: permissions && permissions.length > 0
         });
         
-        // FIX GENERALE: Se dipendente senza permessi e giornata completata, deve avere expectedHours
-        if (status === 'completed' && (!permissions || permissions.length === 0)) {
-          // Dipendente senza permessi che ha completato la giornata = ha lavorato le ore attese
+        // FIX GENERALE: Se dipendente senza permessi dopo la fine dell'orario, deve avere expectedHours
+        const isAfterWorkEnd = currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin);
+        
+        if (isAfterWorkEnd && (!permissions || permissions.length === 0)) {
+          // Dipendente senza permessi dopo la fine dell'orario = ha lavorato le ore attese
           if (Math.abs(actualHours - expectedHours) > 0.01) {
-            console.log(`🔧 FIX ${user.first_name}: Correggo actualHours da ${actualHours.toFixed(2)} a ${expectedHours.toFixed(2)} (no permissions, completed)`);
+            console.log(`🔧 FIX ${user.first_name}: Correggo actualHours da ${actualHours.toFixed(2)} a ${expectedHours.toFixed(2)} (no permissions, after work end, status=${status})`);
             actualHours = expectedHours;
+            status = 'completed'; // Forza anche lo status
           }
         }
         
