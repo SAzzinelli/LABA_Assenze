@@ -4817,6 +4817,16 @@ async function saveHourlyAttendance() {
         
         console.log(`✅ Trovato orario per ${user.first_name}: ${todaySchedule.start_time} - ${todaySchedule.end_time}`);
         
+        // DEBUG: Log dettagliato per Simone
+        if (user.first_name === 'Simone') {
+          console.log(`🔍 DEBUG SIMONE - Orario schedule:`, {
+            start_time: todaySchedule.start_time,
+            end_time: todaySchedule.end_time,
+            break_duration: todaySchedule.break_duration,
+            break_start_time: todaySchedule.break_start_time
+          });
+        }
+        
         // Calcola ore real-time usando la STESSA LOGICA del frontend
         const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
@@ -4828,6 +4838,14 @@ async function saveHourlyAttendance() {
         const workMinutes = totalMinutes - breakDuration;
         const expectedHours = workMinutes / 60; // NON ridurre per permessi!
         
+        // DEBUG: Log calcolo ore attese per Simone
+        if (user.first_name === 'Simone') {
+          console.log(`🔍 DEBUG SIMONE - Calcolo ore attese:`, {
+            startHour, startMin, endHour, endMin,
+            totalMinutes, breakDuration, workMinutes, expectedHours
+          });
+        }
+        
         // Controlla se ci sono permessi per questo dipendente oggi
         const { data: permissions, error: permError } = await supabase
           .from('leave_requests')
@@ -4837,6 +4855,15 @@ async function saveHourlyAttendance() {
           .eq('status', 'approved')
           .lte('start_date', today)
           .gte('end_date', today);
+        
+        // DEBUG: Log permessi per Simone
+        if (user.first_name === 'Simone') {
+          console.log(`🔍 DEBUG SIMONE - Permessi trovati:`, {
+            permissionsCount: permissions ? permissions.length : 0,
+            permissions: permissions || [],
+            permError: permError
+          });
+        }
         
         // Trova orari effettivi considerando permessi
         let effectiveEndHour = endHour;
@@ -4861,14 +4888,39 @@ async function saveHourlyAttendance() {
           }
         }
         
+        // DEBUG: Log orari effettivi per Simone
+        if (user.first_name === 'Simone') {
+          console.log(`🔍 DEBUG SIMONE - Orari effettivi:`, {
+            originalStart: `${startHour}:${startMin}`,
+            originalEnd: `${endHour}:${endMin}`,
+            effectiveStart: `${effectiveStartHour}:${effectiveStartMin}`,
+            effectiveEnd: `${effectiveEndHour}:${effectiveEndMin}`,
+            currentTime: `${currentHour}:${currentMinute}`
+          });
+        }
+        
         // Calcola ore effettive real-time
         let actualHours = 0;
         let status = 'not_started';
+        
+        // DEBUG: Log condizioni per Simone
+        if (user.first_name === 'Simone') {
+          console.log(`🔍 DEBUG SIMONE - Controllo condizioni:`, {
+            currentHour, currentMinute,
+            effectiveStartHour, effectiveStartMin,
+            effectiveEndHour, effectiveEndMin,
+            beforeStart: currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin),
+            afterEnd: currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)
+          });
+        }
         
         // Se è prima dell'inizio effettivo (considerando late_entry)
         if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
           actualHours = 0;
           status = 'not_started';
+          if (user.first_name === 'Simone') {
+            console.log(`🔍 DEBUG SIMONE - NOT STARTED: actualHours=0`);
+          }
         }
         // Se è dopo la fine effettiva (considerando early_exit)
         else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
@@ -4876,6 +4928,11 @@ async function saveHourlyAttendance() {
           const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
           actualHours = effectiveWorkMinutes / 60;
           status = 'completed';
+          if (user.first_name === 'Simone') {
+            console.log(`🔍 DEBUG SIMONE - COMPLETED:`, {
+              effectiveWorkMinutes, actualHours, breakDuration
+            });
+          }
         }
         // Se è durante l'orario di lavoro
         else {
@@ -4925,6 +4982,22 @@ async function saveHourlyAttendance() {
             actualHours = minutesFromStart / 60;
             status = 'working';
           }
+        }
+        
+        // DEBUG: Log risultato finale per Simone
+        if (user.first_name === 'Simone') {
+          const balanceHours = actualHours - expectedHours;
+          console.log(`🔍 DEBUG SIMONE - RISULTATO FINALE:`, {
+            actualHours: actualHours.toFixed(2),
+            expectedHours: expectedHours.toFixed(2),
+            balanceHours: balanceHours.toFixed(2),
+            status,
+            willSave: {
+              actual_hours: Math.round(actualHours * 100) / 100,
+              expected_hours: Math.round(expectedHours * 100) / 100,
+              balance_hours: Math.round((actualHours - expectedHours) * 100) / 100
+            }
+          });
         }
         
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
