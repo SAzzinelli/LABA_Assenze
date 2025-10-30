@@ -530,8 +530,8 @@ const Dashboard = () => {
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-slate-400 mt-2">
           {user?.role === 'admin' 
-            ? 'Benvenuto! Ecco un riepilogo delle attività del sistema HR'
-            : <>Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>! La tua dashboard personale con le tue attività</>
+            ? 'Ciao! Ecco un riepilogo delle attività del sistema HR'
+            : <>Ciao, <span className="text-white font-semibold">{user?.firstName}</span>! La tua dashboard personale con le tue attività</>
           }
         </p>
       </div>
