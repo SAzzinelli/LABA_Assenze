@@ -468,7 +468,7 @@ const Employees = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col space-y-1">
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-slate-500/20 text-slate-300 border border-slate-400/30 shadow-sm">
+                      <span className="inline-block px-3 py-1.5 rounded-full text-xs font-medium bg-slate-500/20 text-slate-300 border border-slate-400/30 shadow-sm w-fit">
                         {employee.position}
                       </span>
                       {employee.role === 'supervisor' && (
