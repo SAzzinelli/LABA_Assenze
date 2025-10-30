@@ -345,18 +345,21 @@ const Dashboard = () => {
       }
       
       // Fetch 104 permissions approved (per admin mostrare tutti)
-      const perm104Response = user?.role === 'admin' 
-        ? await apiCall(`/api/permissions-104?status=approved&startDate=${today.toISOString().split('T')[0]}`)
-        : await apiCall(`/api/permissions-104?status=approved&userId=${user?.id}&startDate=${today.toISOString().split('T')[0]}`);
+      const perm104Response = await apiCall(`/api/leave-requests?type=permission_104&status=approved&startDate=${today.toISOString().split('T')[0]}&endDate=${nextMonth.toISOString().split('T')[0]}`);
       if (perm104Response.ok) {
         const perm104Data = await perm104Response.json();
-        perm104Data.forEach(perm => {
+        // Filtra solo gli approvati che non sono ancora passati
+        const approvedPerms = perm104Data.filter(perm => 
+          perm.status === 'approved' && 
+          new Date(perm.startDate) >= today
+        );
+        approvedPerms.forEach(perm => {
           events.push({
-            date: perm.start_date,
-            endDate: perm.end_date,
+            date: perm.startDate,
+            endDate: perm.endDate,
             type: 'permission_104',
             name: 'Permesso 104',
-            user: user?.role === 'admin' ? perm.user_name : undefined,
+            user: user?.role === 'admin' ? perm.user?.name : undefined,
             color: 'purple'
           });
         });
