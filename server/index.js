@@ -1960,13 +1960,16 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
-    // Restituisci TUTTI i dipendenti che dovrebbero lavorare oggi (inclusi completed e not_started)
-    const allWorkingToday = currentAttendance.filter(emp => emp.is_working_day);
+    // Modalità predefinita: restituisci SOLO i presenti ora (working/on_break)
+    // Se necessario, in futuro possiamo aggiungere una query (?includeScheduled=true) per includere anche not_started/completed
+    const presentNow = currentAttendance.filter(emp =>
+      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
+    );
 
-    console.log(`🔍 All employees working today: ${allWorkingToday.length}`);
-    console.log(`🔍 All records:`, allWorkingToday.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h/${emp.expected_hours}h)`));
+    console.log(`🔍 Present now: ${presentNow.length}`);
+    console.log(`🔍 Records:`, presentNow.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h/${emp.expected_hours}h)`));
 
-    res.json(allWorkingToday);
+    res.json(presentNow);
   } catch (error) {
     console.error('Current attendance error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
