@@ -1390,24 +1390,42 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const iso = d.toISOString().split('T')[0];
         const dow = d.getDay();
-        const todaySchedule = schedules.find(s => s.day_of_week === dayToIdx[String(dow)] && s.is_working_day);
-        if (!todaySchedule) continue;
+        const todaySchedule = schedules.find(s => s.day_of_week === dow && s.is_working_day === true);
+        
+        if (!todaySchedule) {
+          console.log(`⏭️ Skip ${iso} (day ${dow}): no working schedule`);
+          continue;
+        }
 
-        const [startHour, startMin] = todaySchedule.start_time.split(':').map(Number);
-        const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
-        const breakDuration = todaySchedule.break_duration || 60;
-        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-        const workMinutes = totalMinutes - breakDuration;
-        const expectedHours = calculateExpectedHoursForSchedule({ start_time: todaySchedule.start_time, end_time: todaySchedule.end_time, break_duration: todaySchedule.break_duration });
+        if (!todaySchedule.start_time || !todaySchedule.end_time) {
+          console.log(`⏭️ Skip ${iso}: schedule without start/end time`);
+          continue;
+        }
 
-        inserts.push({
-          user_id: userId,
-          date: iso,
-          expected_hours: Math.round(expectedHours * 10) / 10,
-          actual_hours: Math.round(expectedHours * 10) / 10,
-          balance_hours: 0,
-          notes: '[Generato dall\'admin - fallback]'
-        });
+        try {
+          const expectedHours = calculateExpectedHoursForSchedule({ 
+            start_time: todaySchedule.start_time, 
+            end_time: todaySchedule.end_time, 
+            break_duration: todaySchedule.break_duration || 60
+          });
+
+          if (!expectedHours || expectedHours <= 0) {
+            console.log(`⏭️ Skip ${iso}: invalid expected hours (${expectedHours})`);
+            continue;
+          }
+
+          inserts.push({
+            user_id: userId,
+            date: iso,
+            expected_hours: Math.round(expectedHours * 10) / 10,
+            actual_hours: Math.round(expectedHours * 10) / 10,
+            balance_hours: 0,
+            notes: '[Generato dall\'admin - fallback]'
+          });
+        } catch (scheduleError) {
+          console.error(`❌ Error processing schedule for ${iso}:`, scheduleError);
+          continue;
+        }
       }
 
       if (inserts.length === 0) {
@@ -1420,11 +1438,16 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
         .select();
 
       if (insError) {
-        console.error('Fallback insert attendance error:', insError);
-        return res.status(500).json({ error: 'Errore nella generazione delle presenze' });
+        console.error('❌ Fallback insert attendance error:', insError);
+        console.error('❌ Error details:', JSON.stringify(insError, null, 2));
+        console.error('❌ Attempting to insert:', inserts.length, 'records');
+        return res.status(500).json({ error: 'Errore nella generazione delle presenze', details: insError.message });
       }
 
       console.log(`✅ ${inserted?.length || 0} presenze generate con fallback`);
+    } else {
+      // RPC function ha funzionato
+      console.log('✅ Presenze generate usando RPC function');
     }
 
     res.json({
@@ -1432,8 +1455,10 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
       message: 'Presenze generate con successo'
     });
   } catch (error) {
-    console.error('Generate attendance error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    console.error('❌ Generate attendance error:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Request body:', JSON.stringify(req.body, null, 2));
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
   }
 });
 
