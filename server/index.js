@@ -526,8 +526,8 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
 
       return {
         id: emp.id,
-        firstName: emp.first_name,
-        lastName: emp.last_name,
+        first_name: emp.first_name,
+        last_name: emp.last_name,
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
         department: emp.department || 'Amministrazione',
@@ -1413,14 +1413,17 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Nessun orario lavorativo nel periodo selezionato' });
       }
 
-      const { error: insError } = await supabase
+      const { data: inserted, error: insError } = await supabase
         .from('attendance')
-        .insert(inserts);
+        .insert(inserts)
+        .select();
 
       if (insError) {
         console.error('Fallback insert attendance error:', insError);
         return res.status(500).json({ error: 'Errore nella generazione delle presenze' });
       }
+
+      console.log(`✅ ${inserted?.length || 0} presenze generate con fallback`);
     }
 
     res.json({
