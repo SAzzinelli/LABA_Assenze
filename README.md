@@ -148,3 +148,7 @@ Vedere `supabase-schema.sql` per la struttura completa del database.
 **Versione**: 2.0.0  
 **Autore**: TestSprite  
 **Licenza**: MIT
+
+---
+
+Aggiornamento: UI resa più responsive per pagine `Dipendenti` e `Presenze` (card su mobile, tabelle su desktop). Endpoint `/api/attendance/current` ora restituisce solo presenti reali (working/on_break).
