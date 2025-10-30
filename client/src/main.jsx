@@ -35,5 +35,5 @@ if (import.meta.env.PROD && import.meta.env.VITE_VERBOSE_LOGS !== 'true') {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
-)// Deploy Mon Sep 29 22:17:20 CEST 2025
+  </React.StrictMode>
+)
