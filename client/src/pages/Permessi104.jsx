@@ -17,6 +17,9 @@ import {
 const Permessi104 = () => {
   const { user, apiCall } = useAuthStore();
   const [requests, setRequests] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [month, setMonth] = useState(new Date().getMonth()+1);
+  const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [alert, setAlert] = useState({ isOpen: false, type: 'success', title: '', message: '' });
@@ -245,22 +248,42 @@ const Permessi104 = () => {
         </div>
       </div>
 
+      {/* Filtri */}
+      <div className="bg-slate-800 rounded-lg p-4 flex flex-col md:flex-row gap-3 mb-4">
+        <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder="Cerca note..." className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
+        <select value={month} onChange={e=>setMonth(parseInt(e.target.value))} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
+          {Array.from({length:12},(_,i)=>i+1).map(m=> <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select value={year} onChange={e=>setYear(parseInt(e.target.value))} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
+          {Array.from({length:5},(_,i)=> new Date().getFullYear()-2+i).map(y=> <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
       {/* Lista Richieste */}
       <div className="bg-slate-800 rounded-lg p-6">
         <h2 className="text-xl font-bold mb-4">Storico Permessi 104</h2>
-        
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
-        ) : requests.length === 0 ? (
+        ) : requests.filter(r=>{
+              const d=new Date(r.startDate);
+              const matchesMonth=(d.getMonth()+1)===month && d.getFullYear()===year;
+              const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
+              return matchesMonth && matchesSearch;
+            }).length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="h-16 w-16 mx-auto text-slate-600 mb-4" />
             <p className="text-slate-400">Nessun permesso 104 richiesto</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {requests.map((request) => (
+            {requests.filter(r=>{
+                const d=new Date(r.startDate);
+                const matchesMonth=(d.getMonth()+1)===month && d.getFullYear()===year;
+                const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesMonth && matchesSearch;
+              }).map((request) => (
               <div key={request.id} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

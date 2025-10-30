@@ -264,11 +264,17 @@ const Employees = () => {
     });
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [only104, setOnly104] = useState(false);
+
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesDept = departmentFilter ? (emp.department || '').toLowerCase().includes(departmentFilter.toLowerCase()) : true;
+    const matches104 = only104 ? emp.has104 === true : true;
+    return matchesSearch && matchesDept && matches104;
+  });
 
   if (user?.role !== 'admin' && user?.role !== 'supervisor') {
     return (
@@ -323,11 +329,23 @@ const Employees = () => {
               className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
+          <button onClick={() => setFiltersOpen(v => !v)} className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
             <Filter className="h-5 w-5 mr-2" />
             Filtri
           </button>
         </div>
+        {filtersOpen && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm text-slate-300 mb-1">Reparto</label>
+              <input value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Es. Amministrazione" />
+            </div>
+            <label className="flex items-center gap-2 mt-2 sm:mt-7">
+              <input type="checkbox" checked={only104} onChange={e=>setOnly104(e.target.checked)} className="h-4 w-4" />
+              <span className="text-slate-300 text-sm">Solo beneficiari 104</span>
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Employees - Responsive: cards on mobile, table on md+ */}

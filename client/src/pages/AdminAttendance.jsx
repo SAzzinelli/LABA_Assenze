@@ -1087,7 +1087,6 @@ const AdminAttendance = () => {
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Hanno Lavorato Oggi</p>
                 <p className="text-2xl font-bold text-white">{stats.workedToday}</p>
-                <p className="text-xs text-slate-500 mt-1">Ore effettive &gt; 0</p>
               </div>
             </div>
           </div>
@@ -1100,7 +1099,6 @@ const AdminAttendance = () => {
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Attualmente Presenti</p>
                 <p className="text-2xl font-bold text-white">{stats.currentlyPresent}</p>
-                <p className="text-xs text-slate-500 mt-1">Nell'orario di lavoro</p>
               </div>
             </div>
           </div>
@@ -1113,7 +1111,6 @@ const AdminAttendance = () => {
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Assenti Oggi</p>
                 <p className="text-2xl font-bold text-white">{stats.absentToday}</p>
-                <p className="text-xs text-slate-500 mt-1">Dovevano lavorare</p>
               </div>
             </div>
           </div>
@@ -1208,7 +1205,7 @@ const AdminAttendance = () => {
                       <option value="">Tutti i dipendenti</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName}
+                      {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
                     </option>
                   ))}
                 </select>
