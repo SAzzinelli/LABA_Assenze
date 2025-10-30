@@ -4134,40 +4134,19 @@ app.get('/api/holidays', authenticateToken, async (req, res) => {
     const { data, error } = await supabase
       .from('holidays')
       .select('*')
-      .eq('year', parseInt(year))
+      .gte('date', `${year}-01-01`)
+      .lte('date', `${year}-12-31`)
       .order('date');
 
     if (error) {
       console.error('Holidays fetch error:', error);
       // Se la tabella non esiste o ha errori, restituisci giorni festivi di default
-      const defaultHolidays = [
-        { id: '1', name: 'Capodanno', date: `${year}-01-01`, year: parseInt(year), type: 'national' },
-        { id: '2', name: 'Epifania', date: `${year}-01-06`, year: parseInt(year), type: 'national' },
-        { id: '3', name: 'Festa del Lavoro', date: `${year}-05-01`, year: parseInt(year), type: 'national' },
-        { id: '4', name: 'Festa della Repubblica', date: `${year}-06-02`, year: parseInt(year), type: 'national' },
-        { id: '5', name: 'Ferragosto', date: `${year}-08-15`, year: parseInt(year), type: 'national' },
-        { id: '6', name: 'Tutti i Santi', date: `${year}-11-01`, year: parseInt(year), type: 'national' },
-        { id: '7', name: 'Immacolata Concezione', date: `${year}-12-08`, year: parseInt(year), type: 'national' },
-        { id: '8', name: 'Natale', date: `${year}-12-25`, year: parseInt(year), type: 'national' },
-        { id: '9', name: 'Santo Stefano', date: `${year}-12-26`, year: parseInt(year), type: 'national' }
-      ];
-      return res.json(defaultHolidays);
+      return res.json(getDefaultHolidays(year));
     }
 
     // Se non ci sono dati per l'anno richiesto, restituisci i default
     if (!data || data.length === 0) {
-      const defaultHolidays = [
-        { id: '1', name: 'Capodanno', date: `${year}-01-01`, year: parseInt(year), type: 'national' },
-        { id: '2', name: 'Epifania', date: `${year}-01-06`, year: parseInt(year), type: 'national' },
-        { id: '3', name: 'Festa del Lavoro', date: `${year}-05-01`, year: parseInt(year), type: 'national' },
-        { id: '4', name: 'Festa della Repubblica', date: `${year}-06-02`, year: parseInt(year), type: 'national' },
-        { id: '5', name: 'Ferragosto', date: `${year}-08-15`, year: parseInt(year), type: 'national' },
-        { id: '6', name: 'Tutti i Santi', date: `${year}-11-01`, year: parseInt(year), type: 'national' },
-        { id: '7', name: 'Immacolata Concezione', date: `${year}-12-08`, year: parseInt(year), type: 'national' },
-        { id: '8', name: 'Natale', date: `${year}-12-25`, year: parseInt(year), type: 'national' },
-        { id: '9', name: 'Santo Stefano', date: `${year}-12-26`, year: parseInt(year), type: 'national' }
-      ];
-      return res.json(defaultHolidays);
+      return res.json(getDefaultHolidays(year));
     }
 
     res.json(data);
@@ -4176,6 +4155,43 @@ app.get('/api/holidays', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
+
+// Funzione per ottenere festività di default per anno
+function getDefaultHolidays(year) {
+  const holidays2025 = [
+    { id: '1', name: 'Capodanno', date: '2025-01-01', is_national: true, is_paid: true },
+    { id: '2', name: 'Epifania', date: '2025-01-06', is_national: true, is_paid: true },
+    { id: '3', name: 'Pasqua', date: '2025-04-20', is_national: true, is_paid: true },
+    { id: '4', name: 'Pasquetta', date: '2025-04-21', is_national: true, is_paid: true },
+    { id: '5', name: 'Festa della Liberazione', date: '2025-04-25', is_national: true, is_paid: true },
+    { id: '6', name: 'Festa del Lavoro', date: '2025-05-01', is_national: true, is_paid: true },
+    { id: '7', name: 'Festa della Repubblica', date: '2025-06-02', is_national: true, is_paid: true },
+    { id: '8', name: 'Ferragosto', date: '2025-08-15', is_national: true, is_paid: true },
+    { id: '9', name: 'Tutti i Santi', date: '2025-11-01', is_national: true, is_paid: true },
+    { id: '10', name: 'Immacolata Concezione', date: '2025-12-08', is_national: true, is_paid: true },
+    { id: '11', name: 'Natale', date: '2025-12-25', is_national: true, is_paid: true },
+    { id: '12', name: 'Santo Stefano', date: '2025-12-26', is_national: true, is_paid: true }
+  ];
+
+  const holidays2026 = [
+    { id: '13', name: 'Capodanno', date: '2026-01-01', is_national: true, is_paid: true },
+    { id: '14', name: 'Epifania', date: '2026-01-06', is_national: true, is_paid: true },
+    { id: '15', name: 'Carnevale', date: '2026-02-17', is_national: true, is_paid: true },
+    { id: '16', name: 'Pasqua', date: '2026-04-05', is_national: true, is_paid: true },
+    { id: '17', name: 'Pasquetta', date: '2026-04-06', is_national: true, is_paid: true },
+    { id: '18', name: 'Festa della Liberazione', date: '2026-04-25', is_national: true, is_paid: true },
+    { id: '19', name: 'Festa del Lavoro', date: '2026-05-01', is_national: true, is_paid: true },
+    { id: '20', name: 'Festa della Repubblica', date: '2026-06-02', is_national: true, is_paid: true },
+    { id: '21', name: 'Ferragosto', date: '2026-08-15', is_national: true, is_paid: true },
+    { id: '22', name: 'Tutti i Santi', date: '2026-11-01', is_national: true, is_paid: true },
+    { id: '23', name: 'Immacolata Concezione', date: '2026-12-08', is_national: true, is_paid: true },
+    { id: '24', name: 'Natale', date: '2026-12-25', is_national: true, is_paid: true },
+    { id: '25', name: 'Santo Stefano', date: '2026-12-26', is_national: true, is_paid: true },
+    { id: '26', name: 'San Silvestro', date: '2026-12-31', is_national: true, is_paid: true }
+  ];
+
+  return year === 2025 ? holidays2025 : year === 2026 ? holidays2026 : holidays2025;
+}
 
 // Get holidays calendar for month
 app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
