@@ -27,11 +27,23 @@ function formatHours(hours) {
   return minutes === 0 ? `${whole}h` : `${whole}h ${minutes}m`;
 }
 
+// Expected hours from a work_schedules row
+function calculateExpectedHoursForSchedule(schedule) {
+  if (!schedule || !schedule.start_time || !schedule.end_time) return 0;
+  const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+  const [endHour, endMin] = schedule.end_time.split(':').map(Number);
+  const breakDuration = schedule.break_duration || 60; // minutes
+  const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+  const workMinutes = totalMinutes - breakDuration;
+  return workMinutes / 60;
+}
+
 module.exports = {
   CONTRACT_TYPES,
   calculateWeeklyHours,
   getDailyHoursForDay,
   formatHours,
+  calculateExpectedHoursForSchedule,
 };
 
 

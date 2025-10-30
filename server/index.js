@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
+const { calculateExpectedHoursForSchedule } = require('./utils/hoursCalculation');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const WebSocketManager = require('./websocket');
@@ -1397,7 +1398,7 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
         const breakDuration = todaySchedule.break_duration || 60;
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
-        const expectedHours = workMinutes / 60;
+        const expectedHours = calculateExpectedHoursForSchedule({ start_time: todaySchedule.start_time, end_time: todaySchedule.end_time, break_duration: todaySchedule.break_duration });
 
         inserts.push({
           user_id: userId,
@@ -1895,7 +1896,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       // Calculate expected hours (ORE CONTRATTUALI - sempre fisse)
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60; // NON modificare per permessi early_exit/late_entry!
+      const expectedHours = calculateExpectedHoursForSchedule({ start_time: start_time, end_time: end_time, break_duration }); // NON modificare per permessi early_exit/late_entry!
       
       // Controlla se c'è un permesso
       const permissionData = permissionsMap[user.id];
@@ -2582,7 +2583,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     const endTime = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (endTime - startTime) / (1000 * 60);
     const workMinutes = totalMinutes - (break_duration || 60);
-    const expectedHours = workMinutes / 60; // NON ridurre per permessi early_exit/late_entry!
+    const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration }); // NON ridurre per permessi early_exit/late_entry!
     
     // Calcola orari effettivi considerando i permessi
     let effectiveStartTime = start_time;
@@ -2698,7 +2699,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     const endTime = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (endTime - startTime) / (1000 * 60); // Minuti totali (9 ore = 540 min)
     const workMinutes = totalMinutes - (break_duration || 60); // Sottrai pausa (540 - 60 = 480 min)
-    const expectedHours = workMinutes / 60; // Converti in ore (480/60 = 8h)
+    const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
 
     // Calcola ore effettive basate sull'orario corrente
     let actualHours = 0;
@@ -4898,7 +4899,7 @@ async function saveHourlyAttendance() {
         // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
-        const expectedHours = workMinutes / 60; // NON ridurre per permessi!
+        const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration }); // NON ridurre per permessi!
         
         // DEBUG: Log calcolo ore attese per Simone
         if (user.first_name === 'Simone') {
