@@ -601,57 +601,51 @@ const Vacation = () => {
       {/* Vacation Balance - Hours Based - Solo per dipendenti */}
       {user?.role !== 'admin' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Totale Ore</h3>
             <Clock className="h-8 w-8 text-blue-400" />
           </div>
-          <p className="text-3xl font-bold text-blue-400">{formatHours(vacationBalance.totalHours)}</p>
+          <p className="text-3xl font-bold text-blue-400">ND</p>
           <p className="text-slate-400 text-sm">Ore ferie annuali</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ {vacationBalance.totalDays.toFixed(1)} giorni</p>
-            {vacationBalance.bonusHours > 0 && (
-              <p>Bonus: +{formatHours(vacationBalance.bonusHours)}</p>
-            )}
-            {vacationBalance.has104 && (
-              <p className="text-amber-400">+ Legge 104</p>
-            )}
+            <p>≈ ND giorni</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Ore Utilizzate</h3>
             <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
-          <p className="text-3xl font-bold text-green-400">{formatHours(vacationBalance.usedHours)}</p>
+          <p className="text-3xl font-bold text-green-400">ND</p>
           <p className="text-slate-400 text-sm">Ferie già godute</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ {vacationBalance.usedDays.toFixed(1)} giorni</p>
+            <p>≈ ND giorni</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">Ore Rimanenti</h3>
             <Sun className="h-8 w-8 text-yellow-400" />
           </div>
-          <p className="text-3xl font-bold text-yellow-400">{formatHours(vacationBalance.remainingHours)}</p>
+          <p className="text-3xl font-bold text-yellow-400">ND</p>
           <p className="text-slate-400 text-sm">Disponibili per richieste</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ {vacationBalance.remainingDays.toFixed(1)} giorni</p>
+            <p>≈ ND giorni</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">In Attesa</h3>
             <AlertCircle className="h-8 w-8 text-orange-400" />
           </div>
-          <p className="text-3xl font-bold text-orange-400">{formatHours(vacationBalance.pendingHours)}</p>
+          <p className="text-3xl font-bold text-orange-400">ND</p>
           <p className="text-slate-400 text-sm">Richieste pendenti</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ {vacationBalance.pendingDays.toFixed(1)} giorni</p>
+            <p>≈ ND giorni</p>
           </div>
         </div>
       </div>
