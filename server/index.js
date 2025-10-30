@@ -5447,3 +5447,45 @@ if (process.env.NODE_ENV === 'production') {
     originalLog(...args);
   };
 }
+
+// Get total hours bank balance for multiple users (admin only)
+app.get('/api/attendance/total-balances', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // optional CSV of userIds: ?userIds=a,b,c
+    const userIdsParam = req.query.userIds;
+    const shouldFilter = !!userIdsParam;
+    const userIds = shouldFilter ? userIdsParam.split(',').map(s => s.trim()).filter(Boolean) : null;
+
+    let query = supabase
+      .from('attendance')
+      .select('user_id, balance_hours');
+
+    if (shouldFilter && userIds && userIds.length > 0) {
+      query = query.in('user_id', userIds);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Total balances fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
+    }
+
+    // Aggregate in memory (Supabase JS lacks groupBy client side)
+    const totals = {};
+    for (const row of data || []) {
+      const uid = row.user_id;
+      const bal = row.balance_hours || 0;
+      totals[uid] = (totals[uid] || 0) + bal;
+    }
+
+    res.json({ success: true, balances: totals });
+  } catch (error) {
+    console.error('Total balances error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});

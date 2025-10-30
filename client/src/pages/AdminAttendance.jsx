@@ -219,23 +219,16 @@ const AdminAttendance = () => {
   const fetchEmployeeBalancesForList = async (employees) => {
     try {
       console.log('🔄 Fetching total balances for all employees...');
-      const balances = {};
-      
-      // Carica il saldo per ogni dipendente
-      for (const emp of employees) {
-        console.log(`💰 Fetching balance for ${emp.first_name} ${emp.last_name} (ID: ${emp.id})`);
-        const response = await apiCall(`/api/attendance/total-balance?userId=${emp.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          balances[emp.id] = data.totalBalanceHours || 0;
-          console.log(`💰 Balance for ${emp.first_name}: ${data.totalBalanceHours}h`);
-        } else {
-          console.error(`❌ Failed to fetch balance for ${emp.first_name}:`, response.status);
-        }
+      const ids = employees.map(e => e.id).join(',');
+      const response = await apiCall(`/api/attendance/total-balances?userIds=${ids}`);
+      if (response.ok) {
+        const data = await response.json();
+        const balances = data.balances || {};
+        console.log('💰 Employee balances loaded:', balances);
+        setEmployeeBalances(balances);
+      } else {
+        console.error('❌ Failed to fetch batch balances:', response.status);
       }
-      
-      console.log('💰 Employee balances loaded:', balances);
-      setEmployeeBalances(balances);
     } catch (error) {
       console.error('❌ Error fetching employee balances:', error);
     }
