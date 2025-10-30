@@ -1,17 +1,38 @@
 import React from 'react';
-import { Calculator, Clock, Users, Heart, Plane, AlertTriangle, Info } from 'lucide-react';
+import { Calculator, Clock, Users, Heart, Plane, AlertTriangle, Info, DollarSign, TrendingUp, TrendingDown, Activity, Calendar } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 
 const MonteOreCalculator = ({ user, workSchedule }) => {
   const { apiCall } = useAuthStore();
   const [leaveBalances, setLeaveBalances] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [balanceHistory, setBalanceHistory] = React.useState([]);
+  const [currentBalance, setCurrentBalance] = React.useState(0);
 
-  // Carica saldi ferie dal database
+  // Carica saldi ferie e banca ore dal database
   React.useEffect(() => {
-    const loadLeaveBalances = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
+        
+        // Carica balance totale
+        if (user?.id) {
+          const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${user.id}`);
+          if (balanceResponse.ok) {
+            const balanceData = await balanceResponse.json();
+            const balance = balanceData.balances[user.id] || 0;
+            setCurrentBalance(balance);
+          }
+          
+          // Carica history recente (ultimi 10 record)
+          const historyResponse = await apiCall(`/api/attendance?userId=${user.id}&limit=10`);
+          if (historyResponse.ok) {
+            const historyData = await historyResponse.json();
+            setBalanceHistory(historyData || []);
+          }
+        }
+        
+        // Carica saldi ferie
         const response = await apiCall('/api/leave-balances?year=2025');
         if (response.ok) {
           const data = await response.json();
@@ -45,14 +66,14 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           setLeaveBalances(getMockLeaveBalances());
         }
       } catch (error) {
-        console.error('Error loading leave balances:', error);
+        console.error('Error loading balances:', error);
         setLeaveBalances(getMockLeaveBalances());
       } finally {
         setLoading(false);
       }
     };
 
-    loadLeaveBalances();
+    loadData();
   }, [user]);
 
   // Dati mock per fallback
@@ -215,13 +236,102 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const overtime = calculateOvertime();
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-        <Calculator className="h-6 w-6 mr-3 text-indigo-400" />
-        Monte Ore e Calcoli
-      </h3>
+    <div className="space-y-6">
+      {/* Banca Ore Attuale - In evidenza */}
+      <div className="bg-slate-700 rounded-lg p-6">
+        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <DollarSign className="h-5 w-5 mr-2 text-indigo-400" />
+          Banca Ore Attuale
+        </h4>
+        <div className="flex items-center justify-center py-8">
+          <div className={`text-6xl font-bold ${
+            currentBalance > 0 
+              ? 'text-green-400' 
+              : currentBalance < 0 
+                ? 'text-red-400' 
+                : 'text-slate-400'
+          }`}>
+            {currentBalance > 0 ? '+' : ''}
+            {Math.floor(currentBalance)}
+            <span className="text-4xl">h</span>
+            {Math.abs(Math.round((currentBalance % 1) * 60))}
+            <span className="text-3xl">m</span>
+          </div>
+        </div>
+        <div className="text-center mt-4">
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+            currentBalance > 0 
+              ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+              : currentBalance < 0 
+                ? 'bg-red-500/20 text-red-300 border border-red-400/30'
+                : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+          }`}>
+            {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
+            {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
+            {currentBalance === 0 ? 'In pari' : currentBalance > 0 ? 'In credito' : 'In debito'}
+          </span>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Ultime Fluttuazioni */}
+      <div className="bg-slate-700 rounded-lg p-6">
+        <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Activity className="h-5 w-5 mr-2 text-amber-400" />
+          Ultime Fluttuazioni
+        </h4>
+        {balanceHistory.length > 0 ? (
+          <div className="space-y-3">
+            {balanceHistory.map((record, index) => (
+              <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 text-slate-400 mr-3" />
+                  <div>
+                    <p className="text-white font-medium">
+                      {new Date(record.date).toLocaleDateString('it-IT', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                    <p className="text-slate-400 text-sm">
+                      Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-lg font-bold ${
+                    record.balance_hours > 0 
+                      ? 'text-green-400' 
+                      : record.balance_hours < 0 
+                        ? 'text-red-400' 
+                        : 'text-slate-400'
+                  }`}>
+                    {record.balance_hours > 0 ? '+' : ''}
+                    {Math.floor(record.balance_hours || 0)}h {Math.round(Math.abs(((record.balance_hours || 0) % 1) * 60))}m
+                  </p>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-400">
+            <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>Nessuna fluttuazione registrata</p>
+          </div>
+        )}
+      </div>
+
+      {/* Calcoli e Dettagli */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+          <Calculator className="h-6 w-6 mr-3 text-indigo-400" />
+          Calcoli e Dettagli
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Ore Settimanali */}
         <div className="bg-slate-700 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">

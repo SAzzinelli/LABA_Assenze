@@ -16,7 +16,11 @@ import {
   CheckSquare,
   Square,
   MapPin,
-  FileText
+  FileText,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Activity
 } from 'lucide-react';
 import HourPicker from '../components/HourPicker';
 import MonteOreCalculator from '../components/MonteOreCalculator';
@@ -399,7 +403,7 @@ const Profile = () => {
   const tabs = [
     { id: 'personal', name: 'Informazioni Personali', icon: User },
     { id: 'schedule', name: 'Orario di Lavoro', icon: Clock },
-    { id: 'monteore', name: 'Monte Ore', icon: Clock }
+    { id: 'balance', name: 'Banca Ore', icon: Clock }
   ];
 
   const dayNames = {
@@ -871,10 +875,10 @@ const Profile = () => {
     </div>
   );
 
-  const renderMonteOreTab = () => (
+  const renderBalanceTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">Monte Ore e Calcoli</h3>
+        <h3 className="text-xl font-bold text-white">Banca Ore</h3>
       </div>
       <MonteOreCalculator user={user} workSchedule={workSchedule} />
     </div>
@@ -884,7 +888,7 @@ const Profile = () => {
     switch (activeTab) {
       case 'personal': return renderPersonalTab();
       case 'schedule': return renderScheduleTab();
-      case 'monteore': return renderMonteOreTab();
+      case 'balance': return renderBalanceTab();
       default: return renderPersonalTab();
     }
   };
