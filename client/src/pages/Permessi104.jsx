@@ -171,7 +171,7 @@ const Permessi104 = () => {
             disabled={permissions104Status.remaining === 0}
           >
             <Plus className="h-5 w-5 mr-2" />
-            Nuova Richiesta
+            Aggiungi +
           </button>
         </div>
       </div>

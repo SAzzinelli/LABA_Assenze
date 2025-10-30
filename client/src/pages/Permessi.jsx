@@ -573,8 +573,7 @@ const LeaveRequests = () => {
                 className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
               >
                 <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                <span className="sm:hidden ml-1">Aggiungi</span>
+                Aggiungi +
               </button>
             </div>
           )}
@@ -584,7 +583,7 @@ const LeaveRequests = () => {
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Nuova Richiesta
+              Aggiungi +
             </button>
           )}
         </div>

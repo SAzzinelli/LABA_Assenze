@@ -91,7 +91,7 @@ const AdminPermessi104 = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Aggiungi Permesso 104
+            Aggiungi +
           </button>
         </div>
       </div>
