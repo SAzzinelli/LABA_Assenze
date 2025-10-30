@@ -1338,8 +1338,6 @@ const AdminAttendance = () => {
                   <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Stato</th>
                   <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Attese</th>
                   <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Effettive</th>
-                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Saldo</th>
-                  <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Banca</th>
                   <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Azioni</th>
                 </tr>
               </thead>
@@ -1459,35 +1457,6 @@ const AdminAttendance = () => {
                           {formatHours(displayData.actualHours)}
                       </span>
                     </td>
-                      <td className="py-3 px-2 sm:py-4 sm:px-4">
-                        <span className={`font-mono font-semibold ${
-                          displayData.balanceHours > 0 
-                            ? 'text-green-400' 
-                            : displayData.balanceHours < 0 
-                              ? 'text-red-400' 
-                              : 'text-slate-400'
-                        }`}>
-                          {displayData.balanceHours > 0 ? '+' : ''}{formatHours(displayData.balanceHours)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 sm:py-4 sm:px-4">
-                        {(() => {
-                          const userId = record.user_id || record.id;
-                          const totalBalance = employeeBalances[userId] || 0;
-                          
-                          return (
-                            <span className={`font-mono font-bold text-lg ${
-                              totalBalance > 0 
-                                ? 'text-green-400' 
-                                : totalBalance < 0 
-                                  ? 'text-red-400' 
-                                  : 'text-slate-400'
-                            }`}>
-                              {totalBalance > 0 ? '+' : ''}{formatHours(totalBalance)}
-                            </span>
-                          );
-                        })()}
-                      </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">
                         <button
