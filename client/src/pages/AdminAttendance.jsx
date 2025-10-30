@@ -1012,12 +1012,33 @@ const AdminAttendance = () => {
     } else {
       // Per "Cronologia" usa attendanceHistory - SOLO giorni passati e oggi
       const today = new Date().toISOString().split('T')[0];
-      data = attendanceHistory.filter(record => record.date <= today);
+      const todayDateObj = new Date(today);
       
-      // Aggiungi dati real-time per oggi se non ci sono record nel database
+      // Ottieni il mese/anno corrente
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      // Filtra SOLO record con data <= oggi E che corrispondono al mese/anno selezionato
+      data = attendanceHistory.filter(record => {
+        const recordDateObj = new Date(record.date);
+        const recordMonth = recordDateObj.getMonth() + 1;
+        const recordYear = recordDateObj.getFullYear();
+        
+        // Verifica che la data sia <= oggi
+        const isPastOrToday = recordDateObj <= todayDateObj;
+        
+        // Verifica che mese/anno del record corrispondano a quelli selezionati
+        const matchesMonth = selectedMonth === recordMonth;
+        const matchesYear = selectedYear === recordYear;
+        
+        return isPastOrToday && matchesMonth && matchesYear;
+      });
+      
+      // Aggiungi dati real-time per oggi SOLO se il mese/anno selezionato è quello corrente
+      const isCurrentPeriod = selectedMonth === currentMonth && selectedYear === currentYear;
       const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
       
-      if (!hasTodayInHistory && allEmployees.length > 0) {
+      if (!hasTodayInHistory && allEmployees.length > 0 && isCurrentPeriod) {
         // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
         const todayRealTimeData = allEmployees
           .filter(emp => emp.role !== 'admin') // Escludi admin
