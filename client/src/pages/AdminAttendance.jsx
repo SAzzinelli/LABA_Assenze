@@ -26,7 +26,8 @@ import {
   TrendingDown,
   Minus,
   Clock,
-  Accessibility
+  Accessibility,
+  Trash2
 } from 'lucide-react';
 
 const AdminAttendance = () => {
@@ -58,12 +59,11 @@ const AdminAttendance = () => {
   // Stati per editing
   const [editingRecord, setEditingRecord] = useState(null);
   const [editForm, setEditForm] = useState({
-    actual_hours: 0,
-    is_overtime: false,
-    is_early_departure: false,
-    is_late_arrival: false,
+    actual_hours: '0:00',
     notes: ''
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
 
   // Stati per generazione presenze
   const [generateForm, setGenerateForm] = useState({
@@ -848,26 +848,69 @@ const AdminAttendance = () => {
     return 'text-gray-600 bg-gray-50 border-gray-200';
   };
 
+  // Funzione per convertire ore decimali in formato HH:MM
+  const hoursToTime = (hours) => {
+    if (!hours && hours !== 0) return '0:00';
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}:${String(m).padStart(2, '0')}`;
+  };
+
+  // Funzione per convertire formato HH:MM in ore decimali
+  const timeToHours = (timeStr) => {
+    if (!timeStr || timeStr === '') return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return h + (m || 0) / 60;
+  };
+
   const handleEditRecord = (record) => {
     setEditingRecord(record);
     setEditForm({
-      actual_hours: record.actual_hours || record.expected_hours || 0,
-      is_overtime: record.is_overtime || false,
-      is_early_departure: record.is_early_departure || false,
-      is_late_arrival: record.is_late_arrival || false,
+      actual_hours: hoursToTime(record.actual_hours || record.expected_hours || 0),
       notes: record.notes || ''
     });
     setShowEditModal(true);
   };
 
+  const handleDeleteRecord = async (record) => {
+    try {
+      const response = await apiCall(`/api/attendance/${record.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert('Record eliminato con successo!');
+        setShowDeleteConfirm(false);
+        setRecordToDelete(null);
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante l\'eliminazione');
+      }
+    } catch (error) {
+      console.error('Error deleting attendance:', error);
+      alert('Errore durante l\'eliminazione');
+    }
+  };
+
   const handleSaveEdit = async () => {
     try {
+      // Converti ore in formato HH:MM in ore decimali
+      const actualHoursDecimal = timeToHours(editForm.actual_hours);
+      
       const response = await apiCall(`/api/attendance/${editingRecord.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify({
+          actual_hours: actualHoursDecimal,
+          notes: editForm.notes
+        })
       });
 
       if (response.ok) {
@@ -1439,6 +1482,21 @@ const AdminAttendance = () => {
                           <Edit3 className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => {
+                            setRecordToDelete(record);
+                            setShowDeleteConfirm(true);
+                          }}
+                          disabled={record.is_realtime}
+                          className={`p-2 rounded-lg transition-colors ${
+                            record.is_realtime 
+                              ? 'text-slate-500 cursor-not-allowed opacity-50' 
+                              : 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
+                          }`}
+                          title={record.is_realtime ? "Dati real-time non eliminabili" : "Elimina record"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleViewAttendanceDetails(record)}
                           className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
                           title="Visualizza dettagli presenze"
@@ -1488,12 +1546,24 @@ const AdminAttendance = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Ore Effettive</label>
                   <input
-                    type="number"
-                    step="0.25"
+                    type="text"
+                    pattern="[0-9]{1,2}:[0-5][0-9]"
                     value={editForm.actual_hours}
-                    onChange={(e) => setEditForm({...editForm, actual_hours: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Permetti solo numeri e due punti
+                      if (value === '' || /^\d{0,2}:?\d{0,2}$/.test(value.replace(':', ''))) {
+                        // Aggiungi automaticamente i due punti dopo 2 cifre
+                        if (value.length === 2 && !value.includes(':')) {
+                          value = value + ':';
+                        }
+                        setEditForm({...editForm, actual_hours: value});
+                      }
+                    }}
+                    placeholder="0:00"
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                  <p className="text-xs text-slate-400 mt-1">Formato: HH:MM (es. 8:30 per 8 ore e 30 minuti)</p>
                 </div>
                 
                 <div>
@@ -1505,38 +1575,6 @@ const AdminAttendance = () => {
                     rows="3"
                     placeholder="Aggiungi note..."
                   />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={editForm.is_overtime}
-                      onChange={(e) => setEditForm({...editForm, is_overtime: e.target.checked})}
-                      className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-sm text-slate-300">Straordinario</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={editForm.is_early_departure}
-                      onChange={(e) => setEditForm({...editForm, is_early_departure: e.target.checked})}
-                      className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-sm text-slate-300">Uscita Anticipata</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={editForm.is_late_arrival}
-                      onChange={(e) => setEditForm({...editForm, is_late_arrival: e.target.checked})}
-                      className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                    />
-                    <span className="ml-2 text-sm text-slate-300">Arrivo in Ritardo</span>
-                  </label>
                 </div>
               </div>
               
@@ -1553,6 +1591,65 @@ const AdminAttendance = () => {
                 >
                   <Save className="h-4 w-4" />
                   Salva
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modale Conferma Eliminazione */}
+        {showDeleteConfirm && recordToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Conferma Eliminazione</h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setRecordToDelete(null);
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-slate-300">
+                  Sei sicuro di voler eliminare questo record di presenza?
+                </p>
+                <div className="bg-slate-700 rounded-lg p-3">
+                  <p className="text-sm text-slate-400">
+                    {(() => {
+                      const emp = allEmployees.find(e => e.id === recordToDelete.user_id);
+                      return emp ? `${emp.first_name} ${emp.last_name}` : 'Dipendente';
+                    })()}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {new Date(recordToDelete.date).toLocaleDateString('it-IT')}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Ore: {recordToDelete.actual_hours || 0}h
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setRecordToDelete(null);
+                  }}
+                  className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={() => handleDeleteRecord(recordToDelete)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Elimina
                 </button>
               </div>
             </div>

@@ -1286,9 +1286,6 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { 
       actual_hours, 
-      is_overtime, 
-      is_early_departure, 
-      is_late_arrival, 
       notes 
     } = req.body;
 
@@ -1310,9 +1307,6 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
       .update({
         actual_hours,
         balance_hours,
-        is_overtime,
-        is_early_departure,
-        is_late_arrival,
         notes
       })
       .eq('id', id)
@@ -1339,6 +1333,55 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Attendance update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Delete attendance record
+app.delete('/api/attendance/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+
+    // Verifica che il record esista
+    const { data: attendance } = await supabase
+      .from('attendance')
+      .select('user_id, date')
+      .eq('id', id)
+      .single();
+
+    if (!attendance) {
+      return res.status(404).json({ error: 'Record di presenza non trovato' });
+    }
+
+    // Elimina il record
+    const { error } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Attendance delete error:', error);
+      return res.status(500).json({ error: 'Errore nell\'eliminazione' });
+    }
+
+    // Aggiorna il monte ore mensile
+    const date = new Date(attendance.date);
+    await supabase.rpc('update_monthly_hours_balance', {
+      p_user_id: attendance.user_id,
+      p_year: date.getFullYear(),
+      p_month: date.getMonth() + 1
+    });
+
+    res.json({
+      success: true,
+      message: 'Record eliminato con successo'
+    });
+  } catch (error) {
+    console.error('Attendance delete error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
