@@ -4453,7 +4453,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
     // Calcola ore lavorate settimanali
     const { data: weeklyAttendance, error: attendanceError } = await supabase
       .from('attendance')
-      .select('hours_worked, date')
+      .select('hours_worked, expected_hours, date')
       .eq('user_id', userId)
       .gte('date', startOfWeek.toISOString().split('T')[0])
       .lte('date', endOfWeek.toISOString().split('T')[0])
@@ -4462,12 +4462,14 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
     let totalHours = 0;
     let daysPresent = 0;
     let overtimeHours = 0;
+    let expectedSum = 0;
 
     if (!attendanceError && weeklyAttendance) {
       weeklyAttendance.forEach(record => {
         if (record.hours_worked) {
           totalHours += record.hours_worked;
           daysPresent++;
+          expectedSum += (record.expected_hours || 8);
           
           // Calcola straordinario (oltre 8 ore al giorno)
           if (record.hours_worked > 8) {
@@ -4478,7 +4480,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
     }
 
     // Calcola saldo ore (ore lavorate - ore previste)
-    const expectedHours = daysPresent * 8; // 8 ore al giorno
+    const expectedHours = expectedSum || (daysPresent * 8);
     const balanceHours = totalHours - expectedHours;
 
     const weekData = {
@@ -4660,7 +4662,7 @@ app.get('/api/attendance/user-overtime', authenticateToken, async (req, res) => 
     // Get attendance records for current month
     const { data: monthlyAttendance, error } = await supabase
       .from('attendance')
-      .select('hours_worked')
+      .select('hours_worked, expected_hours')
       .eq('user_id', userId)
       .gte('date', startOfMonth.toISOString().split('T')[0])
       .lte('date', endOfMonth.toISOString().split('T')[0])
@@ -4672,12 +4674,10 @@ app.get('/api/attendance/user-overtime', authenticateToken, async (req, res) => 
     }
     
     // Calculate total hours worked this month
-    const totalHoursWorked = monthlyAttendance.reduce((sum, record) => {
-      return sum + (parseFloat(record.hours_worked) || 0);
-    }, 0);
+    const totalHoursWorked = monthlyAttendance.reduce((sum, record) => sum + (parseFloat(record.hours_worked) || 0), 0);
     
-    // Calculate expected hours (assuming 8h/day, 20 working days/month)
-    const expectedHours = 160; // 8h * 20 days
+    // Calculate expected hours from records when available, fallback to 160
+    const expectedHours = monthlyAttendance.reduce((sum, r) => sum + (parseFloat(r.expected_hours) || 0), 0) || 160;
     const overtimeHours = totalHoursWorked - expectedHours;
     
     res.json({ 
