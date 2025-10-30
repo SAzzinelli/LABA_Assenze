@@ -128,17 +128,19 @@ const AdminAttendance = () => {
     
     initializeData();
     
-    // Polling ogni 30s per sincronizzazione con dipendenti
+    // Polling ogni 60s per sincronizzazione con dipendenti (ridotto carico)
     const syncInterval = setInterval(() => {
       console.log('🔄 Admin sync polling...');
+      // Dati dinamici
       fetchAttendanceData();
-      fetchEmployees();
-      fetchAllEmployees();  // Ricarica dipendenti, saldi e permessi insieme
-      fetchWorkSchedules();
       fetchSickToday();
       fetch104Today();
-      calculateRealTimeStats();
-    }, 30000);
+      fetchStats();
+      // Evita di ricaricare ad ogni tick liste relativamente statiche
+      // fetchEmployees();
+      // fetchAllEmployees();
+      // fetchWorkSchedules();
+    }, 60000);
     
     return () => {
       clearInterval(syncInterval);

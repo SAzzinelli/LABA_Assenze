@@ -108,14 +108,15 @@ const Attendance = () => {
     // RIMOSSO: Aggiornamento database automatico (causa errori 403)
     // Il calcolo è ora completamente lato frontend
     
-    // Polling ogni 30s per sincronizzazione con admin
+    // Polling ogni 60s per sincronizzazione con admin (ridotto carico)
     const syncInterval = setInterval(() => {
       console.log('🔄 Employee sync polling...');
       fetchAttendance();
-        fetchHoursBalance();
-        fetchWorkSchedules();
-        calculateRealTimeHours();
-    }, 30000); // 30 secondi
+      fetchHoursBalance();
+      // Evita reload continuo degli orari (statici)
+      // fetchWorkSchedules();
+      calculateRealTimeHours();
+    }, 60000); // 60 secondi
     
     // Aggiorna quando la finestra torna in focus (navigazione)
     const handleFocus = () => {

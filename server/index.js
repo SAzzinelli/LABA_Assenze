@@ -5437,7 +5437,7 @@ server.listen(PORT, () => {
 module.exports = app;
 
 // Silence verbose emoji logs in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && process.env.VERBOSE_LOGS !== 'true') {
   const originalLog = console.log;
   console.log = (...args) => {
     const first = args[0];
