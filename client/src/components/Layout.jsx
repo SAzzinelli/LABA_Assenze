@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
 import {
   LogOut,
-  Bell,
   Home,
   Users,
   Clock,
@@ -93,7 +92,6 @@ const Layout = ({ children }) => {
             {filteredNavigation.map((item) => {
               const IconComponent = item.icon;
               const isActive = location.pathname === item.href;
-              const showBadge = item.name === 'Notifiche' && unreadCount > 0;
               return (
                 <Link
                   key={item.name}
@@ -108,11 +106,6 @@ const Layout = ({ children }) => {
                     <IconComponent className="mr-3 h-5 w-5" />
                     {item.name}
                   </div>
-                  {showBadge && (
-                    <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {unreadCount}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -171,7 +164,6 @@ const Layout = ({ children }) => {
                 {filteredNavigation.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = location.pathname === item.href;
-                  const showBadge = item.name === 'Notifiche' && unreadCount > 0;
                   return (
                     <Link
                       key={item.name}
@@ -187,11 +179,6 @@ const Layout = ({ children }) => {
                         <IconComponent className="mr-4 h-6 w-6" />
                         {item.name}
                       </div>
-                      {showBadge && (
-                        <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                          {unreadCount}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
