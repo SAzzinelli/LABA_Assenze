@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [recentRequests, setRecentRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sickToday, setSickToday] = useState([]); // Dipendenti in malattia oggi
+  const [upcomingEvents, setUpcomingEvents] = useState([]); // Eventi imminenti
   
   // Stati per KPI utente
   const [userKPIs, setUserKPIs] = useState({
@@ -73,6 +74,9 @@ const Dashboard = () => {
         if (user?.role === 'admin') {
           await fetchRecentRequests();
         }
+        
+        // Fetch upcoming events for all users
+        await fetchUpcomingEvents();
         
         // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
         setTimeout(() => {
@@ -313,6 +317,56 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching sick today:', error);
+    }
+  };
+
+  const fetchUpcomingEvents = async () => {
+    try {
+      const today = new Date();
+      const nextMonth = new Date(today);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      
+      const events = [];
+      
+      // Fetch leave requests approved
+      const leaveResponse = await apiCall(`/api/leave-requests?status=approved&startDate=${today.toISOString().split('T')[0]}&endDate=${nextMonth.toISOString().split('T')[0]}`);
+      if (leaveResponse.ok) {
+        const leaveData = await leaveResponse.json();
+        leaveData.forEach(req => {
+          events.push({
+            date: req.start_date,
+            endDate: req.end_date,
+            type: req.type,
+            name: req.type === 'vacation' ? 'Ferie' : req.type === 'sick' ? 'Malattia' : 'Permesso',
+            user: user?.role === 'admin' ? req.user_name : undefined,
+            color: req.type === 'vacation' ? 'green' : req.type === 'sick' ? 'red' : 'blue'
+          });
+        });
+      }
+      
+      // Fetch 104 permissions approved (per admin mostrare tutti)
+      const perm104Response = user?.role === 'admin' 
+        ? await apiCall(`/api/permissions-104?status=approved&startDate=${today.toISOString().split('T')[0]}`)
+        : await apiCall(`/api/permissions-104?status=approved&userId=${user?.id}&startDate=${today.toISOString().split('T')[0]}`);
+      if (perm104Response.ok) {
+        const perm104Data = await perm104Response.json();
+        perm104Data.forEach(perm => {
+          events.push({
+            date: perm.start_date,
+            endDate: perm.end_date,
+            type: 'permission_104',
+            name: 'Permesso 104',
+            user: user?.role === 'admin' ? perm.user_name : undefined,
+            color: 'purple'
+          });
+        });
+      }
+      
+      // Sort by date and take next 10 events
+      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setUpcomingEvents(events.slice(0, 10));
+    } catch (error) {
+      console.error('Error fetching upcoming events:', error);
     }
   };
 
@@ -800,6 +854,79 @@ const Dashboard = () => {
         </div>
         </>
       )}
+
+      {/* Calendario Overview Eventi */}
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+          <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
+          Eventi Imminenti
+        </h3>
+        {upcomingEvents.length > 0 ? (
+          <div className="space-y-3">
+            {upcomingEvents.map((event, index) => {
+              const eventDate = new Date(event.date);
+              const daysUntil = Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24));
+              const isToday = daysUntil === 0;
+              
+              const colorClasses = {
+                green: 'bg-green-900/20 border-green-500/30',
+                red: 'bg-red-900/20 border-red-500/30',
+                blue: 'bg-blue-900/20 border-blue-500/30',
+                purple: 'bg-purple-900/20 border-purple-500/30'
+              };
+              
+              const iconColors = {
+                green: 'text-green-400',
+                red: 'text-red-400',
+                blue: 'text-blue-400',
+                purple: 'text-purple-400'
+              };
+              
+              const IconComponent = event.type === 'permission_104' ? AlertCircle : 
+                                   event.type === 'vacation' ? Calendar : 
+                                   event.type === 'sick' ? XCircle : Clock;
+              
+              return (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg border ${colorClasses[event.color]}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <IconComponent className={`h-5 w-5 mr-3 ${iconColors[event.color]}`} />
+                      <div>
+                        <h4 className="text-white font-semibold">{event.name} {event.user && `- ${event.user}`}</h4>
+                        <p className="text-slate-300 text-sm">
+                          {eventDate.toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                          {event.endDate && event.endDate !== event.date && (
+                            <> - {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-sm font-semibold ${
+                        isToday ? 'text-white' : 'text-slate-400'
+                      }`}>
+                        {isToday ? 'Oggi' : `Tra ${daysUntil} ${daysUntil === 1 ? 'giorno' : 'giorni'}`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-400">
+            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>Nessun evento programmato</p>
+          </div>
+        )}
+      </div>
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />
