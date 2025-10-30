@@ -775,7 +775,9 @@ const Employees = () => {
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Posizione:</span>
-                      <p className="text-white font-bold">{selectedEmployee.position}</p>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-2 bg-slate-500/20 text-slate-300 border border-slate-400/30">
+                        {selectedEmployee.position}
+                      </span>
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Data Assunzione:</span>
@@ -786,12 +788,6 @@ const Employees = () => {
                       <p className="text-white font-bold">
                         {selectedEmployee.weeklyHours ? `${selectedEmployee.weeklyHours}h` : 'Non specificate'}
                       </p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 text-sm">Posizione:</span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-2 bg-slate-500/20 text-slate-300 border border-slate-400/30">
-                        {selectedEmployee.position}
-                      </span>
                     </div>
                   </div>
                 </div>
