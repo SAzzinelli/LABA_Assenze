@@ -476,6 +476,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Note Legali */}
