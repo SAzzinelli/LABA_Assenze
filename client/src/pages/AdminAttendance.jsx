@@ -1222,7 +1222,7 @@ const AdminAttendance = () => {
           </div>
         )}
 
-        {/* Tabella Presenze */}
+        {/* Presenze - Responsive: cards on mobile, table on lg+ */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-700">
               <h2 className="text-xl font-semibold text-white flex items-center">
@@ -1231,7 +1231,47 @@ const AdminAttendance = () => {
           </h2>
           </div>
           
-          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0">
+          {/* Mobile Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 lg:hidden">
+            {filteredData.map((record) => {
+              const realTime = record.is_realtime ? {
+                expectedHours: record.expected_hours,
+                actualHours: record.actual_hours,
+                balanceHours: record.balance_hours,
+                status: record.status
+              } : calculateRealTimeHoursForRecord(record);
+              const name = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A';
+              return (
+                <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold truncate mr-2">{name}</div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs border ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
+                  </div>
+                  <div className="text-slate-400 text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-slate-400">Attese</div>
+                      <div className="font-mono">{formatHours(realTime.expectedHours)}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Effettive</div>
+                      <div className="font-mono">{formatHours(realTime.actualHours)}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Saldo</div>
+                      <div className={`font-mono font-bold ${realTime.balanceHours>0?'text-green-400':realTime.balanceHours<0?'text-red-400':'text-slate-400'}`}>{realTime.balanceHours>0?'+':''}{formatHours(realTime.balanceHours)}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-right">
+                    <button onClick={() => handleViewAttendanceDetails(record)} className="text-green-400 hover:text-green-300 text-sm">Dettagli</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0 hidden lg:block">
             <div className="inline-block min-w-full align-middle">
               <div className="overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5 sm:rounded-lg">
                 <table className="min-w-full divide-y divide-slate-700">

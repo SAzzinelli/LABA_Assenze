@@ -311,8 +311,8 @@ const Employees = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex items-center space-x-4">
+      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
@@ -323,7 +323,7 @@ const Employees = () => {
               className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
-          <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center">
+          <button className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
             <Filter className="h-5 w-5 mr-2" />
             Filtri
           </button>
