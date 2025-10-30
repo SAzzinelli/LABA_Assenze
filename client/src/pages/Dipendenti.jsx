@@ -5,7 +5,7 @@ import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AddEmployeeModal from '../components/AddEmployeeModal';
 import CustomAlert from '../components/CustomAlert';
 import ConfirmModal from '../components/ConfirmModal';
-import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee, DollarSign, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 
 const Employees = () => {
   const { user, apiCall } = useAuthStore();
@@ -44,6 +44,8 @@ const Employees = () => {
   });
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [detailActiveTab, setDetailActiveTab] = useState('details');
+  const [balanceHistory, setBalanceHistory] = useState([]);
+  const [currentBalance, setCurrentBalance] = useState(0);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -245,10 +247,36 @@ const Employees = () => {
     }
   };
 
-  const handleViewDetails = (employee) => {
+  const handleViewDetails = async (employee) => {
     console.log('Opening details for:', employee);
     setSelectedEmployee(employee);
     setShowDetailsModal(true);
+    
+    // Fetch balance data quando si aprono i dettagli
+    if (employee.id) {
+      await fetchEmployeeBalance(employee.id);
+    }
+  };
+
+  const fetchEmployeeBalance = async (employeeId) => {
+    try {
+      // Fetch balance totale
+      const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${employeeId}`);
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        const balance = balanceData.balances[employeeId] || 0;
+        setCurrentBalance(balance);
+      }
+      
+      // Fetch history recente (ultimi 10 record)
+      const historyResponse = await apiCall(`/api/attendance?userId=${employeeId}&limit=10`);
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        setBalanceHistory(historyData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching employee balance:', error);
+    }
   };
 
   const resetForm = () => {
@@ -712,6 +740,17 @@ const Employees = () => {
                 Dettagli
               </button>
               <button
+                onClick={() => setDetailActiveTab('balance')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  detailActiveTab === 'balance'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                }`}
+              >
+                <DollarSign className="h-4 w-4 inline mr-2" />
+                Banca Ore
+              </button>
+              <button
                 onClick={() => setDetailActiveTab('schedule')}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                   detailActiveTab === 'schedule'
@@ -821,6 +860,97 @@ const Employees = () => {
                       <div className="text-slate-400 text-xs">giorni annui</div>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {detailActiveTab === 'balance' && (
+              <div className="space-y-6">
+                {/* Banca Ore Attuale */}
+                <div className="bg-slate-700 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2 text-indigo-400" />
+                    Banca Ore Attuale
+                  </h4>
+                  <div className="flex items-center justify-center py-8">
+                    <div className={`text-6xl font-bold ${
+                      currentBalance > 0 
+                        ? 'text-green-400' 
+                        : currentBalance < 0 
+                          ? 'text-red-400' 
+                          : 'text-slate-400'
+                    }`}>
+                      {currentBalance > 0 ? '+' : ''}
+                      {Math.floor(currentBalance)}
+                      <span className="text-4xl">h</span>
+                      {Math.abs(Math.round((currentBalance % 1) * 60))}
+                      <span className="text-3xl">m</span>
+                    </div>
+                  </div>
+                  <div className="text-center mt-4">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      currentBalance > 0 
+                        ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                        : currentBalance < 0 
+                          ? 'bg-red-500/20 text-red-300 border border-red-400/30'
+                          : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                    }`}>
+                      {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
+                      {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
+                      {currentBalance === 0 ? 'In pari' : currentBalance > 0 ? 'In credito' : 'In debito'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Ultime Fluttuazioni */}
+                <div className="bg-slate-700 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Activity className="h-5 w-5 mr-2 text-amber-400" />
+                    Ultime Fluttuazioni
+                  </h4>
+                  {balanceHistory.length > 0 ? (
+                    <div className="space-y-3">
+                      {balanceHistory.map((record, index) => (
+                        <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 text-slate-400 mr-3" />
+                            <div>
+                              <p className="text-white font-medium">
+                                {new Date(record.date).toLocaleDateString('it-IT', { 
+                                  day: 'numeric', 
+                                  month: 'long', 
+                                  year: 'numeric' 
+                                })}
+                              </p>
+                              <p className="text-slate-400 text-sm">
+                                Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${
+                              record.balance_hours > 0 
+                                ? 'text-green-400' 
+                                : record.balance_hours < 0 
+                                  ? 'text-red-400' 
+                                  : 'text-slate-400'
+                            }`}>
+                              {record.balance_hours > 0 ? '+' : ''}
+                              {Math.floor(record.balance_hours || 0)}h {Math.round(Math.abs(((record.balance_hours || 0) % 1) * 60))}m
+                            </p>
+                            <p className="text-slate-400 text-xs mt-1">
+                              Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-400">
+                      <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Nessuna fluttuazione registrata</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
