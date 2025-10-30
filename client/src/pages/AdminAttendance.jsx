@@ -304,19 +304,19 @@ const AdminAttendance = () => {
           const response = await apiCall(`/api/leave-requests/permission-hours?userId=${emp.id}&date=${today}`);
           if (response.ok) {
             const data = await response.json();
-            console.log(`📋 ${emp.firstName} ${emp.lastName} - Permission data:`, data);
+            console.log(`📋 ${emp.first_name} ${emp.last_name} - Permission data:`, data);
             if (data.totalPermissionHours > 0) {
               // Salva ore E dettagli (tipo, orari)
               permissionsMap[emp.id] = {
                 hours: data.totalPermissionHours,
                 permissions: data.permissions || []
               };
-              console.log(`🕐 ✅ Employee ${emp.firstName} ${emp.lastName}: ${data.totalPermissionHours}h permission FOUND!`);
+              console.log(`🕐 ✅ Employee ${emp.first_name} ${emp.last_name}: ${data.totalPermissionHours}h permission FOUND!`);
             } else {
-              console.log(`⚪ Employee ${emp.firstName} ${emp.lastName}: no permission today`);
+              console.log(`⚪ Employee ${emp.first_name} ${emp.last_name}: no permission today`);
             }
           } else {
-            console.warn(`⚠️ Failed to fetch permissions for ${emp.firstName} ${emp.lastName}:`, response.status);
+            console.warn(`⚠️ Failed to fetch permissions for ${emp.first_name} ${emp.last_name}:`, response.status);
           }
         } catch (err) {
           console.error(`❌ Error fetching permissions for ${emp.id}:`, err);
@@ -1633,7 +1633,7 @@ const AdminAttendance = () => {
                       <option value="">Seleziona dipendente</option>
                       {allEmployees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
-                          {emp.firstName} {emp.lastName}
+                          {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
                         </option>
                       ))}
                     </select>
