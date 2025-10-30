@@ -529,10 +529,9 @@ const Dashboard = () => {
       <div className="bg-slate-800 rounded-lg p-6">
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-slate-400 mt-2">
-          Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>!
           {user?.role === 'admin' 
-            ? ' Ecco un riepilogo delle attività del sistema HR'
-            : ' La tua dashboard personale con le tue attività'
+            ? 'Benvenuto! Ecco un riepilogo delle attività del sistema HR'
+            : <>Benvenuto, <span className="text-white font-semibold">{user?.firstName}</span>! La tua dashboard personale con le tue attività</>
           }
         </p>
       </div>
