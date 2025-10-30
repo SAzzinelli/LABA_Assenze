@@ -1355,7 +1355,8 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
 
-    // Genera presenze automatiche usando la funzione del database
+    // Genera presenze automatiche usando funzione SQL se disponibile,
+    // altrimenti esegui fallback lato applicazione
     const { error } = await supabase.rpc('generate_automatic_attendance', {
       p_user_id: userId,
       p_start_date: startDate,
@@ -1363,8 +1364,63 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
     });
 
     if (error) {
-      console.error('Generate attendance error:', error);
-      return res.status(500).json({ error: 'Errore nella generazione delle presenze' });
+      console.warn('⚠️ generate_automatic_attendance RPC non disponibile, uso fallback lato app:', error?.message || error);
+
+      // Fallback: calcola expected_hours dai work_schedules e inserisce attendance "completed"
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Carica tutti i work schedules dell'utente
+      const { data: schedules, error: wsError } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (wsError) {
+        console.error('Fallback work_schedules error:', wsError);
+        return res.status(500).json({ error: 'Errore nel recupero degli orari' });
+      }
+
+      const inserts = [];
+      const dayToIdx = {
+        '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6
+      };
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const iso = d.toISOString().split('T')[0];
+        const dow = d.getDay();
+        const todaySchedule = schedules.find(s => s.day_of_week === dayToIdx[String(dow)] && s.is_working_day);
+        if (!todaySchedule) continue;
+
+        const [startHour, startMin] = todaySchedule.start_time.split(':').map(Number);
+        const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
+        const breakDuration = todaySchedule.break_duration || 60;
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = totalMinutes - breakDuration;
+        const expectedHours = workMinutes / 60;
+
+        inserts.push({
+          user_id: userId,
+          date: iso,
+          expected_hours: Math.round(expectedHours * 10) / 10,
+          actual_hours: Math.round(expectedHours * 10) / 10,
+          balance_hours: 0,
+          notes: '[Generato dall\'admin - fallback]'
+        });
+      }
+
+      if (inserts.length === 0) {
+        return res.status(400).json({ error: 'Nessun orario lavorativo nel periodo selezionato' });
+      }
+
+      const { error: insError } = await supabase
+        .from('attendance')
+        .insert(inserts);
+
+      if (insError) {
+        console.error('Fallback insert attendance error:', insError);
+        return res.status(500).json({ error: 'Errore nella generazione delle presenze' });
+      }
     }
 
     res.json({
