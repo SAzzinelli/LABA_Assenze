@@ -45,45 +45,9 @@ const Settings = () => {
       website: 'https://labafirenze.com'
     },
     notifications: {
-      email: true,
-      push: true,
-      sms: false,
       attendanceReminders: true,
       leaveRequestUpdates: true,
-      systemAnnouncements: true,
-      weeklyReports: false,
-      monthlyReports: true
-    },
-    privacy: {
-      showProfile: true,
-      showAttendance: false,
-      showSchedule: true,
-      showSalary: false,
-      dataRetention: '2 years',
-      analytics: false,
-      cookieConsent: true,
-      dataSharing: false,
-      marketingEmails: false,
-      locationTracking: false,
-      biometricData: false,
-      thirdPartyAccess: false
-    },
-    security: {
-      twoFactorAuth: false,
-      passwordExpiry: 90,
-      sessionTimeout: 30,
-      loginNotifications: true,
-      deviceManagement: true,
-      auditLogs: true
-    },
-    system: {
-      language: 'it',
-      dateFormat: 'DD/MM/YYYY',
-      timeFormat: '24h',
-      currency: 'EUR',
-      backupFrequency: 'daily',
-      maintenanceWindow: '02:00-04:00',
-      logLevel: 'info'
+      weeklyReports: false
     },
     emailManagement: {
       employees: [],
@@ -291,9 +255,7 @@ const Settings = () => {
   const tabs = [
     ...(user?.role === 'admin' ? [{ id: 'company', name: 'Azienda', icon: Building2 }] : []),
     { id: 'notifications', name: 'Notifiche', icon: Bell },
-    { id: 'privacy', name: 'Privacy', icon: Shield },
     ...(user?.role === 'admin' ? [
-      { id: 'system', name: 'Sistema', icon: SettingsIcon },
       { id: 'emailManagement', name: 'Mail', icon: Mail }
     ] : [])
   ];
@@ -363,41 +325,15 @@ const Settings = () => {
   const renderNotificationsTab = () => (
     <div className="space-y-6">
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Canali di Notifica</h3>
+        <h3 className="text-lg font-semibold text-white">Impostazioni Notifiche Email</h3>
+        <p className="text-slate-400 text-sm mb-4">
+          Configura le notifiche email che desideri ricevere dal sistema HR.
+        </p>
         <div className="space-y-3">
           {[
-            { key: 'email', label: 'Email', description: 'Ricevi notifiche via email' },
-            { key: 'push', label: 'Notifiche Push', description: 'Notifiche nel browser' },
-            { key: 'sms', label: 'SMS', description: 'Notifiche via SMS' }
-          ].map(item => (
-            <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
-              <div>
-                <h4 className="text-white font-medium">{item.label}</h4>
-                <p className="text-slate-400 text-sm">{item.description}</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.notifications[item.key]}
-                  onChange={(e) => handleSettingChange('notifications', item.key, e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Tipi di Notifica</h3>
-        <div className="space-y-3">
-          {[
-            { key: 'attendanceReminders', label: 'Promemoria Presenze', description: 'Ricordi per timbrature' },
-            { key: 'leaveRequestUpdates', label: 'Aggiornamenti Richieste', description: 'Stato richieste permessi' },
-            { key: 'systemAnnouncements', label: 'Annunci Sistema', description: 'Aggiornamenti e manutenzioni' },
-            { key: 'weeklyReports', label: 'Report Settimanali', description: 'Resoconti settimanali' },
-            { key: 'monthlyReports', label: 'Report Mensili', description: 'Resoconti mensili' }
+            { key: 'attendanceReminders', label: 'Promemoria Presenze', description: 'Ricevi promemoria per le timbrature' },
+            { key: 'leaveRequestUpdates', label: 'Aggiornamenti Richieste Permessi', description: 'Ricevi notifiche sullo stato delle tue richieste di permessi e ferie' },
+            { key: 'weeklyReports', label: 'Report Settimanali', description: 'Ricevi un riepilogo settimanale delle tue presenze e ore lavorate' }
           ].map(item => (
             <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
               <div>
@@ -420,7 +356,7 @@ const Settings = () => {
     </div>
   );
 
-  const renderSystemTab = () => (
+  const renderEmailManagementTab = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -782,9 +718,6 @@ const Settings = () => {
     switch (activeTab) {
       case 'company': return renderCompanyTab();
       case 'notifications': return renderNotificationsTab();
-      case 'privacy': return renderPrivacyTab();
-      case 'security': return <div className="text-slate-400">Sezione Sicurezza in sviluppo...</div>;
-      case 'system': return renderSystemTab();
       case 'emailManagement': return renderEmailManagementTab();
       default: return <div className="text-slate-400">Sezione in sviluppo...</div>;
     }

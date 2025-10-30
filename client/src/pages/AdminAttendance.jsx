@@ -1692,10 +1692,25 @@ const AdminAttendance = () => {
                     <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
                     <div className="text-sm text-slate-300 space-y-1">
                       <p><span className="text-slate-400">Dipendente:</span> {
-                        employees.find(emp => emp.id === generateForm.employeeId)?.firstName + ' ' + 
-                        employees.find(emp => emp.id === generateForm.employeeId)?.lastName
+                        (() => {
+                          const selectedEmp = allEmployees.find(emp => emp.id === generateForm.employeeId);
+                          if (!selectedEmp) return '';
+                          return (selectedEmp.first_name || selectedEmp.firstName || '') + ' ' + (selectedEmp.last_name || selectedEmp.lastName || '');
+                        })()
                       }</p>
-                      <p><span className="text-slate-400">Periodo:</span> {generateForm.startDate} - {generateForm.endDate}</p>
+                      <p><span className="text-slate-400">Periodo:</span> {
+                        (() => {
+                          const formatDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            const date = new Date(dateStr);
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const year = date.getFullYear();
+                            return `${day}-${month}-${year}`;
+                          };
+                          return `${formatDate(generateForm.startDate)} - ${formatDate(generateForm.endDate)}`;
+                        })()
+                      }</p>
                     </div>
                   </div>
                   
