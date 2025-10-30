@@ -910,37 +910,31 @@ const Profile = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-slate-800 rounded-lg p-4">
-            <nav className="space-y-2">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <IconComponent className="h-5 w-5 mr-3" />
-                    {tab.name}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
-
+      {/* Tab orizzontali */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <nav className="flex border-b border-slate-700">
+          {tabs.map((tab) => {
+            const IconComponent = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-600/10 text-indigo-400 border-indigo-400'
+                    : 'text-slate-300 hover:bg-slate-700/50 border-transparent'
+                }`}
+              >
+                <IconComponent className="h-5 w-5 mr-2" />
+                {tab.name}
+              </button>
+            );
+          })}
+        </nav>
+        
         {/* Content */}
-        <div className="lg:col-span-3">
-          <div className="bg-slate-800 rounded-lg p-6">
-            {renderTabContent()}
-          </div>
+        <div className="p-6">
+          {renderTabContent()}
         </div>
       </div>
     </div>
