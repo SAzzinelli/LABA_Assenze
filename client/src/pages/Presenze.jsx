@@ -912,14 +912,66 @@ const Attendance = () => {
           })()}
         </div>
 
-        {/* Attendance History */}
+        {/* Attendance History - Responsive: cards on mobile, table on lg+ */}
         <div className="bg-slate-800 rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4 flex items-center">
             <Calendar className="h-5 w-5 mr-2" />
             Cronologia Presenze
           </h2>
-          
-          <div className="overflow-x-auto">
+          {/* Mobile Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:hidden">
+            {(() => {
+              const today = new Date().toISOString().split('T')[0];
+              const todayExists = attendance.some(record => record.date === today);
+              let combined = [...attendance];
+              if (!todayExists) {
+                combined = [{
+                  id: 'today-realtime',
+                  date: today,
+                  actual_hours: currentHours.actualHours,
+                  expected_hours: currentHours.expectedHours,
+                  balance_hours: currentHours.balanceHours,
+                  status: currentHours.status
+                }, ...attendance];
+              }
+              return combined.slice(0, 10).map((record) => (
+                <div key={record.id} className="rounded-xl border border-slate-700 p-4 hover:border-slate-500 transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-semibold">
+                      {new Date(record.date).toLocaleDateString('it-IT')}
+                    </div>
+                    <div className={`text-xs font-bold ${getStatusColor(record)}`}>{getStatusText(record)}</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-slate-400">Attese</div>
+                      <div className="font-mono">{formatHours(record.expected_hours)}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Effettive</div>
+                      <div className="font-mono">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-400">Mancanti</div>
+                      <div className={`font-bold ${getBalanceColor(record.date === today ? currentHours.balanceHours : record.balance_hours)}`}>
+                        {(record.date === today ? currentHours.balanceHours : record.balance_hours) < 0
+                          ? formatHours(Math.abs(record.date === today ? currentHours.balanceHours : record.balance_hours))
+                          : '0h 0m'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-right">
+                    <button onClick={() => handleViewAttendanceDetails(record)} className="text-green-400 hover:text-green-300 text-sm">
+                      Dettagli
+                    </button>
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="overflow-x-auto hidden lg:block mt-2">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700">

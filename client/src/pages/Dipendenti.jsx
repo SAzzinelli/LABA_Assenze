@@ -330,8 +330,57 @@ const Employees = () => {
         </div>
       </div>
 
-      {/* Employees Table */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      {/* Employees - Responsive: cards on mobile, table on md+ */}
+      {/* Mobile Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:hidden">
+        {filteredEmployees.map((employee) => (
+          <div
+            key={employee.id}
+            onClick={() => handleViewDetails(employee)}
+            className="bg-slate-800 rounded-xl p-4 border border-slate-700 hover:border-slate-500 transition-all hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {employee.name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div className="ml-3">
+                  <div className="text-white font-semibold leading-5">{employee.name}</div>
+                  <div className="text-slate-400 text-xs">{employee.email}</div>
+                </div>
+              </div>
+              {employee.has104 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white border border-blue-400">104</span>
+              )}
+            </div>
+            <div className="mt-3 flex items-center justify-between text-sm">
+              <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">{employee.department}</span>
+              <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">{employee.position}</span>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
+                className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30"
+                title="Modifica"
+              >
+                Modifica
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
+                className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30"
+                title="Elimina"
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden hidden md:block">
         <div className="overflow-x-auto hover:overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-700">
