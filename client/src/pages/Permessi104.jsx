@@ -11,17 +11,25 @@ import {
   XCircle,
   Clock,
   Users,
-  Info
+  Info,
+  Filter,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 
 const Permessi104 = () => {
   const { user, apiCall } = useAuthStore();
   const [requests, setRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [month, setMonth] = useState(new Date().getMonth()+1);
-  const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [showNewRequest, setShowNewRequest] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [alert, setAlert] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [permissions104Status, setPermissions104Status] = useState({
     usedThisMonth: 0,
@@ -68,6 +76,35 @@ const Permessi104 = () => {
     } catch (error) {
       console.error('Error fetching 104 status:', error);
     }
+  };
+
+  const monthNames = [
+    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+  ];
+
+  const goToPreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
   };
 
   const handleSubmit = async (e) => {
@@ -248,15 +285,77 @@ const Permessi104 = () => {
         </div>
       </div>
 
-      {/* Filtri */}
-      <div className="bg-slate-800 rounded-lg p-4 flex flex-col md:flex-row gap-3 mb-4">
-        <input value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} placeholder="Cerca note..." className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
-        <select value={month} onChange={e=>setMonth(parseInt(e.target.value))} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
-          {Array.from({length:12},(_,i)=>i+1).map(m=> <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select value={year} onChange={e=>setYear(parseInt(e.target.value))} className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
-          {Array.from({length:5},(_,i)=> new Date().getFullYear()-2+i).map(y=> <option key={y} value={y}>{y}</option>)}
-        </select>
+      {/* Filtri Collassabili */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+          className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <Filter className="h-5 w-5 text-blue-400" />
+            <span className="text-white font-medium">Filtri e Ricerca</span>
+          </div>
+          {filtersCollapsed ? (
+            <ChevronDown className="h-5 w-5 text-slate-400" />
+          ) : (
+            <ChevronUp className="h-5 w-5 text-slate-400" />
+          )}
+        </button>
+        
+        {!filtersCollapsed && (
+          <div className="border-t border-slate-700 p-4 space-y-4">
+            {/* Filtro temporale */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Calendar className="h-5 w-5 text-blue-400" />
+                <span className="text-white font-medium">Filtro per periodo:</span>
+                <button
+                  onClick={goToToday}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  OGGI
+                </button>
+              </div>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={goToPreviousMonth}
+                  className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="text-white font-semibold min-w-[120px] text-center">
+                  {monthNames[currentMonth]} {currentYear}
+                </div>
+                <button
+                  onClick={goToNextMonth}
+                  className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Campo di ricerca */}
+            <div className="flex items-center space-x-4">
+              <Search className="h-5 w-5 text-blue-400" />
+              <input
+                type="text"
+                placeholder="Cerca per note o data..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="p-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lista Richieste */}
@@ -268,7 +367,7 @@ const Permessi104 = () => {
           </div>
         ) : requests.filter(r=>{
               const d=new Date(r.startDate);
-              const matchesMonth=(d.getMonth()+1)===month && d.getFullYear()===year;
+              const matchesMonth=d.getMonth()===currentMonth && d.getFullYear()===currentYear;
               const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
               return matchesMonth && matchesSearch;
             }).length === 0 ? (
@@ -280,7 +379,7 @@ const Permessi104 = () => {
           <div className="space-y-3">
             {requests.filter(r=>{
                 const d=new Date(r.startDate);
-                const matchesMonth=(d.getMonth()+1)===month && d.getFullYear()===year;
+                const matchesMonth=d.getMonth()===currentMonth && d.getFullYear()===currentYear;
                 const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
                 return matchesMonth && matchesSearch;
               }).map((request) => (
