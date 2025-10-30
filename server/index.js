@@ -5435,3 +5435,15 @@ server.listen(PORT, () => {
 });
 
 module.exports = app;
+
+// Silence verbose emoji logs in production
+if (process.env.NODE_ENV === 'production') {
+  const originalLog = console.log;
+  console.log = (...args) => {
+    const first = args[0];
+    if (typeof first === 'string' && /^(🔍|📊|🔄|✅|🔌|🔵|🏥|📋|⚠️|💰|🕐|🚪|👥|🔎)/.test(first)) {
+      return; // skip verbose logs
+    }
+    originalLog(...args);
+  };
+}
