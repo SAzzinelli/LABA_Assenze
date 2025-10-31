@@ -1147,50 +1147,79 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       );
       
       if (todaySchedule) {
-        const { start_time, end_time, break_duration } = todaySchedule;
+        const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
+        
+        // Use the same calculation logic as /api/attendance/current-hours
+        realTimeExpectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
+        
+        // Calculate real-time hours using the same logic as current-hours endpoint
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
-        const breakDuration = break_duration || 60;
         
-        // Calculate expected hours
-        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-        const workMinutes = totalMinutes - breakDuration;
-        realTimeExpectedHours = workMinutes / 60;
-        
-        // Calculate real-time hours (same logic as frontend)
         if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
           realTimeActualHours = 0;
         } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
           realTimeActualHours = realTimeExpectedHours;
         } else {
-          // During work time - calculate with lunch break logic
-          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
-          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-          const hasLunchBreak = totalWorkMinutes > 300;
+          // During work time - calculate with lunch break logic (same as current-hours endpoint)
+          const currentTime = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+          const effectiveStartTime = start_time;
+          const effectiveEndTime = end_time;
           
-          let totalMinutesWorked = 0;
+          const effectiveStartTimeObj = new Date(`2000-01-01T${effectiveStartTime}`);
+          const effectiveEndTimeObj = new Date(`2000-01-01T${effectiveEndTime}`);
+          const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
           
-          if (hasLunchBreak) {
-            // FULL DAY: has lunch break
-            const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
-            const breakStartMinutes = morningEndMinutes;
-            const breakEndMinutes = morningEndMinutes + breakDuration;
-            
-            if (minutesFromStart < breakStartMinutes) {
-              totalMinutesWorked = minutesFromStart;
-            } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-              totalMinutesWorked = breakStartMinutes;
-            } else {
-              const morningMinutes = breakStartMinutes;
-              const afternoonMinutes = minutesFromStart - breakEndMinutes;
-              totalMinutesWorked = morningMinutes + afternoonMinutes;
-            }
+          // Calcola pausa pranzo dallo schedule o usa default
+          let breakStartTimeStr, breakEndTimeStr;
+          if (break_start_time) {
+            // Usa break_start_time configurato
+            const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
+            breakStartTimeStr = break_start_time;
+            const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
+            const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
+            const breakEndMin = breakEndTimeMinutes % 60;
+            breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
           } else {
-            // HALF DAY: no lunch break
-            totalMinutesWorked = minutesFromStart;
+            // Calcola pausa pranzo come metà dell'orario meno metà della durata
+            const [startHourCalc, startMinCalc] = effectiveStartTime.split(':').map(Number);
+            const [endHourCalc, endMinCalc] = effectiveEndTime.split(':').map(Number);
+            const breakDurationMins = break_duration || 60;
+            
+            const startTotalMinutes = startHourCalc * 60 + startMinCalc;
+            const endTotalMinutes = endHourCalc * 60 + endMinCalc;
+            const totalMinutes = endTotalMinutes - startTotalMinutes;
+            
+            // Pausa pranzo a metà dell'orario
+            const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
+            const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
+            const breakEndMinutes = breakStartMinutes + breakDurationMins;
+            
+            const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
+            const breakStartMin = Math.floor(breakStartMinutes % 60);
+            const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
+            const breakEndMin = Math.floor(breakEndMinutes % 60);
+            
+            breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
+            breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
           }
           
-          realTimeActualHours = totalMinutesWorked / 60;
+          const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
+          const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
+          
+          if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
+            // Durante la pausa pranzo
+            realTimeActualHours = (breakStartTime - effectiveStartTimeObj) / (1000 * 60) / 60;
+          } else if (currentTimeObj >= breakEndTime) {
+            // Dopo la pausa pranzo
+            const morningMinutes = (breakStartTime - effectiveStartTimeObj) / (1000 * 60);
+            const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
+            realTimeActualHours = (morningMinutes + afternoonMinutes) / 60;
+          } else {
+            // Prima della pausa pranzo
+            const workedMinutes = (currentTimeObj - effectiveStartTimeObj) / (1000 * 60);
+            realTimeActualHours = workedMinutes / 60;
+          }
         }
         
         hasRealTimeCalculation = true;
@@ -1223,15 +1252,30 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       });
     }
     
+    // Calcola il saldo totale: usa il calcolo real-time per oggi, database per i giorni passati
     const totalBalance = totalActualHours - totalExpectedHours;
     
+    // Per overtime e deficit, ricalcola anche per oggi usando il balance real-time
+    let todayBalanceHours = 0;
+    if (hasRealTimeCalculation && isCurrentMonth) {
+      todayBalanceHours = realTimeActualHours - realTimeExpectedHours;
+    }
+    
     const overtimeHours = attendance.reduce((sum, record) => {
+      if (record.date === today && hasRealTimeCalculation && isCurrentMonth) {
+        // Usa il balance real-time per oggi
+        return todayBalanceHours > 0 ? sum + todayBalanceHours : sum;
+      }
       const balance = record.balance_hours || 0;
       return balance > 0 ? sum + balance : sum;
     }, 0);
     
     // Deficit = ore mancanti (sempre positivo per chiarezza)
     const deficitHours = attendance.reduce((sum, record) => {
+      if (record.date === today && hasRealTimeCalculation && isCurrentMonth) {
+        // Usa il balance real-time per oggi
+        return todayBalanceHours < 0 ? sum + Math.abs(todayBalanceHours) : sum;
+      }
       const balance = record.balance_hours || 0;
       return balance < 0 ? sum + Math.abs(balance) : sum;
     }, 0);
