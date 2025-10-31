@@ -2921,87 +2921,49 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
     let balanceHours = attendance.balance_hours || 0;
     
     if (date === today && schedule) {
-      // Usa la stessa logica di /api/attendance/current-hours
-      const now = new Date();
-      const currentTime = now.toTimeString().substring(0, 5);
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
+      // Recupera permessi per oggi
+      const { data: permissionsToday } = await supabase
+        .from('leave_requests')
+        .select('hours, permission_type, exit_time, entry_time')
+        .eq('user_id', targetUserId)
+        .eq('type', 'permission')
+        .eq('status', 'approved')
+        .lte('start_date', today)
+        .gte('end_date', today);
       
-      const { start_time, end_time, break_duration, break_start_time } = schedule;
-      
-      // Calcola expected_hours correttamente
-      expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
-      
-      // Calcola actual_hours real-time
-      const [startHour, startMin] = start_time.split(':').map(Number);
-      const [endHour, endMin] = end_time.split(':').map(Number);
-      
-      if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
-        actualHours = 0;
-      } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-        actualHours = expectedHours;
-      } else {
-        // Durante l'orario di lavoro - calcola con pausa pranzo dinamica
-        const effectiveStartTime = start_time;
-        const effectiveEndTime = end_time;
+      let permissionData = null;
+      if (permissionsToday && permissionsToday.length > 0) {
+        let totalHours = 0;
+        let exitTime = null;
+        let entryTime = null;
+        let permType = null;
         
-        const effectiveStartTimeObj = new Date(`2000-01-01T${effectiveStartTime}`);
-        const effectiveEndTimeObj = new Date(`2000-01-01T${effectiveEndTime}`);
-        const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
+        permissionsToday.forEach(perm => {
+          totalHours += parseFloat(perm.hours || 0);
+          if (perm.permission_type === 'early_exit' && perm.exit_time) {
+            exitTime = perm.exit_time;
+            permType = 'early_exit';
+          }
+          if (perm.permission_type === 'late_entry' && perm.entry_time) {
+            entryTime = perm.entry_time;
+            permType = 'late_entry';
+          }
+        });
         
-        // Calcola pausa pranzo dallo schedule o usa default
-        let breakStartTimeStr, breakEndTimeStr;
-        if (break_start_time) {
-          const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
-          breakStartTimeStr = break_start_time;
-          const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
-          const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
-          const breakEndMin = breakEndTimeMinutes % 60;
-          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
-        } else {
-          const [startHourCalc, startMinCalc] = effectiveStartTime.split(':').map(Number);
-          const [endHourCalc, endMinCalc] = effectiveEndTime.split(':').map(Number);
-          const breakDurationMins = break_duration || 60;
-          
-          const startTotalMinutes = startHourCalc * 60 + startMinCalc;
-          const endTotalMinutes = endHourCalc * 60 + endMinCalc;
-          const totalMinutes = endTotalMinutes - startTotalMinutes;
-          
-          const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
-          const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
-          const breakEndMinutes = breakStartMinutes + breakDurationMins;
-          
-          const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
-          const breakStartMin = Math.floor(breakStartMinutes % 60);
-          const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
-          const breakEndMin = Math.floor(breakEndMinutes % 60);
-          
-          breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
-          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
-        }
-        
-        const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
-        const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
-        
-        if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
-          // Durante la pausa pranzo
-          actualHours = (breakStartTime - effectiveStartTimeObj) / (1000 * 60) / 60;
-        } else if (currentTimeObj >= breakEndTime) {
-          // Dopo la pausa pranzo
-          const morningMinutes = (breakStartTime - effectiveStartTimeObj) / (1000 * 60);
-          const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
-          actualHours = (morningMinutes + afternoonMinutes) / 60;
-        } else {
-          // Prima della pausa pranzo
-          const workedMinutes = (currentTimeObj - effectiveStartTimeObj) / (1000 * 60);
-          actualHours = workedMinutes / 60;
+        if (exitTime || entryTime) {
+          permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
         }
       }
       
-      // Ricalcola balance_hours
-      balanceHours = actualHours - expectedHours;
+      // USA LA FUNZIONE CENTRALIZZATA
+      const now = new Date();
+      const currentTime = now.toTimeString().substring(0, 5);
+      const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+      actualHours = result.actualHours;
+      expectedHours = result.expectedHours;
+      balanceHours = result.balanceHours;
       
-      console.log(`🔄 Attendance details for today: real-time calculation - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
+      console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
     }
 
     res.json({
