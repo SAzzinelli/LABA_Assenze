@@ -2810,17 +2810,49 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       if (currentTime <= end_time) {
         // Durante l'orario di lavoro
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
-        const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
         
-        // Pausa pranzo fissa dalle 13:00 alle 14:00 (o come configurato)
-        const breakStartTime = new Date(`2000-01-01T13:00`);
-        const breakEndTime = new Date(`2000-01-01T14:00`);
+        // Calcola pausa pranzo dallo schedule o usa default
+        let breakStartTimeStr, breakEndTimeStr;
+        if (break_start_time) {
+          // Usa break_start_time configurato
+          const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
+          breakStartTimeStr = break_start_time;
+          const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
+          const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
+          const breakEndMin = breakEndTimeMinutes % 60;
+          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+        } else {
+          // Calcola pausa pranzo come metà dell'orario meno metà della durata
+          const [startHour, startMin] = start_time.split(':').map(Number);
+          const [endHour, endMin] = end_time.split(':').map(Number);
+          const breakDurationMins = break_duration || 60;
+          
+          const startTotalMinutes = startHour * 60 + startMin;
+          const endTotalMinutes = endHour * 60 + endMin;
+          const totalMinutes = endTotalMinutes - startTotalMinutes;
+          
+          // Pausa pranzo a metà dell'orario
+          const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
+          const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
+          const breakEndMinutes = breakStartMinutes + breakDurationMins;
+          
+          const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
+          const breakStartMin = Math.floor(breakStartMinutes % 60);
+          const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
+          const breakEndMin = Math.floor(breakEndMinutes % 60);
+          
+          breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
+          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+        }
         
-        if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
+        const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
+        const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
+        
+        if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
           // Durante la pausa pranzo
           actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
           status = 'on_break';
-        } else if (currentTimeObj > breakEndTime) {
+        } else if (currentTimeObj >= breakEndTime) {
           // Dopo la pausa pranzo
           const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
           const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
@@ -2828,6 +2860,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
           status = 'working';
         } else {
           // Prima della pausa pranzo
+          const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
           actualHours = workedMinutes / 60;
           status = 'working';
         }
