@@ -255,178 +255,115 @@ const Attendance = () => {
     });
   };
 
-  // Calcolo DINAMICO delle ore in tempo reale per ogni dipendente
-  const calculateRealTimeHours = () => {
-    console.log('🔄 calculateRealTimeHours called');
-    console.log('📋 workSchedules:', workSchedules);
+  // Calcolo DINAMICO delle ore in tempo reale usando l'endpoint backend
+  const calculateRealTimeHours = async () => {
+    console.log('🔄 calculateRealTimeHours called (using API endpoint)');
     
-    if (!workSchedules || workSchedules.length === 0) {
-      console.log('⚠️ No work schedules available');
-      return;
-    }
-
-    const now = new Date();
-    const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const dayOfWeek = now.getDay();
-    
-    console.log(`🕐 Calcolo dinamico: ora attuale ${currentTime}, giorno ${dayOfWeek}`);
-
-    // Trova l'orario di lavoro per oggi
-    const todaySchedule = workSchedules.find(schedule => 
-      schedule.day_of_week === dayOfWeek && schedule.is_working_day
-    );
-
-    if (!todaySchedule) {
-      console.log('⚠️ No working schedule for today');
-      return;
-    }
-
-    const { start_time, end_time, break_duration } = todaySchedule;
-    console.log(`📋 Orario dipendente: ${start_time} - ${end_time}, pausa: ${break_duration}min`);
-
-    // Converte orari in numeri per calcoli
-    const [startHour, startMin] = start_time.split(':').map(Number);
-    const [endHour, endMin] = end_time.split(':').map(Number);
-    const breakDuration = break_duration || 60; // minuti
-
-    // Calcola ore attese totali
-      const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60;
-
-    let actualHours = 0;
-    let status = 'not_started';
-    let remainingHours = 0;
-
-    // Se è prima dell'inizio
-    if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
-      actualHours = 0;
-      status = 'not_started';
-      remainingHours = expectedHours;
-    }
-    // Se è dopo la fine
-    else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-      actualHours = expectedHours;
-      status = 'completed';
-      remainingHours = 0;
-    }
-    // Se è durante l'orario di lavoro
-    else {
-      // Calcola minuti dall'inizio
-      const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
+    try {
+      const response = await apiCall('/api/attendance/current-hours');
       
-      // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
-      const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
-      
-      let totalMinutesWorked = 0;
-      
-      if (hasLunchBreak) {
-        // GIORNATA COMPLETA: ha pausa pranzo (es. 9:00-18:00)
-        const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2; // Fine mattina
-        const breakStartMinutes = morningEndMinutes;
-        const breakEndMinutes = morningEndMinutes + breakDuration;
+      if (response.ok) {
+        const data = await response.json();
         
-        if (minutesFromStart < breakStartMinutes) {
-          // Prima della pausa pranzo
-          totalMinutesWorked = minutesFromStart;
-          status = 'working';
-        } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-          // Durante la pausa pranzo
-          totalMinutesWorked = breakStartMinutes;
-          status = 'on_break';
+        if (!data.isWorkingDay) {
+          setCurrentHours({
+            isWorkingDay: false,
+            schedule: { start_time: '09:00', end_time: '18:00', break_duration: 60 },
+            currentTime: data.currentTime || '00:00',
+            expectedHours: 0,
+            actualHours: 0,
+            balanceHours: 0,
+            status: 'not_started',
+            progress: 0
+          });
+          return;
+        }
+        
+        // Calcola ore rimanenti
+        const remainingHours = Math.max(0, data.expectedHours - data.actualHours);
+        
+        console.log(`📊 API calculation: ${data.actualHours.toFixed(2)}h lavorate, ${remainingHours.toFixed(2)}h rimanenti, status: ${data.status}`);
+        
+        // Calcola i dati finali
+        const finalActualHours = Math.round(data.actualHours * 10) / 10;
+        const finalExpectedHours = Math.round(data.expectedHours * 10) / 10;
+        const finalBalanceHours = Math.round(data.balanceHours * 10) / 10;
+
+        const now = new Date();
+        
+        // Aggiorna la cache locale
+        setLocalCache(prev => ({
+          ...prev,
+          lastCalculation: now,
+          pendingSave: prev.pendingSave || (now.getMinutes() === 0 && finalActualHours > 0) // Salva ogni ora in punto
+        }));
+
+        // Aggiorna lo stato con cache
+        setCurrentHours({
+          isWorkingDay: true,
+          schedule: {
+            start_time: data.schedule?.start_time || '09:00',
+            end_time: data.schedule?.end_time || '18:00',
+            break_duration: data.schedule?.break_duration || 60
+          },
+          currentTime: data.currentTime || now.toTimeString().substring(0, 5),
+          expectedHours: finalExpectedHours,
+          actualHours: finalActualHours,
+          balanceHours: finalBalanceHours,
+          status: data.status || 'working',
+          progress: Math.min((finalActualHours / finalExpectedHours) * 100, 100)
+        });
+
+        // Aggiorna anche i dati di attendance per oggi
+        const today = now.toISOString().split('T')[0];
+        let updatedAttendance;
+        
+        if (attendance.length > 0) {
+          // Se ci sono già record, aggiorna quello di oggi
+          updatedAttendance = attendance.map(record => 
+            record.date === today 
+              ? { 
+                  ...record, 
+                  actual_hours: finalActualHours, 
+                  balance_hours: finalBalanceHours 
+                }
+              : record
+          );
         } else {
-          // Dopo la pausa pranzo
-          const morningMinutes = breakStartMinutes;
-          const afternoonMinutes = minutesFromStart - breakEndMinutes;
-          totalMinutesWorked = morningMinutes + afternoonMinutes;
-          status = 'working';
+          // Se non ci sono record, crea un record virtuale per oggi
+          updatedAttendance = [{
+            id: `virtual-${today}`,
+            user_id: user?.id,
+            date: today,
+            expected_hours: finalExpectedHours,
+            actual_hours: finalActualHours,
+            balance_hours: finalBalanceHours,
+            notes: 'Presenza automatica per orario',
+            created_at: now.toISOString(),
+            updated_at: now.toISOString()
+          }];
+        }
+        
+        setAttendance(updatedAttendance);
+        
+        // Ricalcola i KPI dopo aver aggiornato le ore
+        console.log('🔄 Recalculating KPIs after hour update...');
+        calculateKPIs(updatedAttendance);
+
+        // Controlla se è il momento di salvare (ogni ora in punto)
+        if (now.getMinutes() === 0 && finalActualHours > 0) {
+          const lastSave = localCache.lastHourlySave;
+          if (!lastSave || (now.getTime() - lastSave.getTime()) >= 3600000) {
+            console.log('⏰ Time for hourly save:', finalActualHours, 'hours');
+            saveHourlyAttendance();
+          }
         }
       } else {
-        // MEZZA GIORNATA: non ha pausa pranzo (es. 9:00-13:00)
-        totalMinutesWorked = minutesFromStart;
-        status = 'working';
+        console.error('❌ Failed to fetch current hours:', response.status);
       }
-      
-      actualHours = totalMinutesWorked / 60;
-      remainingHours = expectedHours - actualHours;
-    }
-
-    console.log(`📊 Calcolo dipendente: ${actualHours.toFixed(1)}h lavorate, ${remainingHours.toFixed(1)}h rimanenti, status: ${status}`);
-
-    // Calcola i dati finali
-    const finalActualHours = Math.round(actualHours * 10) / 10;
-    const finalExpectedHours = Math.round(expectedHours * 10) / 10;
-    const finalBalanceHours = Math.round((actualHours - expectedHours) * 10) / 10;
-
-    // Aggiorna la cache locale
-    setLocalCache(prev => ({
-      ...prev,
-      lastCalculation: now,
-      pendingSave: prev.pendingSave || (now.getMinutes() === 0 && finalActualHours > 0) // Salva ogni ora in punto
-    }));
-
-    // Aggiorna lo stato con cache
-    setCurrentHours({
-      isWorkingDay: true,
-      schedule: {
-        start_time,
-        end_time,
-        break_duration: breakDuration
-      },
-      currentTime,
-      expectedHours: finalExpectedHours,
-      actualHours: finalActualHours,
-      balanceHours: finalBalanceHours,
-      status,
-      progress: Math.min((actualHours / expectedHours) * 100, 100)
-    });
-
-    // Aggiorna anche i dati di attendance per oggi
-    const today = now.toISOString().split('T')[0];
-    let updatedAttendance;
-    
-    if (attendance.length > 0) {
-      // Se ci sono già record, aggiorna quello di oggi
-      updatedAttendance = attendance.map(record => 
-        record.date === today 
-          ? { 
-              ...record, 
-              actual_hours: finalActualHours, 
-              balance_hours: finalBalanceHours 
-            }
-          : record
-      );
-    } else {
-      // Se non ci sono record, crea un record virtuale per oggi
-      updatedAttendance = [{
-        id: `virtual-${today}`,
-        user_id: user?.id,
-        date: today,
-        expected_hours: finalExpectedHours,
-        actual_hours: finalActualHours,
-        balance_hours: finalBalanceHours,
-        notes: 'Presenza automatica per orario',
-        created_at: now.toISOString(),
-        updated_at: now.toISOString()
-      }];
-    }
-    
-    setAttendance(updatedAttendance);
-    
-    // Ricalcola i KPI dopo aver aggiornato le ore
-    console.log('🔄 Recalculating KPIs after hour update...');
-    calculateKPIs(updatedAttendance);
-
-    // Controlla se è il momento di salvare (ogni ora in punto)
-    if (now.getMinutes() === 0 && finalActualHours > 0) {
-      const lastSave = localCache.lastHourlySave;
-      if (!lastSave || (now.getTime() - lastSave.getTime()) >= 3600000) {
-        console.log('⏰ Time for hourly save:', finalActualHours, 'hours');
-        saveHourlyAttendance();
-      }
+    } catch (error) {
+      console.error('❌ Error calculating real-time hours:', error);
+      // Se l'API fallisce, non fare nulla (mantieni i dati esistenti)
     }
   };
 
