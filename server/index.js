@@ -2874,7 +2874,13 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     // Calcola saldo ore
     const balanceHours = actualHours - expectedHours;
     
-    console.log(`📊 Calculated: expected=${expectedHours}h, actual=${actualHours}h, balance=${balanceHours}h, status=${status}`);
+    console.log(`📊 Calculated: expected=${expectedHours.toFixed(2)}h (${start_time}-${end_time}, break=${break_duration}m), actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
+    
+    // Verifica che expected_hours sia corretto (deve escludere la pausa pranzo)
+    const verifyExpected = ((new Date(`2000-01-01T${end_time}`) - new Date(`2000-01-01T${start_time}`)) / (1000 * 60) - (break_duration || 60)) / 60;
+    if (Math.abs(expectedHours - verifyExpected) > 0.01) {
+      console.warn(`⚠️ WARNING: expectedHours mismatch! Calculated: ${expectedHours.toFixed(2)}h, Should be: ${verifyExpected.toFixed(2)}h`);
+    }
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -2885,11 +2891,12 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       .single();
 
     if (existingAttendance) {
-      // Aggiorna presenza esistente
+      // Aggiorna presenza esistente (aggiorna anche expected_hours per sicurezza)
       const { error: updateError } = await supabase
         .from('attendance')
         .update({
           actual_hours: actualHours,
+          expected_hours: expectedHours,
           balance_hours: balanceHours,
           notes: `Aggiornato alle ${currentTime} - ${status}`
         })
