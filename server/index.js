@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
-const { calculateExpectedHoursForSchedule } = require('./utils/hoursCalculation');
+const { calculateExpectedHoursForSchedule, calculateRealTimeHours } = require('./utils/hoursCalculation');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const WebSocketManager = require('./websocket');
@@ -2845,92 +2845,48 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       return res.status(400).json({ error: 'Nessun orario di lavoro per oggi' });
     }
 
-    // Calcola ore attese CORRETTE: 9-18 con 1h pausa = 8h
-    const startTime = new Date(`2000-01-01T${start_time}`);
-    const endTime = new Date(`2000-01-01T${end_time}`);
-    const totalMinutes = (endTime - startTime) / (1000 * 60); // Minuti totali (9 ore = 540 min)
-    const workMinutes = totalMinutes - (break_duration || 60); // Sottrai pausa (540 - 60 = 480 min)
-    const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
-
-    // Calcola ore effettive basate sull'orario corrente
-    let actualHours = 0;
-    let status = 'not_started';
+    // Recupera permessi approvati per oggi (early_exit/late_entry)
+    const { data: permissionsToday } = await supabase
+      .from('leave_requests')
+      .select('hours, permission_type, exit_time, entry_time')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
     
-    if (currentTime >= start_time) {
-      if (currentTime <= end_time) {
-        // Durante l'orario di lavoro
-        const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
-        
-        // Calcola pausa pranzo dallo schedule o usa default
-        let breakStartTimeStr, breakEndTimeStr;
-        if (break_start_time) {
-          // Usa break_start_time configurato
-          const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
-          breakStartTimeStr = break_start_time;
-          const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
-          const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
-          const breakEndMin = breakEndTimeMinutes % 60;
-          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
-        } else {
-          // Calcola pausa pranzo come metà dell'orario meno metà della durata
-          const [startHour, startMin] = start_time.split(':').map(Number);
-          const [endHour, endMin] = end_time.split(':').map(Number);
-          const breakDurationMins = break_duration || 60;
-          
-          const startTotalMinutes = startHour * 60 + startMin;
-          const endTotalMinutes = endHour * 60 + endMin;
-          const totalMinutes = endTotalMinutes - startTotalMinutes;
-          
-          // Pausa pranzo a metà dell'orario
-          const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
-          const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
-          const breakEndMinutes = breakStartMinutes + breakDurationMins;
-          
-          const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
-          const breakStartMin = Math.floor(breakStartMinutes % 60);
-          const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
-          const breakEndMin = Math.floor(breakEndMinutes % 60);
-          
-          breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
-          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+    let permissionData = null;
+    if (permissionsToday && permissionsToday.length > 0) {
+      let totalHours = 0;
+      let exitTime = null;
+      let entryTime = null;
+      let permType = null;
+      
+      permissionsToday.forEach(perm => {
+        totalHours += parseFloat(perm.hours || 0);
+        if (perm.permission_type === 'early_exit' && perm.exit_time) {
+          exitTime = perm.exit_time;
+          permType = 'early_exit';
         }
-        
-        const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
-        const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
-        
-        if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
-          // Durante la pausa pranzo
-          actualHours = (breakStartTime - startTime) / (1000 * 60) / 60;
-          status = 'on_break';
-        } else if (currentTimeObj >= breakEndTime) {
-          // Dopo la pausa pranzo
-          const morningMinutes = (breakStartTime - startTime) / (1000 * 60);
-          const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
-          actualHours = (morningMinutes + afternoonMinutes) / 60;
-          status = 'working';
-        } else {
-          // Prima della pausa pranzo
-          const workedMinutes = (currentTimeObj - startTime) / (1000 * 60);
-          actualHours = workedMinutes / 60;
-          status = 'working';
+        if (perm.permission_type === 'late_entry' && perm.entry_time) {
+          entryTime = perm.entry_time;
+          permType = 'late_entry';
         }
-      } else {
-        // Dopo l'orario di lavoro
-        actualHours = expectedHours;
-        status = 'completed';
+      });
+      
+      if (exitTime || entryTime) {
+        permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
       }
     }
 
-    // Calcola saldo ore
-    const balanceHours = actualHours - expectedHours;
+    // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore
+    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+      schedule,
+      currentTime,
+      permissionData
+    );
     
-    console.log(`📊 Calculated: expected=${expectedHours.toFixed(2)}h (${start_time}-${end_time}, break=${break_duration}m), actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
-    
-    // Verifica che expected_hours sia corretto (deve escludere la pausa pranzo)
-    const verifyExpected = ((new Date(`2000-01-01T${end_time}`) - new Date(`2000-01-01T${start_time}`)) / (1000 * 60) - (break_duration || 60)) / 60;
-    if (Math.abs(expectedHours - verifyExpected) > 0.01) {
-      console.warn(`⚠️ WARNING: expectedHours mismatch! Calculated: ${expectedHours.toFixed(2)}h, Should be: ${verifyExpected.toFixed(2)}h`);
-    }
+    console.log(`📊 Calculated (centralized): expected=${expectedHours.toFixed(2)}h, actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
