@@ -2176,7 +2176,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     // Calcola il saldo totale da TUTTE le presenze
     const { data: allAttendance, error } = await supabase
       .from('attendance')
-      .select('balance_hours, date')
+      .select('balance_hours, date, actual_hours, expected_hours')
       .eq('user_id', targetUserId);
     
     if (error) {
@@ -2184,15 +2184,76 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
     }
 
-    console.log(`🔍 DEBUG: Found ${allAttendance.length} attendance records for user ${targetUserId}`);
-    console.log(`🔍 DEBUG: Records:`, allAttendance.map(r => ({ date: r.date, balance: r.balance_hours })));
+    // Calcola il saldo real-time per oggi se è un giorno lavorativo
+    const today = new Date().toISOString().split('T')[0];
+    let todayBalance = 0;
+    let todayRecord = allAttendance.find(r => r.date === today);
+    
+    // Verifica se oggi è un giorno lavorativo e calcola real-time
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const { data: schedule } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+    
+    if (schedule) {
+      // Recupera permessi per oggi
+      const { data: permissionsToday } = await supabase
+        .from('leave_requests')
+        .select('hours, permission_type, exit_time, entry_time')
+        .eq('user_id', targetUserId)
+        .eq('type', 'permission')
+        .eq('status', 'approved')
+        .lte('start_date', today)
+        .gte('end_date', today);
+      
+      let permissionData = null;
+      if (permissionsToday && permissionsToday.length > 0) {
+        let exitTime = null;
+        let entryTime = null;
+        let permType = null;
+        
+        permissionsToday.forEach(perm => {
+          if (perm.permission_type === 'early_exit' && perm.exit_time) {
+            exitTime = perm.exit_time;
+            permType = 'early_exit';
+          }
+          if (perm.permission_type === 'late_entry' && perm.entry_time) {
+            entryTime = perm.entry_time;
+            permType = 'late_entry';
+          }
+        });
+        
+        if (exitTime || entryTime) {
+          permissionData = { permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+        }
+      }
+      
+      // USA LA FUNZIONE CENTRALIZZATA per calcolare il balance di oggi
+      const currentTime = now.toTimeString().substring(0, 5);
+      const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+      todayBalance = result.balanceHours;
+      
+      console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
+    } else if (todayRecord) {
+      // Non è un giorno lavorativo, usa il balance dal DB
+      todayBalance = todayRecord.balance_hours || 0;
+    }
 
-    // Somma tutti i saldi (positivi e negativi)
-    const totalBalance = allAttendance.reduce((sum, record) => 
-      sum + (record.balance_hours || 0), 0
-    );
+    // Somma tutti i saldi, usando real-time per oggi
+    const totalBalance = allAttendance.reduce((sum, record) => {
+      if (record.date === today && schedule) {
+        // Usa il balance real-time per oggi invece del DB
+        return sum + todayBalance;
+      }
+      return sum + (record.balance_hours || 0);
+    }, 0);
 
-    console.log(`💰 Total balance for user ${targetUserId}: ${totalBalance.toFixed(2)}h`);
+    console.log(`💰 Total balance for user ${targetUserId}: ${totalBalance.toFixed(2)}h (using real-time for today: ${todayBalance.toFixed(2)}h)`);
 
     res.json({
       userId: targetUserId,
