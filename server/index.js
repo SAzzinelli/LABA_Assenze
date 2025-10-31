@@ -2377,7 +2377,7 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
     }
 
     // Calcola ore di lavoro basate sull'orario specifico
-    const { start_time, end_time, break_duration } = schedule;
+    const { start_time, end_time, break_duration, break_start_time } = schedule;
     const start = new Date(`2000-01-01T${start_time}`);
     const end = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (end - start) / (1000 * 60);
@@ -2611,7 +2611,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       });
     }
 
-    const { start_time, end_time, break_duration } = schedule;
+    const { start_time, end_time, break_duration, break_start_time } = schedule;
     
     // Recupera permessi approvati per oggi per questo utente
     const { data: permissionsToday, error: permError } = await supabase
@@ -2681,15 +2681,48 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         // Durante l'orario di lavoro
         const currentTimeObj = new Date(`2000-01-01T${currentTime}`);
         
-        // Pausa pranzo fissa dalle 13:00 alle 14:00 (o come configurato)
-        const breakStartTime = new Date(`2000-01-01T13:00`);
-        const breakEndTime = new Date(`2000-01-01T14:00`);
+        // Calcola pausa pranzo dallo schedule o usa default
+        let breakStartTimeStr, breakEndTimeStr;
+        if (break_start_time) {
+          // Usa break_start_time configurato
+          const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
+          breakStartTimeStr = break_start_time;
+          const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
+          const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
+          const breakEndMin = breakEndTimeMinutes % 60;
+          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+        } else {
+          // Calcola pausa pranzo come metà dell'orario meno metà della durata
+          const [startHour, startMin] = effectiveStartTime.split(':').map(Number);
+          const [endHour, endMin] = effectiveEndTime.split(':').map(Number);
+          const breakDurationMins = break_duration || 60;
+          
+          const startTotalMinutes = startHour * 60 + startMin;
+          const endTotalMinutes = endHour * 60 + endMin;
+          const totalMinutes = endTotalMinutes - startTotalMinutes;
+          
+          // Pausa pranzo a metà dell'orario
+          const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
+          const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
+          const breakEndMinutes = breakStartMinutes + breakDurationMins;
+          
+          const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
+          const breakStartMin = Math.floor(breakStartMinutes % 60);
+          const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
+          const breakEndMin = Math.floor(breakEndMinutes % 60);
+          
+          breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
+          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+        }
         
-        if (currentTimeObj >= breakStartTime && currentTimeObj <= breakEndTime) {
+        const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
+        const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
+        
+        if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
           // Durante la pausa pranzo
           actualHours = (breakStartTime - effectiveStartTimeObj) / (1000 * 60) / 60;
           status = 'on_break';
-        } else if (currentTimeObj > breakEndTime) {
+        } else if (currentTimeObj >= breakEndTime) {
           // Dopo la pausa pranzo
           const morningMinutes = (breakStartTime - effectiveStartTimeObj) / (1000 * 60);
           const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
