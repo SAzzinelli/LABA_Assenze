@@ -93,9 +93,7 @@ const Dashboard = () => {
         const refreshTimer = setInterval(() => {
           if (user?.role === 'employee') {
             console.log('🔄 Refreshing employee data...');
-            fetchAttendanceData();
-            fetchWorkSchedules();
-            // Non calcolare KPI localmente, usa solo l'endpoint
+            fetchAttendanceData(); // Questo chiamerà updateKPIsWithBalance
           } else if (user?.role === 'admin') {
             console.log('🔄 Refreshing admin data...');
             fetchEmployees();
@@ -105,31 +103,43 @@ const Dashboard = () => {
           }
         }, 30000); // Ogni 30 secondi
         
-        return () => clearInterval(refreshTimer);
+        // Timer per aggiornare i KPI ogni minuto (per aggiornare le ore in tempo reale)
+        const kpiTimer = setInterval(() => {
+          if (user?.role === 'employee') {
+            fetchAttendanceData(); // Questo aggiornerà anche i KPI
+          }
+        }, 60000); // Ogni minuto
         
-        // Fetch weekly attendance data
-        const weeklyResponse = await apiCall('/api/dashboard/attendance');
-        if (weeklyResponse.ok) {
-          const weeklyData = await weeklyResponse.json();
-          setWeeklyAttendance(weeklyData || []);
-        }
-        
-        // Fetch departments data
-        const departmentsResponse = await apiCall('/api/departments');
-        if (departmentsResponse.ok) {
-          const departmentsData = await departmentsResponse.json();
-          if (departmentsData && departmentsData.length > 0) {
-            const chartData = departmentsData.map((dept, index) => ({
-              name: dept.name,
-              value: dept.employee_count || 0,
-              color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
-              employees: dept.employee_count || 0
-            }));
-            setDepartments(chartData);
-          } else {
-            setDepartments([]);
+        // Fetch weekly attendance data (solo per admin)
+        if (user?.role === 'admin') {
+          const weeklyResponse = await apiCall('/api/dashboard/attendance');
+          if (weeklyResponse.ok) {
+            const weeklyData = await weeklyResponse.json();
+            setWeeklyAttendance(weeklyData || []);
+          }
+          
+          // Fetch departments data
+          const departmentsResponse = await apiCall('/api/departments');
+          if (departmentsResponse.ok) {
+            const departmentsData = await departmentsResponse.json();
+            if (departmentsData && departmentsData.length > 0) {
+              const chartData = departmentsData.map((dept, index) => ({
+                name: dept.name,
+                value: dept.employee_count || 0,
+                color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
+                employees: dept.employee_count || 0
+              }));
+              setDepartments(chartData);
+            } else {
+              setDepartments([]);
+            }
           }
         }
+        
+        return () => {
+          clearInterval(refreshTimer);
+          clearInterval(kpiTimer);
+        };
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -400,8 +410,7 @@ const Dashboard = () => {
 
   const updateKPIsWithBalance = async (balanceData) => {
     if (user?.role === 'employee') {
-      // Usa gli stessi dati real-time dell'endpoint /api/attendance/current
-      // Questo garantisce coerenza con la pagina Presenze
+      // Usa SOLO l'endpoint /api/attendance/current-hours per coerenza con Presenze
       try {
         const response = await apiCall('/api/attendance/current-hours');
         if (response.ok) {
@@ -413,10 +422,11 @@ const Dashboard = () => {
             const todayBalance = currentHoursData.balanceHours || 0;
             
             // Update KPIs with today's hours from the same endpoint
+            // NOTA: overtimeBalance mostra il saldo MENSILE, non quello di oggi
             setUserKPIs(prevKPIs => ({
               ...prevKPIs,
-              weeklyHours: formatHours(todayHours),
-              overtimeBalance: formatOvertime(todayBalance),
+              weeklyHours: formatHours(todayHours), // Ore lavorate OGGI
+              overtimeBalance: formatOvertime(balanceData.monte_ore || 0), // Saldo MENSILE (monte ore)
               remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
               monthlyPresences: `${balanceData.working_days}/20`
             }));
@@ -425,105 +435,26 @@ const Dashboard = () => {
               todayHours, 
               todayExpectedHours, 
               todayBalance,
-              monthlyBalance: balanceData.monte_ore 
+              monthlyBalance: balanceData.monte_ore,
+              workingDays: balanceData.working_days
             });
-            return;
+          } else {
+            // Non è un giorno lavorativo
+            setUserKPIs(prevKPIs => ({
+              ...prevKPIs,
+              weeklyHours: '0h 0m',
+              overtimeBalance: '+0h 0m',
+              remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
+              monthlyPresences: `${balanceData.working_days}/20`
+            }));
           }
+        } else {
+          console.error('❌ Failed to fetch current hours:', response.status);
         }
       } catch (error) {
-        console.error('Error fetching current hours, falling back to local calculation:', error);
+        console.error('❌ Error fetching current hours:', error);
+        // Non fare fallback, lascia i valori esistenti o usa valori di default
       }
-      
-      // FALLBACK: Calculate today's hours only (not weekly)
-      const today = new Date();
-      const todaySchedule = workSchedules.find(schedule => 
-        schedule.day_of_week === today.getDay() && schedule.is_working_day
-      );
-      
-      let todayHours = 0;
-      if (todaySchedule) {
-        const currentHour = today.getHours();
-        const currentMinute = today.getMinutes();
-        const { start_time, end_time, break_duration } = todaySchedule;
-        const [startHour, startMin] = start_time.split(':').map(Number);
-        const [endHour, endMin] = end_time.split(':').map(Number);
-        const breakDuration = break_duration || 60;
-        
-        // Calculate today's real-time hours (same logic as Presenze page)
-        if (currentHour < startHour || (currentHour === startHour && currentMinute < startMin)) {
-          todayHours = 0;
-        } else if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMin)) {
-          const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-          const workMinutes = totalMinutes - breakDuration;
-          todayHours = workMinutes / 60;
-        } else {
-          // During work time - calculate with lunch break logic
-          const minutesFromStart = (currentHour - startHour) * 60 + (currentMinute - startMin);
-          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-          const hasLunchBreak = totalWorkMinutes > 300;
-          
-          let totalMinutesWorked = 0;
-          
-          if (hasLunchBreak) {
-            // FULL DAY: has lunch break
-            const morningEndMinutes = (totalWorkMinutes - breakDuration) / 2;
-            const breakStartMinutes = morningEndMinutes;
-            const breakEndMinutes = morningEndMinutes + breakDuration;
-            
-            if (minutesFromStart < breakStartMinutes) {
-              totalMinutesWorked = minutesFromStart;
-            } else if (minutesFromStart >= breakStartMinutes && minutesFromStart < breakEndMinutes) {
-              totalMinutesWorked = breakStartMinutes;
-            } else {
-              const morningMinutes = breakStartMinutes;
-              const afternoonMinutes = minutesFromStart - breakEndMinutes;
-              totalMinutesWorked = morningMinutes + afternoonMinutes;
-            }
-          } else {
-            // HALF DAY: no lunch break
-            totalMinutesWorked = minutesFromStart;
-          }
-          
-          todayHours = totalMinutesWorked / 60;
-        }
-      }
-      
-      // Calculate today's expected hours for balance calculation
-      let todayExpectedHours = 0;
-      console.log('🔍 Debug todaySchedule:', todaySchedule);
-      if (todaySchedule) {
-        const { start_time, end_time, break_duration } = todaySchedule;
-        console.log('🔍 Schedule times:', { start_time, end_time, break_duration });
-        const [startHour, startMin] = start_time.split(':').map(Number);
-        const [endHour, endMin] = end_time.split(':').map(Number);
-        const breakDuration = break_duration || 60;
-        
-        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-        const workMinutes = totalMinutes - breakDuration;
-        todayExpectedHours = workMinutes / 60;
-        console.log('🔍 Calculated expected hours:', todayExpectedHours);
-      } else {
-        console.log('⚠️ No todaySchedule found!');
-      }
-      
-      // Calculate today's balance (actual vs expected)
-      const todayBalance = todayHours - todayExpectedHours;
-      
-      // Update KPIs with today's hours and today's balance
-      setUserKPIs(prevKPIs => ({
-        ...prevKPIs,
-        weeklyHours: formatHours(todayHours), // TODAY'S hours only
-        overtimeBalance: formatOvertime(todayBalance), // TODAY'S balance (positive/negative/zero)
-        remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
-        monthlyPresences: `${balanceData.working_days}/20`
-      }));
-      
-      console.log('✅ KPIs updated with today\'s hours:', { 
-        todayHours, 
-        todayExpectedHours, 
-        todayBalance,
-        monthlyBalance: balanceData.monte_ore 
-      });
     }
   };
 
