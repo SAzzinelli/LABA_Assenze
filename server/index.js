@@ -1232,16 +1232,22 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     let totalExpectedHours = 0;
     
     // If we have real-time calculation for today, use ONLY that (ignore DB record for today)
+    // IMPORTANTE: Questo assicura che i dati real-time sovrascrivano sempre i dati del database per oggi
     if (hasRealTimeCalculation && isCurrentMonth) {
-      // Use real-time for today
+      // Use real-time for today (IGNORA completamente il record DB per oggi)
       totalActualHours = realTimeActualHours;
       totalExpectedHours = realTimeExpectedHours;
+      
+      console.log(`🔄 Using real-time for today: ${realTimeActualHours.toFixed(2)}h actual, ${realTimeExpectedHours.toFixed(2)}h expected`);
       
       // Add other days from database (excluding today if it exists)
       attendance.forEach(record => {
         if (record.date !== today) {
           totalActualHours += record.actual_hours || 0;
           totalExpectedHours += record.expected_hours || 8;
+          console.log(`  📅 ${record.date}: +${record.actual_hours || 0}h actual, +${record.expected_hours || 8}h expected`);
+        } else {
+          console.log(`  ⏭️ Skipping DB record for today (${record.date}) - using real-time instead`);
         }
       });
     } else {
