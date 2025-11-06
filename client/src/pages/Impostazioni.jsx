@@ -28,8 +28,11 @@ import {
   Send,
   Users,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  TestTube,
+  Sparkles
 } from 'lucide-react';
+import TestSimulazione from './TestSimulazione';
 
 const Settings = () => {
   const { user, apiCall } = useAuthStore();
@@ -256,7 +259,8 @@ const Settings = () => {
     ...(user?.role === 'admin' ? [{ id: 'company', name: 'Azienda', icon: Building2 }] : []),
     { id: 'notifications', name: 'Notifiche', icon: Bell },
     ...(user?.role === 'admin' ? [
-      { id: 'emailManagement', name: 'Mail', icon: Mail }
+      { id: 'emailManagement', name: 'Mail', icon: Mail },
+      { id: 'testSimulazione', name: 'Test & Simulazione', icon: TestTube }
     ] : [])
   ];
 
@@ -531,6 +535,7 @@ const Settings = () => {
       case 'company': return renderCompanyTab();
       case 'notifications': return renderNotificationsTab();
       case 'emailManagement': return renderEmailManagementTab();
+      case 'testSimulazione': return <TestSimulazione />;
       default: return <div className="text-slate-400">Sezione in sviluppo...</div>;
     }
   };
@@ -589,15 +594,18 @@ const Settings = () => {
               <>
                 {renderTabContent()}
                 
-                <div className="mt-8 pt-6 border-t border-slate-700">
-                  <button
-                    onClick={handleSaveSettings}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-                  >
-                    <Save className="h-5 w-5 mr-2" />
-                    Salva Impostazioni
-                  </button>
-                </div>
+                {/* Mostra il pulsante "Salva Impostazioni" solo se non siamo nella tab Test & Simulazione */}
+                {activeTab !== 'testSimulazione' && (
+                  <div className="mt-8 pt-6 border-t border-slate-700">
+                    <button
+                      onClick={handleSaveSettings}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                    >
+                      <Save className="h-5 w-5 mr-2" />
+                      Salva Impostazioni
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
