@@ -30,15 +30,65 @@ const TestSimulazione = () => {
     }
   }, []);
 
+  // Carica modalità test dal database
   useEffect(() => {
-    if (testMode) {
-      localStorage.setItem('testMode', 'true');
-      localStorage.setItem('simulatedDate', simulatedDate);
-      localStorage.setItem('simulatedTime', simulatedTime);
-    } else {
-      localStorage.removeItem('testMode');
-      localStorage.removeItem('simulatedDate');
-      localStorage.removeItem('simulatedTime');
+    const loadTestMode = async () => {
+      try {
+        const response = await apiCall('/api/test-mode');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.active) {
+            setTestMode(true);
+            setSimulatedDate(data.date);
+            setSimulatedTime(data.time);
+            // Salva anche in localStorage per compatibilità
+            localStorage.setItem('testMode', 'true');
+            localStorage.setItem('simulatedDate', data.date);
+            localStorage.setItem('simulatedTime', data.time);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading test mode:', error);
+      }
+    };
+    loadTestMode();
+  }, []);
+
+  // Salva modalità test nel database quando cambia
+  useEffect(() => {
+    const saveTestMode = async () => {
+      try {
+        const response = await apiCall('/api/test-mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            active: testMode,
+            date: testMode ? simulatedDate : null,
+            time: testMode ? simulatedTime : null
+          })
+        });
+        
+        if (response.ok) {
+          // Salva anche in localStorage per compatibilità
+          if (testMode) {
+            localStorage.setItem('testMode', 'true');
+            localStorage.setItem('simulatedDate', simulatedDate);
+            localStorage.setItem('simulatedTime', simulatedTime);
+          } else {
+            localStorage.removeItem('testMode');
+            localStorage.removeItem('simulatedDate');
+            localStorage.removeItem('simulatedTime');
+          }
+          console.log('✅ Test mode salvata nel database');
+        }
+      } catch (error) {
+        console.error('Error saving test mode:', error);
+      }
+    };
+    
+    // Salva solo se i valori sono stati impostati (evita salvataggi iniziali)
+    if (simulatedDate && simulatedTime) {
+      saveTestMode();
     }
   }, [testMode, simulatedDate, simulatedTime]);
 

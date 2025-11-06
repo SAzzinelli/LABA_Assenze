@@ -32,7 +32,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
 // Helper function per ottenere data/ora corrente o simulata
-function getCurrentDateTime(req) {
+async function getCurrentDateTime(req, targetUserId = null) {
+  // 1. Controlla parametri query/header (priorità massima)
   const testDate = req.query.testDate || req.headers['x-test-date'];
   const testTime = req.query.testTime || req.headers['x-test-time'];
   
@@ -49,7 +50,33 @@ function getCurrentDateTime(req) {
     };
   }
   
-  // Modalità normale: usa data/ora reale
+  // 2. Se targetUserId è specificato, controlla se quell'utente ha modalità test attiva nel DB
+  if (targetUserId) {
+    try {
+      const { data: userTestMode } = await supabase
+        .from('users')
+        .select('test_mode_active, test_mode_date, test_mode_time')
+        .eq('id', targetUserId)
+        .single();
+      
+      if (userTestMode?.test_mode_active && userTestMode.test_mode_date && userTestMode.test_mode_time) {
+        console.log(`🧪 TEST MODE per utente ${targetUserId}: ${userTestMode.test_mode_date} ${userTestMode.test_mode_time}`);
+        const [year, month, day] = userTestMode.test_mode_date.split('-').map(Number);
+        const [hour, minute] = userTestMode.test_mode_time.split(':').map(Number);
+        const simulatedDate = new Date(year, month - 1, day, hour, minute);
+        return {
+          date: userTestMode.test_mode_date,
+          time: userTestMode.test_mode_time,
+          dateTime: simulatedDate,
+          isTestMode: true
+        };
+      }
+    } catch (error) {
+      console.error('Error checking user test mode:', error);
+    }
+  }
+  
+  // 3. Modalità normale: usa data/ora reale
   const now = new Date();
   return {
     date: now.toISOString().split('T')[0],
@@ -1115,7 +1142,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
   try {
     const { year, month, userId } = req.query;
     const targetUserId = userId || req.user.id;
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = getCurrentDateTime(req);
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
     
     if (isTestMode) {
       console.log(`🧪 TEST MODE: Hours balance per ${today} alle ${currentTime}`);
@@ -2693,7 +2720,7 @@ app.post('/api/attendance/generate-today', authenticateToken, async (req, res) =
 app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = getCurrentDateTime(req);
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, userId);
     
     if (isTestMode) {
       console.log(`🧪 TEST MODE: Calcolo ore per ${today} alle ${currentTime}`);
@@ -2776,6 +2803,88 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('Current hours calculation error:', error);
     res.status(500).json({ error: 'Errore nel calcolo delle ore correnti' });
+  }
+});
+
+// Save/Update test mode for user
+app.post('/api/test-mode', authenticateToken, async (req, res) => {
+  try {
+    const { active, date, time } = req.body;
+    const userId = req.user.id;
+    
+    // Solo l'utente può modificare la propria modalità test (o admin per altri utenti)
+    const targetUserId = req.body.userId || userId;
+    if (req.user.role !== 'admin' && targetUserId !== userId) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    // Valida i dati
+    if (active && (!date || !time)) {
+      return res.status(400).json({ error: 'Data e ora richieste quando la modalità test è attiva' });
+    }
+    
+    // Aggiorna la modalità test nel database
+    const updateData = {
+      test_mode_active: active || false,
+      test_mode_date: active ? date : null,
+      test_mode_time: active ? time : null
+    };
+    
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', targetUserId);
+    
+    if (error) {
+      console.error('Error updating test mode:', error);
+      return res.status(500).json({ error: 'Errore nel salvataggio della modalità test' });
+    }
+    
+    console.log(`🧪 Test mode ${active ? 'attivata' : 'disattivata'} per utente ${targetUserId}: ${date} ${time}`);
+    
+    res.json({
+      success: true,
+      message: `Modalità test ${active ? 'attivata' : 'disattivata'}`,
+      testMode: {
+        active,
+        date: active ? date : null,
+        time: active ? time : null
+      }
+    });
+  } catch (error) {
+    console.error('Test mode save error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Get test mode status for user
+app.get('/api/test-mode', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.query.userId || req.user.id;
+    
+    // Solo l'utente può vedere la propria modalità test (o admin per tutti)
+    if (req.user.role !== 'admin' && userId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('test_mode_active, test_mode_date, test_mode_time')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      return res.status(500).json({ error: 'Errore nel recupero della modalità test' });
+    }
+    
+    res.json({
+      active: user.test_mode_active || false,
+      date: user.test_mode_date || null,
+      time: user.test_mode_time || null
+    });
+  } catch (error) {
+    console.error('Test mode get error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 
@@ -3118,12 +3227,14 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       .eq('day_of_week', dayOfWeek)
       .single();
 
-    // Se è oggi, calcola le ore real-time usando la logica corretta
-    const today = new Date().toISOString().split('T')[0];
+    // Usa getCurrentDateTime per ottenere data/ora (reale o simulata) per questo utente
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
     let balanceHours = attendance.balance_hours || 0;
     
+    // Se è oggi (o data simulata), calcola le ore real-time usando la logica corretta
     if (date === today && schedule) {
       // Recupera permessi per oggi
       const { data: permissionsToday } = await supabase
@@ -3159,9 +3270,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
         }
       }
       
-      // USA LA FUNZIONE CENTRALIZZATA
-      const now = new Date();
-      const currentTime = now.toTimeString().substring(0, 5);
+      // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
       const result = calculateRealTimeHours(schedule, currentTime, permissionData);
       actualHours = result.actualHours;
       expectedHours = result.expectedHours;
