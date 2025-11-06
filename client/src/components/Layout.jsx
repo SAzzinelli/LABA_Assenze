@@ -33,15 +33,33 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check test mode status
+  // Check test mode status GLOBALE (solo admin può attivarla)
   React.useEffect(() => {
-    const checkTestMode = () => {
-      setTestMode(localStorage.getItem('testMode') === 'true');
+    const checkTestMode = async () => {
+      try {
+        const response = await apiCall('/api/test-mode');
+        if (response.ok) {
+          const data = await response.json();
+          setTestMode(data.active || false);
+          // Salva anche in localStorage per compatibilità
+          if (data.active) {
+            localStorage.setItem('testMode', 'true');
+            localStorage.setItem('simulatedDate', data.date);
+            localStorage.setItem('simulatedTime', data.time);
+          } else {
+            localStorage.removeItem('testMode');
+            localStorage.removeItem('simulatedDate');
+            localStorage.removeItem('simulatedTime');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking test mode:', error);
+      }
     };
     checkTestMode();
-    const interval = setInterval(checkTestMode, 1000);
+    const interval = setInterval(checkTestMode, 2000); // Controlla ogni 2 secondi
     return () => clearInterval(interval);
-  }, []);
+  }, [apiCall]);
 
   const handleLogout = async () => {
     await logout();
@@ -141,7 +159,7 @@ const Layout = ({ children }) => {
     { name: 'Permessi 104', href: '/permessi-104', icon: Accessibility, showIf: (u) => u?.has_104 === true || u?.role === 'admin' },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
-    { name: 'Test & Simulazione', href: '/test-simulazione', icon: Sparkles },
+    { name: 'Test & Simulazione', href: '/test-simulazione', icon: Sparkles, showIf: (u) => u?.role === 'admin' && testMode },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 

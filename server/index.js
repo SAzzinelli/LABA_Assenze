@@ -32,6 +32,33 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
 // Helper function per ottenere data/ora corrente o simulata
+// Funzione per controllare se la modalità test globale è attiva (solo admin può attivarla)
+async function getGlobalTestMode() {
+  try {
+    // Cerca un admin con modalità test attiva
+    const { data: adminWithTestMode } = await supabase
+      .from('users')
+      .select('test_mode_active, test_mode_date, test_mode_time')
+      .eq('role', 'admin')
+      .eq('test_mode_active', true)
+      .not('test_mode_date', 'is', null)
+      .not('test_mode_time', 'is', null)
+      .limit(1)
+      .single();
+    
+    if (adminWithTestMode?.test_mode_active && adminWithTestMode.test_mode_date && adminWithTestMode.test_mode_time) {
+      return {
+        active: true,
+        date: adminWithTestMode.test_mode_date,
+        time: adminWithTestMode.test_mode_time
+      };
+    }
+    return { active: false, date: null, time: null };
+  } catch (error) {
+    return { active: false, date: null, time: null };
+  }
+}
+
 async function getCurrentDateTime(req, targetUserId = null) {
   // 1. Controlla parametri query/header (priorità massima)
   const testDate = req.query.testDate || req.headers['x-test-date'];
@@ -50,30 +77,19 @@ async function getCurrentDateTime(req, targetUserId = null) {
     };
   }
   
-  // 2. Se targetUserId è specificato, controlla se quell'utente ha modalità test attiva nel DB
-  if (targetUserId) {
-    try {
-      const { data: userTestMode } = await supabase
-        .from('users')
-        .select('test_mode_active, test_mode_date, test_mode_time')
-        .eq('id', targetUserId)
-        .single();
-      
-      if (userTestMode?.test_mode_active && userTestMode.test_mode_date && userTestMode.test_mode_time) {
-        console.log(`🧪 TEST MODE per utente ${targetUserId}: ${userTestMode.test_mode_date} ${userTestMode.test_mode_time}`);
-        const [year, month, day] = userTestMode.test_mode_date.split('-').map(Number);
-        const [hour, minute] = userTestMode.test_mode_time.split(':').map(Number);
-        const simulatedDate = new Date(year, month - 1, day, hour, minute);
-        return {
-          date: userTestMode.test_mode_date,
-          time: userTestMode.test_mode_time,
-          dateTime: simulatedDate,
-          isTestMode: true
-        };
-      }
-    } catch (error) {
-      console.error('Error checking user test mode:', error);
-    }
+  // 2. Controlla se la modalità test globale è attiva (solo admin può attivarla)
+  const globalTestMode = await getGlobalTestMode();
+  if (globalTestMode.active) {
+    console.log(`🧪 TEST MODE GLOBALE ATTIVA: ${globalTestMode.date} ${globalTestMode.time}`);
+    const [year, month, day] = globalTestMode.date.split('-').map(Number);
+    const [hour, minute] = globalTestMode.time.split(':').map(Number);
+    const simulatedDate = new Date(year, month - 1, day, hour, minute);
+    return {
+      date: globalTestMode.date,
+      time: globalTestMode.time,
+      dateTime: simulatedDate,
+      isTestMode: true
+    };
   }
   
   // 3. Modalità normale: usa data/ora reale
@@ -1102,27 +1118,29 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Dati mancanti' });
     }
 
-    // Verifica permessi
-    if (req.user.role === 'employee') {
-      // Employee può salvare solo i propri dati
-      const targetUserId = req.user.id;
-    } else {
-      // Admin può salvare per qualsiasi utente
-      const targetUserId = req.body.userId || req.user.id;
-    }
-
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
+    
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
+    
+    // Se in modalità test, salva in test_attendance invece di attendance
+    const tableName = isTestMode ? 'test_attendance' : 'attendance';
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Salvataggio presenza in ${tableName} per ${date}`);
+    }
 
     // Aggiorna o inserisci il record di presenza
     const { data, error } = await supabase
-      .from('attendance')
+      .from(tableName)
       .upsert({
         user_id: targetUserId,
         date: date,
         actual_hours: parseFloat(actualHours),
         expected_hours: parseFloat(expectedHours),
         balance_hours: parseFloat(balanceHours || 0),
-        notes: notes || '',
+        notes: notes || (isTestMode ? '[Dati di Test]' : ''),
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,date'
@@ -1137,8 +1155,9 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Presenza salvata con successo',
-      attendance: data
+      message: isTestMode ? 'Presenza di test salvata con successo' : 'Presenza salvata con successo',
+      attendance: data,
+      isTestData: isTestMode
     });
   } catch (error) {
     console.error('Attendance save error:', error);
@@ -2931,49 +2950,72 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
   }
 });
 
-// Save/Update test mode for user
+// Save/Update test mode GLOBALE (solo admin può attivarla)
 app.post('/api/test-mode', authenticateToken, async (req, res) => {
   try {
-    const { active, date, time } = req.body;
-    const userId = req.user.id;
-    
-    // Solo l'utente può modificare la propria modalità test (o admin per altri utenti)
-    const targetUserId = req.body.userId || userId;
-    if (req.user.role !== 'admin' && targetUserId !== userId) {
-      return res.status(403).json({ error: 'Accesso negato' });
+    // Solo l'admin può attivare la modalità test globale
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo l\'admin può attivare la modalità test' });
     }
+    
+    const { active, date, time } = req.body;
     
     // Valida i dati
     if (active && (!date || !time)) {
       return res.status(400).json({ error: 'Data e ora richieste quando la modalità test è attiva' });
     }
     
-    // Aggiorna la modalità test nel database
+    // Se si disattiva, disattiva per tutti gli admin
+    if (!active) {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          test_mode_active: false,
+          test_mode_date: null,
+          test_mode_time: null
+        })
+        .eq('role', 'admin');
+      
+      if (error) {
+        console.error('Error deactivating test mode:', error);
+        return res.status(500).json({ error: 'Errore nella disattivazione della modalità test' });
+      }
+      
+      console.log(`🧪 Test mode GLOBALE disattivata`);
+      return res.json({
+        success: true,
+        message: 'Modalità test disattivata',
+        testMode: { active: false, date: null, time: null }
+      });
+    }
+    
+    // Se si attiva, attiva solo per l'admin corrente (sarà la modalità globale)
     const updateData = {
-      test_mode_active: active || false,
-      test_mode_date: active ? date : null,
-      test_mode_time: active ? time : null
+      test_mode_active: true,
+      test_mode_date: date,
+      test_mode_time: time
     };
     
     const { error } = await supabase
       .from('users')
       .update(updateData)
-      .eq('id', targetUserId);
+      .eq('id', req.user.id)
+      .eq('role', 'admin');
     
     if (error) {
-      console.error('Error updating test mode:', error);
-      return res.status(500).json({ error: 'Errore nel salvataggio della modalità test' });
+      console.error('Error activating test mode:', error);
+      return res.status(500).json({ error: 'Errore nell\'attivazione della modalità test' });
     }
     
-    console.log(`🧪 Test mode ${active ? 'attivata' : 'disattivata'} per utente ${targetUserId}: ${date} ${time}`);
+    console.log(`🧪 Test mode GLOBALE attivata dall'admin ${req.user.id}: ${date} ${time}`);
     
     res.json({
       success: true,
-      message: `Modalità test ${active ? 'attivata' : 'disattivata'}`,
+      message: 'Modalità test globale attivata',
       testMode: {
-        active,
-        date: active ? date : null,
-        time: active ? time : null
+        active: true,
+        date,
+        time
       }
     });
   } catch (error) {
@@ -2982,31 +3024,32 @@ app.post('/api/test-mode', authenticateToken, async (req, res) => {
   }
 });
 
-// Get test mode status for user
+// Get test mode status GLOBALE
 app.get('/api/test-mode', authenticateToken, async (req, res) => {
   try {
-    const userId = req.query.userId || req.user.id;
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
     
-    // Solo l'utente può vedere la propria modalità test (o admin per tutti)
-    if (req.user.role !== 'admin' && userId !== req.user.id) {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
-    
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('test_mode_active, test_mode_date, test_mode_time, test_data')
-      .eq('id', userId)
-      .single();
-    
-    if (error) {
-      return res.status(500).json({ error: 'Errore nel recupero della modalità test' });
+    // Se l'utente è admin, restituisci anche i dati di test se presenti
+    let testData = null;
+    if (req.user.role === 'admin' && globalTestMode.active) {
+      const { data: adminUser } = await supabase
+        .from('users')
+        .select('test_data')
+        .eq('role', 'admin')
+        .eq('test_mode_active', true)
+        .limit(1)
+        .single();
+      
+      testData = adminUser?.test_data || null;
     }
     
     res.json({
-      active: user.test_mode_active || false,
-      date: user.test_mode_date || null,
-      time: user.test_mode_time || null,
-      testData: user.test_data || null
+      active: globalTestMode.active,
+      date: globalTestMode.date,
+      time: globalTestMode.time,
+      testData: testData,
+      canActivate: req.user.role === 'admin' // Solo admin può attivare
     });
   } catch (error) {
     console.error('Test mode get error:', error);
@@ -3703,12 +3746,23 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       }
     }
     
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
+    
+    // Se in modalità test, leggi da test_leave_requests invece di leave_requests
+    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Lettura richieste da ${tableName}`);
+    }
+    
     let query = supabase
-      .from('leave_requests')
+      .from(tableName)
       .select(`
         *,
-        users!leave_requests_user_id_fkey(first_name, last_name, email),
-        approver:users!leave_requests_approved_by_fkey(first_name, last_name, email)
+        users!${tableName}_user_id_fkey(first_name, last_name, email),
+        approver:users!${tableName}_approved_by_fkey(first_name, last_name, email)
       `)
       .order('created_at', { ascending: false });
 
@@ -4014,10 +4068,21 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (exitTime !== undefined) insertData.exit_time = exitTime;
     if (entryTime !== undefined) insertData.entry_time = entryTime;
 
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
+    
+    // Se in modalità test, salva in test_leave_requests invece di leave_requests
+    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Salvataggio richiesta in ${tableName}`);
+    }
+    
     console.log('🔧 Inserting leave request with data:', insertData);
 
     const { data: newRequest, error } = await supabase
-      .from('leave_requests')
+      .from(tableName)
       .insert([insertData])
       .select()
       .single();
