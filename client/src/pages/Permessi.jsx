@@ -338,12 +338,10 @@ const LeaveRequests = () => {
     }
     
     try {
-      const { token } = useAuthStore.getState();
-      const response = await fetch('/api/hours/leave-requests-hours', {
+      const response = await apiCall('/api/leave-requests', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           type: 'permission',
