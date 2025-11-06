@@ -29,8 +29,19 @@ const Layout = ({ children }) => {
   const [notifications, setNotifications] = React.useState([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
+  const [testMode, setTestMode] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Check test mode status
+  React.useEffect(() => {
+    const checkTestMode = () => {
+      setTestMode(localStorage.getItem('testMode') === 'true');
+    };
+    checkTestMode();
+    const interval = setInterval(checkTestMode, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
