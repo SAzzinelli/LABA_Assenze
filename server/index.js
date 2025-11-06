@@ -31,6 +31,34 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
+// Helper function per ottenere data/ora corrente o simulata
+function getCurrentDateTime(req) {
+  const testDate = req.query.testDate || req.headers['x-test-date'];
+  const testTime = req.query.testTime || req.headers['x-test-time'];
+  
+  if (testDate && testTime) {
+    // Modalità test: usa data/ora simulate
+    const [year, month, day] = testDate.split('-').map(Number);
+    const [hour, minute] = testTime.split(':').map(Number);
+    const simulatedDate = new Date(year, month - 1, day, hour, minute);
+    return {
+      date: testDate,
+      time: testTime,
+      dateTime: simulatedDate,
+      isTestMode: true
+    };
+  }
+  
+  // Modalità normale: usa data/ora reale
+  const now = new Date();
+  return {
+    date: now.toISOString().split('T')[0],
+    time: now.toTimeString().substring(0, 5),
+    dateTime: now,
+    isTestMode: false
+  };
+}
+
 // Admin middleware
 const requireAdmin = (req, res, next) => {
   if (req.user.role !== 'admin' && req.user.role !== 'Amministratore' && req.user.role !== 'supervisor') {
@@ -2664,9 +2692,11 @@ app.post('/api/attendance/generate-today', authenticateToken, async (req, res) =
 app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
-    const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = getCurrentDateTime(req);
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Calcolo ore per ${today} alle ${currentTime}`);
+    }
     
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();

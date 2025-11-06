@@ -1,0 +1,345 @@
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../utils/store';
+import { Clock, Calendar, User, Settings, TestTube, CheckCircle, XCircle, AlertCircle, Play, Square } from 'lucide-react';
+
+const TestSimulazione = () => {
+  const { user, apiCall } = useAuthStore();
+  const [testMode, setTestMode] = useState(false);
+  const [simulatedDate, setSimulatedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [simulatedTime, setSimulatedTime] = useState(new Date().toTimeString().substring(0, 5));
+  const [testData, setTestData] = useState({
+    attendance: null,
+    hours: null,
+    balance: null,
+    permissions: null,
+    permission104: null,
+    dashboard: null
+  });
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Salva la modalità test nel localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('testMode');
+    if (saved === 'true') {
+      setTestMode(true);
+      const savedDate = localStorage.getItem('simulatedDate');
+      const savedTime = localStorage.getItem('simulatedTime');
+      if (savedDate) setSimulatedDate(savedDate);
+      if (savedTime) setSimulatedTime(savedTime);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (testMode) {
+      localStorage.setItem('testMode', 'true');
+      localStorage.setItem('simulatedDate', simulatedDate);
+      localStorage.setItem('simulatedTime', simulatedTime);
+    } else {
+      localStorage.removeItem('testMode');
+      localStorage.removeItem('simulatedDate');
+      localStorage.removeItem('simulatedTime');
+    }
+  }, [testMode, simulatedDate, simulatedTime]);
+
+  const runFullTest = async () => {
+    setLoading(true);
+    try {
+      // Test tutte le funzionalità
+      const [hoursRes, balanceRes, attendanceRes, permissionsRes, permission104Res] = await Promise.all([
+        apiCall(`/api/attendance/test-hours?time=${simulatedTime}&date=${simulatedDate}`),
+        apiCall(`/api/attendance/hours-balance?year=${new Date(simulatedDate).getFullYear()}&month=${new Date(simulatedDate).getMonth() + 1}&testDate=${simulatedDate}&testTime=${simulatedTime}`),
+        apiCall(`/api/attendance?testDate=${simulatedDate}&testTime=${simulatedTime}`),
+        apiCall(`/api/leave-requests?type=permission&testDate=${simulatedDate}&testTime=${simulatedTime}`),
+        apiCall(`/api/leave-requests?type=permission_104&testDate=${simulatedDate}&testTime=${simulatedTime}`)
+      ]);
+
+      setTestData({
+        hours: hoursRes.ok ? await hoursRes.json() : null,
+        balance: balanceRes.ok ? await balanceRes.json() : null,
+        attendance: attendanceRes.ok ? await attendanceRes.json() : null,
+        permissions: permissionsRes.ok ? await permissionsRes.json() : null,
+        permission104: permission104Res.ok ? await permission104Res.json() : null
+      });
+    } catch (error) {
+      console.error('Test error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatHours = (hours) => {
+    if (!hours && hours !== 0) return '--';
+    const h = Math.floor(Math.abs(hours));
+    const m = Math.round((Math.abs(hours) - h) * 60);
+    return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2 flex items-center">
+                <TestTube className="h-8 w-8 mr-3 text-indigo-400" />
+                Test & Simulazione
+              </h1>
+              <p className="text-slate-400">
+                Simula date e orari per testare tutte le funzionalità del sistema
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className={`px-4 py-2 rounded-lg font-medium ${testMode ? 'bg-green-600' : 'bg-slate-700'}`}>
+                {testMode ? (
+                  <span className="flex items-center">
+                    <Play className="h-4 w-4 mr-2" />
+                    Modalità Test ATTIVA
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <Square className="h-4 w-4 mr-2" />
+                    Modalità Test DISATTIVATA
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Test Mode Toggle */}
+          <div className="bg-slate-800 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <Settings className="h-5 w-5 mr-2 text-indigo-400" />
+                Configurazione Test
+              </h2>
+              <button
+                onClick={() => setTestMode(!testMode)}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  testMode
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                {testMode ? 'Disattiva Test Mode' : 'Attiva Test Mode'}
+              </button>
+            </div>
+
+            {testMode && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <Calendar className="h-4 w-4 inline mr-2" />
+                    Data Simulata
+                  </label>
+                  <input
+                    type="date"
+                    value={simulatedDate}
+                    onChange={(e) => setSimulatedDate(e.target.value)}
+                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <Clock className="h-4 w-4 inline mr-2" />
+                    Orario Simulato
+                  </label>
+                  <input
+                    type="time"
+                    value={simulatedTime}
+                    onChange={(e) => setSimulatedTime(e.target.value)}
+                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {testMode && (
+              <div className="mt-4 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-300 text-sm flex items-start">
+                  <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong>Modalità Test Attiva:</strong> Tutti i calcoli e le visualizzazioni useranno la data e l'orario simulati. 
+                    I dati di test non vengono salvati nel database reale.
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-slate-800 rounded-lg overflow-hidden mb-6">
+          <nav className="flex border-b border-slate-700 overflow-x-auto">
+            {[
+              { id: 'overview', name: 'Panoramica', icon: User },
+              { id: 'attendance', name: 'Presenze', icon: Clock },
+              { id: 'permissions', name: 'Permessi', icon: CheckCircle },
+              { id: 'permission104', name: 'Permessi 104', icon: AlertCircle },
+              { id: 'dashboard', name: 'Dashboard', icon: Settings }
+            ].map((tab) => {
+              const IconComponent = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'bg-indigo-600/10 text-indigo-400 border-indigo-400'
+                      : 'text-slate-300 hover:bg-slate-700/50 border-transparent'
+                  }`}
+                >
+                  <IconComponent className="h-5 w-5 mr-2" />
+                  {tab.name}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Tab Content */}
+          <div className="p-6">
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold">Test Completo Sistema</h3>
+                  <button
+                    onClick={runFullTest}
+                    disabled={loading || !testMode}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+                  >
+                    {loading ? 'Test in corso...' : 'Esegui Test Completo'}
+                  </button>
+                </div>
+
+                {testData.hours && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-700 rounded-lg p-4">
+                      <p className="text-slate-400 text-sm mb-1">Ore Attese</p>
+                      <p className="text-2xl font-bold text-white">{testData.hours.expectedHours}h</p>
+                    </div>
+                    <div className="bg-slate-700 rounded-lg p-4">
+                      <p className="text-slate-400 text-sm mb-1">Ore Lavorate</p>
+                      <p className="text-2xl font-bold text-blue-400">{testData.hours.actualHours?.toFixed(1) || 0}h</p>
+                    </div>
+                    <div className="bg-slate-700 rounded-lg p-4">
+                      <p className="text-slate-400 text-sm mb-1">Saldo</p>
+                      <p className={`text-2xl font-bold ${testData.hours.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatHours(testData.hours.balanceHours)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {testData.balance && (
+                  <div className="bg-slate-700 rounded-lg p-4">
+                    <h4 className="font-bold mb-2">Bilancio Mensile</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-slate-400 text-sm">Monte Ore</p>
+                        <p className="text-xl font-bold">{formatHours(testData.balance.monte_ore)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-sm">Giorni Lavorati</p>
+                        <p className="text-xl font-bold">{testData.balance.working_days}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-sm">Giorni Assenti</p>
+                        <p className="text-xl font-bold">{testData.balance.absent_days}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-sm">Ore Totali</p>
+                        <p className="text-xl font-bold">{testData.balance.total_worked?.toFixed(1) || 0}h</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'attendance' && testData.hours && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Dettagli Presenze</h3>
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-slate-400 text-sm">Orario</p>
+                      <p className="text-lg font-bold">{testData.hours.schedule?.start_time} - {testData.hours.schedule?.end_time}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Pausa</p>
+                      <p className="text-lg font-bold">{testData.hours.schedule?.break_duration} min</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Stato</p>
+                      <p className="text-lg font-bold text-indigo-400">{testData.hours.status}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-sm">Progresso</p>
+                      <p className="text-lg font-bold">{testData.hours.progress?.toFixed(1) || 0}%</p>
+                    </div>
+                  </div>
+                  {testData.hours.manualCalculation && (
+                    <div className="mt-4 p-3 bg-slate-800 rounded">
+                      <p className="text-slate-300 text-sm mb-2"><strong>Calcolo Manuale:</strong></p>
+                      <p className="text-slate-400 text-xs">Mattina: {testData.hours.manualCalculation.morning}</p>
+                      <p className="text-slate-400 text-xs">Pausa: {testData.hours.manualCalculation.break}</p>
+                      <p className="text-slate-400 text-xs">Pomeriggio: {testData.hours.manualCalculation.afternoon}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'permissions' && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Permessi</h3>
+                {testData.permissions ? (
+                  <div className="bg-slate-700 rounded-lg p-4">
+                    <p className="text-slate-300">
+                      {testData.permissions.length} permesso/i trovato/i per la data simulata
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-slate-400">Esegui un test completo per vedere i permessi</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'permission104' && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Permessi 104</h3>
+                {testData.permission104 ? (
+                  <div className="bg-slate-700 rounded-lg p-4">
+                    <p className="text-slate-300">
+                      {testData.permission104.length} permesso/i 104 trovato/i per la data simulata
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-slate-400">Esegui un test completo per vedere i permessi 104</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'dashboard' && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Dashboard Test</h3>
+                <p className="text-slate-400">
+                  La dashboard userà automaticamente la data e l'orario simulati quando la modalità test è attiva.
+                </p>
+                <div className="bg-slate-700 rounded-lg p-4">
+                  <p className="text-slate-300">
+                    Vai alla <a href="/dashboard" className="text-indigo-400 hover:underline">Dashboard</a> per vedere i dati simulati.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TestSimulazione;
+
