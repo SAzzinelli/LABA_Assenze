@@ -3681,6 +3681,27 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
 app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
     const { month, year, type } = req.query;
+    const targetUserId = req.user.role === 'admin' && req.query.userId ? req.query.userId : req.user.id;
+    
+    // Controlla se l'utente ha modalità test attiva
+    const { date: testDate, time: testTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    
+    // Se in modalità test, controlla se ci sono dati di test
+    let testPermissions = null;
+    let testPermission104 = null;
+    if (isTestMode) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('test_data')
+        .eq('id', targetUserId)
+        .single();
+      
+      if (user?.test_data) {
+        testPermissions = user.test_data.permissions;
+        testPermission104 = user.test_data.permission104;
+        console.log(`🧪 TEST MODE: Usando dati di test per permessi`);
+      }
+    }
     
     let query = supabase
       .from('leave_requests')
@@ -3709,6 +3730,50 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
     }
 
     const { data: requests, error } = await query;
+    
+    // Se in modalità test e ci sono dati di test, aggiungi i permessi virtuali
+    if (isTestMode) {
+      if (testPermissions && Array.isArray(testPermissions)) {
+        testPermissions.forEach(perm => {
+          // Aggiungi solo se corrisponde al tipo richiesto (se specificato)
+          if (!type || perm.type === type) {
+            requests.push({
+              ...perm,
+              id: `test-${Date.now()}-${Math.random()}`,
+              user_id: targetUserId,
+              is_test_data: true,
+              users: {
+                first_name: req.user.first_name || 'Test',
+                last_name: req.user.last_name || 'User',
+                email: req.user.email
+              }
+            });
+          }
+        });
+      }
+      
+      if (testPermission104 && Array.isArray(testPermission104)) {
+        testPermission104.forEach(perm => {
+          // Aggiungi solo se corrisponde al tipo richiesto (se specificato)
+          if (!type || perm.type === type) {
+            requests.push({
+              ...perm,
+              id: `test-104-${Date.now()}-${Math.random()}`,
+              user_id: targetUserId,
+              is_test_data: true,
+              users: {
+                first_name: req.user.first_name || 'Test',
+                last_name: req.user.last_name || 'User',
+                email: req.user.email
+              }
+            });
+          }
+        });
+      }
+      
+      // Ordina di nuovo per data
+      requests.sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date));
+    }
 
     if (error) {
       console.error('Leave requests fetch error:', error);
