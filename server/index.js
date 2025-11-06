@@ -945,6 +945,25 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
     const { date, userId, month, year } = req.query;
+    const targetUserId = userId || req.user.id;
+    
+    // Controlla se l'utente ha modalità test attiva
+    const { date: testDate, time: testTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    
+    // Se in modalità test, controlla se ci sono dati di test
+    let testAttendance = null;
+    if (isTestMode) {
+      const { data: user } = await supabase
+        .from('users')
+        .select('test_data')
+        .eq('id', targetUserId)
+        .single();
+      
+      if (user?.test_data?.attendance) {
+        testAttendance = user.test_data.attendance;
+        console.log(`🧪 TEST MODE: Usando dati di test per presenze`);
+      }
+    }
     
     let query = supabase
       .from('attendance')
@@ -975,6 +994,40 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     const { data: attendance, error } = await query;
+    
+    // Se in modalità test e ci sono dati di test, aggiungi/aggiorna i record virtuali
+    if (isTestMode && testAttendance) {
+      const testDateStr = testDate;
+      
+      // Cerca se esiste già un record per la data di test
+      const existingIndex = attendance.findIndex(a => a.date === testDateStr);
+      
+      if (existingIndex >= 0) {
+        // Aggiorna il record esistente con i dati di test
+        attendance[existingIndex] = {
+          ...attendance[existingIndex],
+          ...testAttendance,
+          date: testDateStr,
+          is_test_data: true
+        };
+      } else {
+        // Aggiungi un nuovo record virtuale
+        attendance.push({
+          ...testAttendance,
+          date: testDateStr,
+          user_id: targetUserId,
+          is_test_data: true,
+          users: {
+            first_name: req.user.first_name || 'Test',
+            last_name: req.user.last_name || 'User',
+            email: req.user.email
+          }
+        });
+      }
+      
+      // Ordina di nuovo per data
+      attendance.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
 
     if (error) {
       console.error('Attendance fetch error:', error);
@@ -2941,7 +2994,7 @@ app.get('/api/test-mode', authenticateToken, async (req, res) => {
     
     const { data: user, error } = await supabase
       .from('users')
-      .select('test_mode_active, test_mode_date, test_mode_time')
+      .select('test_mode_active, test_mode_date, test_mode_time, test_data')
       .eq('id', userId)
       .single();
     
@@ -2952,10 +3005,47 @@ app.get('/api/test-mode', authenticateToken, async (req, res) => {
     res.json({
       active: user.test_mode_active || false,
       date: user.test_mode_date || null,
-      time: user.test_mode_time || null
+      time: user.test_mode_time || null,
+      testData: user.test_data || null
     });
   } catch (error) {
     console.error('Test mode get error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Save test data (presenze virtuali, permessi virtuali, etc.)
+app.post('/api/test-mode/data', authenticateToken, async (req, res) => {
+  try {
+    const { attendance, permissions, permission104 } = req.body;
+    const userId = req.user.id;
+    
+    // Salva i dati di test nel campo test_data (JSONB)
+    const testData = {
+      attendance: attendance || null,
+      permissions: permissions || null,
+      permission104: permission104 || null
+    };
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ test_data: testData })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error saving test data:', error);
+      return res.status(500).json({ error: 'Errore nel salvataggio dei dati di test' });
+    }
+    
+    console.log(`🧪 Test data salvato per utente ${userId}`);
+    
+    res.json({
+      success: true,
+      message: 'Dati di test salvati con successo',
+      testData
+    });
+  } catch (error) {
+    console.error('Test data save error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
