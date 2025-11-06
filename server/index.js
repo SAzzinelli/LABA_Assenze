@@ -2153,6 +2153,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
       
+      // Se non c'è presenza salvata, calcola se dovrebbe essere presente basandosi sull'orario
+      // (questo è importante per la modalità test, dove potresti non aver ancora salvato presenze)
+      
       const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
@@ -2317,10 +2320,10 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
-    // Modalità predefinita: restituisci SOLO i presenti ora (working/on_break)
+    // Modalità predefinita: restituisci SOLO i presenti ora (working/on_break/present)
     // Se necessario, in futuro possiamo aggiungere una query (?includeScheduled=true) per includere anche not_started/completed
     const presentNow = currentAttendance.filter(emp =>
-      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break')
+      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break' || emp.status === 'present')
     );
 
     console.log(`🔍 Present now: ${presentNow.length}`);
