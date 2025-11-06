@@ -1115,15 +1115,20 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
   try {
     const { year, month, userId } = req.query;
     const targetUserId = userId || req.user.id;
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = getCurrentDateTime(req);
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Hours balance per ${today} alle ${currentTime}`);
+    }
     
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    // Calcola il balance dalle presenze del mese
-    const targetYear = year || new Date().getFullYear();
-    const targetMonth = month || new Date().getMonth() + 1;
+    // Calcola il balance dalle presenze del mese (usa data simulata se in test mode)
+    const targetYear = year || now.getFullYear();
+    const targetMonth = month || (now.getMonth() + 1);
     const startDate = new Date(targetYear, targetMonth - 1, 1).toISOString().split('T')[0];
     const endDate = new Date(targetYear, targetMonth, 0).toISOString().split('T')[0];
 
@@ -1150,22 +1155,18 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       // Continue without real-time calculation
     }
 
-    // Calculate real-time hours for today (hybrid system)
-    const today = new Date().toISOString().split('T')[0];
+    // Calculate real-time hours for today (hybrid system) - usa data simulata se in test mode
     const todayRecord = attendance.find(record => record.date === today);
     
     let realTimeActualHours = 0;
     let realTimeExpectedHours = 0;
     let hasRealTimeCalculation = false;
     
-    // Always calculate real-time if today is within the month range
-    const todayDate = new Date();
-    const isCurrentMonth = todayDate.getFullYear() === parseInt(targetYear) && 
-                          (todayDate.getMonth() + 1) === parseInt(targetMonth);
+    // Always calculate real-time if today is within the month range (usa data simulata se in test mode)
+    const isCurrentMonth = now.getFullYear() === parseInt(targetYear) && 
+                          (now.getMonth() + 1) === parseInt(targetMonth);
     
     if (isCurrentMonth && workSchedules && workSchedules.length > 0) {
-      const now = new Date();
-      const currentTime = now.toTimeString().substring(0, 5);
       const dayOfWeek = now.getDay();
       
       // Find today's work schedule
@@ -1208,7 +1209,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
           }
         }
         
-        // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore real-time
+        // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore real-time (usa currentTime da getCurrentDateTime)
         const result = calculateRealTimeHours(todaySchedule, currentTime, permissionData);
         realTimeActualHours = result.actualHours;
         realTimeExpectedHours = result.expectedHours;

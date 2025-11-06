@@ -19,7 +19,8 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  Accessibility
+  Accessibility,
+  TestTube
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -411,6 +412,18 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </div>
+
+        {/* Test Mode Banner */}
+        {testMode && (
+          <div className="bg-yellow-600 border-b border-yellow-700 px-4 py-2 text-center">
+            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+              <TestTube className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                <strong>MODALITÀ TEST ATTIVA</strong> - Data: {localStorage.getItem('simulatedDate')} | Ora: {localStorage.getItem('simulatedTime')}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-x-hidden">
