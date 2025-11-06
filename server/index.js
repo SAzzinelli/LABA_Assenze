@@ -1035,7 +1035,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     // Recupera le leave requests approvate per controllare assenze giustificate
-    const targetUserId = userId || req.user.id;
+    // targetUserId è già stato dichiarato sopra
     let leaveQuery = supabase
       .from('leave_requests')
       .select('*')
