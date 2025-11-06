@@ -1052,6 +1052,123 @@ const Attendance = () => {
           </div>
         </div>
 
+        {/* Test Mode - Simula orario */}
+        <div className="mt-8 bg-slate-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <Clock className="h-6 w-6 mr-3 text-indigo-400" />
+              Test Calcolo Ore
+            </h3>
+            <button
+              onClick={() => {
+                setTestMode(!testMode);
+                if (testMode) {
+                  setTestResult(null);
+                }
+              }}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+            >
+              {testMode ? 'Nascondi' : 'Mostra'}
+            </button>
+          </div>
+          
+          {testMode && (
+            <div className="space-y-4">
+              <p className="text-slate-400 text-sm">
+                Simula un orario specifico per verificare il calcolo delle ore anche fuori dall'orario di lavoro.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Orario Simulato (HH:MM)
+                  </label>
+                  <input
+                    type="time"
+                    value={testTime}
+                    onChange={(e) => setTestTime(e.target.value)}
+                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data (opzionale)
+                  </label>
+                  <input
+                    type="date"
+                    value={testDate}
+                    onChange={(e) => setTestDate(e.target.value)}
+                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+              
+              <button
+                onClick={runTest}
+                disabled={testing}
+                className="w-full md:w-auto px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              >
+                {testing ? 'Calcolo...' : 'Calcola Ore'}
+              </button>
+              
+              {testResult && (
+                <div className="mt-6 p-4 bg-slate-900 rounded-lg border border-slate-700">
+                  {testResult.error ? (
+                    <div className="text-red-400">
+                      <strong>Errore:</strong> {testResult.error}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <p className="text-slate-400 text-sm">Ore Attese</p>
+                          <p className="text-xl font-bold text-white">{testResult.expectedHours}h</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-sm">Ore Lavorate</p>
+                          <p className="text-xl font-bold text-blue-400">{testResult.actualHours.toFixed(1)}h</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-sm">Saldo</p>
+                          <p className={`text-xl font-bold ${testResult.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {testResult.balanceHours >= 0 ? '+' : ''}{testResult.balanceHours.toFixed(1)}h
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 text-sm">Stato</p>
+                          <p className="text-xl font-bold text-indigo-400">{testResult.status}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="border-t border-slate-700 pt-4 mt-4">
+                        <p className="text-slate-400 text-sm mb-2">
+                          <strong>Orario:</strong> {testResult.schedule.start_time} - {testResult.schedule.end_time}
+                        </p>
+                        <p className="text-slate-400 text-sm mb-2">
+                          <strong>Pausa:</strong> {testResult.schedule.break_duration} min
+                          {testResult.schedule.break_start_time && ` (${testResult.schedule.break_start_time})`}
+                        </p>
+                        {testResult.manualCalculation && (
+                          <div className="mt-3 p-3 bg-slate-800 rounded">
+                            <p className="text-slate-300 text-sm mb-2"><strong>Calcolo Manuale:</strong></p>
+                            <p className="text-slate-400 text-xs">Mattina: {testResult.manualCalculation.morning}</p>
+                            <p className="text-slate-400 text-xs">Pausa: {testResult.manualCalculation.break}</p>
+                            <p className="text-slate-400 text-xs">Pomeriggio: {testResult.manualCalculation.afternoon}</p>
+                            <p className="text-slate-300 text-sm mt-2">
+                              <strong>Totale Manuale:</strong> {testResult.manualCalculation.manualHours}h
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Modal Dettagli Presenze */}
         {showAttendanceDetails && selectedAttendanceDetails && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
