@@ -1953,16 +1953,46 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
-    // Recupera malattie per oggi (usa range ampio per gestire test mode)
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
+    
+    // Se in modalità test, leggi da test_leave_requests invece di leave_requests
+    const leaveTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Lettura leave requests da ${leaveTableName}`);
+    }
+    
+    // Recupera presenze per oggi (se in modalità test, leggi da test_attendance)
+    const attendanceTableName = isTestMode ? 'test_attendance' : 'attendance';
+    const { data: attendanceToday, error: attendanceError } = await supabase
+      .from(attendanceTableName)
+      .select('user_id, actual_hours, expected_hours')
+      .eq('date', today);
+    
+    // Crea mappa user_id -> presenza per oggi
+    const attendanceMap = {};
+    if (attendanceToday && !attendanceError) {
+      attendanceToday.forEach(a => {
+        attendanceMap[a.user_id] = {
+          actual_hours: a.actual_hours,
+          expected_hours: a.expected_hours
+        };
+      });
+    }
+    console.log(`📅 Presenze oggi (${attendanceTableName}):`, Object.keys(attendanceMap).length, 'utenti');
+    
+    // Recupera malattie per oggi
     const { data: sickToday, error: sickError } = await supabase
-      .from('leave_requests')
+      .from(leaveTableName)
       .select('user_id, start_date, end_date')
       .eq('type', 'sick_leave')
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
     
-    // Crea mappa user_id -> date per malattie (per gestire test mode per utente)
+    // Crea mappa user_id -> date per malattie
     const sickMap = {};
     if (sickToday && !sickError) {
       sickToday.forEach(s => {
@@ -1972,9 +2002,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
     console.log(`🤒 Malattie oggi:`, Object.keys(sickMap).length);
     
-    // Recupera permessi 104 per oggi (usa range ampio per gestire test mode)
+    // Recupera permessi 104 per oggi
     const { data: perm104Today, error: perm104Error } = await supabase
-      .from('leave_requests')
+      .from(leaveTableName)
       .select('user_id, start_date, end_date')
       .eq('type', 'permission_104')
       .eq('status', 'approved')
@@ -1991,9 +2021,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
     console.log(`🔵 Permessi 104 oggi:`, Object.keys(perm104Map).length);
     
-    // Recupera permessi approvati per oggi per tutti gli utenti (usa range ampio per gestire test mode)
+    // Recupera permessi approvati per oggi per tutti gli utenti
     const { data: permissionsToday, error: permError } = await supabase
-      .from('leave_requests')
+      .from(leaveTableName)
       .select('user_id, hours, permission_type, exit_time, entry_time, start_date, end_date')
       .eq('type', 'permission')
       .eq('status', 'approved')
@@ -2104,6 +2134,25 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
 
+      // Se c'è una presenza salvata per oggi, usa quella invece di calcolare
+      const savedAttendance = attendanceMap[user.id];
+      if (savedAttendance) {
+        console.log(`📅 ${user.first_name} ha presenza salvata: ${savedAttendance.actual_hours}h / ${savedAttendance.expected_hours}h`);
+        return {
+          user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: true,
+          status: 'present',
+          actual_hours: savedAttendance.actual_hours || 0,
+          expected_hours: savedAttendance.expected_hours || 0,
+          balance_hours: (savedAttendance.actual_hours || 0) - (savedAttendance.expected_hours || 0),
+          permission_end_time: null
+        };
+      }
+      
       const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
