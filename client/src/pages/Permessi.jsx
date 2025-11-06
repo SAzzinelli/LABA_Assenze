@@ -36,6 +36,9 @@ const LeaveRequests = () => {
     entryTime: '', // Orario di entrata per entrata posticipata
     notes: ''
   });
+  
+  // Orario di lavoro reale per il calcolo corretto
+  const [workSchedule, setWorkSchedule] = useState(null);
 
   // Filtri temporali per admin
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -103,6 +106,44 @@ const LeaveRequests = () => {
     }
   }, [user?.has104]);
 
+  // Carica l'orario di lavoro quando cambia la data del permesso
+  useEffect(() => {
+    const fetchWorkSchedule = async () => {
+      if (!formData.permissionDate) {
+        setWorkSchedule(null);
+        return;
+      }
+      
+      try {
+        const date = new Date(formData.permissionDate);
+        const dayOfWeek = date.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
+        
+        const response = await apiCall('/api/work-schedules');
+        if (response.ok) {
+          const schedules = await response.json();
+          // Trova l'orario per il giorno specifico
+          const schedule = schedules.find(s => 
+            s.day_of_week === dayOfWeek && s.is_working_day
+          );
+          
+          if (schedule) {
+            setWorkSchedule({
+              start_time: schedule.start_time,
+              end_time: schedule.end_time
+            });
+          } else {
+            setWorkSchedule(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching work schedule:', error);
+        setWorkSchedule(null);
+      }
+    };
+    
+    fetchWorkSchedule();
+  }, [formData.permissionDate, apiCall]);
+
   const fetchPermissions104 = async () => {
     try {
       const response = await apiCall('/api/104-permissions/count');
@@ -118,11 +159,9 @@ const LeaveRequests = () => {
   // Funzioni per gestire approvazione/rifiuto richieste (solo admin)
   const handleApproveRequest = async (requestId, notes = '') => {
     try {
-      const { token } = useAuthStore.getState();
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -146,11 +185,9 @@ const LeaveRequests = () => {
 
   const handleRejectRequest = async (requestId, notes = '') => {
     try {
-      const { token } = useAuthStore.getState();
-      const response = await fetch(`/api/leave-requests/${requestId}`, {
+      const response = await apiCall(`/api/leave-requests/${requestId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -251,21 +288,34 @@ const LeaveRequests = () => {
     }));
   };
 
-  // Calcola automaticamente le ore di permesso
+  // Calcola automaticamente le ore di permesso usando l'orario reale
   const calculatePermissionHours = () => {
-    if (formData.type === 'uscita_anticipata' && formData.exitTime) {
-      // Orario normale: 9-18, se esce prima calcola la differenza
-      const normalExitTime = 18; // 18:00
-      const exitTime = parseFloat(formData.exitTime.replace(':', '.'));
-      const hoursDiff = normalExitTime - exitTime;
-      return Math.max(0, hoursDiff);
-    } else if (formData.type === 'entrata_posticipata' && formData.entryTime) {
-      // Orario normale: 9-18, se entra dopo calcola la differenza
-      const normalEntryTime = 9; // 9:00
-      const entryTime = parseFloat(formData.entryTime.replace(':', '.'));
-      const hoursDiff = entryTime - normalEntryTime;
-      return Math.max(0, hoursDiff);
+    if (!formData.permissionDate) return 0;
+    
+    // Se abbiamo l'orario di lavoro per quel giorno, usalo
+    if (workSchedule) {
+      const timeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      if (formData.type === 'uscita_anticipata' && formData.exitTime) {
+        // Uscita anticipata: calcola da exitTime alla fine standard
+        const exitMinutes = timeToMinutes(formData.exitTime);
+        const standardEndMinutes = timeToMinutes(workSchedule.end_time);
+        const minutesDiff = standardEndMinutes - exitMinutes;
+        return Math.max(0, parseFloat((minutesDiff / 60).toFixed(2)));
+      } else if (formData.type === 'entrata_posticipata' && formData.entryTime) {
+        // Entrata posticipata: calcola dall'inizio standard a entryTime
+        const entryMinutes = timeToMinutes(formData.entryTime);
+        const standardStartMinutes = timeToMinutes(workSchedule.start_time);
+        const minutesDiff = entryMinutes - standardStartMinutes;
+        return Math.max(0, parseFloat((minutesDiff / 60).toFixed(2)));
+      }
     }
+    
+    // Fallback: se non abbiamo l'orario, usa valori di default (non dovrebbe accadere)
     return 0;
   };
 
@@ -301,7 +351,7 @@ const LeaveRequests = () => {
           endDate: formData.permissionDate,
           reason: formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata',
           notes: formData.notes,
-          permissionType: formData.type === 'uscita_anticipata' ? 'uscita_anticipata' : 'entrata_posticipata',
+          permissionType: formData.type === 'uscita_anticipata' ? 'early_exit' : 'late_entry',
           hours: calculatedHours,
           exitTime: formData.exitTime,
           entryTime: formData.entryTime
@@ -732,7 +782,9 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    Orario normale di uscita: 18:00. Le ore di permesso verranno calcolate automaticamente.
+                    {workSchedule 
+                      ? `Orario normale di uscita: ${workSchedule.end_time}. Le ore di permesso verranno calcolate automaticamente.`
+                      : 'Caricamento orario di lavoro...'}
                   </p>
                 </div>
               )}
@@ -751,7 +803,9 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    Orario normale di entrata: 09:00. Le ore di permesso verranno calcolate automaticamente.
+                    {workSchedule 
+                      ? `Orario normale di entrata: ${workSchedule.start_time}. Le ore di permesso verranno calcolate automaticamente.`
+                      : 'Caricamento orario di lavoro...'}
                   </p>
                 </div>
               )}
