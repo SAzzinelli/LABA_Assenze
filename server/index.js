@@ -963,19 +963,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     const { date, userId, month, year } = req.query;
     const targetUserId = userId || req.user.id;
     
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
-    
-    // Se in modalità test, leggi da test_attendance invece di attendance
-    const tableName = isTestMode ? 'test_attendance' : 'attendance';
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Lettura presenze da ${tableName}`);
-    }
-    
+    // IMPORTANTE: Leggi SEMPRE da attendance (dati reali)
+    // La modalità test viene usata solo per i calcoli real-time (orario simulato)
+    // I dati di test vengono salvati in test_attendance, ma per la visualizzazione usiamo sempre i dati reali
     let query = supabase
-      .from(tableName)
+      .from('attendance')
       .select(`
         *,
         users(first_name, last_name, email)
@@ -1010,12 +1002,10 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     // Recupera le leave requests approvate per controllare assenze giustificate
-    // targetUserId è già stato dichiarato sopra
-    // Se in modalità test, leggi anche da test_leave_requests
-    const leaveTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
-    
+    // IMPORTANTE: Leggi SEMPRE da leave_requests (dati reali)
+    // La modalità test viene usata solo per i calcoli real-time
     let leaveQuery = supabase
-      .from(leaveTableName)
+      .from('leave_requests')
       .select('*')
       .eq('user_id', targetUserId)
       .eq('status', 'approved');
@@ -1953,23 +1943,13 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
-    // Controlla se la modalità test globale è attiva (isTestMode è già dichiarato sopra da getCurrentDateTime)
-    const globalTestMode = await getGlobalTestMode();
-    const globalTestModeActive = globalTestMode.active;
+    // IMPORTANTE: Leggi SEMPRE da attendance e leave_requests (dati reali)
+    // La modalità test viene usata solo per simulare l'orario nei calcoli real-time
+    // I dati di test vengono salvati in test_attendance, ma per la visualizzazione usiamo sempre i dati reali
     
-    // Se in modalità test, leggi da test_leave_requests invece di leave_requests
-    // Usa isTestMode (da query/header) o globalTestModeActive (dal DB) - priorità a isTestMode
-    const effectiveTestMode = isTestMode || globalTestModeActive;
-    const leaveTableName = effectiveTestMode ? 'test_leave_requests' : 'leave_requests';
-    
-    if (effectiveTestMode) {
-      console.log(`🧪 TEST MODE: Lettura leave requests da ${leaveTableName}`);
-    }
-    
-    // Recupera presenze per oggi (se in modalità test, leggi da test_attendance)
-    const attendanceTableName = effectiveTestMode ? 'test_attendance' : 'attendance';
+    // Recupera presenze per oggi (SEMPRE da attendance - dati reali)
     const { data: attendanceToday, error: attendanceError } = await supabase
-      .from(attendanceTableName)
+      .from('attendance')
       .select('user_id, actual_hours, expected_hours')
       .eq('date', today);
     
@@ -1983,11 +1963,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       });
     }
-    console.log(`📅 Presenze oggi (${attendanceTableName}):`, Object.keys(attendanceMap).length, 'utenti');
+    console.log(`📅 Presenze oggi (attendance):`, Object.keys(attendanceMap).length, 'utenti');
     
-    // Recupera malattie per oggi
+    // Recupera malattie per oggi (SEMPRE da leave_requests - dati reali)
     const { data: sickToday, error: sickError } = await supabase
-      .from(leaveTableName)
+      .from('leave_requests')
       .select('user_id, start_date, end_date')
       .eq('type', 'sick_leave')
       .eq('status', 'approved')
@@ -2004,9 +1984,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
     console.log(`🤒 Malattie oggi:`, Object.keys(sickMap).length);
     
-    // Recupera permessi 104 per oggi
+    // Recupera permessi 104 per oggi (SEMPRE da leave_requests - dati reali)
     const { data: perm104Today, error: perm104Error } = await supabase
-      .from(leaveTableName)
+      .from('leave_requests')
       .select('user_id, start_date, end_date')
       .eq('type', 'permission_104')
       .eq('status', 'approved')
@@ -2023,9 +2003,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
     console.log(`🔵 Permessi 104 oggi:`, Object.keys(perm104Map).length);
     
-    // Recupera permessi approvati per oggi per tutti gli utenti
+    // Recupera permessi approvati per oggi per tutti gli utenti (SEMPRE da leave_requests - dati reali)
     const { data: permissionsToday, error: permError } = await supabase
-      .from(leaveTableName)
+      .from('leave_requests')
       .select('user_id, hours, permission_type, exit_time, entry_time, start_date, end_date')
       .eq('type', 'permission')
       .eq('status', 'approved')
