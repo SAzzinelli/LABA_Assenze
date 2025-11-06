@@ -1953,19 +1953,21 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
-    // Controlla se la modalità test globale è attiva
+    // Controlla se la modalità test globale è attiva (isTestMode è già dichiarato sopra da getCurrentDateTime)
     const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
+    const globalTestModeActive = globalTestMode.active;
     
     // Se in modalità test, leggi da test_leave_requests invece di leave_requests
-    const leaveTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    // Usa isTestMode (da query/header) o globalTestModeActive (dal DB) - priorità a isTestMode
+    const effectiveTestMode = isTestMode || globalTestModeActive;
+    const leaveTableName = effectiveTestMode ? 'test_leave_requests' : 'leave_requests';
     
-    if (isTestMode) {
+    if (effectiveTestMode) {
       console.log(`🧪 TEST MODE: Lettura leave requests da ${leaveTableName}`);
     }
     
     // Recupera presenze per oggi (se in modalità test, leggi da test_attendance)
-    const attendanceTableName = isTestMode ? 'test_attendance' : 'attendance';
+    const attendanceTableName = effectiveTestMode ? 'test_attendance' : 'attendance';
     const { data: attendanceToday, error: attendanceError } = await supabase
       .from(attendanceTableName)
       .select('user_id, actual_hours, expected_hours')
