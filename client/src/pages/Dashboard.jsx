@@ -343,14 +343,23 @@ const Dashboard = () => {
       if (leaveResponse.ok) {
         const leaveData = await leaveResponse.json();
         leaveData.forEach(req => {
-          events.push({
-            date: req.start_date,
-            endDate: req.end_date,
-            type: req.type,
-            name: req.type === 'vacation' ? 'Ferie' : req.type === 'sick' ? 'Malattia' : 'Permesso',
-            user: user?.role === 'admin' ? req.user_name : undefined,
-            color: req.type === 'vacation' ? 'green' : req.type === 'sick' ? 'red' : 'blue'
-          });
+          // Valida che le date siano valide prima di aggiungere l'evento
+          if (req.start_date && req.end_date) {
+            const startDate = new Date(req.start_date);
+            const endDate = new Date(req.end_date);
+            
+            // Verifica che le date siano valide (non NaN)
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              events.push({
+                date: req.start_date,
+                endDate: req.end_date,
+                type: req.type,
+                name: req.type === 'vacation' ? 'Ferie' : req.type === 'sick' ? 'Malattia' : 'Permesso',
+                user: user?.role === 'admin' ? req.user_name : undefined,
+                color: req.type === 'vacation' ? 'green' : req.type === 'sick' ? 'red' : 'blue'
+              });
+            }
+          }
         });
       }
       
@@ -358,26 +367,45 @@ const Dashboard = () => {
       const perm104Response = await apiCall(`/api/leave-requests?type=permission_104&status=approved&startDate=${today.toISOString().split('T')[0]}&endDate=${nextMonth.toISOString().split('T')[0]}`);
       if (perm104Response.ok) {
         const perm104Data = await perm104Response.json();
-        // Filtra solo gli approvati che non sono ancora passati
-        const approvedPerms = perm104Data.filter(perm => 
-          perm.status === 'approved' && 
-          new Date(perm.startDate) >= today
-        );
+        // Filtra solo gli approvati che non sono ancora passati e con date valide
+        const approvedPerms = perm104Data.filter(perm => {
+          if (!perm.start_date || !perm.status || perm.status !== 'approved') {
+            return false;
+          }
+          const permDate = new Date(perm.start_date);
+          // Verifica che la data sia valida (non NaN)
+          return !isNaN(permDate.getTime()) && permDate >= today;
+        });
         approvedPerms.forEach(perm => {
-          events.push({
-            date: perm.startDate,
-            endDate: perm.endDate,
-            type: 'permission_104',
-            name: 'Permesso 104',
-            user: user?.role === 'admin' ? perm.user?.name : undefined,
-            color: 'purple'
-          });
+          // Usa start_date e end_date invece di startDate/endDate
+          if (perm.start_date && perm.end_date) {
+            const startDate = new Date(perm.start_date);
+            const endDate = new Date(perm.end_date);
+            
+            // Verifica che le date siano valide
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              events.push({
+                date: perm.start_date,
+                endDate: perm.end_date,
+                type: 'permission_104',
+                name: 'Permesso 104',
+                user: user?.role === 'admin' ? perm.user_name : undefined,
+                color: 'purple'
+              });
+            }
+          }
         });
       }
       
+      // Filtra ulteriormente eventi con date invalide e ordina
+      const validEvents = events.filter(event => {
+        const eventDate = new Date(event.date);
+        return !isNaN(eventDate.getTime());
+      });
+      
       // Sort by date and take next 10 events
-      events.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setUpcomingEvents(events.slice(0, 10));
+      validEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setUpcomingEvents(validEvents.slice(0, 10));
     } catch (error) {
       console.error('Error fetching upcoming events:', error);
     }
@@ -799,6 +827,12 @@ const Dashboard = () => {
           <div className="space-y-3">
             {upcomingEvents.map((event, index) => {
               const eventDate = new Date(event.date);
+              
+              // Salta eventi con date invalide (extra sicurezza)
+              if (isNaN(eventDate.getTime())) {
+                return null;
+              }
+              
               const daysUntil = Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24));
               const isToday = daysUntil === 0;
               
