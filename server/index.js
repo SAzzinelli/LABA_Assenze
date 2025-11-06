@@ -3727,19 +3727,11 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
     const { month, year, type } = req.query;
     const targetUserId = req.user.role === 'admin' && req.query.userId ? req.query.userId : req.user.id;
     
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
-    
-    // Se in modalità test, leggi da test_leave_requests invece di leave_requests
-    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Lettura richieste da ${tableName}`);
-    }
-    
+    // IMPORTANTE: Leggi SEMPRE da leave_requests (dati reali)
+    // La modalità test viene usata solo per i calcoli real-time (orario simulato)
+    // I dati di test vengono salvati in test_leave_requests, ma per la visualizzazione usiamo sempre i dati reali
     let query = supabase
-      .from(tableName)
+      .from('leave_requests')
       .select(`
         *,
         users!${tableName}_user_id_fkey(first_name, last_name, email),
