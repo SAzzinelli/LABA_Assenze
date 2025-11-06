@@ -125,17 +125,17 @@ const TestSimulazione = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-4 sm:p-6 lg:p-8">
+    <div className="text-white">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
+        {/* Header semplificato per quando è dentro Impostazioni */}
+        <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2 flex items-center">
-                <TestTube className="h-8 w-8 mr-3 text-indigo-400" />
+              <h2 className="text-xl font-bold mb-2 flex items-center">
+                <TestTube className="h-6 w-6 mr-2 text-indigo-400" />
                 Test & Simulazione
-              </h1>
-              <p className="text-slate-400">
+              </h2>
+              <p className="text-slate-400 text-sm">
                 Simula date e orari per testare tutte le funzionalità del sistema
               </p>
             </div>
