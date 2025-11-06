@@ -1237,8 +1237,13 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       
       if (todaySchedule) {
         // Recupera permessi per oggi (se presenti)
+        // Controlla se la modalità test globale è attiva
+        const globalTestMode = await getGlobalTestMode();
+        const isTestMode = globalTestMode.active;
+        const permissionTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+        
         const { data: permissionsToday } = await supabase
-          .from('leave_requests')
+          .from(permissionTableName)
           .select('hours, permission_type, exit_time, entry_time')
           .eq('user_id', targetUserId)
           .eq('type', 'permission')
@@ -4202,8 +4207,19 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       return res.status(400).json({ error: 'Stato non valido' });
     }
 
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
+    
+    // Se in modalità test, salva in test_leave_requests invece di leave_requests
+    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Aggiornamento richiesta in ${tableName}`);
+    }
+
     const { data: updatedRequest, error } = await supabase
-      .from('leave_requests')
+      .from(tableName)
       .update({
         status: status,
         approved_at: new Date().toISOString(),

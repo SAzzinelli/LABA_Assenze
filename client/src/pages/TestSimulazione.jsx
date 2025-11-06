@@ -252,151 +252,34 @@ const TestSimulazione = () => {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <div className="bg-slate-700 rounded-lg p-6">
-                  <h3 className="text-xl font-bold mb-4">Configura Dati di Test</h3>
+                  <h3 className="text-xl font-bold mb-4">Modalità Test Globale</h3>
                   <p className="text-slate-400 text-sm mb-4">
-                    Crea dati virtuali (presenze, permessi) che verranno mostrati solo in modalità test, senza salvarli nel database reale.
+                    Quando la modalità test è attiva, tutti i dati creati nelle sezioni normali (Presenze, Permessi, Malattie, 104) vengono salvati in tabelle di test separate e non influiscono sui dati reali.
                   </p>
                   
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Crea Presenza Virtuale per {simulatedDate}
-                      </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Ore Lavorate</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="8.0"
-                            id="test-actual-hours"
-                            className="w-full px-3 py-2 bg-slate-600 text-white rounded border border-slate-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Ore Attese</label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            placeholder="8.0"
-                            id="test-expected-hours"
-                            className="w-full px-3 py-2 bg-slate-600 text-white rounded border border-slate-500"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const actualHours = parseFloat(document.getElementById('test-actual-hours').value) || 0;
-                          const expectedHours = parseFloat(document.getElementById('test-expected-hours').value) || 8;
-                          const balanceHours = actualHours - expectedHours;
-                          
-                          const testAttendance = {
-                            actual_hours: actualHours,
-                            expected_hours: expectedHours,
-                            balance_hours: balanceHours,
-                            notes: '[Dati di Test Virtuali]'
-                          };
-                          
-                          try {
-                            const response = await apiCall('/api/test-mode/data', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                attendance: testAttendance
-                              })
-                            });
-                            
-                            if (response.ok) {
-                              alert('✅ Presenza virtuale creata! Ora vedrai questi dati in Dashboard e Presenze quando la modalità test è attiva.');
-                            }
-                          } catch (error) {
-                            console.error('Error saving test attendance:', error);
-                            alert('Errore nel salvataggio');
-                          }
-                        }}
-                        disabled={!testMode}
-                        className="mt-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm"
-                      >
-                        Salva Presenza Virtuale
-                      </button>
-                    </div>
-                    
-                    <div className="border-t border-slate-600 pt-4">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Crea Permesso Virtuale
-                      </label>
-                      <div className="grid grid-cols-2 gap-4 mb-2">
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Ore</label>
-                          <input
-                            type="number"
-                            step="0.5"
-                            placeholder="2.0"
-                            id="test-permission-hours"
-                            className="w-full px-3 py-2 bg-slate-600 text-white rounded border border-slate-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Tipo</label>
-                          <select
-                            id="test-permission-type"
-                            className="w-full px-3 py-2 bg-slate-600 text-white rounded border border-slate-500"
-                          >
-                            <option value="early_exit">Uscita Anticipata</option>
-                            <option value="late_entry">Entrata Posticipata</option>
-                          </select>
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const hours = parseFloat(document.getElementById('test-permission-hours').value) || 0;
-                          const type = document.getElementById('test-permission-type').value;
-                          
-                          const testPermission = {
-                            type: 'permission',
-                            hours: hours,
-                            permission_type: type,
-                            start_date: simulatedDate,
-                            end_date: simulatedDate,
-                            status: 'approved',
-                            reason: '[Permesso Virtuale di Test]'
-                          };
-                          
-                          try {
-                            const response = await apiCall('/api/test-mode/data', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                permissions: [testPermission]
-                              })
-                            });
-                            
-                            if (response.ok) {
-                              alert('✅ Permesso virtuale creato!');
-                            }
-                          } catch (error) {
-                            console.error('Error saving test permission:', error);
-                            alert('Errore nel salvataggio');
-                          }
-                        }}
-                        disabled={!testMode}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg text-sm"
-                      >
-                        Salva Permesso Virtuale
-                      </button>
-                    </div>
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                    <p className="text-yellow-300 text-sm">
+                      <strong>Come funziona:</strong>
+                    </p>
+                    <ul className="text-yellow-200 text-sm mt-2 space-y-1 list-disc list-inside">
+                      <li>Attiva la modalità test con data e ora simulate</li>
+                      <li>Vai nelle sezioni normali (Presenze, Permessi, Malattie, 104)</li>
+                      <li>Crea i dati normalmente - verranno salvati come dati di test</li>
+                      <li>L'admin può approvare/rifiutare le richieste come in modalità normale</li>
+                      <li>Quando disattivi la modalità test, i dati di test non vengono più mostrati</li>
+                    </ul>
                   </div>
-                </div>
-                
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold">Test Completo Sistema</h3>
-                  <button
-                    onClick={runFullTest}
-                    disabled={loading || !testMode}
-                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
-                  >
-                    {loading ? 'Test in corso...' : 'Esegui Test Completo'}
-                  </button>
+                  
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">Test Completo Sistema</h3>
+                    <button
+                      onClick={runFullTest}
+                      disabled={loading || !testMode}
+                      className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+                    >
+                      {loading ? 'Test in corso...' : 'Esegui Test Completo'}
+                    </button>
+                  </div>
                 </div>
 
                 {testData.hours && (
