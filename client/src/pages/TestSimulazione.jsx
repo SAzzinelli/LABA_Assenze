@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, User, Settings, TestTube, CheckCircle, XCircle, AlertCircle, Play, Square } from 'lucide-react';
+import { Clock, Calendar, Settings, TestTube, AlertCircle, Play, Square } from 'lucide-react';
 
 const TestSimulazione = () => {
   const { user, apiCall } = useAuthStore();
@@ -16,7 +16,6 @@ const TestSimulazione = () => {
     dashboard: null
   });
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
 
   // Salva la modalità test nel localStorage
   useEffect(() => {
