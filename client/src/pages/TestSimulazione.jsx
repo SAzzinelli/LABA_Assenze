@@ -219,37 +219,10 @@ const TestSimulazione = () => {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Main Content */}
         <div className="bg-slate-800 rounded-lg overflow-hidden mb-6">
-          <nav className="flex border-b border-slate-700 overflow-x-auto">
-            {[
-              { id: 'overview', name: 'Panoramica', icon: User },
-              { id: 'attendance', name: 'Presenze', icon: Clock },
-              { id: 'permissions', name: 'Permessi', icon: CheckCircle },
-              { id: 'permission104', name: 'Permessi 104', icon: AlertCircle },
-              { id: 'dashboard', name: 'Dashboard', icon: Settings }
-            ].map((tab) => {
-              const IconComponent = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'bg-indigo-600/10 text-indigo-400 border-indigo-400'
-                      : 'text-slate-300 hover:bg-slate-700/50 border-transparent'
-                  }`}
-                >
-                  <IconComponent className="h-5 w-5 mr-2" />
-                  {tab.name}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Tab Content */}
           <div className="p-6">
-            {activeTab === 'overview' && (
+            <div className="space-y-6">
               <div className="space-y-6">
                 <div className="bg-slate-700 rounded-lg p-6">
                   <h3 className="text-xl font-bold mb-4">Modalità Test Globale</h3>
@@ -283,127 +256,28 @@ const TestSimulazione = () => {
                 </div>
 
                 {testData.hours && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-700 rounded-lg p-4">
-                      <p className="text-slate-400 text-sm mb-1">Ore Attese</p>
-                      <p className="text-2xl font-bold text-white">{testData.hours.expectedHours}h</p>
-                    </div>
-                    <div className="bg-slate-700 rounded-lg p-4">
-                      <p className="text-slate-400 text-sm mb-1">Ore Lavorate</p>
-                      <p className="text-2xl font-bold text-blue-400">{testData.hours.actualHours?.toFixed(1) || 0}h</p>
-                    </div>
-                    <div className="bg-slate-700 rounded-lg p-4">
-                      <p className="text-slate-400 text-sm mb-1">Saldo</p>
-                      <p className={`text-2xl font-bold ${testData.hours.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {formatHours(testData.hours.balanceHours)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {testData.balance && (
-                  <div className="bg-slate-700 rounded-lg p-4">
-                    <h4 className="font-bold mb-2">Bilancio Mensile</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-700 rounded-lg p-6 mt-6">
+                    <h4 className="text-lg font-bold mb-4">Risultati Test</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <p className="text-slate-400 text-sm">Monte Ore</p>
-                        <p className="text-xl font-bold">{formatHours(testData.balance.monte_ore)}</p>
+                        <p className="text-slate-400 text-sm mb-1">Ore Attese</p>
+                        <p className="text-2xl font-bold text-white">{testData.hours.expectedHours}h</p>
                       </div>
                       <div>
-                        <p className="text-slate-400 text-sm">Giorni Lavorati</p>
-                        <p className="text-xl font-bold">{testData.balance.working_days}</p>
+                        <p className="text-slate-400 text-sm mb-1">Ore Lavorate</p>
+                        <p className="text-2xl font-bold text-blue-400">{testData.hours.actualHours?.toFixed(1) || 0}h</p>
                       </div>
                       <div>
-                        <p className="text-slate-400 text-sm">Giorni Assenti</p>
-                        <p className="text-xl font-bold">{testData.balance.absent_days}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-sm">Ore Totali</p>
-                        <p className="text-xl font-bold">{testData.balance.total_worked?.toFixed(1) || 0}h</p>
+                        <p className="text-slate-400 text-sm mb-1">Saldo</p>
+                        <p className={`text-2xl font-bold ${testData.hours.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {formatHours(testData.hours.balanceHours)}
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            )}
-
-            {activeTab === 'attendance' && testData.hours && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Dettagli Presenze</h3>
-                <div className="bg-slate-700 rounded-lg p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-slate-400 text-sm">Orario</p>
-                      <p className="text-lg font-bold">{testData.hours.schedule?.start_time} - {testData.hours.schedule?.end_time}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 text-sm">Pausa</p>
-                      <p className="text-lg font-bold">{testData.hours.schedule?.break_duration} min</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 text-sm">Stato</p>
-                      <p className="text-lg font-bold text-indigo-400">{testData.hours.status}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 text-sm">Progresso</p>
-                      <p className="text-lg font-bold">{testData.hours.progress?.toFixed(1) || 0}%</p>
-                    </div>
-                  </div>
-                  {testData.hours.manualCalculation && (
-                    <div className="mt-4 p-3 bg-slate-800 rounded">
-                      <p className="text-slate-300 text-sm mb-2"><strong>Calcolo Manuale:</strong></p>
-                      <p className="text-slate-400 text-xs">Mattina: {testData.hours.manualCalculation.morning}</p>
-                      <p className="text-slate-400 text-xs">Pausa: {testData.hours.manualCalculation.break}</p>
-                      <p className="text-slate-400 text-xs">Pomeriggio: {testData.hours.manualCalculation.afternoon}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'permissions' && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Permessi</h3>
-                {testData.permissions ? (
-                  <div className="bg-slate-700 rounded-lg p-4">
-                    <p className="text-slate-300">
-                      {testData.permissions.length} permesso/i trovato/i per la data simulata
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-slate-400">Esegui un test completo per vedere i permessi</p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'permission104' && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Permessi 104</h3>
-                {testData.permission104 ? (
-                  <div className="bg-slate-700 rounded-lg p-4">
-                    <p className="text-slate-300">
-                      {testData.permission104.length} permesso/i 104 trovato/i per la data simulata
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-slate-400">Esegui un test completo per vedere i permessi 104</p>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'dashboard' && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Dashboard Test</h3>
-                <p className="text-slate-400">
-                  La dashboard userà automaticamente la data e l'orario simulati quando la modalità test è attiva.
-                </p>
-                <div className="bg-slate-700 rounded-lg p-4">
-                  <p className="text-slate-300">
-                    Vai alla <a href="/dashboard" className="text-indigo-400 hover:underline">Dashboard</a> per vedere i dati simulati.
-                  </p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
