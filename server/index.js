@@ -963,26 +963,19 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     const { date, userId, month, year } = req.query;
     const targetUserId = userId || req.user.id;
     
-    // Controlla se l'utente ha modalità test attiva
-    const { date: testDate, time: testTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    // Controlla se la modalità test globale è attiva
+    const globalTestMode = await getGlobalTestMode();
+    const isTestMode = globalTestMode.active;
     
-    // Se in modalità test, controlla se ci sono dati di test
-    let testAttendance = null;
+    // Se in modalità test, leggi da test_attendance invece di attendance
+    const tableName = isTestMode ? 'test_attendance' : 'attendance';
+    
     if (isTestMode) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('test_data')
-        .eq('id', targetUserId)
-        .single();
-      
-      if (user?.test_data?.attendance) {
-        testAttendance = user.test_data.attendance;
-        console.log(`🧪 TEST MODE: Usando dati di test per presenze`);
-      }
+      console.log(`🧪 TEST MODE: Lettura presenze da ${tableName}`);
     }
     
     let query = supabase
-      .from('attendance')
+      .from(tableName)
       .select(`
         *,
         users(first_name, last_name, email)
@@ -1010,40 +1003,6 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     const { data: attendance, error } = await query;
-    
-    // Se in modalità test e ci sono dati di test, aggiungi/aggiorna i record virtuali
-    if (isTestMode && testAttendance) {
-      const testDateStr = testDate;
-      
-      // Cerca se esiste già un record per la data di test
-      const existingIndex = attendance.findIndex(a => a.date === testDateStr);
-      
-      if (existingIndex >= 0) {
-        // Aggiorna il record esistente con i dati di test
-        attendance[existingIndex] = {
-          ...attendance[existingIndex],
-          ...testAttendance,
-          date: testDateStr,
-          is_test_data: true
-        };
-      } else {
-        // Aggiungi un nuovo record virtuale
-        attendance.push({
-          ...testAttendance,
-          date: testDateStr,
-          user_id: targetUserId,
-          is_test_data: true,
-          users: {
-            first_name: req.user.first_name || 'Test',
-            last_name: req.user.last_name || 'User',
-            email: req.user.email
-          }
-        });
-      }
-      
-      // Ordina di nuovo per data
-      attendance.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
 
     if (error) {
       console.error('Attendance fetch error:', error);
@@ -1052,8 +1011,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 
     // Recupera le leave requests approvate per controllare assenze giustificate
     // targetUserId è già stato dichiarato sopra
+    // Se in modalità test, leggi anche da test_leave_requests
+    const leaveTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
+    
     let leaveQuery = supabase
-      .from('leave_requests')
+      .from(leaveTableName)
       .select('*')
       .eq('user_id', targetUserId)
       .eq('status', 'approved');
@@ -3726,26 +3688,6 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
     const { month, year, type } = req.query;
     const targetUserId = req.user.role === 'admin' && req.query.userId ? req.query.userId : req.user.id;
     
-    // Controlla se l'utente ha modalità test attiva
-    const { date: testDate, time: testTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
-    
-    // Se in modalità test, controlla se ci sono dati di test
-    let testPermissions = null;
-    let testPermission104 = null;
-    if (isTestMode) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('test_data')
-        .eq('id', targetUserId)
-        .single();
-      
-      if (user?.test_data) {
-        testPermissions = user.test_data.permissions;
-        testPermission104 = user.test_data.permission104;
-        console.log(`🧪 TEST MODE: Usando dati di test per permessi`);
-      }
-    }
-    
     // Controlla se la modalità test globale è attiva
     const globalTestMode = await getGlobalTestMode();
     const isTestMode = globalTestMode.active;
@@ -3784,50 +3726,6 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
     }
 
     const { data: requests, error } = await query;
-    
-    // Se in modalità test e ci sono dati di test, aggiungi i permessi virtuali
-    if (isTestMode) {
-      if (testPermissions && Array.isArray(testPermissions)) {
-        testPermissions.forEach(perm => {
-          // Aggiungi solo se corrisponde al tipo richiesto (se specificato)
-          if (!type || perm.type === type) {
-            requests.push({
-              ...perm,
-              id: `test-${Date.now()}-${Math.random()}`,
-              user_id: targetUserId,
-              is_test_data: true,
-              users: {
-                first_name: req.user.first_name || 'Test',
-                last_name: req.user.last_name || 'User',
-                email: req.user.email
-              }
-            });
-          }
-        });
-      }
-      
-      if (testPermission104 && Array.isArray(testPermission104)) {
-        testPermission104.forEach(perm => {
-          // Aggiungi solo se corrisponde al tipo richiesto (se specificato)
-          if (!type || perm.type === type) {
-            requests.push({
-              ...perm,
-              id: `test-104-${Date.now()}-${Math.random()}`,
-              user_id: targetUserId,
-              is_test_data: true,
-              users: {
-                first_name: req.user.first_name || 'Test',
-                last_name: req.user.last_name || 'User',
-                email: req.user.email
-              }
-            });
-          }
-        });
-      }
-      
-      // Ordina di nuovo per data
-      requests.sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date));
-    }
 
     if (error) {
       console.error('Leave requests fetch error:', error);
