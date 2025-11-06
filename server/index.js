@@ -3734,8 +3734,8 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       .from('leave_requests')
       .select(`
         *,
-        users!${tableName}_user_id_fkey(first_name, last_name, email),
-        approver:users!${tableName}_approved_by_fkey(first_name, last_name, email)
+        users!leave_requests_user_id_fkey(first_name, last_name, email),
+        approver:users!leave_requests_approved_by_fkey(first_name, last_name, email)
       `)
       .order('created_at', { ascending: false });
 
