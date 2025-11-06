@@ -43,6 +43,13 @@ const Attendance = () => {
   });
   
     const [totalBalance, setTotalBalance] = useState(0);
+  
+  // Test mode state
+  const [testMode, setTestMode] = useState(false);
+  const [testTime, setTestTime] = useState('17:00');
+  const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+  const [testResult, setTestResult] = useState(null);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
@@ -584,6 +591,27 @@ const Attendance = () => {
     
     setSelectedAttendanceDetails(realTimeData);
     setShowAttendanceDetails(true);
+  };
+
+  // Test function
+  const runTest = async () => {
+    setTesting(true);
+    try {
+      const response = await apiCall(`/api/attendance/test-hours?time=${testTime}&date=${testDate}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTestResult(data);
+        console.log('🧪 Test result:', data);
+      } else {
+        const error = await response.json();
+        setTestResult({ error: error.error || 'Errore nel test' });
+      }
+    } catch (error) {
+      console.error('❌ Test error:', error);
+      setTestResult({ error: 'Errore nella chiamata API' });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const formatTime = (time) => {

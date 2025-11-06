@@ -2748,6 +2748,155 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
   }
 });
 
+// TEST ENDPOINT: Calcola ore con orario simulato (solo per admin o per test)
+app.get('/api/attendance/test-hours', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const simulatedTime = req.query.time; // Formato: "HH:MM" (es. "17:00")
+    const simulatedDate = req.query.date; // Formato: "YYYY-MM-DD" (opzionale, default oggi)
+    
+    // Se non è admin, permetto solo al proprio utente
+    if (req.user.role !== 'admin' && req.user.id !== userId) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    const targetDate = simulatedDate || new Date().toISOString().split('T')[0];
+    const targetTime = simulatedTime || new Date().toTimeString().substring(0, 5);
+    
+    // Calcola il giorno della settimana per la data simulata
+    const testDate = new Date(targetDate);
+    const dayOfWeek = testDate.getDay();
+    
+    console.log(`🧪 TEST: Calcolo ore simulate per ${targetDate} alle ${targetTime}`);
+    
+    // Ottieni l'orario di lavoro per il giorno simulato
+    const { data: schedule, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+
+    if (scheduleError || !schedule) {
+      return res.json({
+        isWorkingDay: false,
+        message: `Nessun orario di lavoro per ${targetDate} (giorno ${dayOfWeek})`,
+        simulatedTime: targetTime,
+        simulatedDate: targetDate
+      });
+    }
+
+    // Recupera permessi approvati per la data simulata
+    const { data: permissionsToday, error: permError } = await supabase
+      .from('leave_requests')
+      .select('hours, permission_type, exit_time, entry_time')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', targetDate)
+      .gte('end_date', targetDate);
+    
+    let permissionData = null;
+    if (permissionsToday && !permError && permissionsToday.length > 0) {
+      let exitTime = null;
+      let entryTime = null;
+      let permType = null;
+      
+      permissionsToday.forEach(perm => {
+        if (perm.permission_type === 'early_exit' && perm.exit_time) {
+          exitTime = perm.exit_time;
+          permType = 'early_exit';
+        }
+        if (perm.permission_type === 'late_entry' && perm.entry_time) {
+          entryTime = perm.entry_time;
+          permType = 'late_entry';
+        }
+      });
+      
+      if (exitTime || entryTime) {
+        permissionData = { permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+      }
+    }
+
+    // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore
+    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+      schedule,
+      targetTime,
+      permissionData
+    );
+
+    // Calcolo manuale per verifica
+    const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+    const [endHour, endMin] = schedule.end_time.split(':').map(Number);
+    const [currentHour, currentMin] = targetTime.split(':').map(Number);
+    const breakDuration = schedule.break_duration || 60;
+    const breakStart = schedule.break_start_time ? schedule.break_start_time.split(':').map(Number) : null;
+    
+    let manualCalculation = null;
+    if (breakStart) {
+      const [breakStartHour, breakStartMin] = breakStart;
+      const breakEndMin = (breakStartHour * 60 + breakStartMin) + breakDuration;
+      const breakEndHour = Math.floor(breakEndMin / 60);
+      const breakEndMinFinal = breakEndMin % 60;
+      
+      const startTotalMin = startHour * 60 + startMin;
+      const currentTotalMin = currentHour * 60 + currentMin;
+      const breakStartTotalMin = breakStartHour * 60 + breakStartMin;
+      const breakEndTotalMin = breakEndHour * 60 + breakEndMinFinal;
+      
+      let manualHours = 0;
+      if (currentTotalMin >= startTotalMin && currentTotalMin <= (endHour * 60 + endMin)) {
+        if (currentTotalMin < breakStartTotalMin) {
+          // Prima della pausa
+          manualHours = (currentTotalMin - startTotalMin) / 60;
+        } else if (currentTotalMin >= breakStartTotalMin && currentTotalMin < breakEndTotalMin) {
+          // Durante la pausa
+          manualHours = (breakStartTotalMin - startTotalMin) / 60;
+        } else {
+          // Dopo la pausa
+          const morningHours = (breakStartTotalMin - startTotalMin) / 60;
+          const afternoonHours = (currentTotalMin - breakEndTotalMin) / 60;
+          manualHours = morningHours + afternoonHours;
+        }
+      }
+      
+      manualCalculation = {
+        morning: `${startHour}:${startMin.toString().padStart(2, '0')} - ${breakStartHour}:${breakStartMin.toString().padStart(2, '0')}`,
+        break: `${breakStartHour}:${breakStartMin.toString().padStart(2, '0')} - ${breakEndHour}:${breakEndMinFinal.toString().padStart(2, '0')} (${breakDuration} min)`,
+        afternoon: `${breakEndHour}:${breakEndMinFinal.toString().padStart(2, '0')} - ${currentHour}:${currentMin.toString().padStart(2, '0')}`,
+        manualHours: Math.round(manualHours * 10) / 10
+      };
+    }
+
+    res.json({
+      isWorkingDay: true,
+      simulatedTime: targetTime,
+      simulatedDate: targetDate,
+      schedule: {
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        break_duration: schedule.break_duration || 60,
+        break_start_time: schedule.break_start_time || 'auto'
+      },
+      expectedHours,
+      actualHours,
+      balanceHours,
+      status,
+      progress: Math.min((actualHours / expectedHours) * 100, 100),
+      manualCalculation, // Calcolo manuale per verifica
+      permissionData: permissionData ? {
+        type: permissionData.permission_type,
+        exit_time: permissionData.exit_time,
+        entry_time: permissionData.entry_time
+      } : null
+    });
+  } catch (error) {
+    console.error('Test hours calculation error:', error);
+    res.status(500).json({ error: 'Errore nel calcolo delle ore di test' });
+  }
+});
+
 // Update attendance with real-time hours
 app.put('/api/attendance/update-current', authenticateToken, async (req, res) => {
   try {
