@@ -1886,11 +1886,16 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
+    // Usa getCurrentDateTime per ottenere data/ora (reale o simulata dall'admin)
+    // Nota: per ogni utente, controlleremo se ha modalità test attiva individualmente
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req);
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
+    
+    if (isTestMode) {
+      console.log(`🧪 ADMIN TEST MODE: Visualizzazione presenze per ${today} alle ${currentTime}`);
+    }
     
     // Get all users with their work schedules
     const { data: allUsers, error: usersError } = await supabase
@@ -1942,29 +1947,47 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .lte('start_date', today)
       .gte('end_date', today);
     
-    // Crea una mappa user_id -> { ore permesso, orari }
+    // Crea una mappa user_id -> array di permessi (per gestire test mode per utente)
     const permissionsMap = {};
     if (permissionsToday && !permError) {
       permissionsToday.forEach(perm => {
-        if (perm.hours && perm.hours > 0) {
-          permissionsMap[perm.user_id] = {
-            hours: (permissionsMap[perm.user_id]?.hours || 0) + parseFloat(perm.hours),
-            permission_type: perm.permission_type,
-            exit_time: perm.exit_time || permissionsMap[perm.user_id]?.exit_time,
-            entry_time: perm.entry_time || permissionsMap[perm.user_id]?.entry_time
-          };
-        }
+        if (!permissionsMap[perm.user_id]) permissionsMap[perm.user_id] = [];
+        permissionsMap[perm.user_id].push({
+          hours: parseFloat(perm.hours || 0),
+          permission_type: perm.permission_type,
+          exit_time: perm.exit_time,
+          entry_time: perm.entry_time,
+          start_date: perm.start_date,
+          end_date: perm.end_date
+        });
       });
-      console.log(`🕐 Permessi oggi:`, permissionsMap);
+      console.log(`🕐 Permessi oggi:`, Object.keys(permissionsMap).length, 'utenti con permessi');
     }
     
     // Calculate real-time attendance for each user
-    const currentAttendance = allUsers.map(user => {
+    // Per ogni utente, controlla se ha modalità test attiva e usa quella data/ora
+    const currentAttendance = await Promise.all(allUsers.map(async (user) => {
+      // Controlla se questo utente specifico ha modalità test attiva
+      const userTestMode = await getCurrentDateTime(req, user.id);
+      const userToday = userTestMode.date;
+      const userCurrentTime = userTestMode.time;
+      const userNow = userTestMode.dateTime;
+      const userDayOfWeek = userNow.getDay();
+      const userCurrentHour = userNow.getHours();
+      const userCurrentMinute = userNow.getMinutes();
+      
+      if (userTestMode.isTestMode) {
+        console.log(`🧪 Utente ${user.first_name} ${user.last_name} ha TEST MODE attiva: ${userToday} ${userCurrentTime}`);
+      }
+      
       console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
       console.log(`🔍 User work_schedules:`, user.work_schedules?.length || 0);
       
-      // Controlla se è in malattia
-      if (sickUserIds.has(user.id)) {
+      // Controlla se è in malattia (usa la data dell'utente se in test mode)
+      const userSick = sickMap[user.id]?.some(s => 
+        userToday >= s.start && userToday <= s.end
+      );
+      if (userSick) {
         console.log(`🤒 ${user.first_name} è in malattia oggi`);
         return {
           user_id: user.id,
@@ -1981,8 +2004,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
       
-      // Controlla se ha permesso 104
-      if (perm104UserIds.has(user.id)) {
+      // Controlla se ha permesso 104 (usa la data dell'utente se in test mode)
+      const userPerm104 = perm104Map[user.id]?.some(p => 
+        userToday >= p.start && userToday <= p.end
+      );
+      if (userPerm104) {
         console.log(`🔵 ${user.first_name} ha permesso 104 oggi`);
         return {
           user_id: user.id,
@@ -1999,9 +2025,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
       
-      // Find today's work schedule
+      // Find today's work schedule (usa il giorno della settimana dell'utente se in test mode)
       const todaySchedule = user.work_schedules?.find(schedule => 
-        schedule.day_of_week === dayOfWeek && schedule.is_working_day
+        schedule.day_of_week === userDayOfWeek && schedule.is_working_day
       );
       
       console.log(`🔍 Today schedule found:`, !!todaySchedule);
@@ -2064,11 +2090,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       let actualHours = 0;
       let status = 'not_started';
       
-      // Controlla se ha iniziato (usa effectiveStartHour per late_entry)
-      if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
+      // Controlla se ha iniziato (usa effectiveStartHour per late_entry e userCurrentHour per test mode)
+      if (userCurrentHour < effectiveStartHour || (userCurrentHour === effectiveStartHour && userCurrentMinute < effectiveStartMin)) {
         actualHours = 0;
         status = 'not_started';
-      } else if (currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin)) {
+      } else if (userCurrentHour > effectiveEndHour || (userCurrentHour === effectiveEndHour && userCurrentMinute >= effectiveEndMin)) {
         // Giornata finita: calcola le ore effettivamente lavorate fino a effectiveEndHour
         const effectiveWorkMinutes = (effectiveEndHour * 60 + effectiveEndMin) - (effectiveStartHour * 60 + effectiveStartMin) - breakDuration;
         actualHours = effectiveWorkMinutes / 60;
@@ -2077,7 +2103,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       } else {
         // Durante la giornata lavorativa - calcola ore real-time
         // USA effectiveStartHour perché potrebbe essere entrato in ritardo
-        const minutesFromStart = (currentHour - effectiveStartHour) * 60 + (currentMinute - effectiveStartMin);
+        // USA userCurrentHour/userCurrentMinute per rispettare la modalità test dell'utente
+        const minutesFromStart = (userCurrentHour - effectiveStartHour) * 60 + (userCurrentMinute - effectiveStartMin);
         const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const hasLunchBreak = totalWorkMinutes > 300;
         
@@ -2085,7 +2112,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         
         if (hasLunchBreak) {
           // FULL DAY: usa break_start_time se disponibile, altrimenti 13:00
-          const currentTimeInMinutes = currentHour * 60 + currentMinute;
+          const currentTimeInMinutes = userCurrentHour * 60 + userCurrentMinute;
           
           let breakStartInMinutes;
           if (break_start_time) {
@@ -2098,7 +2125,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           
           const breakEndInMinutes = breakStartInMinutes + breakDuration;
           
-          console.log(`🔍 ${user.first_name} - Current: ${currentHour}:${currentMinute}, Start: ${effectiveStartHour}:${effectiveStartMin}, Break: ${break_start_time || '13:00'}`);
+          console.log(`🔍 ${user.first_name} - Current: ${userCurrentHour}:${userCurrentMinute}, Start: ${effectiveStartHour}:${effectiveStartMin}, Break: ${break_start_time || '13:00'}`);
           
           // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
           const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
