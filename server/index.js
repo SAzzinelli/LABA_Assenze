@@ -1226,14 +1226,9 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       );
       
       if (todaySchedule) {
-        // Recupera permessi per oggi (se presenti)
-        // Controlla se la modalità test globale è attiva
-        const globalTestMode = await getGlobalTestMode();
-        const isTestMode = globalTestMode.active;
-        const permissionTableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
-        
+        // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
         const { data: permissionsToday } = await supabase
-          .from(permissionTableName)
+          .from('leave_requests')
           .select('hours, permission_type, exit_time, entry_time')
           .eq('user_id', targetUserId)
           .eq('type', 'permission')
@@ -2385,13 +2380,17 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
     }
 
-    // Calcola il saldo real-time per oggi se è un giorno lavorativo
-    const today = new Date().toISOString().split('T')[0];
+    // Usa getCurrentDateTime per ottenere data/ora (reale o simulata)
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    
+    if (isTestMode) {
+      console.log(`🧪 TEST MODE: Total balance per ${today} alle ${currentTime}`);
+    }
+    
     let todayBalance = 0;
     let todayRecord = allAttendance.find(r => r.date === today);
     
-    // Verifica se oggi è un giorno lavorativo e calcola real-time
-    const now = new Date();
+    // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
     const dayOfWeek = now.getDay();
     const { data: schedule } = await supabase
       .from('work_schedules')
@@ -2402,7 +2401,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       .single();
     
     if (schedule) {
-      // Recupera permessi per oggi
+      // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
       const { data: permissionsToday } = await supabase
         .from('leave_requests')
         .select('hours, permission_type, exit_time, entry_time')
@@ -2434,8 +2433,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         }
       }
       
-      // USA LA FUNZIONE CENTRALIZZATA per calcolare il balance di oggi
-      const currentTime = now.toTimeString().substring(0, 5);
+      // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
       const result = calculateRealTimeHours(schedule, currentTime, permissionData);
       todayBalance = result.balanceHours;
       
