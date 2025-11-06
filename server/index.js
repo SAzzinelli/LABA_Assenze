@@ -1914,34 +1914,48 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
     
-    // Recupera malattie per oggi
+    // Recupera malattie per oggi (usa range ampio per gestire test mode)
     const { data: sickToday, error: sickError } = await supabase
       .from('leave_requests')
-      .select('user_id')
+      .select('user_id, start_date, end_date')
       .eq('type', 'sick_leave')
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
     
-    const sickUserIds = new Set(sickToday?.map(s => s.user_id) || []);
-    console.log(`🤒 Malattie oggi:`, sickUserIds.size);
+    // Crea mappa user_id -> date per malattie (per gestire test mode per utente)
+    const sickMap = {};
+    if (sickToday && !sickError) {
+      sickToday.forEach(s => {
+        if (!sickMap[s.user_id]) sickMap[s.user_id] = [];
+        sickMap[s.user_id].push({ start: s.start_date, end: s.end_date });
+      });
+    }
+    console.log(`🤒 Malattie oggi:`, Object.keys(sickMap).length);
     
-    // Recupera permessi 104 per oggi
+    // Recupera permessi 104 per oggi (usa range ampio per gestire test mode)
     const { data: perm104Today, error: perm104Error } = await supabase
       .from('leave_requests')
-      .select('user_id')
+      .select('user_id, start_date, end_date')
       .eq('type', 'permission_104')
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
     
-    const perm104UserIds = new Set(perm104Today?.map(p => p.user_id) || []);
-    console.log(`🔵 Permessi 104 oggi:`, perm104UserIds.size);
+    // Crea mappa user_id -> date per permessi 104
+    const perm104Map = {};
+    if (perm104Today && !perm104Error) {
+      perm104Today.forEach(p => {
+        if (!perm104Map[p.user_id]) perm104Map[p.user_id] = [];
+        perm104Map[p.user_id].push({ start: p.start_date, end: p.end_date });
+      });
+    }
+    console.log(`🔵 Permessi 104 oggi:`, Object.keys(perm104Map).length);
     
-    // Recupera permessi approvati per oggi per tutti gli utenti
+    // Recupera permessi approvati per oggi per tutti gli utenti (usa range ampio per gestire test mode)
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
-      .select('user_id, hours, permission_type, exit_time, entry_time')
+      .select('user_id, hours, permission_type, exit_time, entry_time, start_date, end_date')
       .eq('type', 'permission')
       .eq('status', 'approved')
       .lte('start_date', today)
@@ -2061,8 +2075,39 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       const workMinutes = totalMinutes - breakDuration;
       const expectedHours = calculateExpectedHoursForSchedule({ start_time: start_time, end_time: end_time, break_duration }); // NON modificare per permessi early_exit/late_entry!
       
-      // Controlla se c'è un permesso
-      const permissionData = permissionsMap[user.id];
+      // Controlla se c'è un permesso per la data dell'utente (usa la data dell'utente se in test mode)
+      const userPermissions = permissionsMap[user.id]?.filter(p => 
+        userToday >= p.start_date && userToday <= p.end_date
+      ) || [];
+      
+      let permissionData = null;
+      if (userPermissions.length > 0) {
+        let totalHours = 0;
+        let exitTime = null;
+        let entryTime = null;
+        let permType = null;
+        
+        userPermissions.forEach(perm => {
+          totalHours += perm.hours;
+          if (perm.permission_type === 'early_exit' && perm.exit_time) {
+            exitTime = perm.exit_time;
+            permType = 'early_exit';
+          }
+          if (perm.permission_type === 'late_entry' && perm.entry_time) {
+            entryTime = perm.entry_time;
+            permType = 'late_entry';
+          }
+        });
+        
+        if (exitTime || entryTime) {
+          permissionData = {
+            hours: totalHours,
+            permission_type: permType,
+            exit_time: exitTime,
+            entry_time: entryTime
+          };
+        }
+      }
       
       // Calcola l'orario di fine/inizio effettivo considerando i permessi
       let effectiveEndHour = endHour;
@@ -2179,7 +2224,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       
       console.log(`🔍 User result: ${result.name} - Status: ${result.status}, Hours: ${result.actual_hours}h, Working day: ${result.is_working_day}`);
       return result;
-    });
+    }));
 
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
