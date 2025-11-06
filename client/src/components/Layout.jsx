@@ -159,7 +159,7 @@ const Layout = ({ children }) => {
     { name: 'Permessi 104', href: '/permessi-104', icon: Accessibility, showIf: (u) => u?.has_104 === true || u?.role === 'admin' },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
-    { name: 'Test & Simulazione', href: '/test-simulazione', icon: Sparkles, showIf: (u) => u?.role === 'admin' && testMode },
+    { name: 'Test & Simulazione', href: '/test-simulazione', icon: Sparkles, showIf: (u) => u?.role === 'admin' },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },
   ];
 
