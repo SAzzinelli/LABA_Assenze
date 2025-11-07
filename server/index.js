@@ -2111,10 +2111,17 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
 
-      // Se c'è una presenza salvata per oggi, usa quella invece di calcolare
+      // Se c'è una presenza salvata per oggi, controllare se la giornata è completata
       const savedAttendance = attendanceMap[user.id];
-      if (savedAttendance) {
-        console.log(`📅 ${user.first_name} ha presenza salvata: ${savedAttendance.actual_hours}h / ${savedAttendance.expected_hours}h`);
+      
+      // Determina se la giornata è completata (orario corrente > orario fine)
+      const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
+      const [endHour, endMin] = end_time.split(':').map(Number);
+      const isCompleted = userCurrentHour > endHour || (userCurrentHour === endHour && userCurrentMinute >= endMin);
+      
+      // Usa la presenza salvata SOLO se la giornata è completata
+      if (savedAttendance && isCompleted) {
+        console.log(`📅 ${user.first_name} - Giornata completata, uso dati salvati: ${savedAttendance.actual_hours}h / ${savedAttendance.expected_hours}h`);
         return {
           user_id: user.id,
           first_name: user.first_name,
@@ -2122,7 +2129,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           name: `${user.first_name} ${user.last_name}`,
           department: user.department || 'Non specificato',
           is_working_day: true,
-          status: 'present',
+          status: 'completed',
           actual_hours: savedAttendance.actual_hours || 0,
           expected_hours: savedAttendance.expected_hours || 0,
           balance_hours: (savedAttendance.actual_hours || 0) - (savedAttendance.expected_hours || 0),
@@ -2130,10 +2137,13 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         };
       }
       
+      // Se la giornata NON è completata, calcola sempre real-time (anche se esiste presenza salvata)
+      if (savedAttendance && !isCompleted) {
+        console.log(`🕐 ${user.first_name} - Giornata in corso, ignoro dati salvati (${savedAttendance.actual_hours}h) e calcolo real-time`);
+      }
+      
       // Se non c'è presenza salvata, calcola se dovrebbe essere presente basandosi sull'orario
       // (questo è importante per la modalità test, dove potresti non aver ancora salvato presenze)
-      
-      const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
       const breakDuration = break_duration || 60;
