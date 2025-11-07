@@ -2875,12 +2875,16 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     const userId = req.user.id;
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, userId);
     
+    console.log(`🕐 [current-hours] User: ${req.user.email}, Date: ${today}, Time: ${currentTime}, TestMode: ${isTestMode}`);
+    
     if (isTestMode) {
       console.log(`🧪 TEST MODE: Calcolo ore per ${today} alle ${currentTime}`);
     }
     
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();
+    console.log(`📅 [current-hours] Day of week: ${dayOfWeek} (0=Dom, 1=Lun, 5=Ven)`);
+    
     const { data: schedule, error: scheduleError } = await supabase
       .from('work_schedules')
       .select('*')
@@ -2890,11 +2894,14 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       .single();
 
     if (scheduleError || !schedule) {
+      console.log(`❌ [current-hours] No schedule found:`, scheduleError);
       return res.json({
         isWorkingDay: false,
         message: 'Nessun orario di lavoro per oggi'
       });
     }
+    
+    console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
 
     // Recupera permessi approvati per oggi per questo utente
     const { data: permissionsToday, error: permError } = await supabase
@@ -2938,6 +2945,8 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       currentTime,
       permissionData
     );
+    
+    console.log(`📊 [current-hours] Result: actual=${actualHours}h, expected=${expectedHours}h, balance=${balanceHours}h, status=${status}`);
 
     res.json({
       isWorkingDay: true,
