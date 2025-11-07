@@ -94,10 +94,35 @@ async function getCurrentDateTime(req, targetUserId = null) {
   
   // 3. Modalità normale: usa data/ora reale
   const now = new Date();
+  const timeZone = 'Europe/Rome';
+
+  const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  const formattedDate = dateFormatter.format(now); // e.g. 2025-11-07
+  const formattedTime = timeFormatter.format(now); // e.g. 09:45
+
+  const [year, month, day] = formattedDate.split('-').map(Number);
+  const [hour, minute] = formattedTime.split(':').map(Number);
+
+  // Crea un oggetto Date coerente con l'orario italiano
+  const zonedDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
+
   return {
-    date: now.toISOString().split('T')[0],
-    time: now.toTimeString().substring(0, 5),
-    dateTime: now,
+    date: formattedDate,
+    time: formattedTime,
+    dateTime: zonedDate,
     isTestMode: false
   };
 }
