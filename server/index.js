@@ -2895,10 +2895,51 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
 
     if (scheduleError || !schedule) {
       console.log(`❌ [current-hours] No schedule found:`, scheduleError);
-      return res.json({
-        isWorkingDay: false,
-        message: 'Nessun orario di lavoro per oggi'
-      });
+      console.log(`🔧 [current-hours] Creating default schedules for user ${userId}...`);
+      
+      // Crea orari di default per tutti i giorni
+      const defaultSchedules = [
+        { user_id: userId, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Lunedì
+        { user_id: userId, day_of_week: 2, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Martedì
+        { user_id: userId, day_of_week: 3, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Mercoledì
+        { user_id: userId, day_of_week: 4, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Giovedì
+        { user_id: userId, day_of_week: 5, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Venerdì
+        { user_id: userId, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Sabato
+        { user_id: userId, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }  // Domenica
+      ];
+      
+      const { error: createError } = await supabase
+        .from('work_schedules')
+        .insert(defaultSchedules);
+      
+      if (createError) {
+        console.error(`❌ [current-hours] Failed to create default schedules:`, createError);
+        return res.json({
+          isWorkingDay: false,
+          message: 'Nessun orario di lavoro per oggi'
+        });
+      }
+      
+      console.log(`✅ [current-hours] Default schedules created! Retrying...`);
+      
+      // Riprova a recuperare lo schedule
+      const { data: retrySchedule, error: retryError } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      
+      if (retryError || !retrySchedule) {
+        return res.json({
+          isWorkingDay: false,
+          message: 'Nessun orario di lavoro per oggi'
+        });
+      }
+      
+      // Usa il nuovo schedule
+      schedule = retrySchedule;
     }
     
     console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
