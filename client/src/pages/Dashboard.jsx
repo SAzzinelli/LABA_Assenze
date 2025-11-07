@@ -486,12 +486,12 @@ const Dashboard = () => {
       value: userKPIs.workedToday,
       icon: Clock,
       color: 'blue',
-      subLabel: null
+      subLabel: 'OGGI'
     },
     {
       key: 'remaining-today',
       title: 'Saldo Ore',
-      helper: 'Da lavorare oggi',
+      helper: 'Ore da lavorare oggi',
       value: userKPIs.remainingToday,
       icon: Activity,
       color: 'green',
@@ -500,7 +500,7 @@ const Dashboard = () => {
     {
       key: 'monthly-presence',
       title: 'Presenze Mese',
-      helper: null,
+      helper: new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }),
       value: userKPIs.monthlyPresences,
       icon: Target,
       color: 'yellow',
