@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -687,6 +687,8 @@ const Attendance = () => {
     );
   }
 
+  const isBankUpdating = currentHours?.isWorkingDay && currentHours?.status !== 'completed';
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
@@ -744,9 +746,19 @@ const Attendance = () => {
                 <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                   {totalBalance >= 0 ? 'Credito' : 'Debito'}
                 </p>
+                {isBankUpdating && (
+                  <p className="mt-2 text-[11px] sm:text-xs text-amber-300 flex items-center gap-2">
+                    <RefreshCcw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                    Aggiornamento in corso, saldo definitivo a fine giornata lavorativa
+                  </p>
+                )}
               </div>
-              <div className={`hidden sm:block p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
+              <div className={`hidden sm:block p-3 rounded-full ${isBankUpdating ? 'text-amber-300' : totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {isBankUpdating
+                  ? <RefreshCcw className="h-6 w-6 animate-spin" />
+                  : totalBalance >= 0
+                    ? <TrendingUp className="h-6 w-6" />
+                    : <TrendingDown className="h-6 w-6" />}
               </div>
             </div>
           </div>
