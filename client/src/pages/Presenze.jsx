@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -43,6 +43,7 @@ const Attendance = () => {
   });
   
     const [totalBalance, setTotalBalance] = useState(0);
+  const [refreshing, setRefreshing] = useState(true);
   
   // Test mode state
   const [testMode, setTestMode] = useState(false);
@@ -54,27 +55,33 @@ const Attendance = () => {
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
     const initializeData = async () => {
+      setRefreshing(true);
       console.log('🔄 Initializing with real-time calculation...');
       
-      // 1. Carica i dati di base
-      await Promise.all([
-        fetchAttendance(),
-        fetchHoursBalance(),
-        fetchTotalBalance(),
-        fetchWorkSchedules()
-      ]);
-      
-      // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
-      console.log('🔄 Forcing immediate real-time calculation...');
-      calculateRealTimeHours();
-      
-      // 3. Ricalcola anche dopo un breve delay per sicurezza
-      setTimeout(() => {
-        console.log('🔄 Secondary real-time calculation...');
-        calculateRealTimeHours();
-      }, 500);
-      
-      console.log('✅ Data loaded with real-time calculation');
+      try {
+        // 1. Carica i dati di base
+        await Promise.all([
+          fetchAttendance(),
+          fetchHoursBalance(),
+          fetchTotalBalance(),
+          fetchWorkSchedules()
+        ]);
+        
+        // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
+        console.log('🔄 Forcing immediate real-time calculation...');
+        await calculateRealTimeHours();
+        
+        // 3. Ricalcola anche dopo un breve delay per sicurezza
+        setTimeout(() => {
+          console.log('🔄 Secondary real-time calculation...');
+          calculateRealTimeHours();
+        }, 500);
+        
+        console.log('✅ Data loaded with real-time calculation');
+      } finally {
+        setRefreshing(false);
+        setLoading(false);
+      }
     };
     
     initializeData();
@@ -116,13 +123,23 @@ const Attendance = () => {
     // Il calcolo è ora completamente lato frontend
     
     // Polling ogni 60s per sincronizzazione con admin (ridotto carico)
-    const syncInterval = setInterval(() => {
+    const performSync = async () => {
       console.log('🔄 Employee sync polling...');
-      fetchAttendance();
-      fetchHoursBalance();
-      // Evita reload continuo degli orari (statici)
-      // fetchWorkSchedules();
-      calculateRealTimeHours();
+      setRefreshing(true);
+      try {
+        await Promise.all([
+          fetchAttendance(),
+          fetchHoursBalance(),
+          fetchTotalBalance()
+        ]);
+        await calculateRealTimeHours();
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    const syncInterval = setInterval(() => {
+      performSync();
     }, 60000); // 60 secondi
     
     // Aggiorna quando la finestra torna in focus (navigazione)
@@ -130,7 +147,7 @@ const Attendance = () => {
       console.log('🔄 Window focused - recalculating hours...');
       
       // Ricalcola immediatamente le ore in tempo reale
-      calculateRealTimeHours();
+      performSync();
       
       console.log('✅ Hours recalculated on focus');
     };
@@ -164,16 +181,18 @@ const Attendance = () => {
       const response = await apiCall('/api/attendance');
       if (response.ok) {
         const data = await response.json();
-        setAttendance(data);
+        const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+        setAttendance(sortedData);
+        return sortedData;
       } else {
         console.error('Attendance fetch failed:', response.status);
         setAttendance([]);
+        return [];
       }
     } catch (error) {
       console.error('Error fetching attendance:', error);
       setAttendance([]);
-    } finally {
-      setLoading(false);
+      return [];
     }
   };
 
@@ -679,6 +698,12 @@ const Attendance = () => {
     new Date(record.date).toDateString() === new Date().toDateString()
   );
 
+  const completedStatuses = ['completed', 'after_hours'];
+  const shouldMaskBank = currentHours?.isWorkingDay && !completedStatuses.includes(currentHours?.status);
+  const bankAvailabilityTime = currentHours?.schedule?.end_time
+    ? currentHours.schedule.end_time.substring(0, 5)
+    : todaySchedule?.end_time?.substring(0, 5);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -697,6 +722,13 @@ const Attendance = () => {
             Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(currentHours?.balanceHours || 0)}
           </p>
         </div>
+
+        {refreshing && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-slate-300">
+            <RefreshCcw className="h-4 w-4 animate-spin" />
+            Aggiornamento dati in corso...
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
@@ -746,8 +778,8 @@ const Attendance = () => {
           </div>
 
           {/* BANCA ORE TOTALE */}
-          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border-2 border-indigo-500/30 col-span-2 sm:col-span-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border-2 border-indigo-500/30 col-span-2 sm:col-span-1 relative overflow-hidden">
+            <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between transition ${shouldMaskBank ? 'blur-sm opacity-40 pointer-events-none select-none' : ''}`}>
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm font-semibold uppercase mb-1">💰 Banca Ore</p>
                 <p className={`text-2xl sm:text-3xl font-bold ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -761,6 +793,13 @@ const Attendance = () => {
                 {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
               </div>
             </div>
+
+            {shouldMaskBank && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/70 backdrop-blur-sm text-center px-4">
+                <p className="text-sm font-semibold text-slate-100">Disponibile alle ore {bankAvailabilityTime || '--:--'}</p>
+                <p className="text-xs text-slate-300">Saldo aggiornato a fine giornata lavorativa</p>
+              </div>
+            )}
           </div>
         </div>
 
