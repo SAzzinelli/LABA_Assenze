@@ -5,8 +5,6 @@ import {
   Clock,
   FileText,
   CheckCircle,
-  ArrowUpRight,
-  ArrowDownRight,
   Activity,
   Target,
   Calendar,
@@ -33,9 +31,8 @@ const Dashboard = () => {
   
   // Stati per KPI utente
   const [userKPIs, setUserKPIs] = useState({
-    weeklyHours: '0h 0m',
-    overtimeBalance: '+0h 0m',
-    remainingPermissions: '0h',
+    workedToday: '0h 0m',
+    remainingToday: '0h 0m',
     monthlyPresences: '0/20'
   });
   
@@ -431,11 +428,6 @@ const Dashboard = () => {
     return `${h}h ${m}m`;
   };
 
-  const formatOvertime = (hours) => {
-    const sign = hours >= 0 ? '+' : '';
-    return `${sign}${formatHours(Math.abs(hours))}`;
-  };
-
   const updateKPIsWithBalance = async (balanceData) => {
     if (user?.role === 'employee') {
       // Usa SOLO l'endpoint /api/attendance/current-hours per coerenza con Presenze
@@ -447,32 +439,27 @@ const Dashboard = () => {
           if (currentHoursData.isWorkingDay) {
             const todayHours = currentHoursData.actualHours || 0;
             const todayExpectedHours = currentHoursData.expectedHours || 0;
-            const todayBalance = currentHoursData.balanceHours || 0;
+            const remainingTodayHours = Math.max(0, todayExpectedHours - todayHours);
             
             // Update KPIs with today's hours from the same endpoint
-            // NOTA: overtimeBalance mostra il saldo MENSILE, non quello di oggi
             setUserKPIs(prevKPIs => ({
               ...prevKPIs,
-              weeklyHours: formatHours(todayHours), // Ore lavorate OGGI
-              overtimeBalance: formatOvertime(balanceData.monte_ore || 0), // Saldo MENSILE (monte ore)
-              remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
+              workedToday: formatHours(todayHours),
+              remainingToday: formatHours(remainingTodayHours),
               monthlyPresences: `${balanceData.working_days}/20`
             }));
             
             console.log('✅ KPIs updated with current-hours endpoint:', { 
               todayHours, 
               todayExpectedHours, 
-              todayBalance,
-              monthlyBalance: balanceData.monte_ore,
               workingDays: balanceData.working_days
             });
           } else {
             // Non è un giorno lavorativo
             setUserKPIs(prevKPIs => ({
               ...prevKPIs,
-              weeklyHours: '0h 0m',
-              overtimeBalance: '+0h 0m',
-              remainingPermissions: `${Math.max(0, balanceData.monte_ore)}h`,
+              workedToday: '0h 0m',
+              remainingToday: '0h 0m',
               monthlyPresences: `${balanceData.working_days}/20`
             }));
           }
@@ -492,44 +479,47 @@ const Dashboard = () => {
 
   // Statistiche diverse per admin e utenti
   const statCards = user?.role === 'admin' ? [] : [
-    // Utente: KPI personali REALI
     {
+      key: 'worked-today',
       title: 'Ore Lavorate',
-      value: userKPIs.weeklyHours,
+      helper: null,
+      value: userKPIs.workedToday,
       icon: Clock,
       color: 'blue',
-      change: '+0h 0m',
-      changeType: 'positive',
-      subtitle: 'OGGI'
+      subLabel: null
     },
     {
+      key: 'remaining-today',
       title: 'Saldo Ore',
-      value: userKPIs.overtimeBalance,
+      helper: 'Da lavorare oggi',
+      value: userKPIs.remainingToday,
       icon: Activity,
-      color: userKPIs.overtimeBalance.startsWith('+') ? 'green' : userKPIs.overtimeBalance.startsWith('-') ? 'red' : 'blue',
-      change: '+0h 0m',
-      changeType: 'positive',
-      subtitle: 'Monte ore mensile'
+      color: 'green',
+      subLabel: 'OGGI'
     },
     {
-      title: 'Permessi Rimanenti',
-      value: userKPIs.remainingPermissions,
-      icon: FileText,
-      color: 'purple',
-      change: '0h',
-      changeType: 'neutral',
-      subtitle: 'Ore disponibili'
-    },
-    {
+      key: 'monthly-presence',
       title: 'Presenze Mese',
+      helper: null,
       value: userKPIs.monthlyPresences,
       icon: Target,
       color: 'yellow',
-      change: '0',
-      changeType: 'positive',
-      subtitle: 'Giorni lavorati'
+      subLabel: null
     }
   ];
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const eventsToday = upcomingEvents.filter(event => {
+    const start = new Date(event.date);
+    const end = event.endDate ? new Date(event.endDate) : new Date(event.date);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return false;
+    }
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    return start.getTime() <= todayStart.getTime() && todayStart.getTime() <= end.getTime();
+  });
 
   if (loading) {
     return (
@@ -556,8 +546,8 @@ const Dashboard = () => {
       {user?.role !== 'admin' && (
         <div className="space-y-4">
           
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {statCards.map((stat, index) => {
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3">
+          {statCards.map((stat) => {
             const IconComponent = stat.icon;
             const colorClasses = {
               blue: 'bg-blue-500',
@@ -566,29 +556,23 @@ const Dashboard = () => {
               purple: 'bg-purple-500'
             };
             return (
-              <div key={index} className="bg-slate-800 rounded-lg p-6 hover:bg-slate-700 transition-colors">
+              <div key={stat.key} className="bg-slate-800 rounded-lg p-6 hover:bg-slate-700 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-slate-400 text-sm font-medium">{stat.title}</p>
+                    {stat.helper && (
+                      <p className="text-xs text-slate-500 mt-1">{stat.helper}</p>
+                    )}
                     <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
-                    <p className="text-slate-400 text-xs mt-1">{stat.subtitle}</p>
+                    {stat.subLabel && (
+                      <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-700 text-slate-200">
+                        {stat.subLabel}
+                      </span>
+                    )}
                   </div>
                   <div className={`p-3 rounded-lg ${colorClasses[stat.color]}`}>
                     <IconComponent className="h-6 w-6 text-white" />
                   </div>
-                </div>
-                <div className="flex items-center mt-4">
-                  <div className={`flex items-center text-sm ${
-                    stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {stat.changeType === 'positive' ? (
-                      <ArrowUpRight className="h-4 w-4 mr-1" />
-                    ) : (
-                      <ArrowDownRight className="h-4 w-4 mr-1" />
-                    )}
-                    <span className="font-semibold">{stat.change}</span>
-                  </div>
-                  <span className="text-slate-500 text-xs ml-2">vs mese scorso</span>
                 </div>
               </div>
             );
@@ -821,11 +805,11 @@ const Dashboard = () => {
       <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
-          Eventi Imminenti
+          In programma oggi
         </h3>
-        {upcomingEvents.length > 0 ? (
+        {eventsToday.length > 0 ? (
           <div className="space-y-3">
-            {upcomingEvents.map((event, index) => {
+            {eventsToday.map((event, index) => {
               const eventDate = new Date(event.date);
               
               // Salta eventi con date invalide (extra sicurezza)
@@ -833,8 +817,12 @@ const Dashboard = () => {
                 return null;
               }
               
-              const daysUntil = Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24));
-              const isToday = daysUntil === 0;
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const start = new Date(event.date);
+              const end = event.endDate ? new Date(event.endDate) : new Date(event.date);
+              start.setHours(0, 0, 0, 0);
+              end.setHours(0, 0, 0, 0);
               
               const colorClasses = {
                 green: 'bg-green-900/20 border-green-500/30',
@@ -877,11 +865,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm font-semibold ${
-                        isToday ? 'text-white' : 'text-slate-400'
-                      }`}>
-                        {isToday ? 'Oggi' : `Tra ${daysUntil} ${daysUntil === 1 ? 'giorno' : 'giorni'}`}
-                      </div>
+                      <div className="text-sm font-semibold text-white">Oggi</div>
                     </div>
                   </div>
                 </div>
@@ -891,7 +875,7 @@ const Dashboard = () => {
         ) : (
           <div className="text-center py-8 text-slate-400">
             <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Nessun evento programmato</p>
+            <p>Nessun evento programmato per oggi</p>
           </div>
         )}
       </div>
