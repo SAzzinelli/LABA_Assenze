@@ -2086,7 +2086,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       }
       
       // Find today's work schedule (usa il giorno della settimana dell'utente se in test mode)
-      const todaySchedule = user.work_schedules?.find(schedule => 
+      let todaySchedule = user.work_schedules?.find(schedule => 
         schedule.day_of_week === userDayOfWeek && schedule.is_working_day
       );
       
@@ -2095,20 +2095,63 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         console.log(`🔍 Schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}, break: ${todaySchedule.break_duration}min`);
       }
       
-      if (!todaySchedule) {
-        return {
-          user_id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          name: `${user.first_name} ${user.last_name}`,
-          department: user.department || 'Non specificato',
-          is_working_day: false,
-          status: 'non_working_day',
-          actual_hours: 0,
-          expected_hours: 0,
-          balance_hours: 0,
-          permission_end_time: null
-        };
+      // Se non trova schedule, crea automaticamente quelli di default
+      if (!todaySchedule || !user.work_schedules || user.work_schedules.length === 0) {
+        console.log(`🔧 [current] Creating default schedules for user ${user.id} (${user.first_name})...`);
+        
+        const defaultSchedules = [
+          { user_id: user.id, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 2, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 3, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 4, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 5, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 },
+          { user_id: user.id, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
+        ];
+        
+        const { error: createError } = await supabase
+          .from('work_schedules')
+          .insert(defaultSchedules);
+        
+        if (createError) {
+          console.error(`❌ [current] Failed to create default schedules for ${user.first_name}:`, createError);
+          return {
+            user_id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            name: `${user.first_name} ${user.last_name}`,
+            department: user.department || 'Non specificato',
+            is_working_day: false,
+            status: 'non_working_day',
+            actual_hours: 0,
+            expected_hours: 0,
+            balance_hours: 0,
+            permission_end_time: null
+          };
+        }
+        
+        console.log(`✅ [current] Default schedules created for ${user.first_name}!`);
+        
+        // Usa lo schedule di oggi dai default appena creati
+        const newTodaySchedule = defaultSchedules.find(s => s.day_of_week === userDayOfWeek);
+        if (!newTodaySchedule || !newTodaySchedule.is_working_day) {
+          return {
+            user_id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            name: `${user.first_name} ${user.last_name}`,
+            department: user.department || 'Non specificato',
+            is_working_day: false,
+            status: 'non_working_day',
+            actual_hours: 0,
+            expected_hours: 0,
+            balance_hours: 0,
+            permission_end_time: null
+          };
+        }
+        
+        todaySchedule = newTodaySchedule;
+        console.log(`🔍 Using new schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}`);
       }
 
       // Se c'è una presenza salvata per oggi, controllare se la giornata è completata
