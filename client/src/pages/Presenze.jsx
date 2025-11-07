@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -687,8 +687,6 @@ const Attendance = () => {
     );
   }
 
-  const isBankUpdating = currentHours?.isWorkingDay && currentHours?.status !== 'completed';
-
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
@@ -706,7 +704,7 @@ const Attendance = () => {
           <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
-                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Lavorate</p>
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Ore Lavorate</p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-400">
                   {formatHours(currentHours?.actualHours || 0)}
                 </p>
@@ -717,20 +715,32 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* SALDO OGGI */}
+          {/* DA LAVORARE OGGI */}
           <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
-                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Saldo</p>
-                <p className={`text-xl sm:text-2xl font-bold ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {(currentHours?.balanceHours || 0) >= 0 ? '+' : ''}{formatHours(currentHours?.balanceHours || 0)}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                  {(currentHours?.balanceHours || 0) >= 0 ? 'Credito' : 'Debito'}
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Da lavorare oggi</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-400">
+                  {formatHours(Math.max(0, (currentHours?.expectedHours || 0) - (currentHours?.actualHours || 0)))}
                 </p>
               </div>
-              <div className={`hidden sm:block p-3 rounded-full ${(currentHours?.balanceHours || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {(currentHours?.balanceHours || 0) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              <div className="hidden sm:block p-3 rounded-full text-green-400">
+                <TrendingDown className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* GIORNI LAVORATI */}
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni Lavorati</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-400">
+                  {hoursBalance.working_days || 0}
+                </p>
+              </div>
+              <div className="hidden sm:block p-3 rounded-full text-purple-400">
+                <Calendar className="h-4 w-4" />
               </div>
             </div>
           </div>
@@ -746,34 +756,9 @@ const Attendance = () => {
                 <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                   {totalBalance >= 0 ? 'Credito' : 'Debito'}
                 </p>
-                {isBankUpdating && (
-                  <p className="mt-2 text-[11px] sm:text-xs text-amber-300 flex items-center gap-2">
-                    <RefreshCcw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                    Aggiornamento in corso, saldo definitivo a fine giornata lavorativa
-                  </p>
-                )}
               </div>
-              <div className={`hidden sm:block p-3 rounded-full ${isBankUpdating ? 'text-amber-300' : totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {isBankUpdating
-                  ? <RefreshCcw className="h-6 w-6 animate-spin" />
-                  : totalBalance >= 0
-                    ? <TrendingUp className="h-6 w-6" />
-                    : <TrendingDown className="h-6 w-6" />}
-              </div>
-            </div>
-          </div>
-
-          {/* Giorni Lavorativi */}
-          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 col-span-2 sm:col-span-1">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex-1">
-                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-400">
-                  {hoursBalance.working_days || 0}
-                </p>
-              </div>
-              <div className="hidden sm:block p-3 rounded-full text-purple-400">
-                <Calendar className="h-4 w-4" />
+              <div className={`hidden sm:block p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
               </div>
             </div>
           </div>
