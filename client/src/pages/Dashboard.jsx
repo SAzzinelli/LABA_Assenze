@@ -490,8 +490,8 @@ const Dashboard = () => {
     },
     {
       key: 'remaining-today',
-      title: 'Saldo Ore',
-      helper: 'Ore da lavorare oggi',
+      title: 'Da lavorare oggi',
+      helper: null,
       value: userKPIs.remainingToday,
       icon: Activity,
       color: 'green',
@@ -500,7 +500,7 @@ const Dashboard = () => {
     {
       key: 'monthly-presence',
       title: 'Presenze Mese',
-      helper: new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }),
+      helper: new Date().toLocaleDateString('it-IT', { month: 'long', year: 'numeric' }).replace(/^[a-z]/, (char) => char.toUpperCase()),
       value: userKPIs.monthlyPresences,
       icon: Target,
       color: 'yellow',
