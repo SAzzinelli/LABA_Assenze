@@ -2116,8 +2116,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       
       // Determina se la giornata è completata (orario corrente > orario fine)
       const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
-      const [endHour, endMin] = end_time.split(':').map(Number);
-      const isCompleted = userCurrentHour > endHour || (userCurrentHour === endHour && userCurrentMinute >= endMin);
+      const [scheduleEndHour, scheduleEndMin] = end_time.split(':').map(Number);
+      const isCompleted = userCurrentHour > scheduleEndHour || (userCurrentHour === scheduleEndHour && userCurrentMinute >= scheduleEndMin);
       
       // Usa la presenza salvata SOLO se la giornata è completata
       if (savedAttendance && isCompleted) {
