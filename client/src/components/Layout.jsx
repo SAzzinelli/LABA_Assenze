@@ -19,8 +19,7 @@ import {
   Mail,
   CheckCircle,
   XCircle,
-  Accessibility,
-  TestTube
+  Accessibility
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -29,37 +28,8 @@ const Layout = ({ children }) => {
   const [notifications, setNotifications] = React.useState([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
-  const [testMode, setTestMode] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
-  // Check test mode status GLOBALE (solo admin può attivarla)
-  React.useEffect(() => {
-    const checkTestMode = async () => {
-      try {
-        const response = await apiCall('/api/test-mode');
-        if (response.ok) {
-          const data = await response.json();
-          setTestMode(data.active || false);
-          // Salva anche in localStorage per compatibilità
-          if (data.active) {
-            localStorage.setItem('testMode', 'true');
-            localStorage.setItem('simulatedDate', data.date);
-            localStorage.setItem('simulatedTime', data.time);
-          } else {
-            localStorage.removeItem('testMode');
-            localStorage.removeItem('simulatedDate');
-            localStorage.removeItem('simulatedTime');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking test mode:', error);
-      }
-    };
-    checkTestMode();
-    const interval = setInterval(checkTestMode, 2000); // Controlla ogni 2 secondi
-    return () => clearInterval(interval);
-  }, [apiCall]);
 
   const handleLogout = async () => {
     await logout();
@@ -440,18 +410,6 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </div>
-
-        {/* Test Mode Banner */}
-        {testMode && (
-          <div className="bg-yellow-600 border-b border-yellow-700 px-4 py-2 text-center">
-            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-              <TestTube className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                <strong>MODALITÀ TEST ATTIVA</strong> - Data: {localStorage.getItem('simulatedDate')} | Ora: {localStorage.getItem('simulatedTime')}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-x-hidden">

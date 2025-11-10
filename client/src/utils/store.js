@@ -169,23 +169,7 @@ export const useAuthStore = create(
           headers.Authorization = `Bearer ${token}`;
         }
 
-        // Aggiungi parametri di test se la modalità test è attiva
-        let finalUrl = url;
-        const testMode = localStorage.getItem('testMode') === 'true';
-        if (testMode) {
-          const testDate = localStorage.getItem('simulatedDate');
-          const testTime = localStorage.getItem('simulatedTime');
-          if (testDate && testTime) {
-            const separator = url.includes('?') ? '&' : '?';
-            finalUrl = `${url}${separator}testDate=${testDate}&testTime=${testTime}`;
-            // Aggiungi anche header per test mode
-            headers['X-Test-Mode'] = 'true';
-            headers['X-Test-Date'] = testDate;
-            headers['X-Test-Time'] = testTime;
-          }
-        }
-
-        let response = await fetch(finalUrl, {
+        let response = await fetch(url, {
           ...options,
           headers,
           credentials: 'include',
@@ -217,7 +201,7 @@ export const useAuthStore = create(
 
               // Riprova la chiamata originale con il nuovo token
               headers.Authorization = `Bearer ${refreshData.token}`;
-              response = await fetch(finalUrl, {
+              response = await fetch(url, {
                 ...options,
                 headers,
                 credentials: 'include',

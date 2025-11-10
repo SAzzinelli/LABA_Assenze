@@ -31,68 +31,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
-// Helper function per ottenere data/ora corrente o simulata
-// Funzione per controllare se la modalità test globale è attiva (solo admin può attivarla)
-async function getGlobalTestMode() {
-  try {
-    // Cerca un admin con modalità test attiva
-    const { data: adminWithTestMode } = await supabase
-      .from('users')
-      .select('test_mode_active, test_mode_date, test_mode_time')
-      .eq('role', 'admin')
-      .eq('test_mode_active', true)
-      .not('test_mode_date', 'is', null)
-      .not('test_mode_time', 'is', null)
-      .limit(1)
-      .single();
-    
-    if (adminWithTestMode?.test_mode_active && adminWithTestMode.test_mode_date && adminWithTestMode.test_mode_time) {
-      return {
-        active: true,
-        date: adminWithTestMode.test_mode_date,
-        time: adminWithTestMode.test_mode_time
-      };
-    }
-    return { active: false, date: null, time: null };
-  } catch (error) {
-    return { active: false, date: null, time: null };
-  }
-}
-
-async function getCurrentDateTime(req, targetUserId = null) {
-  // 1. Controlla parametri query/header (priorità massima)
-  const testDate = req.query.testDate || req.headers['x-test-date'];
-  const testTime = req.query.testTime || req.headers['x-test-time'];
-  
-  if (testDate && testTime) {
-    // Modalità test: usa data/ora simulate
-    const [year, month, day] = testDate.split('-').map(Number);
-    const [hour, minute] = testTime.split(':').map(Number);
-    const simulatedDate = new Date(year, month - 1, day, hour, minute);
-    return {
-      date: testDate,
-      time: testTime,
-      dateTime: simulatedDate,
-      isTestMode: true
-    };
-  }
-  
-  // 2. Controlla se la modalità test globale è attiva (solo admin può attivarla)
-  const globalTestMode = await getGlobalTestMode();
-  if (globalTestMode.active) {
-    console.log(`🧪 TEST MODE GLOBALE ATTIVA: ${globalTestMode.date} ${globalTestMode.time}`);
-    const [year, month, day] = globalTestMode.date.split('-').map(Number);
-    const [hour, minute] = globalTestMode.time.split(':').map(Number);
-    const simulatedDate = new Date(year, month - 1, day, hour, minute);
-    return {
-      date: globalTestMode.date,
-      time: globalTestMode.time,
-      dateTime: simulatedDate,
-      isTestMode: true
-    };
-  }
-  
-  // 3. Modalità normale: usa data/ora reale
+// Helper function per ottenere data/ora corrente
+async function getCurrentDateTime() {
   const now = new Date();
   const timeZone = 'Europe/Rome';
 
@@ -1097,27 +1037,16 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
     
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
-    
-    // Se in modalità test, salva in test_attendance invece di attendance
-    const tableName = isTestMode ? 'test_attendance' : 'attendance';
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Salvataggio presenza in ${tableName} per ${date}`);
-    }
-
     // Aggiorna o inserisci il record di presenza
     const { data, error } = await supabase
-      .from(tableName)
+      .from('attendance')
       .upsert({
         user_id: targetUserId,
         date: date,
         actual_hours: parseFloat(actualHours),
         expected_hours: parseFloat(expectedHours),
         balance_hours: parseFloat(balanceHours || 0),
-        notes: notes || (isTestMode ? '[Dati di Test]' : ''),
+        notes: notes || '',
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,date'
@@ -1132,9 +1061,9 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      message: isTestMode ? 'Presenza di test salvata con successo' : 'Presenza salvata con successo',
+      message: 'Presenza salvata con successo',
       attendance: data,
-      isTestData: isTestMode
+      isTestData: false
     });
   } catch (error) {
     console.error('Attendance save error:', error);
@@ -1191,7 +1120,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
   try {
     const { year, month, userId } = req.query;
     const targetUserId = userId || req.user.id;
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     
     if (isTestMode) {
       console.log(`🧪 TEST MODE: Hours balance per ${today} alle ${currentTime}`);
@@ -1937,7 +1866,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
 
     // Usa getCurrentDateTime per ottenere data/ora (reale o simulata dall'admin)
     // Nota: per ogni utente, controlleremo se ha modalità test attiva individualmente
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req);
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
@@ -2052,18 +1981,12 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     // Calculate real-time attendance for each user
     // Per ogni utente, controlla se ha modalità test attiva e usa quella data/ora
     const currentAttendance = await Promise.all(allUsers.map(async (user) => {
-      // Controlla se questo utente specifico ha modalità test attiva
-      const userTestMode = await getCurrentDateTime(req, user.id);
-      const userToday = userTestMode.date;
-      const userCurrentTime = userTestMode.time;
-      const userNow = userTestMode.dateTime;
+      const userToday = today;
+      const userCurrentTime = currentTime;
+      const userNow = now;
       const userDayOfWeek = userNow.getDay();
       const userCurrentHour = userNow.getHours();
       const userCurrentMinute = userNow.getMinutes();
-      
-      if (userTestMode.isTestMode) {
-        console.log(`🧪 Utente ${user.first_name} ${user.last_name} ha TEST MODE attiva: ${userToday} ${userCurrentTime}`);
-      }
       
       console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
       console.log(`🔍 User work_schedules:`, user.work_schedules?.length || 0);
@@ -2458,12 +2381,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
     }
 
-    // Usa getCurrentDateTime per ottenere data/ora (reale o simulata)
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Total balance per ${today} alle ${currentTime}`);
-    }
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     
     let todayBalance = 0;
     let todayRecord = allAttendance.find(r => r.date === today);
@@ -2941,13 +2859,9 @@ app.post('/api/attendance/generate-today', authenticateToken, async (req, res) =
 app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, userId);
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     
     console.log(`🕐 [current-hours] User: ${req.user.email}, Date: ${today}, Time: ${currentTime}, TestMode: ${isTestMode}`);
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Calcolo ore per ${today} alle ${currentTime}`);
-    }
     
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();
@@ -3074,298 +2988,6 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
   } catch (error) {
     console.error('Current hours calculation error:', error);
     res.status(500).json({ error: 'Errore nel calcolo delle ore correnti' });
-  }
-});
-
-// Save/Update test mode GLOBALE (solo admin può attivarla)
-app.post('/api/test-mode', authenticateToken, async (req, res) => {
-  try {
-    // Solo l'admin può attivare la modalità test globale
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Solo l\'admin può attivare la modalità test' });
-    }
-    
-    const { active, date, time } = req.body;
-    
-    // Valida i dati
-    if (active && (!date || !time)) {
-      return res.status(400).json({ error: 'Data e ora richieste quando la modalità test è attiva' });
-    }
-    
-    // Se si disattiva, disattiva per tutti gli admin
-    if (!active) {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          test_mode_active: false,
-          test_mode_date: null,
-          test_mode_time: null
-        })
-        .eq('role', 'admin');
-      
-      if (error) {
-        console.error('Error deactivating test mode:', error);
-        return res.status(500).json({ error: 'Errore nella disattivazione della modalità test' });
-      }
-      
-      console.log(`🧪 Test mode GLOBALE disattivata`);
-      return res.json({
-        success: true,
-        message: 'Modalità test disattivata',
-        testMode: { active: false, date: null, time: null }
-      });
-    }
-    
-    // Se si attiva, attiva solo per l'admin corrente (sarà la modalità globale)
-    const updateData = {
-      test_mode_active: true,
-      test_mode_date: date,
-      test_mode_time: time
-    };
-    
-    const { error } = await supabase
-      .from('users')
-      .update(updateData)
-      .eq('id', req.user.id)
-      .eq('role', 'admin');
-    
-    if (error) {
-      console.error('Error activating test mode:', error);
-      return res.status(500).json({ error: 'Errore nell\'attivazione della modalità test' });
-    }
-    
-    console.log(`🧪 Test mode GLOBALE attivata dall'admin ${req.user.id}: ${date} ${time}`);
-    
-    res.json({
-      success: true,
-      message: 'Modalità test globale attivata',
-      testMode: {
-        active: true,
-        date,
-        time
-      }
-    });
-  } catch (error) {
-    console.error('Test mode save error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Get test mode status GLOBALE
-app.get('/api/test-mode', authenticateToken, async (req, res) => {
-  try {
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    
-    // Se l'utente è admin, restituisci anche i dati di test se presenti
-    let testData = null;
-    if (req.user.role === 'admin' && globalTestMode.active) {
-      const { data: adminUser } = await supabase
-        .from('users')
-        .select('test_data')
-        .eq('role', 'admin')
-        .eq('test_mode_active', true)
-        .limit(1)
-        .single();
-      
-      testData = adminUser?.test_data || null;
-    }
-    
-    res.json({
-      active: globalTestMode.active,
-      date: globalTestMode.date,
-      time: globalTestMode.time,
-      testData: testData,
-      canActivate: req.user.role === 'admin' // Solo admin può attivare
-    });
-  } catch (error) {
-    console.error('Test mode get error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Save test data (presenze virtuali, permessi virtuali, etc.)
-app.post('/api/test-mode/data', authenticateToken, async (req, res) => {
-  try {
-    const { attendance, permissions, permission104 } = req.body;
-    const userId = req.user.id;
-    
-    // Salva i dati di test nel campo test_data (JSONB)
-    const testData = {
-      attendance: attendance || null,
-      permissions: permissions || null,
-      permission104: permission104 || null
-    };
-    
-    const { error } = await supabase
-      .from('users')
-      .update({ test_data: testData })
-      .eq('id', userId);
-    
-    if (error) {
-      console.error('Error saving test data:', error);
-      return res.status(500).json({ error: 'Errore nel salvataggio dei dati di test' });
-    }
-    
-    console.log(`🧪 Test data salvato per utente ${userId}`);
-    
-    res.json({
-      success: true,
-      message: 'Dati di test salvati con successo',
-      testData
-    });
-  } catch (error) {
-    console.error('Test data save error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// TEST ENDPOINT: Calcola ore con orario simulato (solo per admin o per test)
-app.get('/api/attendance/test-hours', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const simulatedTime = req.query.time; // Formato: "HH:MM" (es. "17:00")
-    const simulatedDate = req.query.date; // Formato: "YYYY-MM-DD" (opzionale, default oggi)
-    
-    // Se non è admin, permetto solo al proprio utente
-    if (req.user.role !== 'admin' && req.user.id !== userId) {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
-    
-    const targetDate = simulatedDate || new Date().toISOString().split('T')[0];
-    const targetTime = simulatedTime || new Date().toTimeString().substring(0, 5);
-    
-    // Calcola il giorno della settimana per la data simulata
-    const testDate = new Date(targetDate);
-    const dayOfWeek = testDate.getDay();
-    
-    console.log(`🧪 TEST: Calcolo ore simulate per ${targetDate} alle ${targetTime}`);
-    
-    // Ottieni l'orario di lavoro per il giorno simulato
-    const { data: schedule, error: scheduleError } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('day_of_week', dayOfWeek)
-      .eq('is_working_day', true)
-      .single();
-
-    if (scheduleError || !schedule) {
-      return res.json({
-        isWorkingDay: false,
-        message: `Nessun orario di lavoro per ${targetDate} (giorno ${dayOfWeek})`,
-        simulatedTime: targetTime,
-        simulatedDate: targetDate
-      });
-    }
-
-    // Recupera permessi approvati per la data simulata
-    const { data: permissionsToday, error: permError } = await supabase
-      .from('leave_requests')
-      .select('hours, permission_type, exit_time, entry_time')
-      .eq('user_id', userId)
-      .eq('type', 'permission')
-      .eq('status', 'approved')
-      .lte('start_date', targetDate)
-      .gte('end_date', targetDate);
-    
-    let permissionData = null;
-    if (permissionsToday && !permError && permissionsToday.length > 0) {
-      let exitTime = null;
-      let entryTime = null;
-      let permType = null;
-      
-      permissionsToday.forEach(perm => {
-        if (perm.permission_type === 'early_exit' && perm.exit_time) {
-          exitTime = perm.exit_time;
-          permType = 'early_exit';
-        }
-        if (perm.permission_type === 'late_entry' && perm.entry_time) {
-          entryTime = perm.entry_time;
-          permType = 'late_entry';
-        }
-      });
-      
-      if (exitTime || entryTime) {
-        permissionData = { permission_type: permType, exit_time: exitTime, entry_time: entryTime };
-      }
-    }
-
-    // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore
-    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
-      schedule,
-      targetTime,
-      permissionData
-    );
-
-    // Calcolo manuale per verifica
-    const [startHour, startMin] = schedule.start_time.split(':').map(Number);
-    const [endHour, endMin] = schedule.end_time.split(':').map(Number);
-    const [currentHour, currentMin] = targetTime.split(':').map(Number);
-    const breakDuration = schedule.break_duration || 60;
-    const breakStart = schedule.break_start_time ? schedule.break_start_time.split(':').map(Number) : null;
-    
-    let manualCalculation = null;
-    if (breakStart) {
-      const [breakStartHour, breakStartMin] = breakStart;
-      const breakEndMin = (breakStartHour * 60 + breakStartMin) + breakDuration;
-      const breakEndHour = Math.floor(breakEndMin / 60);
-      const breakEndMinFinal = breakEndMin % 60;
-      
-      const startTotalMin = startHour * 60 + startMin;
-      const currentTotalMin = currentHour * 60 + currentMin;
-      const breakStartTotalMin = breakStartHour * 60 + breakStartMin;
-      const breakEndTotalMin = breakEndHour * 60 + breakEndMinFinal;
-      
-      let manualHours = 0;
-      if (currentTotalMin >= startTotalMin && currentTotalMin <= (endHour * 60 + endMin)) {
-        if (currentTotalMin < breakStartTotalMin) {
-          // Prima della pausa
-          manualHours = (currentTotalMin - startTotalMin) / 60;
-        } else if (currentTotalMin >= breakStartTotalMin && currentTotalMin < breakEndTotalMin) {
-          // Durante la pausa
-          manualHours = (breakStartTotalMin - startTotalMin) / 60;
-        } else {
-          // Dopo la pausa
-          const morningHours = (breakStartTotalMin - startTotalMin) / 60;
-          const afternoonHours = (currentTotalMin - breakEndTotalMin) / 60;
-          manualHours = morningHours + afternoonHours;
-        }
-      }
-      
-      manualCalculation = {
-        morning: `${startHour}:${startMin.toString().padStart(2, '0')} - ${breakStartHour}:${breakStartMin.toString().padStart(2, '0')}`,
-        break: `${breakStartHour}:${breakStartMin.toString().padStart(2, '0')} - ${breakEndHour}:${breakEndMinFinal.toString().padStart(2, '0')} (${breakDuration} min)`,
-        afternoon: `${breakEndHour}:${breakEndMinFinal.toString().padStart(2, '0')} - ${currentHour}:${currentMin.toString().padStart(2, '0')}`,
-        manualHours: Math.round(manualHours * 10) / 10
-      };
-    }
-
-    res.json({
-      isWorkingDay: true,
-      simulatedTime: targetTime,
-      simulatedDate: targetDate,
-      schedule: {
-        start_time: schedule.start_time,
-        end_time: schedule.end_time,
-        break_duration: schedule.break_duration || 60,
-        break_start_time: schedule.break_start_time || 'auto'
-      },
-      expectedHours,
-      actualHours,
-      balanceHours,
-      status,
-      progress: Math.min((actualHours / expectedHours) * 100, 100),
-      manualCalculation, // Calcolo manuale per verifica
-      permissionData: permissionData ? {
-        type: permissionData.permission_type,
-        exit_time: permissionData.exit_time,
-        entry_time: permissionData.entry_time
-      } : null
-    });
-  } catch (error) {
-    console.error('Test hours calculation error:', error);
-    res.status(500).json({ error: 'Errore nel calcolo delle ore di test' });
   }
 });
 
@@ -3559,8 +3181,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       .eq('day_of_week', dayOfWeek)
       .single();
 
-    // Usa getCurrentDateTime per ottenere data/ora (reale o simulata) per questo utente
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime(req, targetUserId);
+    const { date: today, time: currentTime } = await getCurrentDateTime();
     
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
@@ -4123,21 +3744,10 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (exitTime !== undefined) insertData.exit_time = exitTime;
     if (entryTime !== undefined) insertData.entry_time = entryTime;
 
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
-    
-    // Se in modalità test, salva in test_leave_requests invece di leave_requests
-    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Salvataggio richiesta in ${tableName}`);
-    }
-    
     console.log('🔧 Inserting leave request with data:', insertData);
 
     const { data: newRequest, error } = await supabase
-      .from(tableName)
+      .from('leave_requests')
       .insert([insertData])
       .select()
       .single();
@@ -4359,19 +3969,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       return res.status(400).json({ error: 'Stato non valido' });
     }
 
-    // Controlla se la modalità test globale è attiva
-    const globalTestMode = await getGlobalTestMode();
-    const isTestMode = globalTestMode.active;
-    
-    // Se in modalità test, salva in test_leave_requests invece di leave_requests
-    const tableName = isTestMode ? 'test_leave_requests' : 'leave_requests';
-    
-    if (isTestMode) {
-      console.log(`🧪 TEST MODE: Aggiornamento richiesta in ${tableName}`);
-    }
-
     const { data: updatedRequest, error } = await supabase
-      .from(tableName)
+      .from('leave_requests')
       .update({
         status: status,
         approved_at: new Date().toISOString(),

@@ -45,13 +45,6 @@ const Attendance = () => {
     const [totalBalance, setTotalBalance] = useState(0);
   const [refreshing, setRefreshing] = useState(true);
   
-  // Test mode state
-  const [testMode, setTestMode] = useState(false);
-  const [testTime, setTestTime] = useState('17:00');
-  const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
-  const [testResult, setTestResult] = useState(null);
-  const [testing, setTesting] = useState(false);
-
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
     const initializeData = async () => {
@@ -342,39 +335,58 @@ const Attendance = () => {
 
         // Aggiorna anche i dati di attendance per oggi
         const today = now.toISOString().split('T')[0];
-        let updatedAttendance;
+        let latestAttendance = [];
+        setAttendance(prevAttendance => {
+          let updatedAttendance = [];
+          if (prevAttendance.length > 0) {
+            updatedAttendance = prevAttendance.some(record => record.date === today)
+              ? prevAttendance.map(record =>
+                  record.date === today
+                    ? {
+                        ...record,
+                        actual_hours: finalActualHours,
+                        balance_hours: finalBalanceHours
+                      }
+                    : record
+                )
+              : [
+                  {
+                    id: `virtual-${today}`,
+                    user_id: user?.id,
+                    date: today,
+                    expected_hours: finalExpectedHours,
+                    actual_hours: finalActualHours,
+                    balance_hours: finalBalanceHours,
+                    notes: 'Presenza automatica per orario',
+                    created_at: now.toISOString(),
+                    updated_at: now.toISOString()
+                  },
+                  ...prevAttendance
+                ];
+          } else {
+            updatedAttendance = [
+              {
+                id: `virtual-${today}`,
+                user_id: user?.id,
+                date: today,
+                expected_hours: finalExpectedHours,
+                actual_hours: finalActualHours,
+                balance_hours: finalBalanceHours,
+                notes: 'Presenza automatica per orario',
+                created_at: now.toISOString(),
+                updated_at: now.toISOString()
+              }
+            ];
+          }
+          latestAttendance = updatedAttendance;
+          return updatedAttendance;
+        });
         
-        if (attendance.length > 0) {
-          // Se ci sono già record, aggiorna quello di oggi
-          updatedAttendance = attendance.map(record => 
-            record.date === today 
-              ? { 
-                  ...record, 
-                  actual_hours: finalActualHours, 
-                  balance_hours: finalBalanceHours 
-                }
-              : record
-          );
-        } else {
-          // Se non ci sono record, crea un record virtuale per oggi
-          updatedAttendance = [{
-            id: `virtual-${today}`,
-            user_id: user?.id,
-            date: today,
-            expected_hours: finalExpectedHours,
-            actual_hours: finalActualHours,
-            balance_hours: finalBalanceHours,
-            notes: 'Presenza automatica per orario',
-            created_at: now.toISOString(),
-            updated_at: now.toISOString()
-          }];
+        if (latestAttendance.length > 0) {
+          // Ricalcola i KPI dopo aver aggiornato le ore
+          console.log('🔄 Recalculating KPIs after hour update...');
+          calculateKPIs(latestAttendance);
         }
-        
-        setAttendance(updatedAttendance);
-        
-        // Ricalcola i KPI dopo aver aggiornato le ore
-        console.log('🔄 Recalculating KPIs after hour update...');
-        calculateKPIs(updatedAttendance);
 
         // Controlla se è il momento di salvare (ogni ora in punto)
         if (now.getMinutes() === 0 && finalActualHours > 0) {
@@ -610,27 +622,6 @@ const Attendance = () => {
     
     setSelectedAttendanceDetails(realTimeData);
     setShowAttendanceDetails(true);
-  };
-
-  // Test function
-  const runTest = async () => {
-    setTesting(true);
-    try {
-      const response = await apiCall(`/api/attendance/test-hours?time=${testTime}&date=${testDate}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTestResult(data);
-        console.log('🧪 Test result:', data);
-      } else {
-        const error = await response.json();
-        setTestResult({ error: error.error || 'Errore nel test' });
-      }
-    } catch (error) {
-      console.error('❌ Test error:', error);
-      setTestResult({ error: 'Errore nella chiamata API' });
-    } finally {
-      setTesting(false);
-    }
   };
 
   const formatTime = (time) => {
@@ -1086,123 +1077,6 @@ const Attendance = () => {
             <p>• <strong>Assenze:</strong> Solo quando hai richieste di permesso/malattia/ferie approvate</p>
             <p>• <strong>Gestione Admin:</strong> Gli amministratori possono modificare ore effettive e contrassegnare straordinari</p>
           </div>
-        </div>
-
-        {/* Test Mode - Simula orario */}
-        <div className="mt-8 bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-white flex items-center">
-              <Clock className="h-6 w-6 mr-3 text-indigo-400" />
-              Test Calcolo Ore
-            </h3>
-            <button
-              onClick={() => {
-                setTestMode(!testMode);
-                if (testMode) {
-                  setTestResult(null);
-                }
-              }}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-            >
-              {testMode ? 'Nascondi' : 'Mostra'}
-            </button>
-          </div>
-          
-          {testMode && (
-            <div className="space-y-4">
-              <p className="text-slate-400 text-sm">
-                Simula un orario specifico per verificare il calcolo delle ore anche fuori dall'orario di lavoro.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Orario Simulato (HH:MM)
-                  </label>
-                  <input
-                    type="time"
-                    value={testTime}
-                    onChange={(e) => setTestTime(e.target.value)}
-                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Data (opzionale)
-                  </label>
-                  <input
-                    type="date"
-                    value={testDate}
-                    onChange={(e) => setTestDate(e.target.value)}
-                    className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg border border-slate-600 focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-              
-              <button
-                onClick={runTest}
-                disabled={testing}
-                className="w-full md:w-auto px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
-              >
-                {testing ? 'Calcolo...' : 'Calcola Ore'}
-              </button>
-              
-              {testResult && (
-                <div className="mt-6 p-4 bg-slate-900 rounded-lg border border-slate-700">
-                  {testResult.error ? (
-                    <div className="text-red-400">
-                      <strong>Errore:</strong> {testResult.error}
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <p className="text-slate-400 text-sm">Ore Attese</p>
-                          <p className="text-xl font-bold text-white">{testResult.expectedHours}h</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-400 text-sm">Ore Lavorate</p>
-                          <p className="text-xl font-bold text-blue-400">{testResult.actualHours.toFixed(1)}h</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-400 text-sm">Saldo</p>
-                          <p className={`text-xl font-bold ${testResult.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {testResult.balanceHours >= 0 ? '+' : ''}{testResult.balanceHours.toFixed(1)}h
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-slate-400 text-sm">Stato</p>
-                          <p className="text-xl font-bold text-indigo-400">{testResult.status}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="border-t border-slate-700 pt-4 mt-4">
-                        <p className="text-slate-400 text-sm mb-2">
-                          <strong>Orario:</strong> {testResult.schedule.start_time} - {testResult.schedule.end_time}
-                        </p>
-                        <p className="text-slate-400 text-sm mb-2">
-                          <strong>Pausa:</strong> {testResult.schedule.break_duration} min
-                          {testResult.schedule.break_start_time && ` (${testResult.schedule.break_start_time})`}
-                        </p>
-                        {testResult.manualCalculation && (
-                          <div className="mt-3 p-3 bg-slate-800 rounded">
-                            <p className="text-slate-300 text-sm mb-2"><strong>Calcolo Manuale:</strong></p>
-                            <p className="text-slate-400 text-xs">Mattina: {testResult.manualCalculation.morning}</p>
-                            <p className="text-slate-400 text-xs">Pausa: {testResult.manualCalculation.break}</p>
-                            <p className="text-slate-400 text-xs">Pomeriggio: {testResult.manualCalculation.afternoon}</p>
-                            <p className="text-slate-300 text-sm mt-2">
-                              <strong>Totale Manuale:</strong> {testResult.manualCalculation.manualHours}h
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Modal Dettagli Presenze */}

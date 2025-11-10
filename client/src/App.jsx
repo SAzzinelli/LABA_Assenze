@@ -16,7 +16,6 @@ import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
 import Notifiche from './pages/Notifiche';
 import Impostazioni from './pages/Impostazioni';
-import TestSimulazione from './pages/TestSimulazione';
 import Layout from './components/Layout';
 
 function App() {
@@ -168,18 +167,6 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <Impostazioni />
-                </Layout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/test-simulazione"
-            element={
-              isAuthenticated ? (
-                <Layout>
-                  <TestSimulazione />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
