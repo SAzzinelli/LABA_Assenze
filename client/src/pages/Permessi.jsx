@@ -26,7 +26,9 @@ import {
 
 const LeaveRequests = () => {
   const { user, apiCall } = useAuthStore();
-  const { alert: alertState, showSuccess, showError, showConfirm, hideAlert } = useCustomAlert();
+  const alertControls = useCustomAlert();
+  const { showSuccess, showError, showConfirm, hideAlert } = alertControls;
+  const alertState = alertControls.alert;
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [showAdminCreateModal, setShowAdminCreateModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -429,7 +431,7 @@ const LeaveRequests = () => {
         const todayDate = new Date(todayIso);
         
         if (activeTab === 'imminenti') {
-          // Mostra richieste in attesa più quelle approvate da oggi in poi
+          // Mostra richieste in attesa o approvate da oggi in poi
           filtered = filtered.filter(request => {
             const requestDate = new Date(request.permissionDate || request.startDate);
             return (
@@ -438,13 +440,14 @@ const LeaveRequests = () => {
             );
           });
         } else {
-          // Cronologia: mostra solo richieste del mese selezionato già decise/passat
+          // Cronologia: solo richieste concluse e già nel passato
           filtered = filtered.filter(request => {
             const requestDate = new Date(request.permissionDate || request.startDate);
             const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
             const isHistorical =
               (request.status === 'approved' && requestDate < todayDate) ||
-              request.status !== 'approved';
+              request.status === 'rejected' ||
+              request.status === 'cancelled';
             return isInCurrentMonth && isHistorical;
           });
         }
