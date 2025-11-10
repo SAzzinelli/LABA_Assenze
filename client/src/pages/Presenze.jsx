@@ -580,6 +580,10 @@ const Attendance = () => {
     
     let realTimeActualHours = 0;
     let realTimeBalanceHours = 0;
+    let scheduleExpectedHours = null;
+    let expectedHours = typeof record.expected_hours === 'number' ? record.expected_hours : null;
+    const dbActualHours = typeof record.actual_hours === 'number' ? record.actual_hours : null;
+    const dbBalanceHours = typeof record.balance_hours === 'number' ? record.balance_hours : null;
     
     if (todaySchedule) {
       const { start_time, end_time, break_duration } = todaySchedule;
@@ -590,7 +594,10 @@ const Attendance = () => {
       // Calcola ore attese totali
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = totalMinutes - breakDuration;
-      const expectedHours = workMinutes / 60;
+      scheduleExpectedHours = workMinutes / 60;
+      if (expectedHours === null) {
+        expectedHours = scheduleExpectedHours;
+      }
       
       // Calcola ore effettive real-time
       if (currentHour >= startHour && currentHour <= endHour) {
@@ -609,9 +616,15 @@ const Attendance = () => {
         realTimeBalanceHours = 0;
       }
     }
+    
+    const actualHoursForSummary = dbActualHours ?? realTimeActualHours;
+    const expectedHoursForSummary = expectedHours ?? scheduleExpectedHours ?? 0;
+    const balanceHoursForSummary = dbBalanceHours ?? (actualHoursForSummary - expectedHoursForSummary);
+    
     const statusInfo = computeStatusInfo({
       ...record,
-      actual_hours: realTimeActualHours
+      actual_hours: actualHoursForSummary,
+      expected_hours: expectedHoursForSummary
     });
     
     const realTimeData = {
@@ -622,17 +635,9 @@ const Attendance = () => {
         employee: user && user.first_name && user.last_name ? 
           `${user.first_name} ${user.last_name}` : 
           (user && user.email ? user.email.split('@')[0] : 'Dipendente'),
-        expectedHours: todaySchedule ? (() => {
-          const { start_time, end_time, break_duration } = todaySchedule;
-          const [startHour, startMin] = start_time.split(':').map(Number);
-          const [endHour, endMin] = end_time.split(':').map(Number);
-          const breakDuration = break_duration || 60;
-          const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-          const workMinutes = totalMinutes - breakDuration;
-          return workMinutes / 60;
-        })() : 8,
-        actualHours: realTimeActualHours,
-        balanceHours: realTimeBalanceHours,
+        expectedHours: expectedHoursForSummary,
+        actualHours: actualHoursForSummary,
+        balanceHours: balanceHoursForSummary,
         status: statusInfo.text,
         statusBadgeClass: statusInfo.badgeClass,
         notes: ''
