@@ -31,6 +31,61 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
 
+const normalizeTimeString = (timeStr) => {
+  if (!timeStr || typeof timeStr !== 'string') return null;
+  return timeStr.length >= 5 ? timeStr.substring(0, 5) : timeStr;
+};
+
+function aggregatePermissionData(permissions) {
+  if (!permissions || permissions.length === 0) {
+    return null;
+  }
+
+  let totalHours = 0;
+  let lateEntryTime = null;
+  let earlyExitTime = null;
+  const details = [];
+
+  permissions.forEach(perm => {
+    const hoursValue = perm?.hours ? parseFloat(perm.hours) : 0;
+    if (!Number.isNaN(hoursValue)) {
+      totalHours += hoursValue;
+    }
+
+    const entryTime = normalizeTimeString(perm?.entry_time);
+    const exitTime = normalizeTimeString(perm?.exit_time);
+
+    if (perm?.permission_type === 'late_entry' && entryTime) {
+      lateEntryTime = entryTime;
+    }
+
+    if (perm?.permission_type === 'early_exit' && exitTime) {
+      earlyExitTime = exitTime;
+    }
+
+    details.push({
+      id: perm?.id || null,
+      type: perm?.permission_type || perm?.type || null,
+      hours: hoursValue,
+      entryTime,
+      exitTime,
+      reason: perm?.reason || null
+    });
+  });
+
+  const hasData = totalHours > 0 || lateEntryTime || earlyExitTime;
+  if (!hasData) {
+    return null;
+  }
+
+  return {
+    totalHours: Math.round(totalHours * 100) / 100,
+    lateEntryTime,
+    earlyExitTime,
+    details
+  };
+}
+
 // Helper function per ottenere data/ora corrente
 async function getCurrentDateTime() {
   const now = new Date();

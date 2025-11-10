@@ -68,21 +68,64 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
   
-  // Calcola ore attese (ORE CONTRATTUALI - sempre fisse!)
-  const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
+  // Helper per normalizzare HH:MM(:SS) in HH:MM
+  const normalizeTime = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    return timeStr.slice(0, 5);
+  };
+  
+  const toMinutes = (timeStr) => {
+    if (!timeStr) return null;
+    const [hour, minute] = timeStr.split(':').map(Number);
+    return hour * 60 + minute;
+  };
+  
+  // Calcola ore attese (potenzialmente ridotte dai permessi)
+  let expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
   
   // Calcola orari effettivi considerando i permessi
   let effectiveStartTime = start_time;
   let effectiveEndTime = end_time;
+  let permissionHours = 0;
   
-  // PERMESSO USCITA ANTICIPATA: crea debito, non riduce expectedHours
-  if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
-    effectiveEndTime = permissionData.exit_time;
+  const normalizedStartTime = normalizeTime(start_time);
+  const normalizedEndTime = normalizeTime(end_time);
+  const normalizedEntryTime = normalizeTime(permissionData?.entry_time);
+  const normalizedExitTime = normalizeTime(permissionData?.exit_time);
+  const permissionType = permissionData?.permission_type;
+  const rawPermissionHours = parseFloat(permissionData?.hours || 0) || 0;
+  
+  // PERMESSO ENTRATA POSTICIPATA
+  if (permissionType === 'late_entry' && normalizedEntryTime) {
+    effectiveStartTime = normalizedEntryTime;
+    const startMinutes = toMinutes(normalizedStartTime);
+    const entryMinutes = toMinutes(normalizedEntryTime);
+    if (startMinutes !== null && entryMinutes !== null && entryMinutes > startMinutes) {
+      permissionHours += (entryMinutes - startMinutes) / 60;
+    }
   }
   
-  // PERMESSO ENTRATA POSTICIPATA: crea debito, non riduce expectedHours
-  if (permissionData?.permission_type === 'late_entry' && permissionData.entry_time) {
-    effectiveStartTime = permissionData.entry_time;
+  // PERMESSO USCITA ANTICIPATA
+  if (permissionType === 'early_exit' && normalizedExitTime) {
+    effectiveEndTime = normalizedExitTime;
+    const endMinutes = toMinutes(normalizedEndTime);
+    const exitMinutes = toMinutes(normalizedExitTime);
+    if (endMinutes !== null && exitMinutes !== null && endMinutes > exitMinutes) {
+      permissionHours += (endMinutes - exitMinutes) / 60;
+    }
+  }
+  
+  // PERMESSI A ORE (hourly / personal) o fallback per valori espliciti
+  if (permissionType === 'hourly' || permissionType === 'personal') {
+    permissionHours += rawPermissionHours;
+  } else if (rawPermissionHours > permissionHours) {
+    // Se abbiamo ore esplicite maggiori dei calcoli effettuati, usa il valore esplicito
+    permissionHours = rawPermissionHours;
+  }
+  
+  // Riduci le ore attese in base ai permessi approvati (mai sotto zero)
+  if (permissionHours > 0) {
+    expectedHours = Math.max(0, expectedHours - permissionHours);
   }
   
   // Calcola ore effettive basate sull'orario corrente
