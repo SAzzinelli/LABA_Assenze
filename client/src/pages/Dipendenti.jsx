@@ -62,6 +62,29 @@ const Employees = () => {
     fetchDepartments();
   }, []);
 
+  const formatHoursValue = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return { sign: '', hours: 0, minutes: 0, full: '0h 0m' };
+    }
+
+    const sign = value < 0 ? '-' : value > 0 ? '+' : '';
+    const absValue = Math.abs(value);
+    let hours = Math.floor(absValue);
+    let minutes = Math.round((absValue - hours) * 60);
+
+    if (minutes === 60) {
+      hours += 1;
+      minutes = 0;
+    }
+
+    return {
+      sign,
+      hours,
+      minutes,
+      full: `${sign}${hours}h ${minutes}m`
+    };
+  };
+
   const fetchEmployees = async () => {
     try {
       const response = await apiCall('/api/employees');
@@ -260,12 +283,25 @@ const Employees = () => {
 
   const fetchEmployeeBalance = async (employeeId) => {
     try {
-      // Fetch balance totale
-      const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${employeeId}`);
-      if (balanceResponse.ok) {
-        const balanceData = await balanceResponse.json();
-        const balance = balanceData.balances[employeeId] || 0;
-        setCurrentBalance(balance);
+      // Fetch balance totale con logica real-time (singolo endpoint)
+      let balanceValue = null;
+      const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${employeeId}`);
+      if (singleBalanceResponse.ok) {
+        const singleBalance = await singleBalanceResponse.json();
+        balanceValue = singleBalance.realTime?.balanceHours ?? singleBalance.totalBalanceHours ?? 0;
+      }
+
+      // Fallback all'endpoint aggregato
+      if (balanceValue === null) {
+        const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${employeeId}`);
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          balanceValue = balanceData.balances?.[employeeId] ?? 0;
+        }
+      }
+
+      if (balanceValue !== null) {
+        setCurrentBalance(balanceValue);
       }
       
       // Fetch history recente (ultimi 10 record)
@@ -873,19 +909,24 @@ const Employees = () => {
                     Banca Ore Attuale
                   </h4>
                   <div className="flex items-center justify-center py-8">
-                    <div className={`text-6xl font-bold ${
-                      currentBalance > 0 
-                        ? 'text-green-400' 
-                        : currentBalance < 0 
-                          ? 'text-red-400' 
-                          : 'text-slate-400'
-                    }`}>
-                      {currentBalance > 0 ? '+' : ''}
-                      {Math.floor(currentBalance)}
-                      <span className="text-4xl">h</span>
-                      {Math.abs(Math.round((currentBalance % 1) * 60))}
-                      <span className="text-3xl">m</span>
-                    </div>
+                    {(() => {
+                      const formatted = formatHoursValue(currentBalance);
+                      return (
+                        <div className={`text-6xl font-bold ${
+                          currentBalance > 0 
+                            ? 'text-green-400' 
+                            : currentBalance < 0 
+                              ? 'text-red-400' 
+                              : 'text-slate-400'
+                        }`}>
+                          {formatted.sign}
+                          {formatted.hours}
+                          <span className="text-4xl">h</span>
+                          {formatted.minutes}
+                          <span className="text-3xl">m</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="text-center mt-4">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -923,24 +964,34 @@ const Employees = () => {
                                 })}
                               </p>
                               <p className="text-slate-400 text-sm">
-                                Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                                {(() => {
+                                  const expectedFormatted = formatHoursValue(record.expected_hours || 0);
+                                  return `Ore attese: ${expectedFormatted.hours}h ${expectedFormatted.minutes}m`;
+                                })()}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={`text-lg font-bold ${
-                              record.balance_hours > 0 
-                                ? 'text-green-400' 
-                                : record.balance_hours < 0 
-                                  ? 'text-red-400' 
-                                  : 'text-slate-400'
-                            }`}>
-                              {record.balance_hours > 0 ? '+' : ''}
-                              {Math.floor(record.balance_hours || 0)}h {Math.round(Math.abs(((record.balance_hours || 0) % 1) * 60))}m
-                            </p>
-                            <p className="text-slate-400 text-xs mt-1">
-                              Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
-                            </p>
+                            {(() => {
+                              const balanceFormatted = formatHoursValue(record.balance_hours || 0);
+                              const actualFormatted = formatHoursValue(record.actual_hours || 0);
+                              return (
+                                <>
+                                  <p className={`text-lg font-bold ${
+                                    record.balance_hours > 0 
+                                      ? 'text-green-400' 
+                                      : record.balance_hours < 0 
+                                        ? 'text-red-400' 
+                                        : 'text-slate-400'
+                                  }`}>
+                                    {balanceFormatted.full}
+                                  </p>
+                                  <p className="text-slate-400 text-xs mt-1">
+                                    Effettive: {actualFormatted.full}
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}

@@ -2,6 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, Pause, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 
+const formatHoursValue = (value) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '0h 0m';
+  }
+
+  const sign = value < 0 ? '-' : value > 0 ? '+' : '';
+  const absValue = Math.abs(value);
+  let hours = Math.floor(absValue);
+  let minutes = Math.round((absValue - hours) * 60);
+
+  if (minutes === 60) {
+    hours += 1;
+    minutes = 0;
+  }
+
+  return `${sign}${hours}h ${minutes}m`;
+};
+
 const AttendanceDetails = ({ userId, date, onClose }) => {
   const { apiCall } = useAuthStore();
   const [details, setDetails] = useState([]);
@@ -186,19 +204,19 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
                 <div className="text-center">
                   <p className="text-sm text-slate-400">Ore Attese</p>
                   <p className="text-lg font-bold text-blue-400">
-                    {details.summary.expectedHours}h
+                    {formatHoursValue(details.summary.expectedHours)}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-slate-400">Ore Effettive</p>
                   <p className="text-lg font-bold text-green-400">
-                    {details.summary.actualHours}h
+                    {formatHoursValue(details.summary.actualHours)}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-slate-400">Saldo Ore</p>
                   <p className={`text-lg font-bold ${details.summary.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {details.summary.balanceHours >= 0 ? '+' : ''}{details.summary.balanceHours}h
+                    {formatHoursValue(details.summary.balanceHours)}
                   </p>
                 </div>
               </div>
@@ -219,14 +237,6 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
                     Data: {new Date(details.summary.date).toLocaleDateString('it-IT')}
                   </div>
                 </div>
-                
-                {details.summary.notes && (
-                  <div className="mt-3 p-3 bg-slate-800 rounded border border-slate-600">
-                    <p className="text-sm text-slate-300">
-                      <strong>Note:</strong> {details.summary.notes}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
