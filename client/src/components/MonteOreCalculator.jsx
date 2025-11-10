@@ -2,6 +2,24 @@ import React from 'react';
 import { Calculator, Clock, Users, Heart, Plane, AlertTriangle, Info, DollarSign, TrendingUp, TrendingDown, Activity, Calendar } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 
+const formatHoursValue = (value) => {
+  const sign = value < 0 ? '-' : value > 0 ? '+' : '';
+  const absoluteValue = Math.abs(value);
+  let hours = Math.floor(absoluteValue);
+  let minutes = Math.round((absoluteValue - hours) * 60);
+
+  if (minutes === 60) {
+    hours += 1;
+    minutes = 0;
+  }
+
+  return {
+    sign,
+    hours,
+    minutes
+  };
+};
+
 const MonteOreCalculator = ({ user, workSchedule }) => {
   const { apiCall } = useAuthStore();
   const [leaveBalances, setLeaveBalances] = React.useState([]);
@@ -249,6 +267,10 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const sickLeave = calculateSickLeave();
   const permissions104 = calculate104Permissions();
   const overtime = calculateOvertime();
+  const formattedCurrentBalance = React.useMemo(
+    () => formatHoursValue(currentBalance),
+    [currentBalance]
+  );
 
   return (
     <div className="space-y-6">
@@ -266,10 +288,10 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                 ? 'text-red-400' 
                 : 'text-slate-400'
           }`}>
-            {currentBalance > 0 ? '+' : ''}
-            {Math.floor(currentBalance)}
+            {formattedCurrentBalance.sign}
+            {formattedCurrentBalance.hours}
             <span className="text-4xl">h</span>
-            {Math.abs(Math.round((currentBalance % 1) * 60))}
+            {formattedCurrentBalance.minutes}
             <span className="text-3xl">m</span>
           </div>
         </div>
@@ -296,7 +318,9 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         </h4>
         {balanceHistory.length > 0 ? (
           <div className="space-y-3">
-            {balanceHistory.map((record, index) => (
+            {balanceHistory.map((record, index) => {
+              const formattedRecordBalance = formatHoursValue(record.balance_hours || 0);
+              return (
               <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 text-slate-400 mr-3" />
@@ -321,15 +345,16 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                         ? 'text-red-400' 
                         : 'text-slate-400'
                   }`}>
-                    {record.balance_hours > 0 ? '+' : ''}
-                    {Math.floor(record.balance_hours || 0)}h {Math.round(Math.abs(((record.balance_hours || 0) % 1) * 60))}m
+                    {formattedRecordBalance.sign}
+                    {formattedRecordBalance.hours}h {formattedRecordBalance.minutes}m
                   </p>
                   <p className="text-slate-400 text-xs mt-1">
                     Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
                   </p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-slate-400">
