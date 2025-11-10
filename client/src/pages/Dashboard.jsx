@@ -438,8 +438,8 @@ const Dashboard = () => {
           
           if (currentHoursData.isWorkingDay) {
             const todayHours = currentHoursData.actualHours || 0;
-            const todayExpectedHours = currentHoursData.expectedHours || 0;
-            const remainingTodayHours = Math.max(0, todayExpectedHours - todayHours);
+            const todayContractHours = currentHoursData.contractHours ?? currentHoursData.expectedHours ?? 0;
+            const remainingTodayHours = currentHoursData.remainingHours ?? Math.max(0, (currentHoursData.expectedHours || 0) - todayHours);
             
             // Update KPIs with today's hours from the same endpoint
             setUserKPIs(prevKPIs => ({
@@ -451,7 +451,8 @@ const Dashboard = () => {
             
             console.log('✅ KPIs updated with current-hours endpoint:', { 
               todayHours, 
-              todayExpectedHours, 
+              contractHours: todayContractHours,
+              remainingTodayHours,
               workingDays: balanceData.working_days
             });
           } else {

@@ -21,7 +21,9 @@ const Attendance = () => {
     isWorkingDay: false,
     schedule: { start_time: '09:00', end_time: '18:00', break_duration: 60 },
     currentTime: '00:00',
-    expectedHours: 0,
+    expectedHours: 0, // ore effettive (dopo permessi)
+    contractHours: 0, // ore contrattuali della giornata
+    remainingHours: 0,
     actualHours: 0,
     balanceHours: 0,
     status: 'not_started',
@@ -299,14 +301,18 @@ const Attendance = () => {
         }
         
         // Calcola ore rimanenti
-        const remainingHours = Math.max(0, data.expectedHours - data.actualHours);
+        const contractHours = data.contractHours ?? data.expectedHours ?? 0;
+        const effectiveExpectedHours = data.expectedHours ?? contractHours;
+        const remainingHoursValue = data.remainingHours ?? Math.max(0, effectiveExpectedHours - (data.actualHours || 0));
         
-        console.log(`📊 API calculation: ${data.actualHours.toFixed(2)}h lavorate, ${remainingHours.toFixed(2)}h rimanenti, status: ${data.status}`);
+        console.log(`📊 API calculation: ${data.actualHours.toFixed(2)}h lavorate, ${remainingHoursValue.toFixed(2)}h rimanenti (contract ${contractHours}h), status: ${data.status}`);
         
         // Calcola i dati finali
-        const finalActualHours = Math.round(data.actualHours * 10) / 10;
-        const finalExpectedHours = Math.round(data.expectedHours * 10) / 10;
-        const finalBalanceHours = Math.round(data.balanceHours * 10) / 10;
+        const finalActualHours = Math.round((data.actualHours || 0) * 10) / 10;
+        const finalExpectedHours = Math.round(effectiveExpectedHours * 10) / 10;
+        const finalContractHours = Math.round(contractHours * 10) / 10;
+        const finalRemainingHours = Math.max(0, Math.round(remainingHoursValue * 10) / 10);
+        const finalBalanceHours = Math.round((data.balanceHours || 0) * 10) / 10;
 
         const now = new Date();
         
@@ -327,10 +333,12 @@ const Attendance = () => {
           },
           currentTime: data.currentTime || now.toTimeString().substring(0, 5),
           expectedHours: finalExpectedHours,
+          contractHours: finalContractHours,
+          remainingHours: finalRemainingHours,
           actualHours: finalActualHours,
           balanceHours: finalBalanceHours,
           status: data.status || 'working',
-          progress: Math.min((finalActualHours / finalExpectedHours) * 100, 100)
+          progress: finalExpectedHours > 0 ? Math.min((finalActualHours / finalExpectedHours) * 100, 100) : 100
         });
 
         // Aggiorna anche i dati di attendance per oggi
@@ -354,7 +362,7 @@ const Attendance = () => {
                     id: `virtual-${today}`,
                     user_id: user?.id,
                     date: today,
-                    expected_hours: finalExpectedHours,
+                    expected_hours: finalContractHours,
                     actual_hours: finalActualHours,
                     balance_hours: finalBalanceHours,
                     notes: 'Presenza automatica per orario',
@@ -369,7 +377,7 @@ const Attendance = () => {
                 id: `virtual-${today}`,
                 user_id: user?.id,
                 date: today,
-                expected_hours: finalExpectedHours,
+              expected_hours: finalContractHours,
                 actual_hours: finalActualHours,
                 balance_hours: finalBalanceHours,
                 notes: 'Presenza automatica per orario',
@@ -485,7 +493,7 @@ const Attendance = () => {
         body: JSON.stringify({
           date: new Date().toISOString().split('T')[0],
           actualHours: currentHours.actualHours,
-          expectedHours: currentHours.expectedHours,
+          expectedHours: currentHours.contractHours ?? currentHours.expectedHours,
           balanceHours: currentHours.balanceHours,
           notes: `Salvataggio orario alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
         })
@@ -530,7 +538,7 @@ const Attendance = () => {
         body: JSON.stringify({
           date: new Date().toISOString().split('T')[0],
           actualHours: currentHours.actualHours,
-          expectedHours: currentHours.expectedHours,
+          expectedHours: currentHours.contractHours ?? currentHours.expectedHours,
           balanceHours: currentHours.balanceHours,
           notes: `Presenza salvata automaticamente alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
         })
@@ -744,7 +752,7 @@ const Attendance = () => {
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Da lavorare oggi</p>
                 <p className="text-xl sm:text-2xl font-bold text-green-400">
-                  {formatHours(Math.max(0, (currentHours?.expectedHours || 0) - (currentHours?.actualHours || 0)))}
+                  {formatHours(currentHours?.remainingHours ?? Math.max(0, (currentHours?.expectedHours || 0) - (currentHours?.actualHours || 0)))}
                 </p>
               </div>
               <div className="hidden sm:block p-3 rounded-full text-green-400">

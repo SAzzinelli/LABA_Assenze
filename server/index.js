@@ -1164,7 +1164,9 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     const todayRecord = attendance.find(record => record.date === today);
     
     let realTimeActualHours = 0;
-    let realTimeExpectedHours = 0;
+    let realTimeContractHours = 0;
+    let realTimeEffectiveHours = 0;
+    let realTimeRemainingHours = 0;
     let hasRealTimeCalculation = false;
     
     // Always calculate real-time if today is within the month range (usa data simulata se in test mode)
@@ -1221,10 +1223,12 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
         // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore real-time (usa currentTime da getCurrentDateTime)
         const result = calculateRealTimeHours(todaySchedule, currentTime, permissionData);
         realTimeActualHours = result.actualHours;
-        realTimeExpectedHours = result.expectedHours;
+        realTimeEffectiveHours = result.expectedHours;
+        realTimeContractHours = result.contractHours;
+        realTimeRemainingHours = result.remainingHours;
         
         hasRealTimeCalculation = true;
-        console.log(`🕐 Real-time calculation (centralized) for today: ${realTimeActualHours.toFixed(2)}h worked, ${realTimeExpectedHours.toFixed(2)}h expected`);
+        console.log(`🕐 Real-time calculation (centralized) for today: ${realTimeActualHours.toFixed(2)}h worked, ${realTimeContractHours.toFixed(2)}h contract, ${realTimeEffectiveHours.toFixed(2)}h effective (remaining ${realTimeRemainingHours.toFixed(2)}h)`);
       }
     }
 
@@ -1237,9 +1241,9 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     if (hasRealTimeCalculation && isCurrentMonth) {
       // Use real-time for today (IGNORA completamente il record DB per oggi)
       totalActualHours = realTimeActualHours;
-      totalExpectedHours = realTimeExpectedHours;
+      totalExpectedHours = realTimeContractHours;
       
-      console.log(`🔄 Using real-time for today: ${realTimeActualHours.toFixed(2)}h actual, ${realTimeExpectedHours.toFixed(2)}h expected`);
+      console.log(`🔄 Using real-time for today: ${realTimeActualHours.toFixed(2)}h actual, ${realTimeContractHours.toFixed(2)}h contract`);
       
       // Add other days from database (excluding today if it exists)
       attendance.forEach(record => {
@@ -1265,7 +1269,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     // Per overtime e deficit, ricalcola anche per oggi usando il balance real-time
     let todayBalanceHours = 0;
     if (hasRealTimeCalculation && isCurrentMonth) {
-      todayBalanceHours = realTimeActualHours - realTimeExpectedHours;
+      todayBalanceHours = realTimeActualHours - realTimeContractHours;
     }
     
     const overtimeHours = attendance.reduce((sum, record) => {
@@ -2469,7 +2473,14 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       totalBalanceHours: Math.round(totalBalance * 100) / 100,
       totalBalanceMinutes: Math.round(totalBalance * 60),
       isCredit: totalBalance > 0,
-      isDebt: totalBalance < 0
+      isDebt: totalBalance < 0,
+      realTime: hasRealTimeCalculation ? {
+        actualHours: realTimeActualHours,
+        effectiveExpectedHours: realTimeEffectiveHours,
+        contractHours: realTimeContractHours,
+        remainingHours: realTimeRemainingHours,
+        balanceHours: todayBalanceHours
+      } : null
     });
   } catch (error) {
     console.error('Total balance error:', error);
@@ -3147,6 +3158,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         contractHours: Math.round(contractHours * 10) / 10,
         actualHours: Math.round(actualHours * 10) / 10,
         balanceHours: Math.round(balanceHours * 10) / 10,
+        remainingHours: Math.round(remainingHours * 10) / 10,
         status,
         progress: expectedHours > 0 ? Math.min((actualHours / expectedHours) * 100, 100) : 100
       }
@@ -3211,6 +3223,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
     let contractHours = attendance.expected_hours || 8;
+    let remainingHours = Math.max(0, expectedHours - actualHours);
     let balanceHours = attendance.balance_hours || 0;
     
     // Se è oggi (o data simulata), calcola le ore real-time usando la logica corretta
@@ -3258,6 +3271,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       actualHours = result.actualHours;
       expectedHours = result.expectedHours;
       contractHours = result.contractHours;
+      remainingHours = result.remainingHours;
       balanceHours = result.balanceHours;
       
       console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), balance=${balanceHours.toFixed(2)}h`);
@@ -3271,9 +3285,10 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
         summary: {
           date: attendance.date,
           employee: `${attendance.users.first_name} ${attendance.users.last_name}`,
-          expectedHours: Math.round(expectedHours * 10) / 10,
-          contractHours: Math.round(contractHours * 10) / 10,
+          expectedHours: Math.round(contractHours * 10) / 10,
+          effectiveExpectedHours: Math.round(expectedHours * 10) / 10,
           actualHours: Math.round(actualHours * 10) / 10,
+          remainingHours: Math.round((remainingHours ?? Math.max(0, contractHours - actualHours)) * 10) / 10,
           balanceHours: Math.round(balanceHours * 10) / 10,
           status: actualHours > 0 ? 'Presente' : 'Assente',
           notes: attendance.notes || 'Nessuna nota'
@@ -3362,7 +3377,7 @@ app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (re
 
     const calculationTime = time || permissionData?.exit_time || schedule.end_time;
 
-    const { actualHours, expectedHours, contractHours, balanceHours, status } = calculateRealTimeHours(
+    const { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status } = calculateRealTimeHours(
       schedule,
       calculationTime,
       permissionData
@@ -3397,6 +3412,7 @@ app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (re
         contractHours,
         actualHours,
         balanceHours,
+        remainingHours,
         status,
         permissionData
       }
