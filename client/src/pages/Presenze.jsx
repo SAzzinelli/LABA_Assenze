@@ -653,6 +653,13 @@ const Attendance = () => {
   };
 
   const getStatusColor = (record) => {
+    const hasWorked = (record.actual_hours || 0) > 0;
+    const isPermissionWithWork = record.is_justified_absence && record.leave_type === 'permission' && hasWorked;
+    
+    if (isPermissionWithWork) {
+      return 'text-green-400';
+    }
+
     // Assenza giustificata (malattia, ferie, permessi approvati)
     if (record.is_justified_absence) return 'text-yellow-400';
     // Assenza non giustificata
@@ -664,6 +671,12 @@ const Attendance = () => {
   };
 
   const getStatusText = (record) => {
+    const hasWorked = (record.actual_hours || 0) > 0;
+
+    if (record.is_justified_absence && record.leave_type === 'permission' && hasWorked) {
+      return 'Presente (con permesso)';
+    }
+
     // Assenza giustificata
     if (record.is_justified_absence) {
       const leaveTypeText = {
