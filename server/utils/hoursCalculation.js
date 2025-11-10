@@ -86,6 +86,9 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
   
+  // Ore contrattuali (restano fisse per la banca ore)
+  const contractExpectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
+
   // Calcola orari effettivi considerando i permessi
   let effectiveStartTime = start_time;
   let effectiveEndTime = end_time;
@@ -103,7 +106,9 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentTimeObj = parseTimeToDate(currentTimeStr);
 
   if (effectiveEndTimeObj <= effectiveStartTimeObj) {
-    return { actualHours: 0, expectedHours: 0, balanceHours: 0, status: 'not_started' };
+    const roundedExpected = Math.round(contractExpectedHours * 10) / 10;
+    const balance = -roundedExpected;
+    return { actualHours: 0, expectedHours: roundedExpected, balanceHours: balance, status: 'not_started' };
   }
 
   const breakDurationMinutes = break_duration || 60;
@@ -152,7 +157,6 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     ),
     shiftMinutes
   );
-  const expectedHoursRaw = shiftMinutes > 0 ? Math.max(0, (shiftMinutes - breakMinutesInShift) / 60) : 0;
 
   const cappedCurrentTime = currentTimeObj <= effectiveEndTimeObj ? currentTimeObj : effectiveEndTimeObj;
   const workedIntervalMinutes = cappedCurrentTime > effectiveStartTimeObj
@@ -194,7 +198,7 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
 
   // Calcola saldo ore
   const roundedActualHours = Math.round(actualHours * 10) / 10;
-  const roundedExpectedHours = Math.round(expectedHoursRaw * 10) / 10;
+  const roundedExpectedHours = Math.round(contractExpectedHours * 10) / 10;
   const balanceHours = Math.round((roundedActualHours - roundedExpectedHours) * 10) / 10;
   
   return {
