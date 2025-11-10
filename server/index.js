@@ -2158,24 +2158,28 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
-        let permType = null;
+        const permissionTypes = new Set();
         
         userPermissions.forEach(perm => {
-          totalHours += perm.hours;
+          totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
-            exitTime = perm.exit_time;
-            permType = 'early_exit';
+            permissionTypes.add('early_exit');
+            if (!exitTime || perm.exit_time < exitTime) {
+              exitTime = perm.exit_time;
+            }
           }
           if (perm.permission_type === 'late_entry' && perm.entry_time) {
-            entryTime = perm.entry_time;
-            permType = 'late_entry';
+            permissionTypes.add('late_entry');
+            if (!entryTime || perm.entry_time > entryTime) {
+              entryTime = perm.entry_time;
+            }
           }
         });
         
         if (exitTime || entryTime) {
           permissionData = {
             hours: totalHours,
-            permission_type: permType,
+            permission_types: Array.from(permissionTypes),
             exit_time: exitTime,
             entry_time: entryTime
           };
@@ -2189,19 +2193,19 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       let effectiveStartMin = startMin;
       
       // PERMESSO USCITA ANTICIPATA: non riduce expectedHours, crea solo debito
-      if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
+      if (permissionData?.exit_time) {
         const [exitHour, exitMin] = permissionData.exit_time.split(':').map(Number);
         effectiveEndHour = exitHour;
         effectiveEndMin = exitMin;
-        console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time} → DEBITO di ${permissionData.hours}h`);
+        console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time} → potenziale debito di ${permissionData.hours}h`);
       }
       
       // PERMESSO ENTRATA POSTICIPATA: non riduce expectedHours, crea solo debito
-      if (permissionData?.permission_type === 'late_entry' && permissionData.entry_time) {
+      if (permissionData?.entry_time) {
         const [entryHour, entryMin] = permissionData.entry_time.split(':').map(Number);
         effectiveStartHour = entryHour;
         effectiveStartMin = entryMin;
-        console.log(`🚪 ${user.first_name} ha permesso entrata posticipata alle ${permissionData.entry_time} → DEBITO di ${permissionData.hours}h`);
+        console.log(`🚪 ${user.first_name} ha permesso entrata posticipata alle ${permissionData.entry_time} → potenziale debito di ${permissionData.hours}h`);
       }
       
       // Calculate real-time hours (same logic as employee page)
@@ -2292,7 +2296,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         start_time,
         end_time,
         break_duration: breakDuration,
-        permission_end_time: permissionData?.permission_type === 'early_exit' && permissionData.exit_time ? permissionData.exit_time : null
+        permission_end_time: permissionData?.exit_time || null
       };
       
       console.log(`🔍 User result: ${result.name} - Status: ${result.status}, Hours: ${result.actual_hours}h, Working day: ${result.is_working_day}`);
@@ -2413,23 +2417,29 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       
       let permissionData = null;
       if (permissionsToday && permissionsToday.length > 0) {
+        let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
-        let permType = null;
+        const permissionTypes = new Set();
         
         permissionsToday.forEach(perm => {
+          totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
-            exitTime = perm.exit_time;
-            permType = 'early_exit';
+            permissionTypes.add('early_exit');
+            if (!exitTime || perm.exit_time < exitTime) {
+              exitTime = perm.exit_time;
+            }
           }
           if (perm.permission_type === 'late_entry' && perm.entry_time) {
-            entryTime = perm.entry_time;
-            permType = 'late_entry';
+            permissionTypes.add('late_entry');
+            if (!entryTime || perm.entry_time > entryTime) {
+              entryTime = perm.entry_time;
+            }
           }
         });
         
         if (exitTime || entryTime) {
-          permissionData = { permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+          permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
         }
       }
       
@@ -3043,22 +3053,26 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       let totalHours = 0;
       let exitTime = null;
       let entryTime = null;
-      let permType = null;
+      const permissionTypes = new Set();
       
       permissionsToday.forEach(perm => {
         totalHours += parseFloat(perm.hours || 0);
         if (perm.permission_type === 'early_exit' && perm.exit_time) {
-          exitTime = perm.exit_time;
-          permType = 'early_exit';
+          permissionTypes.add('early_exit');
+          if (!exitTime || perm.exit_time < exitTime) {
+            exitTime = perm.exit_time;
+          }
         }
         if (perm.permission_type === 'late_entry' && perm.entry_time) {
-          entryTime = perm.entry_time;
-          permType = 'late_entry';
+          permissionTypes.add('late_entry');
+          if (!entryTime || perm.entry_time > entryTime) {
+            entryTime = perm.entry_time;
+          }
         }
       });
       
       if (exitTime || entryTime) {
-        permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+        permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
       }
     }
 
@@ -3212,22 +3226,26 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
         let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
-        let permType = null;
+        const permissionTypes = new Set();
         
         permissionsToday.forEach(perm => {
           totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
-            exitTime = perm.exit_time;
-            permType = 'early_exit';
+            permissionTypes.add('early_exit');
+            if (!exitTime || perm.exit_time < exitTime) {
+              exitTime = perm.exit_time;
+            }
           }
           if (perm.permission_type === 'late_entry' && perm.entry_time) {
-            entryTime = perm.entry_time;
-            permType = 'late_entry';
+            permissionTypes.add('late_entry');
+            if (!entryTime || perm.entry_time > entryTime) {
+              entryTime = perm.entry_time;
+            }
           }
         });
         
         if (exitTime || entryTime) {
-          permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+          permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
         }
       }
       
@@ -3259,6 +3277,126 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Attendance details error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+/**
+ * Admin utility endpoint to recalculate attendance for a specific user/date.
+ * Body: { userId: string, date?: 'YYYY-MM-DD', time?: 'HH:MM' }
+ */
+app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, date, time } = req.body || {};
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId richiesto' });
+    }
+
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const dayOfWeek = new Date(targetDate).getDay();
+
+    const { data: schedule, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+
+    if (scheduleError || !schedule) {
+      return res.status(404).json({ error: 'Nessun orario di lavoro configurato per questa data' });
+    }
+
+    const { data: permissionsToday, error: permError } = await supabase
+      .from('leave_requests')
+      .select('hours, permission_type, exit_time, entry_time')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', targetDate)
+      .gte('end_date', targetDate);
+
+    if (permError) {
+      console.error('❌ Fix attendance permission fetch error:', permError);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    let permissionData = null;
+    if (permissionsToday && permissionsToday.length > 0) {
+      let totalHours = 0;
+      let exitTime = null;
+      let entryTime = null;
+      const permissionTypes = new Set();
+
+      permissionsToday.forEach(perm => {
+        totalHours += parseFloat(perm.hours || 0);
+        if (perm.permission_type === 'early_exit' && perm.exit_time) {
+          permissionTypes.add('early_exit');
+          if (!exitTime || perm.exit_time < exitTime) {
+            exitTime = perm.exit_time;
+          }
+        }
+        if (perm.permission_type === 'late_entry' && perm.entry_time) {
+          permissionTypes.add('late_entry');
+          if (!entryTime || perm.entry_time > entryTime) {
+            entryTime = perm.entry_time;
+          }
+        }
+      });
+
+      if (exitTime || entryTime) {
+        permissionData = {
+          hours: totalHours,
+          permission_types: Array.from(permissionTypes),
+          exit_time: exitTime,
+          entry_time: entryTime
+        };
+      }
+    }
+
+    const calculationTime = time || permissionData?.exit_time || schedule.end_time;
+
+    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+      schedule,
+      calculationTime,
+      permissionData
+    );
+
+    const upsertPayload = {
+      user_id: userId,
+      date: targetDate,
+      expected_hours: expectedHours,
+      actual_hours: actualHours,
+      balance_hours: balanceHours,
+      notes: `Ricalcolato manualmente alle ${calculationTime} (status: ${status})`
+    };
+
+    const { error: upsertError } = await supabase
+      .from('attendance')
+      .upsert(upsertPayload, { onConflict: 'user_id,date' });
+
+    if (upsertError) {
+      console.error('❌ Fix attendance upsert error:', upsertError);
+      return res.status(500).json({ error: 'Errore durante l\'aggiornamento della presenza' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Presenza ricalcolata correttamente',
+      data: {
+        date: targetDate,
+        userId,
+        calculationTime,
+        expectedHours,
+        actualHours,
+        balanceHours,
+        status,
+        permissionData
+      }
+    });
+  } catch (error) {
+    console.error('❌ Fix attendance error:', error);
+    res.status(500).json({ error: 'Errore interno durante il ricalcolo' });
   }
 });
 

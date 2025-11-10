@@ -86,9 +86,6 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
   
-  // Calcola ore attese (ORE CONTRATTUALI - sempre fisse!)
-  const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
-  
   // Calcola orari effettivi considerando i permessi
   let effectiveStartTime = start_time;
   let effectiveEndTime = end_time;
@@ -106,8 +103,7 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentTimeObj = parseTimeToDate(currentTimeStr);
 
   if (effectiveEndTimeObj <= effectiveStartTimeObj) {
-    const roundedExpected = Math.round(expectedHours * 10) / 10;
-    return { actualHours: 0, expectedHours: roundedExpected, balanceHours: -roundedExpected, status: 'not_started' };
+    return { actualHours: 0, expectedHours: 0, balanceHours: 0, status: 'not_started' };
   }
 
   const breakDurationMinutes = break_duration || 60;
@@ -146,6 +142,18 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const breakStartTimeObj = breakStartTimeStr ? parseTimeToDate(breakStartTimeStr) : null;
   const breakEndTimeObj = breakEndTimeStr ? parseTimeToDate(breakEndTimeStr) : null;
 
+  const shiftMinutes = Math.max((effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60), 0);
+  const breakMinutesInShift = Math.min(
+    calculateOverlapMinutes(
+      effectiveStartTimeObj,
+      effectiveEndTimeObj,
+      breakStartTimeObj,
+      breakEndTimeObj
+    ),
+    shiftMinutes
+  );
+  const expectedHoursRaw = shiftMinutes > 0 ? Math.max(0, (shiftMinutes - breakMinutesInShift) / 60) : 0;
+
   const cappedCurrentTime = currentTimeObj <= effectiveEndTimeObj ? currentTimeObj : effectiveEndTimeObj;
   const workedIntervalMinutes = cappedCurrentTime > effectiveStartTimeObj
     ? (cappedCurrentTime - effectiveStartTimeObj) / (1000 * 60)
@@ -179,23 +187,20 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     status = isOnBreak ? 'on_break' : 'working';
   } else {
     const totalWorkedMinutes = (effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60);
-    const totalBreakMinutes = calculateOverlapMinutes(
-      effectiveStartTimeObj,
-      effectiveEndTimeObj,
-      breakStartTimeObj,
-      breakEndTimeObj
-    );
+    const totalBreakMinutes = breakMinutesInShift;
     actualHours = Math.max(0, (totalWorkedMinutes - totalBreakMinutes) / 60);
     status = 'completed';
   }
 
   // Calcola saldo ore
-  const balanceHours = actualHours - expectedHours;
+  const roundedActualHours = Math.round(actualHours * 10) / 10;
+  const roundedExpectedHours = Math.round(expectedHoursRaw * 10) / 10;
+  const balanceHours = Math.round((roundedActualHours - roundedExpectedHours) * 10) / 10;
   
   return {
-    actualHours: Math.round(actualHours * 10) / 10,
-    expectedHours: Math.round(expectedHours * 10) / 10,
-    balanceHours: Math.round(balanceHours * 10) / 10,
+    actualHours: roundedActualHours,
+    expectedHours: roundedExpectedHours,
+    balanceHours,
     status
   };
 }

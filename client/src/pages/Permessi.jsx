@@ -420,31 +420,49 @@ const LeaveRequests = () => {
   };
 
   // Filtra le richieste per il mese/anno selezionato, ricerca e tab attiva
+  const parseRequestDate = (request) => {
+    const rawDate = request.permissionDate || request.startDate;
+    if (!rawDate) return null;
+    const date = new Date(rawDate);
+    return isNaN(date.getTime()) ? null : date;
+  };
+
   const getFilteredRequests = () => {
     let filtered = requests;
-    
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
     // Filtro per tab (solo admin)
     if (user?.role === 'admin') {
-      const today = new Date().toISOString().split('T')[0];
-      
-            if (activeTab === 'imminenti') {
-              // Mostra solo richieste approvate con data futura
-              filtered = filtered.filter(request => 
-                request.status === 'approved' && request.startDate > today
-              );
-            } else {
-        // Cronologia: filtra per mese/anno E esclude richieste programmate
+      if (activeTab === 'imminenti') {
+        filtered = filtered
+          .filter(request => {
+            const requestDate = parseRequestDate(request);
+            const isUpcoming = requestDate ? requestDate >= now : false;
+            if (request.status === 'pending') return true;
+            if (request.status === 'approved' && isUpcoming) return true;
+            return false;
+          })
+          .sort((a, b) => {
+            const dateA = parseRequestDate(a)?.getTime() || 0;
+            const dateB = parseRequestDate(b)?.getTime() || 0;
+            return dateA - dateB;
+          });
+      } else {
         filtered = filtered.filter(request => {
-          const requestDate = new Date(request.permissionDate || request.startDate);
+          const requestDate = parseRequestDate(request);
+          if (!requestDate) return false;
           const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
-          const isNotProgrammed = request.status !== 'approved' || request.startDate <= today;
-          return isInCurrentMonth && isNotProgrammed;
+          const isUpcomingApproved = request.status === 'approved' && requestDate >= now;
+          const isPending = request.status === 'pending';
+          return isInCurrentMonth && !isPending && !isUpcomingApproved;
         });
       }
     } else {
       // Per dipendenti: filtra per mese/anno
       filtered = filtered.filter(request => {
-        const requestDate = new Date(request.permissionDate || request.startDate);
+        const requestDate = parseRequestDate(request);
+        if (!requestDate) return false;
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
