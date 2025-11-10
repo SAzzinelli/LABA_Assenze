@@ -17,11 +17,26 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         
         // Carica balance totale
         if (user?.id) {
-          const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${user.id}`);
-          if (balanceResponse.ok) {
-            const balanceData = await balanceResponse.json();
-            const balance = balanceData.balances[user.id] || 0;
-            setCurrentBalance(balance);
+          let balanceValue = null;
+
+          // prova prima l'endpoint con la logica real-time (vale per employee e admin)
+          const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${user.id}`);
+          if (singleBalanceResponse.ok) {
+            const singleBalance = await singleBalanceResponse.json();
+            balanceValue = singleBalance.realTime?.balanceHours ?? singleBalance.totalBalanceHours ?? 0;
+          }
+
+          // fallback per admin (ricerca multipla) se necessario
+          if (balanceValue === null) {
+            const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${user.id}`);
+            if (balanceResponse.ok) {
+              const balanceData = await balanceResponse.json();
+              balanceValue = balanceData.balances[user.id] ?? 0;
+            }
+          }
+
+          if (balanceValue !== null) {
+            setCurrentBalance(balanceValue);
           }
           
           // Carica history recente (ultimi 10 record)

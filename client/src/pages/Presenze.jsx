@@ -209,8 +209,12 @@ const Attendance = () => {
       const response = await apiCall('/api/attendance/total-balance');
       if (response.ok) {
         const data = await response.json();
-        setTotalBalance(data.totalBalanceHours || 0);
-        console.log('💰 Total balance loaded:', data.totalBalanceHours);
+        let balance = data.totalBalanceHours || 0;
+        if (data.realTime && typeof data.realTime.balanceHours === 'number') {
+          balance = Math.round(data.realTime.balanceHours * 100) / 100;
+        }
+        setTotalBalance(balance);
+        console.log('💰 Total balance loaded:', data.totalBalanceHours, ' (real-time:', data.realTime?.balanceHours, ')');
       }
     } catch (error) {
       console.error('Error fetching total balance:', error);
@@ -292,6 +296,8 @@ const Attendance = () => {
             schedule: { start_time: '09:00', end_time: '18:00', break_duration: 60 },
             currentTime: data.currentTime || '00:00',
             expectedHours: 0,
+            contractHours: 0,
+            remainingHours: 0,
             actualHours: 0,
             balanceHours: 0,
             status: 'not_started',
