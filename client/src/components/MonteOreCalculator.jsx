@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, Clock, Users, Heart, Plane, AlertTriangle, Info, DollarSign, TrendingUp, TrendingDown, Activity, Calendar } from 'lucide-react';
+import { Calculator, Clock, Users, Heart, Plane, AlertTriangle, Info, DollarSign, TrendingUp, TrendingDown, Activity, Calendar, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 
 const formatHoursValue = (value) => {
@@ -260,6 +260,23 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     
     return { weekly: 0, annual: 0, compensation: 'Nessuno straordinario' };
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-slate-700 rounded-lg p-6 flex flex-col items-center justify-center border border-slate-600">
+          <Loader2 className="h-10 w-10 text-indigo-300 animate-spin mb-4" />
+          <p className="text-slate-300">Caricamento banca ore in corso...</p>
+        </div>
+        <div className="bg-slate-700 rounded-lg p-6 border border-slate-600">
+          <div className="animate-pulse space-y-4">
+            <div className="h-6 bg-slate-600 rounded w-1/3"></div>
+            <div className="h-32 bg-slate-600 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const weeklyHours = calculateWeeklyHours();
   const annualVacation = calculateAnnualVacation();

@@ -6,6 +6,7 @@ import { useAuthStore } from './utils/store';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Profilo from './pages/Profilo';
+import BancaOre from './pages/BancaOre';
 import Dipendenti from './pages/Dipendenti';
 import Presenze from './pages/Presenze';
 import AdminAttendance from './pages/AdminAttendance';
@@ -142,6 +143,22 @@ function App() {
                     ) : (
                       <Layout>
                         <Profilo />
+                      </Layout>
+                    )
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/banca-ore"
+                element={
+                  isAuthenticated ? (
+                    user?.role === 'admin' || user?.role === 'supervisor' ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Layout>
+                        <BancaOre />
                       </Layout>
                     )
                   ) : (
