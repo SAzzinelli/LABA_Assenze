@@ -2397,6 +2397,12 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     
     let todayBalance = 0;
     let todayRecord = allAttendance.find(r => r.date === today);
+    let hasRealTimeCalculation = false;
+    let realTimeActualHours = 0;
+    let realTimeEffectiveHours = 0;
+    let realTimeContractHours = 0;
+    let realTimeRemainingHours = 0;
+    let todayBalanceHours = 0;
     
     // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
     const dayOfWeek = now.getDay();
@@ -2450,6 +2456,12 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
       const result = calculateRealTimeHours(schedule, currentTime, permissionData);
       todayBalance = result.balanceHours;
+      todayBalanceHours = result.balanceHours;
+      realTimeActualHours = result.actualHours;
+      realTimeEffectiveHours = result.expectedHours;
+      realTimeContractHours = result.contractHours;
+      realTimeRemainingHours = result.remainingHours;
+      hasRealTimeCalculation = true;
       
       console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
     } else if (todayRecord) {
