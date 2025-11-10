@@ -420,32 +420,62 @@ const LeaveRequests = () => {
   };
 
   // Filtra le richieste per il mese/anno selezionato, ricerca e tab attiva
-  const parseRequestDate = (request) => {
+  const parseRequestDate = (request, includeTime = false) => {
     const rawDate = request.permissionDate || request.startDate;
     if (!rawDate) return null;
     const date = new Date(rawDate);
-    return isNaN(date.getTime()) ? null : date;
+    if (isNaN(date.getTime())) return null;
+
+    if (includeTime) {
+      const timeStr = request.exitTime || request.entryTime;
+      if (timeStr) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+          date.setHours(hours, minutes, 0, 0);
+        }
+      }
+    }
+
+    return date;
+  };
+
+  const canCancelRequest = (request) => {
+    if (request.status !== 'approved') return false;
+    const dateWithTime = parseRequestDate(request, true);
+    if (!dateWithTime) return true;
+    return dateWithTime > new Date();
   };
 
   const getFilteredRequests = () => {
     let filtered = requests;
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     // Filtro per tab (solo admin)
     if (user?.role === 'admin') {
       if (activeTab === 'imminenti') {
         filtered = filtered
           .filter(request => {
-            const requestDate = parseRequestDate(request);
-            const isUpcoming = requestDate ? requestDate >= now : false;
             if (request.status === 'pending') return true;
-            if (request.status === 'approved' && isUpcoming) return true;
-            return false;
+            if (request.status !== 'approved') return false;
+
+            const requestDate = parseRequestDate(request);
+            if (!requestDate) return false;
+
+            if (requestDate > todayStart) {
+              return true;
+            }
+
+            if (requestDate < todayStart) {
+              return false;
+            }
+
+            const requestMoment = parseRequestDate(request, true);
+            return requestMoment ? requestMoment > now : false;
           })
           .sort((a, b) => {
-            const dateA = parseRequestDate(a)?.getTime() || 0;
-            const dateB = parseRequestDate(b)?.getTime() || 0;
+            const dateA = parseRequestDate(a, true)?.getTime() || 0;
+            const dateB = parseRequestDate(b, true)?.getTime() || 0;
             return dateA - dateB;
           });
       } else {
@@ -453,7 +483,8 @@ const LeaveRequests = () => {
           const requestDate = parseRequestDate(request);
           if (!requestDate) return false;
           const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
-          const isUpcomingApproved = request.status === 'approved' && requestDate >= now;
+          const requestMoment = parseRequestDate(request, true);
+          const isUpcomingApproved = request.status === 'approved' && requestMoment && requestMoment > now;
           const isPending = request.status === 'pending';
           return isInCurrentMonth && !isPending && !isUpcomingApproved;
         });
@@ -1025,7 +1056,7 @@ const LeaveRequests = () => {
                     )}
 
                     {/* Pulsante di annullamento per admin - solo per richieste approvate */}
-                    {user?.role === 'admin' && request.status === 'approved' && (
+                    {user?.role === 'admin' && canCancelRequest(request) && (
                       <div className="mt-4 flex gap-3">
                         <button
                           onClick={() => openCancelDialog(request.id)}
