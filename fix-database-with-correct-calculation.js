@@ -50,21 +50,29 @@ async function fixDatabase() {
   if (permissionsToday && permissionsToday.length > 0) {
     let exitTime = null;
     let entryTime = null;
-    let permType = null;
-    
+    const permissionTypes = new Set();
+
     permissionsToday.forEach(perm => {
       if (perm.permission_type === 'early_exit' && perm.exit_time) {
-        exitTime = perm.exit_time;
-        permType = 'early_exit';
+        permissionTypes.add('early_exit');
+        if (!exitTime || perm.exit_time < exitTime) {
+          exitTime = perm.exit_time;
+        }
       }
       if (perm.permission_type === 'late_entry' && perm.entry_time) {
-        entryTime = perm.entry_time;
-        permType = 'late_entry';
+        permissionTypes.add('late_entry');
+        if (!entryTime || perm.entry_time > entryTime) {
+          entryTime = perm.entry_time;
+        }
       }
     });
-    
+
     if (exitTime || entryTime) {
-      permissionData = { permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+      permissionData = {
+        permission_types: Array.from(permissionTypes),
+        exit_time: exitTime,
+        entry_time: entryTime
+      };
     }
   }
   

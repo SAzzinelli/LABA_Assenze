@@ -34,8 +34,26 @@ function calculateExpectedHoursForSchedule(schedule) {
   const [endHour, endMin] = schedule.end_time.split(':').map(Number);
   const breakDuration = schedule.break_duration || 60; // minutes
   const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-  const workMinutes = totalMinutes - breakDuration;
+  const workMinutes = Math.max(totalMinutes - breakDuration, 0);
   return workMinutes / 60;
+}
+
+function parseTimeToDate(timeStr) {
+  return new Date(`2000-01-01T${timeStr}`);
+}
+
+function addMinutesToTimeString(timeStr, minutesToAdd) {
+  const baseDate = parseTimeToDate(timeStr);
+  baseDate.setMinutes(baseDate.getMinutes() + minutesToAdd);
+  return `${baseDate.getHours().toString().padStart(2, '0')}:${baseDate.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function calculateOverlapMinutes(intervalStart, intervalEnd, windowStart, windowEnd) {
+  if (!windowStart || !windowEnd) return 0;
+  const start = Math.max(intervalStart.getTime(), windowStart.getTime());
+  const end = Math.min(intervalEnd.getTime(), windowEnd.getTime());
+  if (end <= start) return 0;
+  return (end - start) / (1000 * 60);
 }
 
 /**
@@ -75,90 +93,100 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   let effectiveStartTime = start_time;
   let effectiveEndTime = end_time;
   
-  // PERMESSO USCITA ANTICIPATA: crea debito, non riduce expectedHours
-  if (permissionData?.permission_type === 'early_exit' && permissionData.exit_time) {
-    effectiveEndTime = permissionData.exit_time;
-  }
-  
-  // PERMESSO ENTRATA POSTICIPATA: crea debito, non riduce expectedHours
-  if (permissionData?.permission_type === 'late_entry' && permissionData.entry_time) {
+  if (permissionData?.entry_time) {
     effectiveStartTime = permissionData.entry_time;
   }
   
-  // Calcola ore effettive basate sull'orario corrente
+  if (permissionData?.exit_time) {
+    effectiveEndTime = permissionData.exit_time;
+  }
+
+  const effectiveStartTimeObj = parseTimeToDate(effectiveStartTime);
+  const effectiveEndTimeObj = parseTimeToDate(effectiveEndTime);
+  const currentTimeObj = parseTimeToDate(currentTimeStr);
+
+  if (effectiveEndTimeObj <= effectiveStartTimeObj) {
+    const roundedExpected = Math.round(expectedHours * 10) / 10;
+    return { actualHours: 0, expectedHours: roundedExpected, balanceHours: -roundedExpected, status: 'not_started' };
+  }
+
+  const breakDurationMinutes = break_duration || 60;
+  let breakStartTimeStr = null;
+  let breakEndTimeStr = null;
+
+  if (breakDurationMinutes > 0) {
+    if (break_start_time) {
+      breakStartTimeStr = break_start_time;
+      breakEndTimeStr = addMinutesToTimeString(break_start_time, breakDurationMinutes);
+    } else {
+      const startTotalMinutes = effectiveStartTimeObj.getHours() * 60 + effectiveStartTimeObj.getMinutes();
+      const endTotalMinutes = effectiveEndTimeObj.getHours() * 60 + effectiveEndTimeObj.getMinutes();
+      const totalMinutes = endTotalMinutes - startTotalMinutes;
+
+      if (totalMinutes > breakDurationMinutes) {
+        const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
+        const rawBreakStart = halfPointMinutes - (breakDurationMinutes / 2);
+        const rawBreakEnd = rawBreakStart + breakDurationMinutes;
+
+        const clampedBreakStart = Math.max(rawBreakStart, startTotalMinutes);
+        const clampedBreakEnd = Math.min(rawBreakEnd, endTotalMinutes);
+
+        if (clampedBreakEnd - clampedBreakStart > 0) {
+          const breakStartHour = Math.floor(clampedBreakStart / 60);
+          const breakStartMin = Math.round(clampedBreakStart % 60);
+          const breakEndHour = Math.floor(clampedBreakEnd / 60);
+          const breakEndMin = Math.round(clampedBreakEnd % 60);
+          breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
+          breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
+        }
+      }
+    }
+  }
+
+  const breakStartTimeObj = breakStartTimeStr ? parseTimeToDate(breakStartTimeStr) : null;
+  const breakEndTimeObj = breakEndTimeStr ? parseTimeToDate(breakEndTimeStr) : null;
+
+  const cappedCurrentTime = currentTimeObj <= effectiveEndTimeObj ? currentTimeObj : effectiveEndTimeObj;
+  const workedIntervalMinutes = cappedCurrentTime > effectiveStartTimeObj
+    ? (cappedCurrentTime - effectiveStartTimeObj) / (1000 * 60)
+    : 0;
+  const breakMinutesElapsed = calculateOverlapMinutes(
+    effectiveStartTimeObj,
+    cappedCurrentTime,
+    breakStartTimeObj,
+    breakEndTimeObj
+  );
+
   let actualHours = 0;
   let status = 'not_started';
-  
-  const [startHour, startMin] = effectiveStartTime.split(':').map(Number);
-  const [endHour, endMin] = effectiveEndTime.split(':').map(Number);
-  
-  const effectiveStartTimeObj = new Date(`2000-01-01T${effectiveStartTime}`);
-  const effectiveEndTimeObj = new Date(`2000-01-01T${effectiveEndTime}`);
-  const currentTimeObj = new Date(`2000-01-01T${currentTimeStr}`);
-  
-  if (currentTimeObj >= effectiveStartTimeObj) {
-    if (currentTimeObj <= effectiveEndTimeObj) {
-      // Durante l'orario di lavoro
-      
-      // Calcola pausa pranzo dallo schedule o usa default
-      let breakStartTimeStr, breakEndTimeStr;
-      if (break_start_time) {
-        // Usa break_start_time configurato
-        const [breakStartHour, breakStartMin] = break_start_time.split(':').map(Number);
-        breakStartTimeStr = break_start_time;
-        const breakEndTimeMinutes = (breakStartHour * 60 + breakStartMin) + (break_duration || 60);
-        const breakEndHour = Math.floor(breakEndTimeMinutes / 60);
-        const breakEndMin = breakEndTimeMinutes % 60;
-        breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
-      } else {
-        // Calcola pausa pranzo come metà dell'orario meno metà della durata
-        const [startHourCalc, startMinCalc] = effectiveStartTime.split(':').map(Number);
-        const [endHourCalc, endMinCalc] = effectiveEndTime.split(':').map(Number);
-        const breakDurationMins = break_duration || 60;
-        
-        const startTotalMinutes = startHourCalc * 60 + startMinCalc;
-        const endTotalMinutes = endHourCalc * 60 + endMinCalc;
-        const totalMinutes = endTotalMinutes - startTotalMinutes;
-        
-        // Pausa pranzo a metà dell'orario
-        const halfPointMinutes = startTotalMinutes + (totalMinutes / 2);
-        const breakStartMinutes = halfPointMinutes - (breakDurationMins / 2);
-        const breakEndMinutes = breakStartMinutes + breakDurationMins;
-        
-        const breakStartHour = Math.floor(breakStartMinutes / 60) % 24;
-        const breakStartMin = Math.floor(breakStartMinutes % 60);
-        const breakEndHour = Math.floor(breakEndMinutes / 60) % 24;
-        const breakEndMin = Math.floor(breakEndMinutes % 60);
-        
-        breakStartTimeStr = `${breakStartHour.toString().padStart(2, '0')}:${breakStartMin.toString().padStart(2, '0')}`;
-        breakEndTimeStr = `${breakEndHour.toString().padStart(2, '0')}:${breakEndMin.toString().padStart(2, '0')}`;
-      }
-      
-      const breakStartTime = new Date(`2000-01-01T${breakStartTimeStr}`);
-      const breakEndTime = new Date(`2000-01-01T${breakEndTimeStr}`);
-      
-      if (currentTimeObj >= breakStartTime && currentTimeObj < breakEndTime) {
-        // Durante la pausa pranzo
-        actualHours = (breakStartTime - effectiveStartTimeObj) / (1000 * 60) / 60;
-        status = 'on_break';
-      } else if (currentTimeObj >= breakEndTime) {
-        // Dopo la pausa pranzo
-        const morningMinutes = (breakStartTime - effectiveStartTimeObj) / (1000 * 60);
-        const afternoonMinutes = (currentTimeObj - breakEndTime) / (1000 * 60);
-        actualHours = (morningMinutes + afternoonMinutes) / 60;
-        status = 'working';
-      } else {
-        // Prima della pausa pranzo
-        const workedMinutes = (currentTimeObj - effectiveStartTimeObj) / (1000 * 60);
-        actualHours = workedMinutes / 60;
-        status = 'working';
-      }
-    } else {
-      // Dopo l'orario effettivo: calcola le ore REALMENTE lavorate (non expectedHours!)
-      const effectiveWorkMinutes = (effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60) - (break_duration || 60);
-      actualHours = effectiveWorkMinutes / 60;
-      status = 'completed';
-    }
+
+  if (currentTimeObj < effectiveStartTimeObj) {
+    actualHours = 0;
+    status = 'not_started';
+  } else if (currentTimeObj <= effectiveEndTimeObj) {
+    actualHours = Math.max(0, (workedIntervalMinutes - breakMinutesElapsed) / 60);
+    const breakOverlapsShift = breakStartTimeObj && breakEndTimeObj
+      ? calculateOverlapMinutes(
+          effectiveStartTimeObj,
+          effectiveEndTimeObj,
+          breakStartTimeObj,
+          breakEndTimeObj
+        ) > 0
+      : false;
+    const isOnBreak = breakOverlapsShift && breakStartTimeObj && breakEndTimeObj
+      ? currentTimeObj >= breakStartTimeObj && currentTimeObj < breakEndTimeObj
+      : false;
+    status = isOnBreak ? 'on_break' : 'working';
+  } else {
+    const totalWorkedMinutes = (effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60);
+    const totalBreakMinutes = calculateOverlapMinutes(
+      effectiveStartTimeObj,
+      effectiveEndTimeObj,
+      breakStartTimeObj,
+      breakEndTimeObj
+    );
+    actualHours = Math.max(0, (totalWorkedMinutes - totalBreakMinutes) / 60);
+    status = 'completed';
   }
 
   // Calcola saldo ore

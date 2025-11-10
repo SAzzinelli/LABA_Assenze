@@ -1195,22 +1195,26 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
           let totalHours = 0;
           let exitTime = null;
           let entryTime = null;
-          let permType = null;
+          const permissionTypes = new Set();
           
           permissionsToday.forEach(perm => {
             totalHours += parseFloat(perm.hours || 0);
             if (perm.permission_type === 'early_exit' && perm.exit_time) {
-              exitTime = perm.exit_time;
-              permType = 'early_exit';
+              permissionTypes.add('early_exit');
+              if (!exitTime || perm.exit_time < exitTime) {
+                exitTime = perm.exit_time;
+              }
             }
             if (perm.permission_type === 'late_entry' && perm.entry_time) {
-              entryTime = perm.entry_time;
-              permType = 'late_entry';
+              permissionTypes.add('late_entry');
+              if (!entryTime || perm.entry_time > entryTime) {
+                entryTime = perm.entry_time;
+              }
             }
           });
           
           if (exitTime || entryTime) {
-            permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
+            permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
           }
         }
         
@@ -2942,23 +2946,27 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       let totalHours = 0;
       let exitTime = null;
       let entryTime = null;
-      let permType = null;
+      const permissionTypes = new Set();
       
       permissionsToday.forEach(perm => {
         totalHours += parseFloat(perm.hours || 0);
         if (perm.permission_type === 'early_exit' && perm.exit_time) {
-          exitTime = perm.exit_time;
-          permType = 'early_exit';
+          permissionTypes.add('early_exit');
+          if (!exitTime || perm.exit_time < exitTime) {
+            exitTime = perm.exit_time;
+          }
         }
         if (perm.permission_type === 'late_entry' && perm.entry_time) {
-          entryTime = perm.entry_time;
-          permType = 'late_entry';
+          permissionTypes.add('late_entry');
+          if (!entryTime || perm.entry_time > entryTime) {
+            entryTime = perm.entry_time;
+          }
         }
       });
       
       if (exitTime || entryTime) {
-        permissionData = { hours: totalHours, permission_type: permType, exit_time: exitTime, entry_time: entryTime };
-        console.log(`🚪 Permessi trovati: ${permissionData.permission_type}, exit=${exitTime}, entry=${entryTime}`);
+        permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
+        console.log(`🚪 Permessi trovati: [${permissionData.permission_types.join(', ')}], exit=${exitTime}, entry=${entryTime}`);
       }
     }
 
