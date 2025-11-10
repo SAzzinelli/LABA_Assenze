@@ -2981,13 +2981,13 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     }
 
     // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore
-    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+    const { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status } = calculateRealTimeHours(
       schedule,
       currentTime,
       permissionData
     );
     
-    console.log(`📊 [current-hours] Result: actual=${actualHours}h, expected=${expectedHours}h, balance=${balanceHours}h, status=${status}`);
+    console.log(`📊 [current-hours] Result: actual=${actualHours}h, expected=${expectedHours}h, contract=${contractHours}h, balance=${balanceHours}h, status=${status}`);
 
     res.json({
       isWorkingDay: true,
@@ -2998,10 +2998,12 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       },
       currentTime,
       expectedHours,
+      contractHours,
       actualHours,
       balanceHours,
+      remainingHours,
       status,
-      progress: Math.min((actualHours / expectedHours) * 100, 100)
+      progress: expectedHours > 0 ? Math.min((actualHours / expectedHours) * 100, 100) : 100
     });
   } catch (error) {
     console.error('Current hours calculation error:', error);
@@ -3077,13 +3079,13 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     }
 
     // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore
-    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+    const { actualHours, expectedHours, contractHours, balanceHours, status } = calculateRealTimeHours(
       schedule,
       currentTime,
       permissionData
     );
     
-    console.log(`📊 Calculated (centralized): expected=${expectedHours.toFixed(2)}h, actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
+    console.log(`📊 Calculated (centralized): expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -3099,7 +3101,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .from('attendance')
         .update({
           actual_hours: actualHours,
-          expected_hours: expectedHours,
+          expected_hours: contractHours,
           balance_hours: balanceHours,
           notes: `Aggiornato alle ${currentTime} - ${status}`
         })
@@ -3117,7 +3119,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .insert({
           user_id: userId,
           date: today,
-          expected_hours: expectedHours,
+          expected_hours: contractHours,
           actual_hours: actualHours,
           balance_hours: balanceHours,
           notes: `Presenza aggiornata alle ${currentTime} - ${status}`
@@ -3142,10 +3144,11 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         },
         currentTime,
         expectedHours: Math.round(expectedHours * 10) / 10,
+        contractHours: Math.round(contractHours * 10) / 10,
         actualHours: Math.round(actualHours * 10) / 10,
         balanceHours: Math.round(balanceHours * 10) / 10,
         status,
-        progress: Math.min((actualHours / expectedHours) * 100, 100)
+        progress: expectedHours > 0 ? Math.min((actualHours / expectedHours) * 100, 100) : 100
       }
     });
   } catch (error) {
@@ -3207,6 +3210,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
     
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
+    let contractHours = attendance.expected_hours || 8;
     let balanceHours = attendance.balance_hours || 0;
     
     // Se è oggi (o data simulata), calcola le ore real-time usando la logica corretta
@@ -3253,9 +3257,10 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       const result = calculateRealTimeHours(schedule, currentTime, permissionData);
       actualHours = result.actualHours;
       expectedHours = result.expectedHours;
+      contractHours = result.contractHours;
       balanceHours = result.balanceHours;
       
-      console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
+      console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), balance=${balanceHours.toFixed(2)}h`);
     }
 
     res.json({
@@ -3267,6 +3272,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
           date: attendance.date,
           employee: `${attendance.users.first_name} ${attendance.users.last_name}`,
           expectedHours: Math.round(expectedHours * 10) / 10,
+          contractHours: Math.round(contractHours * 10) / 10,
           actualHours: Math.round(actualHours * 10) / 10,
           balanceHours: Math.round(balanceHours * 10) / 10,
           status: actualHours > 0 ? 'Presente' : 'Assente',
@@ -3356,7 +3362,7 @@ app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (re
 
     const calculationTime = time || permissionData?.exit_time || schedule.end_time;
 
-    const { actualHours, expectedHours, balanceHours, status } = calculateRealTimeHours(
+    const { actualHours, expectedHours, contractHours, balanceHours, status } = calculateRealTimeHours(
       schedule,
       calculationTime,
       permissionData
@@ -3365,7 +3371,7 @@ app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (re
     const upsertPayload = {
       user_id: userId,
       date: targetDate,
-      expected_hours: expectedHours,
+      expected_hours: contractHours,
       actual_hours: actualHours,
       balance_hours: balanceHours,
       notes: `Ricalcolato manualmente alle ${calculationTime} (status: ${status})`
@@ -3388,6 +3394,7 @@ app.post('/api/admin/fix-attendance', authenticateToken, requireAdmin, async (re
         userId,
         calculationTime,
         expectedHours,
+        contractHours,
         actualHours,
         balanceHours,
         status,

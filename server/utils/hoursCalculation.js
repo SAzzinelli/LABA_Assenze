@@ -106,9 +106,15 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const currentTimeObj = parseTimeToDate(currentTimeStr);
 
   if (effectiveEndTimeObj <= effectiveStartTimeObj) {
-    const roundedExpected = Math.round(contractExpectedHours * 10) / 10;
-    const balance = -roundedExpected;
-    return { actualHours: 0, expectedHours: roundedExpected, balanceHours: balance, status: 'not_started' };
+    const roundedContract = Math.round(contractExpectedHours * 10) / 10;
+    return {
+      actualHours: 0,
+      expectedHours: 0,
+      contractHours: roundedContract,
+      balanceHours: -roundedContract,
+      remainingHours: roundedContract,
+      status: 'not_started'
+    };
   }
 
   const breakDurationMinutes = break_duration || 60;
@@ -157,6 +163,7 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     ),
     shiftMinutes
   );
+  const effectiveExpectedHoursRaw = shiftMinutes > 0 ? Math.max(0, (shiftMinutes - breakMinutesInShift) / 60) : 0;
 
   const cappedCurrentTime = currentTimeObj <= effectiveEndTimeObj ? currentTimeObj : effectiveEndTimeObj;
   const workedIntervalMinutes = cappedCurrentTime > effectiveStartTimeObj
@@ -198,13 +205,17 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
 
   // Calcola saldo ore
   const roundedActualHours = Math.round(actualHours * 10) / 10;
-  const roundedExpectedHours = Math.round(contractExpectedHours * 10) / 10;
-  const balanceHours = Math.round((roundedActualHours - roundedExpectedHours) * 10) / 10;
+  const roundedEffectiveExpectedHours = Math.round(effectiveExpectedHoursRaw * 10) / 10;
+  const roundedContractHours = Math.round(contractExpectedHours * 10) / 10;
+  const balanceHours = Math.round((roundedActualHours - roundedContractHours) * 10) / 10;
+  const remainingHours = Math.max(0, Math.round((effectiveExpectedHoursRaw - actualHours) * 10) / 10);
   
   return {
     actualHours: roundedActualHours,
-    expectedHours: roundedExpectedHours,
+    expectedHours: roundedEffectiveExpectedHours,
+    contractHours: roundedContractHours,
     balanceHours,
+    remainingHours,
     status
   };
 }
