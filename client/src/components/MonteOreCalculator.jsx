@@ -261,6 +261,11 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     return { weekly: 0, annual: 0, compensation: 'Nessuno straordinario' };
   };
 
+  const formattedCurrentBalance = React.useMemo(
+    () => formatHoursValue(currentBalance),
+    [currentBalance]
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -284,10 +289,6 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const sickLeave = calculateSickLeave();
   const permissions104 = calculate104Permissions();
   const overtime = calculateOvertime();
-  const formattedCurrentBalance = React.useMemo(
-    () => formatHoursValue(currentBalance),
-    [currentBalance]
-  );
 
   return (
     <div className="space-y-6">
