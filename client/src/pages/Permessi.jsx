@@ -26,7 +26,7 @@ import {
 
 const LeaveRequests = () => {
   const { user, apiCall } = useAuthStore();
-  const { alert, showSuccess, showError, showConfirm, hideAlert } = useCustomAlert();
+  const { alert: alertState, showSuccess, showError, showConfirm, hideAlert } = useCustomAlert();
   const [showNewRequest, setShowNewRequest] = useState(false);
   const [showAdminCreateModal, setShowAdminCreateModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -333,7 +333,7 @@ const LeaveRequests = () => {
     const calculatedHours = calculatePermissionHours();
     
     if (calculatedHours <= 0) {
-      alert('Inserisci un orario valido per calcolare le ore di permesso');
+      showError('Inserisci un orario valido per calcolare le ore di permesso');
       return;
     }
     
@@ -367,14 +367,14 @@ const LeaveRequests = () => {
           notes: ''
         });
         setShowNewRequest(false);
-        alert('Richiesta inviata con successo!');
+        showSuccess('Richiesta inviata con successo!');
       } else {
         const error = await response.json();
-        alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
+        showError(`Errore: ${error.error || 'Errore nel salvataggio'}`);
       }
     } catch (error) {
       console.error('Errore:', error);
-      alert('Errore nel salvataggio della richiesta');
+      showError('Errore nel salvataggio della richiesta');
     }
   };
 
@@ -1125,15 +1125,15 @@ const LeaveRequests = () => {
 
       {/* Alert custom */}
       <CustomAlert
-        isOpen={alert.isOpen}
+        isOpen={alertState.isOpen}
         onClose={hideAlert}
-        type={alert.type}
-        title={alert.title}
-        message={alert.message}
-        onConfirm={alert.onConfirm}
-        showCancel={alert.showCancel}
-        confirmText={alert.confirmText}
-        cancelText={alert.cancelText}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+        onConfirm={alertState.onConfirm}
+        showCancel={alertState.showCancel}
+        confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
       />
 
       {/* Modal Admin Crea Permesso per Dipendente */}
