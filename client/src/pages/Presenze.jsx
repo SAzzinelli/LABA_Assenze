@@ -609,6 +609,10 @@ const Attendance = () => {
         realTimeBalanceHours = 0;
       }
     }
+    const statusInfo = computeStatusInfo({
+      ...record,
+      actual_hours: realTimeActualHours
+    });
     
     const realTimeData = {
       attendance: record,
@@ -629,7 +633,8 @@ const Attendance = () => {
         })() : 8,
         actualHours: realTimeActualHours,
         balanceHours: realTimeBalanceHours,
-        status: realTimeActualHours > 0 ? 'Presente' : 'Assente',
+        status: statusInfo.text,
+        statusBadgeClass: statusInfo.badgeClass,
         notes: ''
       }
     };
@@ -645,54 +650,77 @@ const Attendance = () => {
     }) : '--:--';
   };
 
-  const formatHours = (hours) => {
+const formatHours = (hours) => {
     if (hours === null || hours === undefined) return '0h 0m';
     const h = Math.floor(Math.abs(hours));
     const m = Math.round((Math.abs(hours) - h) * 60);
     return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
   };
 
-  const getStatusColor = (record) => {
-    const hasWorked = (record.actual_hours || 0) > 0;
-    const isPermissionWithWork = record.is_justified_absence && record.leave_type === 'permission' && hasWorked;
+
+function computeStatusInfo(record = {}) {
+  const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0 } = record;
+  const hasWorked = actual_hours > 0;
+
+  const badgeClasses = {
+    green: 'bg-green-500/20 text-green-300 border border-green-400/30',
+    yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
+    red: 'bg-red-500/20 text-red-300 border border-red-400/30',
+    gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+  };
+
+  if (is_justified_absence && leave_type === 'permission' && hasWorked) {
+    return {
+      text: 'Presente (con permesso)',
+      colorClass: 'text-green-400',
+      badgeClass: badgeClasses.green
+    };
+  }
+
+  if (is_justified_absence) {
+    const leaveTypeText = {
+      sick_leave: 'Malattia',
+      vacation: 'Ferie',
+      permission: 'Permesso'
+    }[leave_type] || 'Giustificato';
     
-    if (isPermissionWithWork) {
-      return 'text-green-400';
-    }
+    return {
+      text: `Assente (${leaveTypeText})`,
+      colorClass: 'text-yellow-400',
+      badgeClass: badgeClasses.yellow
+    };
+  }
 
-    // Assenza giustificata (malattia, ferie, permessi approvati)
-    if (record.is_justified_absence) return 'text-yellow-400';
-    // Assenza non giustificata
-    if (record.is_absent) return 'text-red-400';
-    // Giorno non lavorativo
-    if (record.expected_hours === 0) return 'text-gray-400';
-    // Presente
-    return 'text-green-400';
+  if (is_absent) {
+    return {
+      text: 'Assente',
+      colorClass: 'text-red-400',
+      badgeClass: badgeClasses.red
+    };
+  }
+
+  if (expected_hours === 0) {
+    return {
+      text: 'Non lavorativo',
+      colorClass: 'text-gray-400',
+      badgeClass: badgeClasses.gray
+    };
+  }
+
+  return {
+    text: 'Presente',
+    colorClass: 'text-green-400',
+    badgeClass: badgeClasses.green
   };
+}
 
-  const getStatusText = (record) => {
-    const hasWorked = (record.actual_hours || 0) > 0;
+const getStatusColor = (record) => {
+  return computeStatusInfo(record).colorClass;
+};
 
-    if (record.is_justified_absence && record.leave_type === 'permission' && hasWorked) {
-      return 'Presente (con permesso)';
-    }
-
-    // Assenza giustificata
-    if (record.is_justified_absence) {
-      const leaveTypeText = {
-        'sick_leave': 'Malattia',
-        'vacation': 'Ferie',
-        'permission': 'Permesso'
-      }[record.leave_type] || 'Assente (Giustificato)';
-      return `Assente (${leaveTypeText})`;
-    }
-    // Assenza non giustificata
-    if (record.is_absent) return 'Assente';
-    // Giorno non lavorativo
-    if (record.expected_hours === 0) return 'Non lavorativo';
-    // Presente
-    return 'Presente';
-  };
+const getStatusText = (record) => {
+  return computeStatusInfo(record).text;
+};
 
   const getBalanceColor = (balance) => {
     if (balance > 0) return 'text-green-400';
@@ -1162,9 +1190,8 @@ const Attendance = () => {
                         <div className="flex items-center space-x-3">
                           <span className="text-sm text-slate-400">Stato:</span>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            selectedAttendanceDetails.summary.status === 'Presente' 
-                              ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
-                              : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                            selectedAttendanceDetails.summary.statusBadgeClass 
+                              || computeStatusInfo(selectedAttendanceDetails.attendance).badgeClass
                           }`}>
                             {selectedAttendanceDetails.summary.status}
                           </span>
