@@ -3621,6 +3621,18 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
     const { type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor } = req.body;
 
+    const normalizeTime = (value) => {
+      if (value === null || value === undefined) return null;
+      if (typeof value === 'string' && value.trim() === '') return null;
+      return value;
+    };
+
+    const normalizeHours = (value) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numericValue = typeof value === 'number' ? value : parseFloat(value);
+      return Number.isFinite(numericValue) ? numericValue : null;
+    };
+
     // Validation
     if (!type || !startDate || !endDate) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti' });
@@ -3748,9 +3760,16 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (notes !== undefined) insertData.notes = notes;
     if (doctor !== undefined) insertData.doctor = doctor;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    if (calculatedHours !== undefined) insertData.hours = calculatedHours; // Usa le ore calcolate
-    if (exitTime !== undefined) insertData.exit_time = exitTime;
-    if (entryTime !== undefined) insertData.entry_time = entryTime;
+    const normalizedHours = normalizeHours(calculatedHours);
+    if (normalizedHours !== null) {
+      insertData.hours = normalizedHours; // Usa le ore calcolate
+    }
+
+    const normalizedExitTime = normalizeTime(exitTime);
+    const normalizedEntryTime = normalizeTime(entryTime);
+
+    if (normalizedExitTime !== null) insertData.exit_time = normalizedExitTime;
+    if (normalizedEntryTime !== null) insertData.entry_time = normalizedEntryTime;
 
     console.log('🔧 Inserting leave request with data:', insertData);
 
@@ -3789,6 +3808,18 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { userId, type, startDate, endDate, reason, notes, permissionType, hours, exitTime, entryTime, doctor, medicalCode } = req.body;
+
+    const normalizeTime = (value) => {
+      if (value === null || value === undefined) return null;
+      if (typeof value === 'string' && value.trim() === '') return null;
+      return value;
+    };
+
+    const normalizeHours = (value) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numericValue = typeof value === 'number' ? value : parseFloat(value);
+      return Number.isFinite(numericValue) ? numericValue : null;
+    };
 
     // Validation
     if (!userId || !type || !startDate || !endDate) {
@@ -3883,9 +3914,16 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (doctor !== undefined) insertData.doctor = doctor;
     if (medicalCode !== undefined) insertData.medical_code = medicalCode;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    if (calculatedHours !== undefined) insertData.hours = calculatedHours; // Usa le ore calcolate
-    if (exitTime !== undefined) insertData.exit_time = exitTime;
-    if (entryTime !== undefined) insertData.entry_time = entryTime;
+    const normalizedHours = normalizeHours(calculatedHours);
+    if (normalizedHours !== null) {
+      insertData.hours = normalizedHours; // Usa le ore calcolate
+    }
+
+    const normalizedExitTime = normalizeTime(exitTime);
+    const normalizedEntryTime = normalizeTime(entryTime);
+
+    if (normalizedExitTime !== null) insertData.exit_time = normalizedExitTime;
+    if (normalizedEntryTime !== null) insertData.entry_time = normalizedEntryTime;
 
     console.log('🔧 Admin creating leave request for employee:', employee.email);
     console.log('📋 Insert data:', JSON.stringify(insertData, null, 2));
