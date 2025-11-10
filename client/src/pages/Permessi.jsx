@@ -424,23 +424,30 @@ const LeaveRequests = () => {
     let filtered = requests;
     
     // Filtro per tab (solo admin)
-    if (user?.role === 'admin') {
-      const today = new Date().toISOString().split('T')[0];
-      
-            if (activeTab === 'imminenti') {
-              // Mostra solo richieste approvate con data futura
-              filtered = filtered.filter(request => 
-                request.status === 'approved' && request.startDate > today
-              );
-            } else {
-        // Cronologia: filtra per mese/anno E esclude richieste programmate
-        filtered = filtered.filter(request => {
-          const requestDate = new Date(request.permissionDate || request.startDate);
-          const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
-          const isNotProgrammed = request.status !== 'approved' || request.startDate <= today;
-          return isInCurrentMonth && isNotProgrammed;
-        });
-      }
+      if (user?.role === 'admin') {
+        const todayIso = new Date().toISOString().split('T')[0];
+        const todayDate = new Date(todayIso);
+        
+        if (activeTab === 'imminenti') {
+          // Mostra richieste in attesa più quelle approvate da oggi in poi
+          filtered = filtered.filter(request => {
+            const requestDate = new Date(request.permissionDate || request.startDate);
+            return (
+              request.status === 'pending' ||
+              (request.status === 'approved' && requestDate >= todayDate)
+            );
+          });
+        } else {
+          // Cronologia: mostra solo richieste del mese selezionato già decise/passat
+          filtered = filtered.filter(request => {
+            const requestDate = new Date(request.permissionDate || request.startDate);
+            const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+            const isHistorical =
+              (request.status === 'approved' && requestDate < todayDate) ||
+              request.status !== 'approved';
+            return isInCurrentMonth && isHistorical;
+          });
+        }
     } else {
       // Per dipendenti: filtra per mese/anno
       filtered = filtered.filter(request => {
