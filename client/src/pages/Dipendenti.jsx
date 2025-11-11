@@ -69,13 +69,8 @@ const Employees = () => {
 
     const sign = value < 0 ? '-' : value > 0 ? '+' : '';
     const absValue = Math.abs(value);
-    let hours = Math.floor(absValue);
-    let minutes = Math.round((absValue - hours) * 60);
-
-    if (minutes === 60) {
-      hours += 1;
-      minutes = 0;
-    }
+    const hours = Math.floor(absValue);
+    const minutes = Math.max(0, Math.floor((absValue - hours) * 60));
 
     return {
       sign,

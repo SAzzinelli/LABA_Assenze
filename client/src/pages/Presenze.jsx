@@ -658,7 +658,7 @@ const Attendance = () => {
 const formatHours = (hours) => {
   if (hours === null || hours === undefined) return '0h 0m';
   const h = Math.floor(Math.abs(hours));
-  const m = Math.round((Math.abs(hours) - h) * 60);
+  const m = Math.floor((Math.abs(hours) - h) * 60);
   return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
 };
 
@@ -667,7 +667,7 @@ const formatHoursWithSign = (hours) => {
   const sign = hours < 0 ? '-' : hours > 0 ? '+' : '';
   const absValue = Math.abs(hours);
   const h = Math.floor(absValue);
-  const m = Math.round((absValue - h) * 60);
+  const m = Math.floor((absValue - h) * 60);
   return `${sign}${h}h ${m}m`;
 };
 

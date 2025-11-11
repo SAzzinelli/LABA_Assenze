@@ -5,13 +5,9 @@ import { useAuthStore } from '../utils/store';
 const formatHoursValue = (value) => {
   const sign = value < 0 ? '-' : value > 0 ? '+' : '';
   const absoluteValue = Math.abs(value);
-  let hours = Math.floor(absoluteValue);
-  let minutes = Math.round((absoluteValue - hours) * 60);
-
-  if (minutes === 60) {
-    hours += 1;
-    minutes = 0;
-  }
+  const hours = Math.floor(absoluteValue);
+  const rawMinutes = (absoluteValue - hours) * 60;
+  const minutes = Math.max(0, Math.floor(rawMinutes));
 
   return {
     sign,
