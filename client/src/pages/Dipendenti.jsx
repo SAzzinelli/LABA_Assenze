@@ -294,13 +294,12 @@ const Employees = () => {
         const realTimeBalance = typeof singleBalance.realTime?.balanceHours === 'number'
           ? singleBalance.realTime.balanceHours
           : null;
-        const currentDayBalance = typeof singleBalance.realTime?.dayBalanceHours === 'number'
-          ? singleBalance.realTime.dayBalanceHours
-          : (realTimeBalance ?? 0);
+        const remainingToday = typeof singleBalance.realTime?.remainingHours === 'number'
+          ? singleBalance.realTime.remainingHours
+          : 0;
 
-        balanceValue = (totalBalance !== null ? totalBalance - currentDayBalance : null)
-          ?? (realTimeBalance !== null ? realTimeBalance - currentDayBalance : null)
-          ?? 0;
+        const baseBalance = totalBalance ?? realTimeBalance ?? 0;
+        balanceValue = baseBalance + remainingToday;
       }
 
       // Fallback all'endpoint aggregato

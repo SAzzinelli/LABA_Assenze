@@ -671,6 +671,13 @@ const formatHoursWithSign = (hours) => {
   return `${sign}${h}h ${m}m`;
 };
 
+const normalizeDateToISO = (date) => {
+  if (!date) return '';
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized.toISOString().split('T')[0];
+};
+
 
 function computeStatusInfo(record = {}) {
   const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0 } = record;
@@ -746,6 +753,25 @@ const getStatusText = (record) => {
     if (balance > 0) return <TrendingUp className="h-4 w-4" />;
     if (balance < 0) return <TrendingDown className="h-4 w-4" />;
     return <Clock className="h-4 w-4" />;
+  };
+
+  const getDisplayedDeficit = (record) => {
+    if (!record) return 0;
+    const todayISO = new Date().toISOString().split('T')[0];
+    const recordISO = normalizeDateToISO(record.date);
+    const isToday = recordISO === todayISO;
+
+    const expected = record.expected_hours ?? (isToday ? currentHours.expectedHours ?? 0 : 0);
+    const actual = isToday ? (currentHours.actualHours ?? 0) : (record.actual_hours ?? 0);
+
+    let deficit = Math.max(0, expected - actual);
+
+    if (isToday) {
+      const remaining = currentHours?.remainingHours ?? 0;
+      deficit = Math.max(0, deficit - remaining);
+    }
+
+    return deficit;
   };
 
   const getTodaySchedule = () => {
@@ -1015,11 +1041,14 @@ const getStatusText = (record) => {
                     </div>
                     <div>
                       <div className="text-slate-400">Mancanti</div>
-                      <div className={`font-bold ${getBalanceColor(record.date === today ? currentHours.balanceHours : record.balance_hours)}`}>
-                        {(record.date === today ? currentHours.balanceHours : record.balance_hours) < 0
-                          ? formatHours(Math.abs(record.date === today ? currentHours.balanceHours : record.balance_hours))
-                          : '0h 0m'}
-                      </div>
+                      {(() => {
+                        const deficit = getDisplayedDeficit(record);
+                        return (
+                          <div className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                            {deficit > 0 ? formatHours(deficit) : '0h 0m'}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="mt-3 text-right">
@@ -1092,23 +1121,14 @@ const getStatusText = (record) => {
                       })()}
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`font-bold ${(() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        if (record.date === today && currentHours?.balanceHours !== undefined) {
-                          return getBalanceColor(currentHours.balanceHours);
-                        }
-                        return getBalanceColor(record.balance_hours);
-                      })()}`}>
-                        {(() => {
-                          // Se è oggi, usa i dati real-time
-                          const today = new Date().toISOString().split('T')[0];
-                          if (record.date === today && currentHours?.balanceHours !== undefined) {
-                            return currentHours.balanceHours < 0 ? formatHours(Math.abs(currentHours.balanceHours)) : '0h 0m';
-                          }
-                          // Altrimenti usa i dati dal database
-                          return record.balance_hours < 0 ? formatHours(Math.abs(record.balance_hours)) : '0h 0m';
-                        })()}
-                      </span>
+                      {(() => {
+                        const deficit = getDisplayedDeficit(record);
+                        return (
+                          <span className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                            {deficit > 0 ? formatHours(deficit) : '0h 0m'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-3 px-4">
                       <button
