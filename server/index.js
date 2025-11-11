@@ -2491,7 +2491,8 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         effectiveExpectedHours: realTimeEffectiveHours,
         contractHours: realTimeContractHours,
         remainingHours: realTimeRemainingHours,
-        balanceHours: todayBalanceHours
+        balanceHours: todayBalanceHours,
+        dayBalanceHours: todayBalanceHours
       } : null
     });
   } catch (error) {

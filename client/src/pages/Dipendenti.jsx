@@ -288,7 +288,19 @@ const Employees = () => {
       const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${employeeId}`);
       if (singleBalanceResponse.ok) {
         const singleBalance = await singleBalanceResponse.json();
-        balanceValue = singleBalance.realTime?.balanceHours ?? singleBalance.totalBalanceHours ?? 0;
+        const totalBalance = typeof singleBalance.totalBalanceHours === 'number'
+          ? singleBalance.totalBalanceHours
+          : null;
+        const realTimeBalance = typeof singleBalance.realTime?.balanceHours === 'number'
+          ? singleBalance.realTime.balanceHours
+          : null;
+        const currentDayBalance = typeof singleBalance.realTime?.dayBalanceHours === 'number'
+          ? singleBalance.realTime.dayBalanceHours
+          : (realTimeBalance ?? 0);
+
+        balanceValue = (totalBalance !== null ? totalBalance - currentDayBalance : null)
+          ?? (realTimeBalance !== null ? realTimeBalance - currentDayBalance : null)
+          ?? 0;
       }
 
       // Fallback all'endpoint aggregato
