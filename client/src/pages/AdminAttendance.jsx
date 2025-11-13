@@ -152,7 +152,7 @@ const AdminAttendance = () => {
     if (activeTab === 'history') {
       fetchAttendanceHistory();
     }
-  }, [activeTab, selectedMonth, selectedYear, selectedEmployee]);
+  }, [activeTab, selectedMonth, selectedYear]);
 
   // Ricalcola le statistiche quando cambiano i workSchedules
   useEffect(() => {
@@ -481,7 +481,6 @@ const AdminAttendance = () => {
       const params = new URLSearchParams();
       if (selectedMonth) params.append('month', selectedMonth);
       if (selectedYear) params.append('year', selectedYear);
-      if (selectedEmployee) params.append('userId', selectedEmployee);
       
       const response = await apiCall(`/api/attendance?${params.toString()}`);
       if (response.ok) {
@@ -1059,10 +1058,7 @@ const AdminAttendance = () => {
       
       if (!hasTodayInHistory && allEmployees.length > 0 && isCurrentPeriod) {
         // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
-        // Ma rispetta il filtro del dipendente se selezionato
-        const employeesToProcess = selectedEmployee 
-          ? allEmployees.filter(emp => String(emp.id) === String(selectedEmployee))
-          : allEmployees.filter(emp => emp.role !== 'admin');
+        const employeesToProcess = allEmployees.filter(emp => emp.role !== 'admin');
         
         const todayRealTimeData = employeesToProcess
           .map(emp => {
@@ -1090,9 +1086,15 @@ const AdminAttendance = () => {
     }
     
     return data.filter(record => {
-      // Filtro per dipendente selezionato
-      if (selectedEmployee && String(record.user_id) !== String(selectedEmployee)) {
-        return false;
+      // Filtro per ricerca
+      if (searchTerm) {
+        let employeeName = '';
+        // Per attendance records, usa la struttura normale
+        employeeName = record.users ? 
+          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+        if (!employeeName.includes(searchTerm.toLowerCase())) {
+          return false;
+        }
       }
       
       // Logica specifica per ogni tab
@@ -1229,7 +1231,21 @@ const AdminAttendance = () => {
         {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
+                  <div className="relative">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nome o cognome..."
+                      className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
                   <select
@@ -1260,22 +1276,6 @@ const AdminAttendance = () => {
                         </option>
                       );
                     })}
-                  </select>
-                </div>
-                    
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
-                  <select
-                    value={selectedEmployee}
-                    onChange={(e) => setSelectedEmployee(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                        <option value="">Tutti i dipendenti</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
-                      </option>
-                    ))}
                   </select>
                 </div>
               </div>
