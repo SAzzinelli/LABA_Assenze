@@ -5372,7 +5372,7 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
         .status(200)
         .setHeader('Content-Type', 'text/csv; charset=utf-8')
         .setHeader('Content-Disposition', `attachment; filename="report-presenze-${yearParam}-${String(monthParam).padStart(2, '0')}.csv"`)
-        .send('\ufeffNome;Cognome;Lunedì Ore;Martedì Ore;Mercoledì Ore;Giovedì Ore;Venerdì Ore;Sabato Ore;Domenica Ore;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
+        .send('\ufeffNome;Cognome;Lunedì;Martedì;Mercoledì;Giovedì;Venerdì;Sabato;Domenica;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
     }
 
     const userIds = users.map(u => u.id);
@@ -5467,13 +5467,13 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
 
     const dayOrder = [1, 2, 3, 4, 5, 6, 0];
     const dayLabels = [
-      'Lunedì Ore',
-      'Martedì Ore',
-      'Mercoledì Ore',
-      'Giovedì Ore',
-      'Venerdì Ore',
-      'Sabato Ore',
-      'Domenica Ore'
+      'Lunedì',
+      'Martedì',
+      'Mercoledì',
+      'Giovedì',
+      'Venerdì',
+      'Sabato',
+      'Domenica'
     ];
 
     const header = [
