@@ -960,7 +960,6 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
     const { date, userId, month, year } = req.query;
-    const targetUserId = userId || req.user.id;
     
     // IMPORTANTE: Leggi SEMPRE da attendance (dati reali)
     // La modalità test viene usata solo per i calcoli real-time (orario simulato)
@@ -982,8 +981,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       query = query.eq('date', date);
     } else if (month && year) {
       // Filtra per mese e anno specifici
-      const startDate = `${year}-${month.padStart(2, '0')}-01`;
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      const monthStr = String(monthNum).padStart(2, '0');
+      const startDate = `${yearNum}-${monthStr}-01`;
+      const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0];
       query = query.gte('date', startDate).lte('date', endDate);
     }
     
@@ -1006,12 +1008,21 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     let leaveQuery = supabase
       .from('leave_requests')
       .select('*')
-      .eq('user_id', targetUserId)
       .eq('status', 'approved');
     
+    // Filtra per user_id solo se specificato, altrimenti per admin mostra tutte le leave requests
+    if (userId) {
+      leaveQuery = leaveQuery.eq('user_id', userId);
+    } else if (req.user.role === 'employee') {
+      leaveQuery = leaveQuery.eq('user_id', req.user.id);
+    }
+    
     if (month && year) {
-      const startDate = `${year}-${month.padStart(2, '0')}-01`;
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      const monthStr = String(monthNum).padStart(2, '0');
+      const startDate = `${yearNum}-${monthStr}-01`;
+      const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0];
       leaveQuery = leaveQuery.gte('start_date', startDate).lte('end_date', endDate);
     }
 
