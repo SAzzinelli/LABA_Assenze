@@ -1100,6 +1100,11 @@ const AdminAttendance = () => {
     }
     
     return data.filter(record => {
+      // Filtro per dipendente selezionato
+      if (selectedEmployee && String(record.user_id) !== String(selectedEmployee)) {
+        return false;
+      }
+      
       // Logica specifica per ogni tab
       if (activeTab === 'today') {
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
