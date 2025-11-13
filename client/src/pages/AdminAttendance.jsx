@@ -63,6 +63,7 @@ const AdminAttendance = () => {
     notes: ''
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
 
   // Stati per generazione presenze
@@ -176,6 +177,38 @@ const AdminAttendance = () => {
       console.error('Error fetching attendance data:', error);
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const handleDownloadMonthlyReport = async () => {
+    try {
+      setDownloadingReport(true);
+      const response = await apiCall(`/api/admin/reports/monthly-attendance?year=${selectedYear}&month=${selectedMonth}`, {
+        headers: {
+          Accept: 'text/csv'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Errore nel download del report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const monthString = String(selectedMonth).padStart(2, '0');
+      link.href = url;
+      link.download = `report-presenze-${selectedYear}-${monthString}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Errore nel download del report mensile:', error);
+      window.alert('Errore nel download del report mensile. Riprova più tardi.');
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -1067,17 +1100,6 @@ const AdminAttendance = () => {
     }
     
     return data.filter(record => {
-      // Filtro per ricerca
-      if (searchTerm) {
-        let employeeName = '';
-        // Per attendance records, usa la struttura normale
-        employeeName = record.users ? 
-          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
-        if (!employeeName.includes(searchTerm.toLowerCase())) {
-          return false;
-        }
-      }
-      
       // Logica specifica per ogni tab
       if (activeTab === 'today') {
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
@@ -1211,68 +1233,71 @@ const AdminAttendance = () => {
         {/* Filtri */}
         {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Nome o cognome..."
-                    className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                    
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const year = new Date().getFullYear() - 2 + i;
+                      return (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                    
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
+                  <select
+                    value={selectedEmployee}
+                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                        <option value="">Tutti i dipendenti</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={handleDownloadMonthlyReport}
+                  disabled={downloadingReport}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${
+                    downloadingReport
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                  }`}
                 >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
-                    </option>
-                  ))}
-                </select>
-              </div>
-                  
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {Array.from({ length: 5 }, (_, i) => {
-                    const year = new Date().getFullYear() - 2 + i;
-                    return (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-                  
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Dipendente</label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                      <option value="">Tutti i dipendenti</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
-                    </option>
-                  ))}
-                </select>
+                  <Download className="h-4 w-4" />
+                  {downloadingReport ? 'Creazione report...' : 'Scarica report CSV'}
+                </button>
               </div>
             </div>
           </div>

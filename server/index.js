@@ -609,6 +609,40 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
   }
 });
 
+// List admin users (for admin dashboard)
+app.get('/api/admins', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔍 Fetching admins for user:', req.user.id);
+
+    const { data: admins, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, department, position, created_at')
+      .eq('role', 'admin')
+      .order('last_name');
+
+    if (error) {
+      console.error('❌ Admins fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero degli amministratori' });
+    }
+
+    const formattedAdmins = admins.map(admin => ({
+      id: admin.id,
+      first_name: admin.first_name,
+      last_name: admin.last_name,
+      name: `${admin.first_name} ${admin.last_name}`,
+      email: admin.email,
+      department: admin.department || 'Amministrazione',
+      position: admin.position || 'Amministratore',
+      created_at: admin.created_at
+    }));
+
+    res.json(formattedAdmins);
+  } catch (error) {
+    console.error('❌ Admins fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Auto-approve new employee (Admin only)
 app.post('/api/employees/approve/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -6101,5 +6135,168 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
   } catch (error) {
     console.error('Total balances error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const monthParam = parseInt(req.query.month, 10);
+    const yearParam = parseInt(req.query.year, 10);
+
+    if (!monthParam || monthParam < 1 || monthParam > 12 || !yearParam || yearParam < 2000) {
+      return res.status(400).json({ error: 'Parametri mese/anno non validi' });
+    }
+
+    const startDate = new Date(Date.UTC(yearParam, monthParam - 1, 1));
+    const endDate = new Date(Date.UTC(yearParam, monthParam, 0));
+    const startISO = startDate.toISOString().split('T')[0];
+    const endISO = endDate.toISOString().split('T')[0];
+
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, role, is_active')
+      .neq('role', 'admin')
+      .eq('is_active', true);
+
+    if (usersError) {
+      console.error('Monthly report users error:', usersError);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
+    }
+
+    if (!users || users.length === 0) {
+      return res
+        .status(200)
+        .send('Nome;Cognome;Lunedì Ore;Martedì Ore;Mercoledì Ore;Giovedì Ore;Venerdì Ore;Sabato Ore;Domenica Ore;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
+    }
+
+    const userIds = users.map(u => u.id);
+
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('user_id, date, actual_hours')
+      .in('user_id', userIds)
+      .gte('date', startISO)
+      .lte('date', endISO);
+
+    if (attendanceError) {
+      console.error('Monthly report attendance error:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
+    }
+
+    const { data: leaveData, error: leaveError } = await supabase
+      .from('leave_requests')
+      .select('user_id, type, start_date, end_date, hours, days_requested, permission_type')
+      .in('user_id', userIds)
+      .eq('status', 'approved')
+      .lte('start_date', endISO)
+      .gte('end_date', startISO);
+
+    if (leaveError) {
+      console.error('Monthly report leave error:', leaveError);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    const summary = {};
+    users.forEach(user => {
+      summary[user.id] = {
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        dowHours: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+        permissionHours: 0,
+        sickDays: 0,
+        vacationDays: 0
+      };
+    });
+
+    (attendanceData || []).forEach(record => {
+      const entry = summary[record.user_id];
+      if (!entry) return;
+      const recordDate = new Date(`${record.date}T00:00:00Z`);
+      const day = recordDate.getUTCDay();
+      entry.dowHours[day] += Number(record.actual_hours || 0);
+    });
+
+    const calculateOverlapDays = (requestStart, requestEnd) => {
+      const start = new Date(`${requestStart}T00:00:00Z`);
+      const end = new Date(`${requestEnd}T00:00:00Z`);
+      const monthStart = new Date(`${startISO}T00:00:00Z`);
+      const monthEnd = new Date(`${endISO}T00:00:00Z`);
+      const overlapStart = start > monthStart ? start : monthStart;
+      const overlapEnd = end < monthEnd ? end : monthEnd;
+      if (overlapEnd < overlapStart) return 0;
+      const diffMs = overlapEnd - overlapStart;
+      return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    (leaveData || []).forEach(request => {
+      const entry = summary[request.user_id];
+      if (!entry) return;
+
+      const overlapDays = calculateOverlapDays(request.start_date, request.end_date);
+      if (overlapDays <= 0) return;
+
+      if (request.type === 'permission') {
+        const requestHours =
+          request.hours !== null && request.hours !== undefined
+            ? Number(request.hours)
+            : overlapDays * 8;
+        entry.permissionHours += requestHours;
+      } else if (request.type === 'sick_leave') {
+        entry.sickDays += overlapDays;
+      } else if (request.type === 'vacation') {
+        entry.vacationDays += overlapDays;
+      }
+    });
+
+    const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+    const dayLabels = [
+      'Lunedì Ore',
+      'Martedì Ore',
+      'Mercoledì Ore',
+      'Giovedì Ore',
+      'Venerdì Ore',
+      'Sabato Ore',
+      'Domenica Ore'
+    ];
+
+    const header = [
+      'Nome',
+      'Cognome',
+      ...dayLabels,
+      'Ore Permesso',
+      'Giorni Malattia',
+      'Giorni Ferie'
+    ];
+
+    const csvEscape = value => {
+      const stringValue = value !== null && value !== undefined ? String(value) : '';
+      if (/[\";\\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/\"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const lines = [header.join(';')];
+
+    Object.values(summary).forEach(entry => {
+      const row = [
+        csvEscape(entry.firstName),
+        csvEscape(entry.lastName),
+        ...dayOrder.map(day => entry.dowHours[day]?.toFixed(2)),
+        entry.permissionHours.toFixed(2),
+        entry.sickDays,
+        entry.vacationDays
+      ];
+      lines.push(row.join(';'));
+    });
+
+    const csvContent = lines.join('\n');
+    const monthString = String(monthParam).padStart(2, '0');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="report-presenze-${yearParam}-${monthString}.csv"`);
+    res.status(200).send(csvContent);
+  } catch (error) {
+    console.error('Monthly report error:', error);
+    res.status(500).json({ error: 'Errore nella generazione del report' });
   }
 });
