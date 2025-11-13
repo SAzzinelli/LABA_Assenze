@@ -5370,7 +5370,9 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
     if (!users || users.length === 0) {
       return res
         .status(200)
-        .send('Nome;Cognome;Lunedì Ore;Martedì Ore;Mercoledì Ore;Giovedì Ore;Venerdì Ore;Sabato Ore;Domenica Ore;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
+        .setHeader('Content-Type', 'text/csv; charset=utf-8')
+        .setHeader('Content-Disposition', `attachment; filename="report-presenze-${yearParam}-${String(monthParam).padStart(2, '0')}.csv"`)
+        .send('\ufeffNome;Cognome;Lunedì Ore;Martedì Ore;Mercoledì Ore;Giovedì Ore;Venerdì Ore;Sabato Ore;Domenica Ore;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
     }
 
     const userIds = users.map(u => u.id);
@@ -5399,6 +5401,17 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       console.error('Monthly report leave error:', leaveError);
       return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
     }
+
+    // Funzione per convertire ore decimali in formato "Hh Mm"
+    const formatHoursToHhMm = (hoursDecimal) => {
+      if (hoursDecimal === null || hoursDecimal === undefined || hoursDecimal === 0) {
+        return '0h 0m';
+      }
+      const hours = Math.floor(Math.abs(hoursDecimal));
+      const minutes = Math.floor((Math.abs(hoursDecimal) - hours) * 60);
+      const sign = hoursDecimal < 0 ? '-' : '';
+      return `${sign}${hours}h ${minutes}m`;
+    };
 
     const summary = {};
     users.forEach(user => {
@@ -5480,14 +5493,15 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       return stringValue;
     };
 
-    const lines = [header.join(';')];
+    // Aggiungi BOM UTF-8 per supporto corretto dei caratteri accentati in Excel
+    const lines = ['\ufeff' + header.join(';')];
 
     Object.values(summary).forEach(entry => {
       const row = [
         csvEscape(entry.firstName),
         csvEscape(entry.lastName),
-        ...dayOrder.map(day => entry.dowHours[day]?.toFixed(2)),
-        entry.permissionHours.toFixed(2),
+        ...dayOrder.map(day => formatHoursToHhMm(entry.dowHours[day] || 0)),
+        formatHoursToHhMm(entry.permissionHours),
         entry.sickDays,
         entry.vacationDays
       ];
