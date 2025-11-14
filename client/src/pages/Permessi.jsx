@@ -1000,11 +1000,25 @@ const LeaveRequests = () => {
                             formatHoursReadable(request.hours) :
                             `${calculateDays(request.startDate, request.endDate)} giorni`
                           }
+                          {request.permissionType === 'uscita_anticipata' && request.exitTime && (
+                            <span className="ml-2 text-indigo-400">• Uscita alle {request.exitTime}</span>
+                          )}
+                          {request.permissionType === 'entrata_posticipata' && request.entryTime && (
+                            <span className="ml-2 text-indigo-400">• Entrata alle {request.entryTime}</span>
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>Tipo: {getPermissionTypeText(request)}</span>
+                        <span>
+                          {request.permissionType === 'uscita_anticipata' ? (
+                            <span className="text-orange-400 font-medium">Uscita Anticipata</span>
+                          ) : request.permissionType === 'entrata_posticipata' ? (
+                            <span className="text-blue-400 font-medium">Entrata Posticipata</span>
+                          ) : (
+                            <span>Tipo: {getPermissionTypeText(request)}</span>
+                          )}
+                        </span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />

@@ -4048,7 +4048,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             .insert([{
               user_id: admin.id,
               title: 'Nuova richiesta Permesso',
-              message: `${userName} ha richiesto un permesso per il ${dateRange}`,
+              message: `${userName} ha richiesto un permesso ${startDate === endDate ? 'per il' : 'dal'} ${dateRange}`,
               type: 'permission',
               is_read: false,
               request_id: newRequest.id,
@@ -4240,7 +4240,22 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
         user_id: userId,
         type: 'leave_approved',
         title: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso'} aggiunto dall'admin`,
-        message: `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'una malattia' : 'un permesso'} dal ${new Date(startDate).toLocaleDateString('it-IT')} al ${new Date(endDate).toLocaleDateString('it-IT')}. ${reason ? `Motivo: ${reason}` : ''}`,
+        message: (() => {
+          const formattedStart = new Date(startDate).toLocaleDateString('it-IT', { 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric' 
+          });
+          const formattedEnd = startDate === endDate 
+            ? formattedStart 
+            : new Date(endDate).toLocaleDateString('it-IT', { 
+                day: '2-digit', 
+                month: 'long', 
+                year: 'numeric' 
+              });
+          const dateRange = startDate === endDate ? formattedStart : `dal ${formattedStart} al ${formattedEnd}`;
+          return `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'una malattia' : 'un permesso'} ${dateRange}. ${reason ? `Motivo: ${reason}` : ''}`;
+        })(),
         related_id: newRequest.id,
         is_read: false,
         created_at: new Date().toISOString()
@@ -4333,13 +4348,30 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         'rejected': 'rifiutata'
       };
 
+      // Formatta le date in italiano
+      const formattedStartDate = new Date(updatedRequest.start_date).toLocaleDateString('it-IT', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      const formattedEndDate = updatedRequest.start_date === updatedRequest.end_date
+        ? formattedStartDate
+        : new Date(updatedRequest.end_date).toLocaleDateString('it-IT', { 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric' 
+          });
+      const dateRange = updatedRequest.start_date === updatedRequest.end_date 
+        ? formattedStartDate 
+        : `dal ${formattedStartDate} al ${formattedEndDate}`;
+
         await supabase
           .from('notifications')
           .insert([
             {
               user_id: updatedRequest.user_id,
               title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
-              message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} dal ${updatedRequest.start_date} al ${updatedRequest.end_date} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
+              message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} ${dateRange} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
               type: 'response',
               request_id: updatedRequest.id,
               request_type: updatedRequest.type,
