@@ -573,9 +573,9 @@ const LeaveRequests = () => {
   // Ottieni il tipo di richiesta dettagliato per i permessi
   const getPermissionTypeText = (request) => {
     if (request.type === 'permission' || request.type === 'permission_104') {
-      if (request.permissionType === 'uscita_anticipata') {
+      if (request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit') {
         return 'Uscita Anticipata';
-      } else if (request.permissionType === 'entrata_posticipata') {
+      } else if (request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry') {
         return 'Entrata Posticipata';
       } else if (request.permissionType === 'permesso_104') {
         return 'Permesso 104';
@@ -1000,10 +1000,10 @@ const LeaveRequests = () => {
                             formatHoursReadable(request.hours) :
                             `${calculateDays(request.startDate, request.endDate)} giorni`
                           }
-                          {request.permissionType === 'uscita_anticipata' && request.exitTime && (
+                          {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
                             <span className="ml-2 text-indigo-400">• Uscita alle {request.exitTime}</span>
                           )}
-                          {request.permissionType === 'entrata_posticipata' && request.entryTime && (
+                          {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
                             <span className="ml-2 text-indigo-400">• Entrata alle {request.entryTime}</span>
                           )}
                         </span>
@@ -1011,14 +1011,14 @@ const LeaveRequests = () => {
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-slate-400" />
                         <span>
-                          {request.permissionType === 'uscita_anticipata' || request.exitTime ? (
+                          {request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime ? (
                             <span className="text-orange-400 font-medium">
                               Uscita Anticipata
                               {request.exitTime && (
                                 <span className="ml-2 text-sm font-normal text-slate-300">(alle {request.exitTime})</span>
                               )}
                             </span>
-                          ) : request.permissionType === 'entrata_posticipata' || request.entryTime ? (
+                          ) : request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime ? (
                             <span className="text-blue-400 font-medium">
                               Entrata Posticipata
                               {request.entryTime && (
