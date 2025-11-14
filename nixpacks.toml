@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20", "npm-9_x"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npm run client:install", "npm run client:build"]
+cmds = ["cd client && npm install --include=dev", "npm run client:build"]
 
 [start]
 cmd = "npm start"
