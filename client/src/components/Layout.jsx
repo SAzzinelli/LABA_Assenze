@@ -369,16 +369,20 @@ const Layout = ({ children }) => {
                                       <p className="text-sm font-semibold text-white mb-1">
                                         {notification.title}
                                       </p>
-                                      <p className="text-sm text-slate-300 mb-2">
-                                        {notification.message}
-                                      </p>
+                                      <p className="text-sm text-slate-300 mb-2" dangerouslySetInnerHTML={{
+                                        __html: notification.message.replace(
+                                          /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
+                                          '<strong class="font-bold text-white">$1</strong>'
+                                        )
+                                      }} />
                                       <p className="text-xs text-slate-500">
                                         {new Date(notification.created_at).toLocaleDateString('it-IT', {
                                           day: '2-digit',
-                                          month: '2-digit',
+                                          month: 'long',
                                           year: 'numeric',
                                           hour: '2-digit',
-                                          minute: '2-digit'
+                                          minute: '2-digit',
+                                          timeZone: 'Europe/Rome'
                                         })}
                                         {notification.request_id && (
                                           <span className="ml-2 text-blue-400 text-xs">

@@ -4007,8 +4007,77 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
     console.log('✅ Leave request created successfully:', newRequest.id);
 
-    // TEMPORANEAMENTE DISABILITATO per Railway
-    console.log('⚠️ Notifiche temporaneamente disabilitate per Railway - richiesta creata con successo');
+    // Recupera i dati dell'utente che ha fatto la richiesta
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('first_name, last_name, email')
+      .eq('id', req.user.id)
+      .single();
+
+    if (userError) {
+      console.error('Errore nel recupero dati utente per notifica:', userError);
+    }
+
+    const userName = userData ? `${userData.first_name} ${userData.last_name}` : 'Dipendente';
+    const formattedStartDate = new Date(startDate).toLocaleDateString('it-IT', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    const formattedEndDate = startDate === endDate 
+      ? formattedStartDate 
+      : new Date(endDate).toLocaleDateString('it-IT', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric' 
+        });
+    const dateRange = startDate === endDate ? formattedStartDate : `${formattedStartDate} - ${formattedEndDate}`;
+
+    // Crea notifiche per tutti gli admin
+    try {
+      const { data: admins, error: adminsError } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('role', 'admin')
+        .eq('is_active', true);
+
+      if (!adminsError && admins && admins.length > 0) {
+        const notificationPromises = admins.map(admin => 
+          supabase
+            .from('notifications')
+            .insert([{
+              user_id: admin.id,
+              title: 'Nuova richiesta Permesso',
+              message: `${userName} ha richiesto un permesso per il ${dateRange}`,
+              type: 'permission',
+              is_read: false,
+              request_id: newRequest.id,
+              created_at: new Date().toISOString()
+            }])
+        );
+
+        await Promise.all(notificationPromises);
+        console.log(`✅ Notifiche create per ${admins.length} admin`);
+
+        // Invia email a tutti gli admin
+        try {
+          await sendEmailToAdmins('newRequest', [
+            userName,
+            type,
+            formattedStartDate,
+            formattedEndDate,
+            newRequest.id
+          ]);
+          console.log('✅ Email inviate agli admin');
+        } catch (emailError) {
+          console.error('⚠️ Errore invio email admin:', emailError);
+          // Non bloccare la risposta se l'email fallisce
+        }
+      }
+    } catch (notificationError) {
+      console.error('⚠️ Errore creazione notifiche:', notificationError);
+      // Non bloccare la risposta se le notifiche falliscono
+    }
 
     console.log('🎉 Sending success response for request:', newRequest.id);
     

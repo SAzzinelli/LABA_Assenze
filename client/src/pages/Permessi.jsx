@@ -985,9 +985,12 @@ const LeaveRequests = () => {
                         </div>
                       )}
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>
-                          {request.permissionDate ? formatDate(request.permissionDate) : 'Data non disponibile'}
+                        <Calendar className="h-4 w-4 mr-2 text-indigo-400" />
+                        <span className="font-medium text-white">
+                          Permesso per il: <span className="text-slate-300 font-normal">
+                            {request.permissionDate ? formatDate(request.permissionDate) : 
+                             request.startDate ? formatDate(request.startDate) : 'Data non disponibile'}
+                          </span>
                         </span>
                       </div>
                       <div className="flex items-center">
@@ -1005,7 +1008,9 @@ const LeaveRequests = () => {
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>Richiesta: {formatDateTime(request.submittedAt)}</span>
+                        <span className="text-slate-400 text-xs">
+                          Richiesta il: {formatDateTime(request.submittedAt)}
+                        </span>
                       </div>
                       {request.approvedAt && (
                         <div className="flex items-center">

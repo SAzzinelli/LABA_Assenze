@@ -230,16 +230,20 @@ const Notifiche = () => {
                       </div>
                       <p className={`mt-1 ${
                         notification.is_read ? 'text-slate-500' : 'text-slate-300'
-                      }`}>
-                        {notification.message}
-                      </p>
+                      }`} dangerouslySetInnerHTML={{
+                        __html: notification.message.replace(
+                          /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
+                          '<strong class="font-bold text-white">$1</strong>'
+                        )
+                      }} />
                       <p className="text-xs text-slate-500 mt-2">
                         {new Date(notification.created_at).toLocaleString('it-IT', {
                           day: '2-digit',
                           month: 'long',
                           year: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          timeZone: 'Europe/Rome'
                         })}
                       </p>
                     </div>
