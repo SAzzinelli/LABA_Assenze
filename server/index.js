@@ -4019,17 +4019,26 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     }
 
     const userName = userData ? `${userData.first_name} ${userData.last_name}` : 'Dipendente';
-    const formattedStartDate = new Date(startDate).toLocaleDateString('it-IT', { 
+    
+    // Parse date as local time to avoid UTC timezone issues
+    const parseLocalDate = (dateStr) => {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    
+    const formattedStartDate = parseLocalDate(startDate).toLocaleDateString('it-IT', { 
       day: '2-digit', 
       month: 'long', 
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'Europe/Rome'
     });
     const formattedEndDate = startDate === endDate 
       ? formattedStartDate 
-      : new Date(endDate).toLocaleDateString('it-IT', { 
+      : parseLocalDate(endDate).toLocaleDateString('it-IT', { 
           day: '2-digit', 
           month: 'long', 
-          year: 'numeric' 
+          year: 'numeric',
+          timeZone: 'Europe/Rome'
         });
     const dateRange = startDate === endDate ? formattedStartDate : `${formattedStartDate} - ${formattedEndDate}`;
 
@@ -4241,17 +4250,25 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
         type: 'leave_approved',
         title: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso'} aggiunto dall'admin`,
         message: (() => {
-          const formattedStart = new Date(startDate).toLocaleDateString('it-IT', { 
+          // Parse date as local time to avoid UTC timezone issues
+          const parseLocalDate = (dateStr) => {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
+          };
+          
+          const formattedStart = parseLocalDate(startDate).toLocaleDateString('it-IT', { 
             day: '2-digit', 
             month: 'long', 
-            year: 'numeric' 
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
           });
           const formattedEnd = startDate === endDate 
             ? formattedStart 
-            : new Date(endDate).toLocaleDateString('it-IT', { 
+            : parseLocalDate(endDate).toLocaleDateString('it-IT', { 
                 day: '2-digit', 
                 month: 'long', 
-                year: 'numeric' 
+                year: 'numeric',
+                timeZone: 'Europe/Rome'
               });
           const dateRange = startDate === endDate ? formattedStart : `dal ${formattedStart} al ${formattedEnd}`;
           return `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'una malattia' : 'un permesso'} ${dateRange}. ${reason ? `Motivo: ${reason}` : ''}`;
@@ -4348,18 +4365,26 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         'rejected': 'rifiutata'
       };
 
+      // Parse date as local time to avoid UTC timezone issues
+      const parseLocalDate = (dateStr) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      };
+      
       // Formatta le date in italiano
-      const formattedStartDate = new Date(updatedRequest.start_date).toLocaleDateString('it-IT', { 
+      const formattedStartDate = parseLocalDate(updatedRequest.start_date).toLocaleDateString('it-IT', { 
         day: '2-digit', 
         month: 'long', 
-        year: 'numeric' 
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
       });
       const formattedEndDate = updatedRequest.start_date === updatedRequest.end_date
         ? formattedStartDate
-        : new Date(updatedRequest.end_date).toLocaleDateString('it-IT', { 
+        : parseLocalDate(updatedRequest.end_date).toLocaleDateString('it-IT', { 
             day: '2-digit', 
             month: 'long', 
-            year: 'numeric' 
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
           });
       const dateRange = updatedRequest.start_date === updatedRequest.end_date 
         ? formattedStartDate 
