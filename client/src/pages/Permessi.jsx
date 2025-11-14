@@ -1011,10 +1011,20 @@ const LeaveRequests = () => {
                       <div className="flex items-center">
                         <FileText className="h-4 w-4 mr-2 text-slate-400" />
                         <span>
-                          {request.permissionType === 'uscita_anticipata' ? (
-                            <span className="text-orange-400 font-medium">Uscita Anticipata</span>
-                          ) : request.permissionType === 'entrata_posticipata' ? (
-                            <span className="text-blue-400 font-medium">Entrata Posticipata</span>
+                          {request.permissionType === 'uscita_anticipata' || request.exitTime ? (
+                            <span className="text-orange-400 font-medium">
+                              Uscita Anticipata
+                              {request.exitTime && (
+                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {request.exitTime})</span>
+                              )}
+                            </span>
+                          ) : request.permissionType === 'entrata_posticipata' || request.entryTime ? (
+                            <span className="text-blue-400 font-medium">
+                              Entrata Posticipata
+                              {request.entryTime && (
+                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {request.entryTime})</span>
+                              )}
+                            </span>
                           ) : (
                             <span>Tipo: {getPermissionTypeText(request)}</span>
                           )}

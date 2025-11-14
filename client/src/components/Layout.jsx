@@ -370,10 +370,24 @@ const Layout = ({ children }) => {
                                         {notification.title}
                                       </p>
                                       <p className="text-sm text-slate-300 mb-2" dangerouslySetInnerHTML={{
-                                        __html: notification.message.replace(
-                                          /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
-                                          '<strong class="font-bold text-white">$1</strong>'
-                                        )
+                                        __html: (() => {
+                                          let msg = notification.message;
+                                          // Formatta date in formato anglosassone (YYYY-MM-DD) in italiano
+                                          msg = msg.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, year, month, day) => {
+                                            const date = new Date(`${year}-${month}-${day}`);
+                                            return date.toLocaleDateString('it-IT', { 
+                                              day: '2-digit', 
+                                              month: 'long', 
+                                              year: 'numeric' 
+                                            });
+                                          });
+                                          // Metti in bold i nomi (Nome Cognome)
+                                          msg = msg.replace(
+                                            /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
+                                            '<strong class="font-bold text-white">$1</strong>'
+                                          );
+                                          return msg;
+                                        })()
                                       }} />
                                       <p className="text-xs text-slate-500">
                                         {new Date(notification.created_at).toLocaleDateString('it-IT', {
