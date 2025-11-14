@@ -4022,8 +4022,20 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     
     // Parse date as local time to avoid UTC timezone issues
     const parseLocalDate = (dateStr) => {
-      const [year, month, day] = dateStr.split('-').map(Number);
-      return new Date(year, month - 1, day);
+      if (!dateStr || typeof dateStr !== 'string') {
+        console.error('⚠️ Invalid date string:', dateStr);
+        return new Date();
+      }
+      // Ensure format is YYYY-MM-DD
+      const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!dateMatch) {
+        console.error('⚠️ Date format not recognized:', dateStr);
+        return new Date(dateStr);
+      }
+      const [, year, month, day] = dateMatch.map(Number);
+      const parsedDate = new Date(year, month - 1, day);
+      console.log(`📅 Parsing date: ${dateStr} -> ${year}-${month}-${day} -> ${parsedDate.toLocaleDateString('it-IT')}`);
+      return parsedDate;
     };
     
     const formattedStartDate = parseLocalDate(startDate).toLocaleDateString('it-IT', { 
@@ -4032,6 +4044,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       year: 'numeric',
       timeZone: 'Europe/Rome'
     });
+    console.log(`✅ Formatted start date: ${startDate} -> ${formattedStartDate}`);
     const formattedEndDate = startDate === endDate 
       ? formattedStartDate 
       : parseLocalDate(endDate).toLocaleDateString('it-IT', { 
