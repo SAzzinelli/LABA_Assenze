@@ -373,12 +373,15 @@ const Layout = ({ children }) => {
                                         __html: (() => {
                                           let msg = notification.message;
                                           // Formatta date in formato anglosassone (YYYY-MM-DD) in italiano
+                                          // Parse as local time to avoid UTC timezone issues
                                           msg = msg.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, year, month, day) => {
-                                            const date = new Date(`${year}-${month}-${day}`);
+                                            // Parse as local date (year, month-1, day) to avoid UTC issues
+                                            const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                                             return date.toLocaleDateString('it-IT', { 
                                               day: '2-digit', 
                                               month: 'long', 
-                                              year: 'numeric' 
+                                              year: 'numeric',
+                                              timeZone: 'Europe/Rome'
                                             });
                                           });
                                           // Metti in bold i nomi (Nome Cognome)
