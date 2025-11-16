@@ -547,7 +547,7 @@ const Dashboard = () => {
       {user?.role !== 'admin' && (
         <div className="space-y-4">
           
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {statCards.map((stat) => {
             const IconComponent = stat.icon;
             const colorClasses = {
@@ -557,22 +557,22 @@ const Dashboard = () => {
               purple: 'bg-purple-500'
             };
             return (
-              <div key={stat.key} className="bg-slate-800 rounded-lg p-6 hover:bg-slate-700 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-400 text-sm font-medium">{stat.title}</p>
+              <div key={stat.key} className="bg-slate-800 rounded-lg p-4 sm:p-6 hover:bg-slate-700 transition-colors">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-400 text-xs sm:text-sm font-medium">{stat.title}</p>
                     {stat.helper && (
-                      <p className="text-xs text-slate-500 mt-1">{stat.helper}</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500 mt-1 truncate">{stat.helper}</p>
                     )}
-                    <p className="text-3xl font-bold text-white mt-2">{stat.value}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stat.value}</p>
                     {stat.subLabel && (
-                      <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-700 text-slate-200">
+                      <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full bg-slate-700 text-slate-200">
                         {stat.subLabel}
                       </span>
                     )}
                   </div>
-                  <div className={`p-3 rounded-lg ${colorClasses[stat.color]}`}>
-                    <IconComponent className="h-6 w-6 text-white" />
+                  <div className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${colorClasses[stat.color]}`}>
+                    <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                 </div>
               </div>
@@ -624,7 +624,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* Presenti adesso */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
@@ -685,25 +685,25 @@ const Dashboard = () => {
                 }
                 
                 return (
-                  <div key={person.user_id} className="bg-slate-700 rounded-lg p-4 hover:bg-slate-600 transition-colors">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${badgeColor}`}>
+                  <div key={person.user_id} className="bg-slate-700 rounded-lg p-3 sm:p-4 hover:bg-slate-600 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center min-w-0 flex-1">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${badgeColor}`}>
                           <span className="text-white font-semibold text-sm">
                             {person.name ? person.name.split(' ').map(n => n[0]).join('') : 'N/A'}
                           </span>
                         </div>
-                        <div>
-                          <h4 className="text-white font-semibold">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-white font-semibold text-sm sm:text-base truncate">
                             {person.name || 'N/A'}
                           </h4>
-                          <p className="text-slate-400 text-sm">
+                          <p className="text-slate-400 text-xs sm:text-sm truncate">
                             {person.department || 'N/A'}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className={`font-semibold text-lg ${statusColor}`}>
+                      <div className="text-left sm:text-right flex-shrink-0">
+                        <div className={`font-semibold text-base sm:text-lg ${statusColor}`}>
                           {statusText}
                         </div>
                       </div>
@@ -764,9 +764,9 @@ const Dashboard = () => {
 
                 return (
                   <div key={request.id} className={`${colors.bg} border ${colors.border} rounded-lg p-4 ${colors.hover} transition-colors`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className={`w-10 h-10 ${colors.circle} rounded-full flex items-center justify-center mr-3`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center min-w-0 flex-1">
+                        <div className={`w-10 h-10 ${colors.circle} rounded-full flex items-center justify-center mr-3 flex-shrink-0`}>
                           <FileText className="h-5 w-5 text-white" />
                         </div>
                         <div>

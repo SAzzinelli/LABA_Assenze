@@ -450,14 +450,14 @@ const Employees = () => {
             <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
-                className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30"
+                className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
                 title="Modifica"
               >
                 Modifica
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
-                className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30"
+                className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
                 title="Elimina"
               >
                 Elimina

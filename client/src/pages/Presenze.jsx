@@ -1006,8 +1006,8 @@ const getStatusText = (record) => {
             <Calendar className="h-5 w-5 mr-2" />
             Cronologia Presenze
           </h2>
-          {/* Mobile Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:hidden">
+          {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:hidden">
             {(() => {
               const today = new Date().toISOString().split('T')[0];
               const todayExists = attendance.some(record => record.date === today);
@@ -1023,36 +1023,39 @@ const getStatusText = (record) => {
                 }, ...attendance];
               }
               return combined.slice(0, 10).map((record) => (
-                <div key={record.id} className="rounded-xl border border-slate-700 p-4 hover:border-slate-500 transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold">
+                <div key={record.id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 hover:border-slate-500 transition-all">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="font-semibold text-white text-sm sm:text-base">
                       {new Date(record.date).toLocaleDateString('it-IT')}
                     </div>
-                    <div className={`text-xs font-bold ${getStatusColor(record)}`}>{getStatusText(record)}</div>
+                    <div className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border flex-shrink-0 ${getStatusColor(record)}`}>{getStatusText(record)}</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <div className="text-slate-400">Attese</div>
-                      <div className="font-mono">{formatHours(record.expected_hours)}</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.expected_hours)}</div>
                     </div>
-                    <div>
-                      <div className="text-slate-400">Effettive</div>
-                      <div className="font-mono">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
                     </div>
-                    <div>
-                      <div className="text-slate-400">Mancanti</div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Mancanti</div>
                       {(() => {
                         const deficit = getDisplayedDeficit(record);
                         return (
-                          <div className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                          <div className={`font-bold text-xs sm:text-sm ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                             {deficit > 0 ? formatHours(deficit) : '0h 0m'}
                           </div>
                         );
                       })()}
                     </div>
                   </div>
-                  <div className="mt-3 text-right">
-                    <button onClick={() => handleViewAttendanceDetails(record)} className="text-green-400 hover:text-green-300 text-sm">
+                  <div className="mt-3">
+                    <button 
+                      onClick={() => handleViewAttendanceDetails(record)} 
+                      className="w-full py-2 px-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 text-xs sm:text-sm rounded-lg transition-colors border border-green-500/30 touch-manipulation min-h-[44px] flex items-center justify-center"
+                    >
                       Dettagli
                     </button>
                   </div>

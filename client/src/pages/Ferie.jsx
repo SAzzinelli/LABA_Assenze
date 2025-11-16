@@ -316,8 +316,8 @@ const Vacation = () => {
     // Verifica che ci sia almeno un periodo aperto
     if (availablePeriods.length === 0) {
       alert('Non ci sono periodi di richiesta ferie aperti al momento. Contatta l\'amministratore.');
-      return;
-    }
+        return;
+      }
 
     try {
       // Calcola i GIORNI richiesti (1 giorno = 1 giorno per tutti, non ore)
@@ -730,19 +730,19 @@ const Vacation = () => {
                   <span className="hidden sm:inline">Periodi Ferie</span>
                   <span className="sm:hidden">Periodi</span>
                 </button>
-                <button
-                  onClick={() => setShowAdminCreateModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
-                >
-                  <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-                  <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                  <span className="sm:hidden ml-1">Aggiungi</span>
-                </button>
+              <button
+                onClick={() => setShowAdminCreateModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+              >
+                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Aggiungi per Dipendente</span>
+                <span className="sm:hidden ml-1">Aggiungi</span>
+              </button>
               </>
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center text-sm sm:text-base touch-manipulation min-h-[44px]"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 Nuova Richiesta
@@ -754,51 +754,51 @@ const Vacation = () => {
 
       {/* Vacation Balance - GIORNI (non ore) - Solo per dipendenti */}
       {user?.role !== 'admin' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Totale Giorni</h3>
-            <Calendar className="h-8 w-8 text-blue-400" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-white">Totale Giorni</h3>
+            <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
-          <p className="text-slate-400 text-sm">Giorni di ferie annuali</p>
-          <div className="mt-2 text-xs text-slate-500">
+          <p className="text-2xl sm:text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
+          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
             <p>30 giorni per tutti (full-time e part-time)</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Giorni Utilizzati</h3>
-            <CheckCircle className="h-8 w-8 text-green-400" />
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Utilizzati</h3>
+            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
-          <p className="text-slate-400 text-sm">Ferie già godute</p>
-          <div className="mt-2 text-xs text-slate-500">
+          <p className="text-2xl sm:text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Ferie già godute</p>
+          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
             <p>{vacationBalance.totalDays - vacationBalance.usedDays} giorni disponibili</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Giorni Rimanenti</h3>
-            <Sun className="h-8 w-8 text-yellow-400" />
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Rimanenti</h3>
+            <Sun className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
-          <p className="text-slate-400 text-sm">Disponibili per richieste</p>
-          <div className="mt-2 text-xs text-slate-500">
+          <p className="text-2xl sm:text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Disponibili per richieste</p>
+          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
             <p>Escludendo richieste in attesa</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">In Attesa</h3>
-            <AlertCircle className="h-8 w-8 text-orange-400" />
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-white">In Attesa</h3>
+            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 flex-shrink-0" />
           </div>
-          <p className="text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
-          <p className="text-slate-400 text-sm">Richieste pendenti</p>
-          <div className="mt-2 text-xs text-slate-500">
+          <p className="text-2xl sm:text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Richieste pendenti</p>
+          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
             <p>Giorni in attesa di approvazione</p>
           </div>
         </div>
@@ -939,7 +939,7 @@ const Vacation = () => {
             }
           }}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Calendar className="h-6 w-6 mr-2 text-purple-400" />
@@ -958,7 +958,7 @@ const Vacation = () => {
 
             {/* Indicatori Step */}
             <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4">
                 {[1, 2, 3, 4].map((step) => (
                   <React.Fragment key={step}>
                     <div className="flex items-center">
@@ -974,7 +974,7 @@ const Vacation = () => {
                         ) : (
                           <span className="font-bold">{step}</span>
                         )}
-                      </div>
+          </div>
                       <span className={`ml-2 text-sm font-medium hidden sm:block ${
                         periodFormStep === step ? 'text-white' : 'text-slate-400'
                       }`}>
@@ -983,7 +983,7 @@ const Vacation = () => {
                         {step === 3 && 'Impostazioni'}
                         {step === 4 && 'Riepilogo'}
                       </span>
-                    </div>
+          </div>
                     {step < 4 && (
                       <div className={`flex-1 h-0.5 mx-2 ${
                         periodFormStep > step ? 'bg-green-600' : 'bg-slate-700'
@@ -1285,7 +1285,7 @@ const Vacation = () => {
                       type="button"
                       onClick={handleNextStep}
                       disabled={!validateStep(periodFormStep)}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center"
+                      className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center text-xs sm:text-sm touch-manipulation min-h-[44px]"
                     >
                       Avanti
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -1302,8 +1302,8 @@ const Vacation = () => {
                 </div>
               </div>
             </form>
-          </div>
         </div>
+      </div>
       )}
 
 
@@ -1313,7 +1313,7 @@ const Vacation = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Plane className="h-6 w-6 mr-2 text-blue-400" />

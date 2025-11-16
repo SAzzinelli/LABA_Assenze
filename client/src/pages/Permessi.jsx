@@ -677,9 +677,9 @@ const LeaveRequests = () => {
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center text-sm sm:text-base touch-manipulation min-h-[44px]"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Aggiungi
             </button>
           )}
@@ -767,7 +767,7 @@ const LeaveRequests = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <FileText className="h-6 w-6 mr-2 text-indigo-400" />
@@ -917,16 +917,16 @@ const LeaveRequests = () => {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+                  className="px-4 sm:px-6 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation min-h-[44px] flex items-center justify-center"
                 >
-                  <X className="h-4 w-4 mr-2 inline" />
+                  <X className="h-4 w-4 mr-2" />
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                  className="px-4 sm:px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation min-h-[44px] flex items-center justify-center"
                 >
-                  <Save className="h-4 w-4 mr-2 inline" />
+                  <Save className="h-4 w-4 mr-2" />
                   Invia Richiesta
                 </button>
               </div>
