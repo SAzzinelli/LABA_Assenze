@@ -4274,9 +4274,73 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     const end = new Date(endDate);
     const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
-    // Calcola le ore effettive per i permessi con orari specifici
-    let calculatedHours = hours;
+    // Se admin crea FERIE, verifica bilancio ferie (ma NON valida periodi - admin può bypassare)
+    if (type === 'vacation') {
+      const requestYear = new Date(startDate).getFullYear();
+
+      // Recupera o crea bilancio ferie
+      let { data: balance, error: balanceError } = await supabase
+        .from('vacation_balances')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('year', requestYear)
+        .single();
+
+      if (balanceError && balanceError.code === 'PGRST116') {
+        // Nessun bilancio trovato, creane uno nuovo con 30 giorni
+        const { data: newBalance, error: createError } = await supabase
+          .from('vacation_balances')
+          .insert([{
+            user_id: userId,
+            year: requestYear,
+            total_days: 30,
+            used_days: 0,
+            pending_days: 0,
+            remaining_days: 30
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Vacation balance creation error:', createError);
+          return res.status(500).json({ error: 'Errore nella creazione del bilancio ferie' });
+        }
+
+        balance = newBalance;
+      } else if (balanceError) {
+        console.error('Vacation balance fetch error:', balanceError);
+        return res.status(500).json({ error: 'Errore nel recupero del bilancio ferie' });
+      }
+
+      // Calcola pending_days dalle richieste in attesa
+      const { data: pendingRequests, error: pendingError } = await supabase
+        .from('leave_requests')
+        .select('days_requested')
+        .eq('user_id', userId)
+        .eq('type', 'vacation')
+        .eq('status', 'pending')
+        .gte('start_date', `${requestYear}-01-01`)
+        .lte('end_date', `${requestYear}-12-31`);
+
+      let pendingDays = 0;
+      if (!pendingError && pendingRequests) {
+        pendingDays = pendingRequests.reduce((sum, req) => sum + (req.days_requested || 0), 0);
+      }
+
+      const remainingDays = (balance.total_days || 30) - (balance.used_days || 0) - pendingDays;
+
+      // Admin può creare ferie anche se il saldo è negativo (override), ma avvisiamo
+      if (daysRequested > remainingDays) {
+        console.warn(`⚠️ Admin crea ferie oltre il saldo disponibile: ${daysRequested} giorni richiesti, ${remainingDays} disponibili`);
+        // Non blocchiamo - admin può override
+      }
+    }
+
+    // Calcola le ore effettive per i permessi con orari specifici (NON per ferie)
+    // PER FERIE: non calcolare ore, sono giorni interi
+    let calculatedHours = null;
     if (type === 'permission' && (exitTime || entryTime) && permissionType) {
+      calculatedHours = hours;
       try {
         // Ottieni il work_schedule del dipendente per il giorno specifico
         const permissionDate = new Date(startDate);
