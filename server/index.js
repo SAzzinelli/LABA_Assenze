@@ -563,8 +563,10 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
 
       return {
         id: emp.id,
-        first_name: emp.first_name,
-        last_name: emp.last_name,
+        firstName: emp.first_name,
+        lastName: emp.last_name,
+        first_name: emp.first_name, // Manteniamo per compatibilità
+        last_name: emp.last_name, // Manteniamo per compatibilità
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
         department: emp.department || 'Amministrazione',
@@ -572,8 +574,10 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         hireDate: emp.hire_date || emp.created_at?.split('T')[0],
         status: emp.is_active ? 'active' : 'inactive',
         has104: emp.has_104,
+        has_104: emp.has_104, // Manteniamo per compatibilità
         phone: emp.phone || '',
         birthDate: emp.birth_date || '',
+        birth_date: emp.birth_date || '', // Manteniamo per compatibilità
         // Aggiungi dati orario di lavoro dettagliati
         workSchedule: Object.keys(detailedWorkSchedule).length > 0 ? detailedWorkSchedule : 
           (activeWorkPattern ? {
