@@ -5180,6 +5180,93 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+// Endpoint di test per inviare email
+app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { email, template, type } = req.body;
+    
+    const { sendEmail, sendEmailToAdmins } = require('./emailService');
+    
+    // Se email specificata, invia a quell'email, altrimenti invia a tutti gli admin
+    if (email) {
+      let result;
+      
+      switch (template || 'newRequest') {
+        case 'newRequest':
+          result = await sendEmail(email, 'newRequest', [
+            'Simone Azzinelli',
+            'permission',
+            '2025-01-08',
+            '2025-01-08',
+            12345
+          ]);
+          break;
+        case 'requestResponse':
+          result = await sendEmail(email, 'requestResponse', [
+            'permission',
+            type || 'approved',
+            '2025-01-08',
+            '2025-01-08',
+            'Test di approvazione',
+            12345
+          ]);
+          break;
+        case 'attendanceReminder':
+          result = await sendEmail(email, 'attendanceReminder', [
+            'Simone Azzinelli',
+            'Ufficio'
+          ]);
+          break;
+        case 'weeklyReport':
+          result = await sendEmail(email, 'weeklyReport', [
+            'Simone Azzinelli',
+            {
+              weekNumber: 1,
+              totalHours: 40,
+              daysPresent: 5,
+              overtimeHours: 2,
+              balanceHours: 2
+            }
+          ]);
+          break;
+        default:
+          return res.status(400).json({ error: 'Template non valido' });
+      }
+      
+      if (result.success) {
+        return res.json({ 
+          success: true, 
+          message: `Email di test inviata a ${email}`,
+          messageId: result.messageId 
+        });
+      } else {
+        return res.status(500).json({ 
+          error: 'Errore nell\'invio dell\'email', 
+          details: result.error 
+        });
+      }
+    } else {
+      // Invia a tutti gli admin
+      const result = await sendEmailToAdmins('newRequest', [
+        'Simone Azzinelli',
+        'permission',
+        '2025-01-08',
+        '2025-01-08',
+        12345
+      ]);
+      
+      return res.json({ 
+        success: true, 
+        message: `Email di test inviate a ${result.length} admin`,
+        results: result
+      });
+    }
+  } catch (error) {
+    console.error('Email test error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 // Endpoint per toggle scheduler
 app.post('/api/email/scheduler/toggle', authenticateToken, requireAdmin, async (req, res) => {
   try {
