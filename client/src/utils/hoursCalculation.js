@@ -11,7 +11,7 @@ export const CONTRACT_TYPES = {
   FULL_TIME: {
     name: 'full_time',
     description: 'Tempo pieno indeterminato',
-    annualVacationDays: 26, // giorni ferie annue
+    annualVacationDays: 30, // 30 giorni ferie per tutti i dipendenti
     annualPermissionDays: 13, // giorni permessi annui
     maxCarryoverDays: 13, // max giorni riportabili anno successivo
     defaultWeeklyHours: 40,
@@ -38,7 +38,7 @@ export const CONTRACT_TYPES = {
   APPRENTICESHIP: {
     name: 'apprenticeship',
     description: 'Apprendistato',
-    annualVacationDays: 26, // giorni ferie annue
+    annualVacationDays: 30, // 30 giorni ferie per tutti i dipendenti
     annualPermissionDays: 13, // giorni permessi annui
     maxCarryoverDays: 13, // max giorni riportabili anno successivo
     defaultWeeklyHours: 40,

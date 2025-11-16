@@ -161,7 +161,7 @@ const OrariLavoro = () => {
 
   const calculateAnnualVacationHours = () => {
     const dailyHours = calculateDailyHours();
-    return 26 * dailyHours; // 26 giorni ferie
+    return 30 * dailyHours; // 30 giorni ferie
   };
 
   if (loading) {
@@ -209,7 +209,7 @@ const OrariLavoro = () => {
               weeklyHours / [pattern.monday_hours, pattern.tuesday_hours, pattern.wednesday_hours, 
                            pattern.thursday_hours, pattern.friday_hours, pattern.saturday_hours, 
                            pattern.sunday_hours].filter(h => h > 0).length : 0;
-            const annualVacationHours = dailyHours * 26;
+            const annualVacationHours = dailyHours * 30;
 
             return (
               <div key={employee.id} className="p-6 hover:bg-gray-700">

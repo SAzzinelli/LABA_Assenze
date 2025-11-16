@@ -80,10 +80,10 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           const balancesArray = [
             {
               leave_type: 'vacation',
-              total_entitled: data.vacation?.total || 26,
+              total_entitled: data.vacation?.total || 30,
               used: data.vacation?.used || 0,
               pending: data.vacation?.pending || 0,
-              remaining: data.vacation?.remaining || 26
+              remaining: data.vacation?.remaining || 30
             },
             {
               leave_type: 'sick',
@@ -123,7 +123,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     const yearsOfService = currentYear - hireYear;
     
     // Calcolo ferie base + bonus anzianità
-    let vacationDays = 26; // Base italiana
+    let vacationDays = 30; // 30 giorni per tutti i dipendenti
     if (yearsOfService >= 10) vacationDays += 2;
     if (yearsOfService >= 15) vacationDays += 2;
     if (yearsOfService >= 20) vacationDays += 2;
