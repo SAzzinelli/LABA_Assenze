@@ -250,7 +250,8 @@ const Vacation = () => {
     } else {
       setPeriodValidationError('');
     }
-  }, [formData.startDate, formData.endDate, availablePeriods]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startDate, formData.endDate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
