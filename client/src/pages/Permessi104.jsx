@@ -260,10 +260,10 @@ const Permessi104 = () => {
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
               <Accessibility className="h-8 w-8 mr-3 text-blue-400" />
-              Permessi Legge 104
+              Assenze Legge 104
             </h1>
             <p className="text-slate-400 mt-2">
-              Permessi mensili per assistenza a familiare con handicap grave
+              3 giorni interi al mese per assistenza a familiare con handicap grave (non influenzano la banca ore)
             </p>
           </div>
           
@@ -350,7 +350,7 @@ const Permessi104 = () => {
         <div className="flex items-start">
           <Info className="h-5 w-5 text-blue-400 mr-3 mt-0.5" />
           <div className="text-sm text-blue-200">
-            <p className="font-semibold mb-2">ℹ️ Informazioni sui Permessi Legge 104:</p>
+            <p className="font-semibold mb-2">ℹ️ Informazioni sulle Assenze Legge 104:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Hai diritto a <strong>3 giorni interi</strong> di assenza 104 al mese</li>
               <li>Le assenze 104 sono <strong>auto-approvate</strong> (non serve attendere conferma)</li>
@@ -525,7 +525,7 @@ const Permessi104 = () => {
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
               <Accessibility className="h-6 w-6 mr-2 text-blue-400" />
-              Richiedi Permesso 104
+              Richiedi Assenza 104
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
