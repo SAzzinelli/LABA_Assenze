@@ -3862,6 +3862,119 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
+    // Validazione specifica per FERIE (separata dalla banca ore)
+    if (type === 'vacation') {
+      // Verifica che ci sia un periodo aperto per le date richieste
+      const { data: periods, error: periodsError } = await supabase
+        .from('vacation_periods')
+        .select('*')
+        .eq('is_open', true)
+        .lte('start_date', startDate)
+        .gte('end_date', endDate);
+
+      if (periodsError) {
+        console.error('Error checking vacation periods:', periodsError);
+        return res.status(500).json({ error: 'Errore nella verifica dei periodi ferie' });
+      }
+
+      if (!periods || periods.length === 0) {
+        return res.status(400).json({ 
+          error: 'Non ci sono periodi di richiesta ferie aperti per le date selezionate',
+          startDate,
+          endDate
+        });
+      }
+
+      // Verifica che tutte le date richieste siano nei periodi validi per le ferie
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      let invalidDates = [];
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const isInValidPeriod = periods.some(period => 
+          dateStr >= period.vacation_start_date && dateStr <= period.vacation_end_date
+        );
+
+        if (!isInValidPeriod) {
+          invalidDates.push(dateStr);
+        }
+      }
+
+      if (invalidDates.length > 0) {
+        return res.status(400).json({ 
+          error: 'Alcune date richieste non sono disponibili nei periodi aperti',
+          invalidDates
+        });
+      }
+
+      // Verifica bilancio ferie (giorni, non ore)
+      const currentYear = new Date(startDate).getFullYear();
+      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Recupera o crea bilancio ferie
+      let { data: balance, error: balanceError } = await supabase
+        .from('vacation_balances')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .eq('year', currentYear)
+        .single();
+
+      if (balanceError && balanceError.code === 'PGRST116') {
+        // Nessun bilancio trovato, creane uno nuovo con 30 giorni
+        const { data: newBalance, error: createError } = await supabase
+          .from('vacation_balances')
+          .insert([{
+            user_id: req.user.id,
+            year: currentYear,
+            total_days: 30,
+            used_days: 0,
+            pending_days: 0,
+            remaining_days: 30
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Vacation balance creation error:', createError);
+          return res.status(500).json({ error: 'Errore nella creazione del bilancio ferie' });
+        }
+
+        balance = newBalance;
+      } else if (balanceError) {
+        console.error('Vacation balance fetch error:', balanceError);
+        return res.status(500).json({ error: 'Errore nel recupero del bilancio ferie' });
+      }
+
+      // Calcola pending_days dalle richieste in attesa
+      const { data: pendingRequests, error: pendingError } = await supabase
+        .from('leave_requests')
+        .select('days_requested')
+        .eq('user_id', req.user.id)
+        .eq('type', 'vacation')
+        .eq('status', 'pending')
+        .gte('start_date', `${currentYear}-01-01`)
+        .lte('end_date', `${currentYear}-12-31`);
+
+      let pendingDays = 0;
+      if (!pendingError && pendingRequests) {
+        pendingDays = pendingRequests.reduce((sum, req) => sum + (req.days_requested || 0), 0);
+      }
+
+      const remainingDays = (balance.total_days || 30) - (balance.used_days || 0) - pendingDays;
+
+      if (daysRequested > remainingDays) {
+        return res.status(400).json({ 
+          error: 'Giorni di ferie insufficienti',
+          requested: daysRequested,
+          available: remainingDays,
+          totalDays: balance.total_days || 30,
+          usedDays: balance.used_days || 0,
+          pendingDays
+        });
+      }
+    }
+
     // Validazione specifica per permessi 104
     if (type === 'permission_104') {
       // Verifica che l'utente abbia la 104
@@ -3979,9 +4092,14 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (notes !== undefined) insertData.notes = notes;
     if (doctor !== undefined) insertData.doctor = doctor;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    const normalizedHours = normalizeHours(calculatedHours);
-    if (normalizedHours !== null) {
-      insertData.hours = normalizedHours; // Usa le ore calcolate
+    
+    // Per FERIE: non salvare ore (sono giorni interi, non ore)
+    // Per PERMESSI: salva le ore calcolate
+    if (type !== 'vacation') {
+      const normalizedHours = normalizeHours(calculatedHours);
+      if (normalizedHours !== null) {
+        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi
+      }
     }
 
     const normalizedExitTime = normalizeTime(exitTime);
@@ -4224,9 +4342,49 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (doctor !== undefined) insertData.doctor = doctor;
     if (medicalCode !== undefined) insertData.medical_code = medicalCode;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    const normalizedHours = normalizeHours(calculatedHours);
-    if (normalizedHours !== null) {
-      insertData.hours = normalizedHours; // Usa le ore calcolate
+    
+    // Per FERIE: non salvare ore (sono giorni interi, non ore)
+    // Per PERMESSI: salva le ore calcolate
+    if (type !== 'vacation') {
+      const normalizedHours = normalizeHours(calculatedHours);
+      if (normalizedHours !== null) {
+        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi
+      }
+    }
+    
+    // Se admin crea ferie approvate direttamente, aggiorna bilancio ferie
+    if (type === 'vacation' && insertData.status === 'approved') {
+      const requestYear = new Date(startDate).getFullYear();
+      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Aggiorna bilancio ferie dopo la creazione (vedi sotto)
+      setTimeout(async () => {
+        // Questo verrà eseguito dopo la risposta per non rallentare
+        let { data: balance, error: balanceError } = await supabase
+          .from('vacation_balances')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('year', requestYear)
+          .single();
+
+        if (balanceError && balanceError.code === 'PGRST116') {
+          await supabase.from('vacation_balances').insert([{
+            user_id: userId,
+            year: requestYear,
+            total_days: 30,
+            used_days: daysRequested,
+            pending_days: 0,
+            remaining_days: 30 - daysRequested
+          }]);
+        } else if (!balanceError && balance) {
+          const newUsedDays = (balance.used_days || 0) + daysRequested;
+          await supabase.from('vacation_balances').update({
+            used_days: newUsedDays,
+            remaining_days: (balance.total_days || 30) - newUsedDays,
+            updated_at: new Date().toISOString()
+          }).eq('id', balance.id);
+        }
+      }, 100);
     }
 
     const normalizedExitTime = normalizeTime(exitTime);
@@ -4364,6 +4522,71 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     if (error) {
       console.error('Leave request update error:', error);
       return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
+    }
+
+    // Se è una richiesta FERIE approvata, aggiorna il bilancio ferie (giorni, non ore)
+    // IMPORTANTE: Le ferie NON influenzano la banca ore (balance_hours)
+    if (updatedRequest.type === 'vacation' && status === 'approved') {
+      const requestYear = new Date(updatedRequest.start_date).getFullYear();
+      const daysRequested = updatedRequest.days_requested || 0;
+
+      if (daysRequested > 0) {
+        // Recupera o crea bilancio ferie
+        let { data: balance, error: balanceError } = await supabase
+          .from('vacation_balances')
+          .select('*')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('year', requestYear)
+          .single();
+
+        if (balanceError && balanceError.code === 'PGRST116') {
+          // Nessun bilancio trovato, creane uno nuovo con 30 giorni
+          const { data: newBalance, error: createError } = await supabase
+            .from('vacation_balances')
+            .insert([{
+              user_id: updatedRequest.user_id,
+              year: requestYear,
+              total_days: 30,
+              used_days: daysRequested,
+              pending_days: 0,
+              remaining_days: 30 - daysRequested
+            }])
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Vacation balance creation error:', createError);
+          } else {
+            balance = newBalance;
+          }
+        } else if (!balanceError && balance) {
+          // Aggiorna bilancio esistente
+          const newUsedDays = (balance.used_days || 0) + daysRequested;
+          const newRemainingDays = (balance.total_days || 30) - newUsedDays;
+
+          const { error: updateError } = await supabase
+            .from('vacation_balances')
+            .update({
+              used_days: newUsedDays,
+              remaining_days: newRemainingDays,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', balance.id);
+
+          if (updateError) {
+            console.error('Vacation balance update error:', updateError);
+          } else {
+            console.log(`✅ Bilancio ferie aggiornato: +${daysRequested} giorni (totale utilizzati: ${newUsedDays})`);
+          }
+        }
+      }
+    }
+
+    // Se è una richiesta FERIE rifiutata, rimuovi i giorni pending dal bilancio
+    if (updatedRequest.type === 'vacation' && status === 'rejected') {
+      // Il pending_days verrà ricalcolato automaticamente al prossimo accesso
+      // Non serve fare nulla qui perché viene ricalcolato dinamicamente
+      console.log(`❌ Richiesta ferie rifiutata: ${updatedRequest.days_requested} giorni non utilizzati`);
     }
 
     // Crea notifica per il dipendente
