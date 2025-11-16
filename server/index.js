@@ -4086,8 +4086,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           await sendEmailToAdmins('newRequest', [
             userName,
             type,
-            formattedStartDate,
-            formattedEndDate,
+            startDate, // Passa la data originale YYYY-MM-DD, il template la formatterà
+            endDate,   // Passa la data originale YYYY-MM-DD, il template la formatterà
             newRequest.id
           ]);
           console.log('✅ Email inviate agli admin');
@@ -4307,18 +4307,19 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     // Invia email al dipendente
     try {
       const { sendEmail } = require('./emailService');
-      const typeLabel = type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso';
+      const typeLabel = type === 'vacation' ? 'vacation' : type === 'sick_leave' ? 'sick_leave' : 'permission';
       
+      // Invia email usando il template requestResponse con status approved
       await sendEmail(
         employee.email,
-        'leaveApproved',
+        'requestResponse',
         [
-          `${employee.first_name} ${employee.last_name}`,
-          typeLabel,
-          new Date(startDate).toLocaleDateString('it-IT'),
-          new Date(endDate).toLocaleDateString('it-IT'),
-          reason || 'Non specificato',
-          '[Registrato dall\'amministratore]'
+          typeLabel,        // requestType
+          'approved',        // status
+          startDate,        // startDate (YYYY-MM-DD, il template la formatterà)
+          endDate,          // endDate (YYYY-MM-DD, il template la formatterà)
+          notes || reason || '[Registrato dall\'amministratore]', // notes
+          newRequest.id     // requestId
         ]
       );
       
@@ -4936,10 +4937,12 @@ app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
 // ==================== NOTIFICATIONS ENDPOINTS ====================
 
 // Get notifications for user
-// Helper per verificare email reali (privacy)
+// Helper per verificare email reali (privacy) - ora accetta tutte le email valide
 const isRealEmail = (email) => {
-  const realEmails = ['hr@labafirenze.com', 'simone.azzinelli@labafirenze.com'];
-  return realEmails.includes(email);
+  if (!email || typeof email !== 'string') return false;
+  // Verifica formato email valido
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
 
 // Endpoint per inviare promemoria email

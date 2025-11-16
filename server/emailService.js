@@ -14,144 +14,237 @@ if (process.env.RESEND_API_KEY) {
 // Resend è pronto per l'uso
 console.log('✅ Resend configured and ready to send emails');
 
-// Funzioni helper per traduzione e colori
-const getItalianRequestType = (type) => {
-  switch (type) {
-    case 'sick_leave': return 'malattia';
-    case 'vacation': return 'ferie';
-    case 'permission': return 'permesso';
-    default: return type;
+// Funzione helper per formattare date in formato GG/MM/AAAA
+const formatDateItalian = (dateStr) => {
+  if (!dateStr) return '';
+  
+  // Se è già una stringa YYYY-MM-DD, convertila
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
   }
+  
+  // Se è un oggetto Date, formattalo
+  if (dateStr instanceof Date) {
+    const day = String(dateStr.getDate()).padStart(2, '0');
+    const month = String(dateStr.getMonth() + 1).padStart(2, '0');
+    const year = dateStr.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+  
+  return dateStr;
 };
 
-const getBannerColor = (type) => {
-  switch (type) {
-    case 'sick_leave': return '#EF4444'; // Red-500
-    case 'vacation': return '#3B82F6'; // Blue-500
-    case 'permission': return '#8B5CF6'; // Purple-500
-    default: return '#64748B'; // Slate-500 (default)
-  }
+// Funzione helper per formattare date estese (es: "08 gennaio 2025")
+const formatDateExtended = (dateStr) => {
+  if (!dateStr) return '';
+  
+  const parseLocalDate = (str) => {
+    if (typeof str === 'string' && str.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const [year, month, day] = str.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return new Date(str);
+  };
+  
+  const date = parseLocalDate(dateStr);
+  return date.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Rome'
+  });
+};
+
+// Funzioni helper per traduzione
+const getItalianRequestType = (type) => {
+  const types = {
+    'sick_leave': 'Malattia',
+    'vacation': 'Ferie',
+    'permission': 'Permesso',
+    'permission_104': 'Permesso Legge 104',
+    'business_trip': 'Trasferta'
+  };
+  return types[type] || type;
+};
+
+const getItalianStatus = (status) => {
+  const statuses = {
+    'approved': 'Approvata',
+    'rejected': 'Rifiutata',
+    'pending': 'In Attesa'
+  };
+  return statuses[status] || status;
 };
 
 // Template email per notifiche
 const emailTemplates = {
   // Notifica admin per nuova richiesta
-  newRequest: (userName, requestType, startDate, endDate, requestId) => ({
-    subject: `🔔 Nuova richiesta per ${getItalianRequestType(requestType)} - Sistema HR LABA`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Nuova Richiesta</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${getBannerColor(requestType)}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .request-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin: 15px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔔 Nuova richiesta per ${getItalianRequestType(requestType)}</h1>
-            <p>Sistema HR LABA</p>
-          </div>
-          <div class="content">
-            <div class="highlight">
-              <h2>📋 Dettagli Richiesta</h2>
-              <p><strong>Dipendente:</strong> ${userName}</p>
-              <p><strong>Tipo:</strong> ${getItalianRequestType(requestType)}</p>
-              <p><strong>Periodo:</strong> ${startDate} - ${endDate}</p>
-              <p><strong>ID Richiesta:</strong> #${requestId}</p>
+  newRequest: (userName, requestType, startDate, endDate, requestId) => {
+    const typeLabel = getItalianRequestType(requestType);
+    const dateStart = formatDateItalian(startDate);
+    const dateEnd = formatDateItalian(endDate);
+    const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
+    
+    return {
+      subject: `🔔 Nuova Richiesta ${typeLabel} - Sistema HR LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Nuova Richiesta</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h2 { margin-top: 0; color: #1E40AF; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #1E40AF; }
+            .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #2563EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔔 Nuova Richiesta ${typeLabel}</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
             </div>
-            
-            <div class="request-card">
-              <h3>📝 Azione Richiesta</h3>
-              <p>È stata inviata una nuova richiesta che richiede la tua attenzione.</p>
-              <p>Accedi al sistema per visualizzare i dettagli completi e gestire la richiesta.</p>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">È stata ricevuta una nuova richiesta che richiede la tua attenzione.</p>
+              
+              <div class="info-box">
+                <h2>📋 Dettagli Richiesta</h2>
+                <div class="info-row">
+                  <span class="info-label">Dipendente:</span> ${userName}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Tipo Richiesta:</span> ${typeLabel}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Periodo:</span> ${dateRange}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">ID Richiesta:</span> #${requestId}
+                </div>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/permessi" class="btn">
+                  📊 Gestisci Richiesta
+                </a>
+              </div>
+              
+              <p style="margin-top: 30px; font-size: 14px; color: #6B7280;">
+                Accedi al sistema per visualizzare i dettagli completi e gestire la richiesta.
+              </p>
             </div>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/dashboard" class="btn">
-                📊 Gestisci Richiesta
-              </a>
-            </div>
-            
             <div class="footer">
-              <p>Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
-              <p>LABA Firenze - Libera Accademia di Belle Arti</p>
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
             </div>
           </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+        </body>
+        </html>
+      `
+    };
+  },
 
   // Risposta richiesta per dipendente
-  requestResponse: (requestType, status, startDate, endDate, notes, requestId) => ({
-    subject: `📋 Richiesta ${getItalianRequestType(requestType)} ${status === 'approved' ? 'approvata' : 'rifiutata'} - Sistema HR LABA`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Aggiornamento Richiesta</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: ${getBannerColor(requestType)}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .status-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #27ae60; margin: 15px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>📋 Richiesta ${getItalianRequestType(requestType)} ${status === 'approved' ? 'approvata' : 'rifiutata'}</h1>
-            <p>Sistema HR LABA</p>
-          </div>
-          <div class="content">
-            <div class="highlight">
-              <h2>📝 Dettagli Richiesta</h2>
-              <p><strong>Tipo:</strong> ${getItalianRequestType(requestType)}</p>
-              <p><strong>Periodo:</strong> ${startDate} - ${endDate}</p>
-              <p><strong>Stato:</strong> ${status}</p>
-              <p><strong>ID Richiesta:</strong> #${requestId}</p>
+  requestResponse: (requestType, status, startDate, endDate, notes, requestId) => {
+    const typeLabel = getItalianRequestType(requestType);
+    const statusLabel = getItalianStatus(status);
+    const dateStart = formatDateItalian(startDate);
+    const dateEnd = formatDateItalian(endDate);
+    const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
+    
+    // Colori in base allo stato
+    const statusColor = status === 'approved' ? '#10B981' : '#EF4444'; // Verde per approvato, Rosso per rifiutato
+    const statusBg = status === 'approved' ? '#D1FAE5' : '#FEE2E2';
+    const statusText = status === 'approved' ? 'Approvata' : 'Rifiutata';
+    const headerColor = status === 'approved' 
+      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+      : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+    
+    return {
+      subject: `📋 Richiesta ${typeLabel} ${statusText} - Sistema HR LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Aggiornamento Richiesta</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .status-box { background: ${statusBg}; border-left: 4px solid ${statusColor}; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .status-box h2 { margin-top: 0; color: ${statusColor}; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #374151; }
+            .btn { display: inline-block; background: ${statusColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { opacity: 0.9; }
+            .notes-box { background: #F9FAFB; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #E5E7EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📋 Richiesta ${typeLabel} ${statusText}</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
             </div>
-            
-            <div class="status-card">
-              <h3>✅ Risposta</h3>
-              <p>La tua richiesta è stata <strong>${status === 'approved' ? 'approvata' : 'rifiutata'}</strong>.</p>
-              ${notes ? `<p><strong>Note:</strong> ${notes}</p>` : ''}
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">La tua richiesta è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
+              
+              <div class="status-box">
+                <h2>📝 Dettagli Richiesta</h2>
+                <div class="info-row">
+                  <span class="info-label">Tipo Richiesta:</span> ${typeLabel}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Periodo:</span> ${dateRange}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusLabel}</strong>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">ID Richiesta:</span> #${requestId}
+                </div>
+              </div>
+              
+              ${notes ? `
+                <div class="notes-box">
+                  <strong>Note:</strong><br>
+                  ${notes}
+                </div>
+              ` : ''}
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/permessi" class="btn">
+                  📊 Visualizza Dettagli
+                </a>
+              </div>
             </div>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/dashboard" class="btn">
-                📊 Visualizza Dettagli
-              </a>
-            </div>
-            
             <div class="footer">
-              <p>Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
-              <p>LABA Firenze - Libera Accademia di Belle Arti</p>
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
             </div>
           </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+        </body>
+        </html>
+      `
+    };
+  },
 
   // Promemoria timbratura
   attendanceReminder: (userName, department) => ({
@@ -164,36 +257,38 @@ const emailTemplates = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Promemoria Timbratura</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .reminder-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #f39c12; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #fef9e7; padding: 15px; border-left: 4px solid #f39c12; margin: 15px 0; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .content { padding: 30px; }
+          .reminder-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .reminder-box h2 { margin-top: 0; color: #92400E; font-size: 18px; }
+          .btn { display: inline-block; background: #F59E0B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+          .btn:hover { background: #D97706; }
+          .checklist { list-style: none; padding: 0; }
+          .checklist li { padding: 8px 0; padding-left: 30px; position: relative; }
+          .checklist li:before { content: "✅"; position: absolute; left: 0; }
+          .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>⏰ Promemoria Timbratura</h1>
-            <p>Ciao ${userName}</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Ciao ${userName}</p>
           </div>
           <div class="content">
-            <div class="highlight">
-              <h2>📅 Ricorda di Timbrare</h2>
-              <p>Non dimenticare di registrare la tua presenza oggi!</p>
-              <p><strong>Dipartimento:</strong> ${department}</p>
-            </div>
+            <p style="font-size: 16px; margin-bottom: 20px;">Non dimenticare di registrare la tua presenza oggi!</p>
             
-            <div class="reminder-card">
-              <h3>⏰ Azione Richiesta</h3>
-              <p>Assicurati di timbrare correttamente:</p>
-              <ul>
-                <li>✅ Entrata al mattino</li>
-                <li>✅ Uscita alla sera</li>
-                <li>✅ Pausa pranzo (se applicabile)</li>
+            <div class="reminder-box">
+              <h2>📅 Ricorda di Timbrare</h2>
+              <p><strong>Dipartimento:</strong> ${department || 'Ufficio'}</p>
+              <p style="margin-top: 15px;"><strong>Assicurati di timbrare correttamente:</strong></p>
+              <ul class="checklist">
+                <li>Entrata al mattino</li>
+                <li>Uscita alla sera</li>
+                <li>Pausa pranzo (se applicabile)</li>
               </ul>
             </div>
             
@@ -202,11 +297,10 @@ const emailTemplates = {
                 ⏰ Vai alla Timbratura
               </a>
             </div>
-            
-            <div class="footer">
-              <p>Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
-              <p>LABA Firenze - Libera Accademia di Belle Arti</p>
-            </div>
+          </div>
+          <div class="footer">
+            <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
+            <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
           </div>
         </div>
       </body>
@@ -215,68 +309,96 @@ const emailTemplates = {
   }),
 
   // Report settimanale
-  weeklyReport: (userName, weekData) => ({
-    subject: `📊 Report Settimanale - Settimana ${weekData.weekNumber}`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Report Settimanale</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .stats-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .btn { display: inline-block; background: #2196f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin: 15px 0; }
-          .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>📊 Report Settimanale</h1>
-            <p>Settimana ${weekData.weekNumber}</p>
-          </div>
-          
-          <div class="content">
-            <p>Ciao ${userName},</p>
-            <p>Ecco il riepilogo delle tue presenze e ore lavorate per la settimana:</p>
-            
-            <div class="stats-card">
-              <div class="stat-row">
-                <strong>Ore Lavorate Totali:</strong> <span>${weekData.totalHours}h</span>
+  weeklyReport: (userName, weekData) => {
+    const weekNumber = weekData.weekNumber || 1;
+    const totalHours = weekData.totalHours || 0;
+    const daysPresent = weekData.daysPresent || 0;
+    const overtimeHours = weekData.overtimeHours || 0;
+    const balanceHours = weekData.balanceHours || 0;
+    
+    // Formatta ore in formato "Xh Ym"
+    const formatHours = (hours) => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      const sign = hours < 0 ? '-' : '';
+      if (m === 0) return `${sign}${h}h`;
+      return `${sign}${h}h ${m}m`;
+    };
+    
+    return {
+      subject: `📊 Report Settimanale - Settimana ${weekNumber} - Sistema HR LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Report Settimanale</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .stats-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .stats-box h2 { margin-top: 0; color: #1E40AF; font-size: 18px; }
+            .stat-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #DBEAFE; }
+            .stat-row:last-child { border-bottom: none; }
+            .stat-label { font-weight: 600; color: #1E40AF; }
+            .stat-value { font-weight: bold; color: #1F2937; font-size: 16px; }
+            .stat-value.positive { color: #10B981; }
+            .stat-value.negative { color: #EF4444; }
+            .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #2563EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📊 Report Settimanale</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Settimana ${weekNumber}</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>Ecco il riepilogo delle tue presenze e ore lavorate per la settimana:</p>
+              
+              <div class="stats-box">
+                <h2>📈 Riepilogo Settimanale</h2>
+                <div class="stat-row">
+                  <span class="stat-label">Ore Lavorate Totali:</span>
+                  <span class="stat-value">${formatHours(totalHours)}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Giorni di Presenza:</span>
+                  <span class="stat-value">${daysPresent}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Ore Straordinario:</span>
+                  <span class="stat-value ${overtimeHours > 0 ? 'positive' : ''}">${formatHours(overtimeHours)}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Saldo Ore:</span>
+                  <span class="stat-value ${balanceHours >= 0 ? 'positive' : 'negative'}">${formatHours(balanceHours)}</span>
+                </div>
               </div>
-              <div class="stat-row">
-                <strong>Giorni di Presenza:</strong> <span>${weekData.daysPresent}</span>
-              </div>
-              <div class="stat-row">
-                <strong>Ore Straordinario:</strong> <span>${weekData.overtimeHours}h</span>
-              </div>
-              <div class="stat-row">
-                <strong>Saldo Ore:</strong> <span>${weekData.balanceHours}h</span>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
+                  📊 Visualizza Dettagli Completi
+                </a>
               </div>
             </div>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
-                Visualizza Dettagli Completi
-              </a>
-            </div>
-            
             <div class="footer">
-              <p>© LABA Firenze 2025 - Sistema HR</p>
+              <p style="margin: 5px 0;">© LABA Firenze 2025 - Sistema HR</p>
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente</p>
             </div>
           </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+        </body>
+        </html>
+      `
+    };
+  },
 
   welcome: (userName, department) => ({
     subject: `🎉 Benvenuto in LABA Firenze!`,
@@ -288,32 +410,38 @@ const emailTemplates = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Benvenuto in LABA</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
-          .btn { display: inline-block; background: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .highlight { background: #e8f5e8; padding: 15px; border-left: 4px solid #27ae60; margin: 15px 0; }
-          .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .content { padding: 30px; }
+          .welcome-box { background: #D1FAE5; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+          .welcome-box h3 { margin-top: 0; color: #065F46; font-size: 18px; }
+          .steps-box { background: #F9FAFB; padding: 20px; margin: 20px 0; border-radius: 5px; border: 1px solid #E5E7EB; }
+          .steps-box h3 { margin-top: 0; color: #374151; font-size: 18px; }
+          .steps-list { list-style: none; padding: 0; }
+          .steps-list li { padding: 10px 0; padding-left: 35px; position: relative; }
+          .steps-list li:before { content: "📋"; position: absolute; left: 0; font-size: 18px; }
+          .btn { display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+          .btn:hover { background: #059669; }
+          .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🎉 Benvenuto in LABA!</h1>
-            <p>Ciao ${userName}, il tuo account è stato approvato</p>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Ciao ${userName}, il tuo account è stato approvato</p>
           </div>
-          
           <div class="content">
-            <div class="highlight">
+            <div class="welcome-box">
               <h3>✅ Account Attivato</h3>
               <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema HR di LABA Firenze.</p>
             </div>
             
-            <div class="steps">
+            <div class="steps-box">
               <h3>📋 Prossimi Passi</h3>
-              <ul>
+              <ul class="steps-list">
                 <li>Accedi al sistema con le tue credenziali</li>
                 <li>Completa il tuo profilo</li>
                 <li>Configura il tuo orario di lavoro</li>
@@ -326,11 +454,10 @@ const emailTemplates = {
                 🚀 Accedi al Sistema
               </a>
             </div>
-            
-            <div class="footer">
-              <p>© LABA Firenze 2025 - Sistema HR<br>
-              Dipartimento: ${department}</p>
-            </div>
+          </div>
+          <div class="footer">
+            <p style="margin: 5px 0;">© LABA Firenze 2025 - Sistema HR</p>
+            <p style="margin: 5px 0;">Dipartimento: ${department || 'Ufficio'}</p>
           </div>
         </div>
       </body>
@@ -342,7 +469,12 @@ const emailTemplates = {
 // Funzione per inviare email con Resend
 const sendEmail = async (to, template, data) => {
   try {
-    console.log(`📧 Attempting to send ${template} email to: ${to}`);
+    console.log(`📧 Tentativo invio email ${template} a: ${to}`);
+    
+    if (!to || !emailTemplates[template]) {
+      console.error(`❌ Parametri non validi: to=${to}, template=${template}`);
+      return { success: false, error: 'Parametri non validi' };
+    }
     
     const emailTemplate = emailTemplates[template](...data);
     
@@ -353,10 +485,10 @@ const sendEmail = async (to, template, data) => {
       html: emailTemplate.html
     });
 
-    console.log('✅ Email inviata con successo:', result.data?.id);
+    console.log(`✅ Email inviata con successo a ${to}:`, result.data?.id);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
-    console.error('❌ Errore invio email:', error);
+    console.error(`❌ Errore invio email a ${to}:`, error);
     return { success: false, error: error.message };
   }
 };
@@ -374,38 +506,51 @@ const sendEmailToAdmins = async (template, data) => {
 
     const { data: admins, error } = await supabase
       .from('users')
-      .select('email')
+      .select('email, first_name, last_name')
       .eq('role', 'admin')
       .eq('is_active', true);
 
     if (error) {
-      console.error('Errore nel recupero admin per email:', error);
+      console.error('❌ Errore nel recupero admin per email:', error);
       return { success: false, error: error.message };
     }
 
-    const realAdminEmails = admins.map(admin => admin.email).filter(email => isRealEmail(email));
+    if (!admins || admins.length === 0) {
+      console.log('⚠️ Nessun admin trovato per invio email');
+      return { success: false, error: 'Nessun admin trovato' };
+    }
+
+    console.log(`📧 Invio email a ${admins.length} admin`);
     
     const results = [];
-    for (const email of realAdminEmails) {
-      const result = await sendEmail(email, template, data);
-      results.push({ email, ...result });
+    for (const admin of admins) {
+      // Invia a tutti gli admin, non solo quelli con email "reali"
+      if (admin.email) {
+        const result = await sendEmail(admin.email, template, data);
+        results.push({ email: admin.email, name: `${admin.first_name} ${admin.last_name}`, ...result });
+      }
     }
     
+    console.log(`✅ Email inviate a ${results.filter(r => r.success).length}/${results.length} admin`);
     return results;
   } catch (error) {
-    console.error('Errore invio email admin:', error);
+    console.error('❌ Errore invio email admin:', error);
     return { success: false, error: error.message };
   }
 };
 
-// Helper function to check if email is real
+// Helper function to check if email is real (rimossa restrizione - invia a tutte le email valide)
 const isRealEmail = (email) => {
-  const realEmails = ['hr@labafirenze.com', 'simone.azzinelli@labafirenze.com', 'marco.rossi@labafirenze.com', 'anna.bianchi@labafirenze.com'];
-  return realEmails.includes(email);
+  if (!email || typeof email !== 'string') return false;
+  // Verifica formato email valido
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
 
 module.exports = {
   sendEmail,
   sendEmailToAdmins,
-  resend
+  resend,
+  formatDateItalian,
+  formatDateExtended
 };
