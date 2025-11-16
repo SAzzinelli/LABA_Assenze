@@ -5192,25 +5192,29 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
       let result;
       
       switch (template || 'newRequest') {
-        case 'newRequest':
+        case 'newRequest': {
+          const today = new Date().toISOString().split('T')[0];
           result = await sendEmail(email, 'newRequest', [
             'Simone Azzinelli',
             'permission',
-            '2025-01-08',
-            '2025-01-08',
+            today,
+            today,
             12345
           ]);
           break;
-        case 'requestResponse':
+        }
+        case 'requestResponse': {
+          const today = new Date().toISOString().split('T')[0];
           result = await sendEmail(email, 'requestResponse', [
             'permission',
             type || 'approved',
-            '2025-01-08',
-            '2025-01-08',
+            today,
+            today,
             'Test di approvazione',
             12345
           ]);
           break;
+        }
         case 'attendanceReminder':
           result = await sendEmail(email, 'attendanceReminder', [
             'Simone Azzinelli',
@@ -5247,11 +5251,12 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
       }
     } else {
       // Invia a tutti gli admin
+      const today = new Date().toISOString().split('T')[0];
       const result = await sendEmailToAdmins('newRequest', [
         'Simone Azzinelli',
         'permission',
-        '2025-01-08',
-        '2025-01-08',
+        today,
+        today,
         12345
       ]);
       

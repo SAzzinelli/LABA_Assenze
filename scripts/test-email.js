@@ -10,6 +10,15 @@ async function testEmail() {
   console.log(`📬 Destinatario: ${emailTo}`);
   console.log(`📋 Template: ${template}`);
   
+  // Usa la data di oggi per il test
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  
+  console.log(`📅 Data utilizzata: ${todayStr}`);
+  
   let result;
   
   try {
@@ -18,8 +27,8 @@ async function testEmail() {
         result = await sendEmail(emailTo, 'newRequest', [
           'Simone Azzinelli',
           'permission',
-          '2025-01-08',
-          '2025-01-08',
+          todayStr,
+          todayStr,
           12345
         ]);
         break;
@@ -28,8 +37,8 @@ async function testEmail() {
         result = await sendEmail(emailTo, 'requestResponse', [
           'permission',
           status,
-          '2025-01-08',
-          '2025-01-08',
+          todayStr,
+          todayStr,
           'Test di approvazione - Email riformattata con date GG/MM/AAAA',
           12345
         ]);
