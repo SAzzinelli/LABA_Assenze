@@ -218,11 +218,11 @@ const Layout = ({ children }) => {
         </div>
       </div>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay - Full width su mobile piccolo, max-w-xs su mobile grande */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-800">
+          <div className="relative flex-1 flex flex-col w-full sm:max-w-xs bg-slate-800 transform transition-transform duration-300 ease-in-out">
             <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button
                 className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
@@ -271,8 +271,9 @@ const Layout = ({ children }) => {
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-slate-800 border-b border-slate-700 shadow-lg">
           <button
-            className="px-4 border-r border-slate-700 text-slate-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden"
+            className="px-3 sm:px-4 py-3 border-r border-slate-700 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Apri menu"
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -290,9 +291,10 @@ const Layout = ({ children }) => {
               <div className="relative">
                 <button 
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className="bg-slate-800 p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white relative"
+                  className="bg-slate-800 p-2 sm:p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white relative touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label={`Notifiche${unreadCount > 0 ? ` (${unreadCount} non lette)` : ''}`}
                 >
-                  <Bell className="h-6 w-6" />
+                  <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
                   {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400">
                       <span className="sr-only">{unreadCount} notifiche non lette</span>
@@ -309,8 +311,8 @@ const Layout = ({ children }) => {
                       onClick={() => setNotificationsOpen(false)}
                     />
                     
-                    {/* Sidebar */}
-                    <div className="fixed right-0 top-0 h-full w-96 bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
+                    {/* Sidebar - Responsive: full width su mobile, w-96 su desktop */}
+                    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
                       <div className="flex flex-col h-full">
                         {/* Header */}
                         <div className="p-6 border-b border-slate-700">
@@ -433,10 +435,10 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
-        {/* Page content */}
+        {/* Page content - Responsive padding per mobile */}
         <main className="flex-1 overflow-x-hidden">
-          <div className="py-3 sm:py-6 px-2 sm:px-4 lg:px-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="py-2 sm:py-4 md:py-6 px-2 sm:px-3 md:px-4 lg:px-6">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
               {children}
             </div>
           </div>

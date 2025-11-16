@@ -1307,8 +1307,8 @@ const AdminAttendance = () => {
           </h2>
           </div>
           
-          {/* Mobile Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 lg:hidden">
+          {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 lg:hidden">
             {filteredData.map((record) => {
               const realTime = record.is_realtime ? {
                 expectedHours: record.expected_hours,
@@ -1318,28 +1318,51 @@ const AdminAttendance = () => {
               } : calculateRealTimeHoursForRecord(record);
               const name = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A';
               return (
-                <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold truncate mr-2">{name}</div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs border ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
+                <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 transition-colors">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="font-semibold text-white truncate text-sm sm:text-base flex-1 min-w-0">{name}</div>
+                    <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
                   </div>
-                  <div className="text-slate-400 text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <div className="text-slate-400">Attese</div>
-                      <div className="font-mono">{formatHours(realTime.expectedHours)}</div>
+                  <div className="text-slate-400 text-xs sm:text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.expectedHours)}</div>
                     </div>
-                    <div>
-                      <div className="text-slate-400">Effettive</div>
-                      <div className="font-mono">{formatHours(realTime.actualHours)}</div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.actualHours)}</div>
                     </div>
-                    <div>
-                      <div className="text-slate-400">Saldo</div>
-                      <div className={`font-mono font-bold ${realTime.balanceHours>0?'text-green-400':realTime.balanceHours<0?'text-red-400':'text-slate-400'}`}>{realTime.balanceHours>0?'+':''}{formatHours(realTime.balanceHours)}</div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Saldo</div>
+                      <div className={`font-mono font-bold text-xs sm:text-sm ${realTime.balanceHours>0?'text-green-400':realTime.balanceHours<0?'text-red-400':'text-slate-400'}`}>{realTime.balanceHours>0?'+':''}{formatHours(realTime.balanceHours)}</div>
                     </div>
                   </div>
-                  <div className="mt-3 text-right">
-                    <button onClick={() => handleViewAttendanceDetails(record)} className="text-green-400 hover:text-green-300 text-sm">Dettagli</button>
+                  <div className="flex items-center justify-between gap-2">
+                    <button 
+                      onClick={() => handleViewAttendanceDetails(record)} 
+                      className="flex-1 py-2 px-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 text-xs sm:text-sm rounded-lg transition-colors border border-green-500/30 touch-manipulation min-h-[44px] flex items-center justify-center"
+                    >
+                      Dettagli
+                    </button>
+                    {!record.is_realtime && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
+                          className="p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors border border-blue-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="Modifica"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRecordToDelete(record); setShowDeleteConfirm(true); }}
+                          className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors border border-red-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
