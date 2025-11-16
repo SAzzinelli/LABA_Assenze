@@ -3620,6 +3620,119 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
 
 // ==================== LEAVE BALANCES API ====================
 
+// Get absence 104 balance for current month
+app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    // Verifica che l'utente abbia la 104
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('has_104')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData || !userData.has_104) {
+      return res.json({
+        has104: false,
+        totalDays: 0,
+        usedDays: 0,
+        pendingDays: 0,
+        remainingDays: 0
+      });
+    }
+
+    // Recupera o crea bilancio assenze 104 per il mese corrente
+    let { data: balance, error: balanceError } = await supabase
+      .from('absence_104_balances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('year', currentYear)
+      .eq('month', currentMonth)
+      .single();
+
+    if (balanceError && balanceError.code === 'PGRST116') {
+      // Nessun bilancio trovato, creane uno nuovo con 3 giorni
+      const { data: newBalance, error: createError } = await supabase
+        .from('absence_104_balances')
+        .insert([{
+          user_id: userId,
+          year: currentYear,
+          month: currentMonth,
+          total_days: 3,
+          used_days: 0,
+          remaining_days: 3
+        }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Absence 104 balance creation error:', createError);
+        return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104' });
+      }
+
+      balance = newBalance;
+    } else if (balanceError) {
+      console.error('Absence 104 balance fetch error:', balanceError);
+      return res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
+    }
+
+    // Calcola giorni utilizzati dalle richieste approvate del mese corrente
+    const { data: approvedRequests, error: approvedError } = await supabase
+      .from('leave_requests')
+      .select('days_requested')
+      .eq('user_id', userId)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    let usedDays = balance.used_days || 0;
+    if (!approvedError && approvedRequests) {
+      usedDays = approvedRequests.reduce((sum, req) => {
+        const days = req.days_requested || 1;
+        return sum + Math.ceil(days); // Arrotonda sempre per eccesso
+      }, 0);
+    }
+
+    // Calcola pending_days dalle richieste in attesa del mese corrente
+    const { data: pendingRequests, error: pendingError } = await supabase
+      .from('leave_requests')
+      .select('days_requested')
+      .eq('user_id', userId)
+      .eq('type', 'permission_104')
+      .eq('status', 'pending')
+      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    let pendingDays = 0;
+    if (!pendingError && pendingRequests) {
+      pendingDays = pendingRequests.reduce((sum, req) => {
+        const days = req.days_requested || 1;
+        return sum + Math.ceil(days); // Arrotonda sempre per eccesso
+      }, 0);
+    }
+
+    const remainingDays = (balance.total_days || 3) - usedDays - pendingDays;
+
+    res.json({
+      has104: true,
+      totalDays: balance.total_days || 3,
+      usedDays,
+      pendingDays,
+      remainingDays,
+      month: currentMonth,
+      year: currentYear
+    });
+  } catch (error) {
+    console.error('Absence 104 balance error:', error);
+    res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
+  }
+});
+
 // Get user leave balances (vacation, sick, permissions)
 app.get('/api/leave-balances', authenticateToken, async (req, res) => {
   try {
