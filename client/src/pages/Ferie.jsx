@@ -28,7 +28,10 @@ import {
   TrendingUp,
   CalendarDays,
   List,
-  UserPlus
+  UserPlus,
+  ArrowRight,
+  ArrowLeft,
+  Info
 } from 'lucide-react';
 import { 
   calculateVacationHoursForDay, 
@@ -69,6 +72,7 @@ const Vacation = () => {
   const [vacationPeriods, setVacationPeriods] = useState([]);
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState(null);
+  const [periodFormStep, setPeriodFormStep] = useState(1); // Step corrente (1-4)
   const [periodFormData, setPeriodFormData] = useState({
     name: '',
     startDate: '',
@@ -525,6 +529,7 @@ const Vacation = () => {
 
   const handleCreatePeriod = () => {
     setEditingPeriod(null);
+    setPeriodFormStep(1); // Reset a step 1
     setPeriodFormData({
       name: '',
       startDate: '',
@@ -540,6 +545,7 @@ const Vacation = () => {
 
   const handleEditPeriod = (period) => {
     setEditingPeriod(period);
+    setPeriodFormStep(1); // Reset a step 1
     setPeriodFormData({
       name: period.name,
       startDate: period.start_date,
@@ -551,6 +557,39 @@ const Vacation = () => {
       notes: period.notes || ''
     });
     setShowPeriodModal(true);
+  };
+
+  // Valida step corrente
+  const validateStep = (step) => {
+    switch (step) {
+      case 1:
+        return periodFormData.name.trim() !== '' && 
+               periodFormData.startDate !== '' && 
+               periodFormData.endDate !== '' &&
+               periodFormData.startDate <= periodFormData.endDate;
+      case 2:
+        return periodFormData.vacationStartDate !== '' && 
+               periodFormData.vacationEndDate !== '' &&
+               periodFormData.vacationStartDate <= periodFormData.vacationEndDate;
+      case 3:
+        // Step 3 non ha campi obbligatori (opzionali)
+        return true;
+      case 4:
+        // Step 4 (note) sempre valido
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(periodFormStep)) {
+      setPeriodFormStep(prev => Math.min(prev + 1, 4));
+    }
+  };
+
+  const handlePrevStep = () => {
+    setPeriodFormStep(prev => Math.max(prev - 1, 1));
   };
 
   const handleSavePeriod = async (e) => {
@@ -888,27 +927,383 @@ const Vacation = () => {
         </div>
       )}
 
-      {/* Modal Creazione/Modifica Periodo */}
+      {/* Modal Creazione/Modifica Periodo - WIZARD A STEP */}
       {showPeriodModal && (
         <div 
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={(e) => e.target === e.currentTarget && setShowPeriodModal(false)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPeriodModal(false);
+              setPeriodFormStep(1);
+            }
+          }}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Calendar className="h-6 w-6 mr-2 text-purple-400" />
                 {editingPeriod ? 'Modifica Periodo' : 'Nuovo Periodo'}
               </h2>
               <button
-                onClick={() => setShowPeriodModal(false)}
+                onClick={() => {
+                  setShowPeriodModal(false);
+                  setPeriodFormStep(1);
+                }}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
+            {/* Indicatori Step */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                {[1, 2, 3, 4].map((step) => (
+                  <React.Fragment key={step}>
+                    <div className="flex items-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        periodFormStep === step 
+                          ? 'bg-purple-600 border-purple-500 text-white' 
+                          : periodFormStep > step
+                          ? 'bg-green-600 border-green-500 text-white'
+                          : 'bg-slate-700 border-slate-600 text-slate-400'
+                      }`}>
+                        {periodFormStep > step ? (
+                          <CheckCircle className="h-5 w-5" />
+                        ) : (
+                          <span className="font-bold">{step}</span>
+                        )}
+                      </div>
+                      <span className={`ml-2 text-sm font-medium hidden sm:block ${
+                        periodFormStep === step ? 'text-white' : 'text-slate-400'
+                      }`}>
+                        {step === 1 && 'Informazioni Base'}
+                        {step === 2 && 'Periodo Ferie'}
+                        {step === 3 && 'Impostazioni'}
+                        {step === 4 && 'Riepilogo'}
+                      </span>
+                    </div>
+                    {step < 4 && (
+                      <div className={`flex-1 h-0.5 mx-2 ${
+                        periodFormStep > step ? 'bg-green-600' : 'bg-slate-700'
+                      }`} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+
             <form onSubmit={handleSavePeriod} className="space-y-4">
+              {/* STEP 1: Informazioni Base */}
+              {periodFormStep === 1 && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start">
+                      <Info className="h-5 w-5 text-purple-400 mr-2 mt-0.5" />
+                      <div className="text-sm text-purple-200">
+                        <p className="font-semibold mb-1">Step 1: Informazioni Base</p>
+                        <p>Definisci il nome del periodo e quando i dipendenti possono inviare richieste di ferie.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Nome Periodo *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={periodFormData.name}
+                      onChange={handlePeriodInputChange}
+                      required
+                      placeholder="Es: Periodo Estivo 2025"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Un nome descrittivo per identificare questo periodo</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Data Inizio Richieste *
+                      </label>
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={periodFormData.startDate}
+                        onChange={handlePeriodInputChange}
+                        required
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Da quando si possono inviare richieste</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Data Fine Richieste *
+                      </label>
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={periodFormData.endDate}
+                        onChange={handlePeriodInputChange}
+                        required
+                        min={periodFormData.startDate || ''}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Fino a quando si possono inviare richieste</p>
+                      {periodFormData.startDate && periodFormData.endDate && periodFormData.startDate > periodFormData.endDate && (
+                        <p className="text-xs text-red-400 mt-1">⚠️ La data di fine deve essere successiva alla data di inizio</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Periodo Ferie Effettivo */}
+              {periodFormStep === 2 && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start">
+                      <Info className="h-5 w-5 text-purple-400 mr-2 mt-0.5" />
+                      <div className="text-sm text-purple-200">
+                        <p className="font-semibold mb-1">Step 2: Periodo Ferie Effettivo</p>
+                        <p>Definisci il periodo effettivo in cui i dipendenti possono prendere le ferie.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Data Inizio Ferie *
+                      </label>
+                      <input
+                        type="date"
+                        name="vacationStartDate"
+                        value={periodFormData.vacationStartDate}
+                        onChange={handlePeriodInputChange}
+                        required
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Da quando si possono prendere le ferie</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Data Fine Ferie *
+                      </label>
+                      <input
+                        type="date"
+                        name="vacationEndDate"
+                        value={periodFormData.vacationEndDate}
+                        onChange={handlePeriodInputChange}
+                        required
+                        min={periodFormData.vacationStartDate || ''}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Fino a quando si possono prendere le ferie</p>
+                      {periodFormData.vacationStartDate && periodFormData.vacationEndDate && periodFormData.vacationStartDate > periodFormData.vacationEndDate && (
+                        <p className="text-xs text-red-400 mt-1">⚠️ La data di fine deve essere successiva alla data di inizio</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {periodFormData.vacationStartDate && periodFormData.vacationEndDate && periodFormData.startDate && periodFormData.endDate && (
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
+                      <p className="text-blue-200 text-sm">
+                        ℹ️ I dipendenti possono richiedere ferie dal <strong>{new Date(periodFormData.vacationStartDate).toLocaleDateString('it-IT')}</strong> al <strong>{new Date(periodFormData.vacationEndDate).toLocaleDateString('it-IT')}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* STEP 3: Impostazioni Avanzate */}
+              {periodFormStep === 3 && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start">
+                      <Info className="h-5 w-5 text-purple-400 mr-2 mt-0.5" />
+                      <div className="text-sm text-purple-200">
+                        <p className="font-semibold mb-1">Step 3: Impostazioni Avanzate</p>
+                        <p>Configura opzioni aggiuntive per il periodo (tutte opzionali).</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Max Richieste Contemporanee
+                      </label>
+                      <input
+                        type="number"
+                        name="maxConcurrentRequests"
+                        value={periodFormData.maxConcurrentRequests}
+                        onChange={handlePeriodInputChange}
+                        min="1"
+                        placeholder="Lasciare vuoto per illimitato"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Limite massimo di dipendenti in ferie contemporaneamente (opzionale)</p>
+                    </div>
+
+                    <div className="flex flex-col justify-center">
+                      <label className="flex items-center cursor-pointer mb-4">
+                        <input
+                          type="checkbox"
+                          name="isOpen"
+                          checked={periodFormData.isOpen}
+                          onChange={handlePeriodInputChange}
+                          className="h-5 w-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500"
+                        />
+                        <span className="ml-3 text-slate-300 font-medium">Periodo aperto</span>
+                      </label>
+                      <p className="text-xs text-slate-400">
+                        {periodFormData.isOpen 
+                          ? '✅ I dipendenti possono richiedere ferie per questo periodo' 
+                          : '❌ Il periodo è chiuso, i dipendenti non possono richiedere ferie'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Note e Riepilogo */}
+              {periodFormStep === 4 && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start">
+                      <Info className="h-5 w-5 text-purple-400 mr-2 mt-0.5" />
+                      <div className="text-sm text-purple-200">
+                        <p className="font-semibold mb-1">Step 4: Note e Riepilogo</p>
+                        <p>Aggiungi note opzionali e verifica il riepilogo prima di salvare.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Riepilogo */}
+                  <div className="bg-slate-700 rounded-lg p-4 mb-4">
+                    <h3 className="text-lg font-semibold text-white mb-3">Riepilogo Periodo</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Nome:</span>
+                        <span className="text-white font-medium">{periodFormData.name || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Periodo Richieste:</span>
+                        <span className="text-white">
+                          {periodFormData.startDate && periodFormData.endDate 
+                            ? `${new Date(periodFormData.startDate).toLocaleDateString('it-IT')} - ${new Date(periodFormData.endDate).toLocaleDateString('it-IT')}`
+                            : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Periodo Ferie:</span>
+                        <span className="text-white">
+                          {periodFormData.vacationStartDate && periodFormData.vacationEndDate
+                            ? `${new Date(periodFormData.vacationStartDate).toLocaleDateString('it-IT')} - ${new Date(periodFormData.vacationEndDate).toLocaleDateString('it-IT')}`
+                            : '-'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Stato:</span>
+                        <span className={`font-medium ${periodFormData.isOpen ? 'text-green-400' : 'text-red-400'}`}>
+                          {periodFormData.isOpen ? 'Aperto' : 'Chiuso'}
+                        </span>
+                      </div>
+                      {periodFormData.maxConcurrentRequests && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Max Contemporanee:</span>
+                          <span className="text-white">{periodFormData.maxConcurrentRequests}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Note (opzionale)
+                    </label>
+                    <textarea
+                      name="notes"
+                      value={periodFormData.notes}
+                      onChange={handlePeriodInputChange}
+                      rows={3}
+                      placeholder="Note aggiuntive sul periodo..."
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Campi nascosti per validazione form HTML */}
+              <div className="hidden">
+                <input type="date" name="startDate" value={periodFormData.startDate} required readOnly />
+                <input type="date" name="endDate" value={periodFormData.endDate} required readOnly />
+                <input type="date" name="vacationStartDate" value={periodFormData.vacationStartDate} required readOnly />
+                <input type="date" name="vacationEndDate" value={periodFormData.vacationEndDate} required readOnly />
+              </div>
+
+              {/* Pulsanti Navigazione */}
+              <div className="flex justify-between items-center pt-4 border-t border-slate-700 mt-6">
+                <div>
+                  {periodFormStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={handlePrevStep}
+                      className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors flex items-center"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Indietro
+                    </button>
+                  )}
+                  {periodFormStep === 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPeriodModal(false);
+                        setPeriodFormStep(1);
+                      }}
+                      className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors flex items-center"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Annulla
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-slate-400">
+                    Step {periodFormStep} di 4
+                  </span>
+                  {periodFormStep < 4 ? (
+                    <button
+                      type="button"
+                      onClick={handleNextStep}
+                      disabled={!validateStep(periodFormStep)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center"
+                    >
+                      Avanti
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingPeriod ? 'Salva Modifiche' : 'Crea Periodo'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Nome Periodo *
