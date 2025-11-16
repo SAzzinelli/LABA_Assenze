@@ -1063,7 +1063,16 @@ const Employees = () => {
                                 
                                 // Calcola orario pausa (default 13:00-14:00, ma potrebbe essere diverso)
                                 const breakStart = daySchedule.breakStartTime || daySchedule.break_start_time || '13:00';
-                                const breakEnd = breakStart.split(':')[0] + ':' + String(parseInt(breakStart.split(':')[1]) + Math.floor(breakDuration / 60)).padStart(2, '0');
+                                // Calcola correttamente la fine della pausa aggiungendo i minuti
+                                const calculateBreakEnd = (start, durationMinutes) => {
+                                  if (!start || !durationMinutes) return '14:00';
+                                  const [hours, minutes] = start.split(':').map(Number);
+                                  const totalMinutes = hours * 60 + minutes + durationMinutes;
+                                  const endHours = Math.floor(totalMinutes / 60);
+                                  const endMins = totalMinutes % 60;
+                                  return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+                                };
+                                const breakEnd = calculateBreakEnd(breakStart, breakDuration);
                                 
                                 // Formatta orari rimuovendo i secondi se presenti
                                 const formatTime = (timeStr) => {
