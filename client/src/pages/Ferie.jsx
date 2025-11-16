@@ -677,45 +677,102 @@ const Vacation = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header - Responsive: stack verticale su mobile */}
-      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+      {/* Header Mobile-First: Design completamente diverso su mobile */}
+      {/* Mobile: Header compatto sticky con toggle vista */}
+      <div className="lg:hidden bg-slate-800 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Plane className="h-5 w-5 text-blue-400 flex-shrink-0" />
+            <h1 className="text-lg font-bold text-white truncate">
+              {user?.role === 'admin' ? 'Ferie' : 'Le Mie Ferie'}
+            </h1>
+          </div>
+          <button
+            onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+            aria-label="Aggiungi ferie"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+        
+        {/* Toggle Vista - Full width su mobile */}
+        <div className="flex bg-slate-700 rounded-lg p-1 mb-2">
+          <button
+            onClick={() => setActiveView('list')}
+            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${
+              activeView === 'list' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400'
+            }`}
+          >
+            <List className="h-4 w-4 mr-2" />
+            Lista
+          </button>
+          <button
+            onClick={() => setActiveView('calendar')}
+            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${
+              activeView === 'calendar' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400'
+            }`}
+          >
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Calendario
+          </button>
+        </div>
+        
+        {/* Bottoni admin aggiuntivi su mobile - Stack verticale se presenti */}
+        {user?.role === 'admin' && (
+          <button
+            onClick={() => setShowPeriodsManagement(!showPeriodsManagement)}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] mt-2"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Gestisci Periodi
+          </button>
+        )}
+      </div>
+
+      {/* Desktop: Header tradizionale */}
+      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-              <Plane className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-blue-400 flex-shrink-0" />
+            <h1 className="text-3xl font-bold text-white flex items-center">
+              <Plane className="h-8 w-8 mr-3 text-blue-400 flex-shrink-0" />
               <span className="truncate">{user?.role === 'admin' ? 'Gestione Ferie' : 'Le Mie Ferie'}</span>
             </h1>
-            <p className="text-slate-400 mt-2 text-sm sm:text-base">
+            <p className="text-slate-400 mt-2 text-base">
               {user?.role === 'admin' 
                 ? 'Visualizza e gestisci tutte le richieste di ferie dei dipendenti'
                 : 'Gestisci le tue richieste di ferie e visualizza il bilancio ferie'
               }
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:flex-shrink-0">
-            {/* Toggle Vista - Full width su mobile */}
-            <div className="flex bg-slate-700 rounded-lg p-1 w-full sm:w-auto">
+          <div className="flex flex-row items-center gap-4 flex-shrink-0">
+            {/* Toggle Vista */}
+            <div className="flex bg-slate-700 rounded-lg p-1">
               <button
                 onClick={() => setActiveView('list')}
-                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md transition-colors flex items-center justify-center text-xs sm:text-sm touch-manipulation min-h-[44px] ${
+                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${
                   activeView === 'list' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <List className="h-4 w-4 mr-1 sm:mr-2" />
+                <List className="h-4 w-4 mr-2" />
                 Lista
               </button>
               <button
                 onClick={() => setActiveView('calendar')}
-                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md transition-colors flex items-center justify-center text-xs sm:text-sm touch-manipulation min-h-[44px] ${
+                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${
                   activeView === 'calendar' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <CalendarDays className="h-4 w-4 mr-1 sm:mr-2" />
+                <CalendarDays className="h-4 w-4 mr-2" />
                 Calendario
               </button>
             </div>
@@ -724,27 +781,25 @@ const Vacation = () => {
               <>
                 <button
                   onClick={() => setShowPeriodsManagement(!showPeriodsManagement)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
                 >
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-                  <span className="hidden sm:inline">Periodi Ferie</span>
-                  <span className="sm:hidden">Periodi</span>
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Periodi Ferie
                 </button>
               <button
                 onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
               >
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                <span className="sm:hidden">Aggiungi</span>
+                <UserPlus className="h-5 w-5 mr-2" />
+                Aggiungi per Dipendente
               </button>
               </>
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
               >
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                <Plus className="h-5 w-5 mr-2" />
                 Nuova Richiesta
               </button>
             )}

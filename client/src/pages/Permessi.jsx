@@ -623,16 +623,62 @@ const LeaveRequests = () => {
 
 
   return (
-    <div className="space-y-6">
-      {/* Header - Responsive: stack verticale su mobile */}
-      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+      {/* Header Mobile-First: Design completamente diverso su mobile */}
+      {/* Mobile: Header compatto con titolo e icona */}
+      <div className="lg:hidden bg-slate-800 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <FileText className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+            <h1 className="text-lg font-bold text-white truncate">
+              {user?.role === 'admin' ? 'Permessi' : 'I Miei Permessi'}
+            </h1>
+          </div>
+          <button
+            onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+            aria-label="Aggiungi permesso"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+        
+        {/* Tab per admin - Full width su mobile */}
+        {user?.role === 'admin' && (
+          <div className="flex bg-slate-700 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('imminenti')}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                activeTab === 'imminenti'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400'
+              }`}
+            >
+              Imminenti
+            </button>
+            <button
+              onClick={() => setActiveTab('cronologia')}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                activeTab === 'cronologia'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400'
+              }`}
+            >
+              Cronologia
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Header tradizionale */}
+      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
+        <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-              <FileText className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-indigo-400 flex-shrink-0" />
+            <h1 className="text-3xl font-bold text-white flex items-center">
+              <FileText className="h-8 w-8 mr-3 text-indigo-400 flex-shrink-0" />
               <span className="truncate">{user?.role === 'admin' ? 'Gestione Permessi' : 'I Miei Permessi'}</span>
             </h1>
-            <p className="text-slate-400 mt-2 text-sm sm:text-base">
+            <p className="text-slate-400 mt-2 text-base">
               {user?.role === 'admin' 
                 ? 'Visualizza e gestisci tutte le richieste di permessi dei dipendenti'
                 : 'Gestisci le tue richieste di permessi e visualizza lo storico'
@@ -640,13 +686,13 @@ const LeaveRequests = () => {
             </p>
           </div>
           
-          {/* Tab e Pulsante per Admin - Stack verticale su mobile */}
+          {/* Tab e Pulsante per Admin - Desktop */}
           {user?.role === 'admin' && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:flex-shrink-0">
-              <div className="flex bg-slate-700 rounded-lg p-1 w-full sm:w-auto">
+            <div className="flex flex-row items-center gap-4 flex-shrink-0">
+              <div className="flex bg-slate-700 rounded-lg p-1">
                 <button
                   onClick={() => setActiveTab('imminenti')}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeTab === 'imminenti'
                       ? 'bg-purple-600 text-white'
                       : 'text-slate-400 hover:text-white'
@@ -656,7 +702,7 @@ const LeaveRequests = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('cronologia')}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                     activeTab === 'cronologia'
                       ? 'bg-purple-600 text-white'
                       : 'text-slate-400 hover:text-white'
@@ -667,9 +713,9 @@ const LeaveRequests = () => {
               </div>
               <button
                 onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
               >
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                <UserPlus className="h-5 w-5 mr-2" />
                 Aggiungi
               </button>
             </div>
@@ -677,9 +723,9 @@ const LeaveRequests = () => {
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
             >
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Aggiungi
             </button>
           )}
