@@ -1232,26 +1232,32 @@ router.get('/overtime/transactions', async (req, res) => {
 
     if (error) {
       if (error.code === 'PGRST205') {
-        // Return sample data for demo
+        // Return sample data for demo - usa date dinamiche basate sul periodo corrente
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const day15 = `${currentYear}-${String(currentMonth).padStart(2, '0')}-15`;
+        const day20 = `${currentYear}-${String(currentMonth).padStart(2, '0')}-20`;
+        
         const sampleTransactions = [
           {
             id: 1,
             transaction_type: 'accrual',
             hours: 4,
-            transaction_date: '2025-01-15',
+            transaction_date: day15,
             reason: 'Straordinario progetto urgente',
-            period_year: 2025,
-            period_month: 1,
+            period_year: currentYear,
+            period_month: currentMonth,
             notes: ''
           },
           {
             id: 2,
             transaction_type: 'usage',
             hours: 2,
-            transaction_date: '2025-01-20',
+            transaction_date: day20,
             reason: 'Permesso recupero ore',
-            period_year: 2025,
-            period_month: 1,
+            period_year: currentYear,
+            period_month: currentMonth,
             notes: ''
           }
         ];
@@ -1371,27 +1377,32 @@ router.get('/monthly-accrual/history', async (req, res) => {
 
     if (error) {
       if (error.code === 'PGRST205') {
-        // Return sample data for demo
+        // Return sample data for demo - usa date dinamiche basate sul periodo corrente
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const firstOfMonth = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
+        
         const sampleAccruals = [
           {
             id: 1,
             category: 'vacation',
             transaction_type: 'accrual',
             hours: 17.33,
-            transaction_date: '2025-01-01',
-            reason: 'Maturazione mensile vacation 1/2025',
-            period_year: 2025,
-            period_month: 1
+            transaction_date: firstOfMonth,
+            reason: `Maturazione mensile vacation ${currentMonth}/${currentYear}`,
+            period_year: currentYear,
+            period_month: currentMonth
           },
           {
             id: 2,
             category: 'permission',
             transaction_type: 'accrual',
             hours: 8.67,
-            transaction_date: '2025-01-01',
-            reason: 'Maturazione mensile permission 1/2025',
-            period_year: 2025,
-            period_month: 1
+            transaction_date: firstOfMonth,
+            reason: `Maturazione mensile permission ${currentMonth}/${currentYear}`,
+            period_year: currentYear,
+            period_month: currentMonth
           }
         ];
         return res.json(sampleAccruals);
@@ -1558,9 +1569,9 @@ router.get('/carryover/history', async (req, res) => {
             category: 'vacation',
             transaction_type: 'adjustment',
             hours: 104,
-            transaction_date: '2025-01-01',
-            reason: 'Carry-over ore vacation da 2024 a 2025',
-            period_year: 2025,
+            transaction_date: `${new Date().getFullYear()}-01-01`,
+            reason: `Carry-over ore vacation da ${new Date().getFullYear() - 1} a ${new Date().getFullYear()}`,
+            period_year: new Date().getFullYear(),
             period_month: 1
           }
         ];
