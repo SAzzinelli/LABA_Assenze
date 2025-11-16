@@ -691,18 +691,46 @@ app.post('/api/employees/approve/:id', authenticateToken, requireAdmin, async (r
 app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { personalEmail } = req.body;
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      birthDate, 
+      department, 
+      position, 
+      has104,
+      personalEmail // Manteniamo compatibilità con vecchio endpoint
+    } = req.body;
 
-    if (!personalEmail) {
-      return res.status(400).json({ error: 'Email personale richiesta' });
+    // Validazione dipartimento protetto
+    if (department === 'System Owner') {
+      return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
+    }
+
+    // Costruisci l'oggetto di aggiornamento
+    const updateData = {};
+    
+    if (firstName !== undefined) updateData.first_name = firstName;
+    if (lastName !== undefined) updateData.last_name = lastName;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (birthDate !== undefined) updateData.birth_date = birthDate;
+    if (department !== undefined) updateData.department = department;
+    if (position !== undefined) updateData.position = position;
+    if (has104 !== undefined) updateData.has_104 = has104;
+    if (personalEmail !== undefined) updateData.personal_email = personalEmail;
+
+    // Se non ci sono dati da aggiornare
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Nessun dato da aggiornare' });
     }
 
     const { data: updatedEmployee, error } = await supabase
       .from('users')
-      .update({
-        personal_email: personalEmail
-      })
+      .update(updateData)
       .eq('id', id)
+      .eq('role', 'employee') // Solo dipendenti possono essere aggiornati qui
       .select()
       .single();
 
@@ -711,10 +739,30 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
       return res.status(500).json({ error: 'Errore nell\'aggiornamento del dipendente' });
     }
 
+    if (!updatedEmployee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    // Formatta la risposta come il formato usato da GET /api/employees
+    const formattedEmployee = {
+      id: updatedEmployee.id,
+      firstName: updatedEmployee.first_name,
+      lastName: updatedEmployee.last_name,
+      name: `${updatedEmployee.first_name} ${updatedEmployee.last_name}`,
+      email: updatedEmployee.email,
+      phone: updatedEmployee.phone,
+      birthDate: updatedEmployee.birth_date || updatedEmployee.birth_date?.split('T')[0],
+      department: updatedEmployee.department || 'Amministrazione',
+      position: updatedEmployee.position || 'Dipendente',
+      has104: updatedEmployee.has_104 || false,
+      hireDate: updatedEmployee.hire_date || updatedEmployee.created_at?.split('T')[0],
+      status: updatedEmployee.is_active ? 'active' : 'inactive'
+    };
+
     res.json({
       success: true,
-      message: 'Email personale aggiornata con successo',
-      employee: updatedEmployee
+      message: 'Dipendente aggiornato con successo',
+      employee: formattedEmployee
     });
   } catch (error) {
     console.error('Employee update error:', error);

@@ -188,48 +188,61 @@ const Employees = () => {
   const handleEditEmployee = (employee) => {
     setSelectedEmployee(employee);
     setFormData({
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      email: employee.email,
-      phone: employee.phone,
-      birthDate: employee.birthDate,
-      department: employee.department,
-      position: employee.position,
-      has104: employee.has104
+      firstName: employee.firstName || employee.first_name || '',
+      lastName: employee.lastName || employee.last_name || '',
+      email: employee.email || '',
+      phone: employee.phone || '',
+      birthDate: employee.birthDate || employee.birth_date || '',
+      department: employee.department || '',
+      position: employee.position || '',
+      has104: employee.has104 || employee.has_104 || false
     });
     setShowEditModal(true);
   };
 
-  const handleUpdateEmployee = () => {
-    // TODO: Sostituire con chiamata API PUT /api/employees/:id
-    // const response = await fetch(`/api/employees/${selectedEmployee.id}`, {
-    //   method: 'PUT',
-    //   headers: { 
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${token}` 
-    //   },
-    //   body: JSON.stringify(formData)
-    // });
-    
-    setEmployees(prev => prev.map(emp => 
-      emp.id === selectedEmployee.id 
-        ? {
-            ...emp,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            name: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email,
-            phone: formData.phone,
-            birthDate: formData.birthDate,
-            department: formData.department,
-            position: formData.position,
-            has104: formData.has104
-          }
-        : emp
-    ));
-    setShowEditModal(false);
-    setSelectedEmployee(null);
-    resetForm();
+  const handleUpdateEmployee = async () => {
+    try {
+      const response = await apiCall(`/api/employees/${selectedEmployee.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          birthDate: formData.birthDate,
+          department: formData.department,
+          position: formData.position,
+          has104: formData.has104
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Emetti aggiornamento real-time
+        emitUpdate('employee_updated', {
+          type: 'updated',
+          employeeId: selectedEmployee.id,
+          employeeName: `${formData.firstName} ${formData.lastName}`,
+          department: formData.department
+        });
+        
+        // Ricarica la lista dipendenti per assicurarsi che i dati siano aggiornati
+        await fetchEmployees();
+        setShowEditModal(false);
+        setSelectedEmployee(null);
+        resetForm();
+        
+        showAlert('success', 'Successo!', `Dipendente ${formData.firstName} ${formData.lastName} aggiornato con successo!`);
+      } else {
+        const error = await response.json();
+        showAlert('error', 'Errore', error.error || 'Errore durante l\'aggiornamento del dipendente');
+      }
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      showAlert('error', 'Errore', 'Errore durante l\'aggiornamento del dipendente');
+    }
   };
 
   const handleDeleteEmployee = (employeeId) => {
