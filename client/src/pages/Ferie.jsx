@@ -63,6 +63,22 @@ const Vacation = () => {
 
   // Vista attiva (calendar o list)
   const [activeView, setActiveView] = useState('list');
+  
+  // Gestione periodi ferie (solo admin)
+  const [showPeriodsManagement, setShowPeriodsManagement] = useState(false);
+  const [vacationPeriods, setVacationPeriods] = useState([]);
+  const [showPeriodModal, setShowPeriodModal] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState(null);
+  const [periodFormData, setPeriodFormData] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+    vacationStartDate: '',
+    vacationEndDate: '',
+    isOpen: true,
+    maxConcurrentRequests: '',
+    notes: ''
+  });
 
   // Hook per gestire chiusura modal con ESC e click fuori
   useModal(showNewRequest, () => setShowNewRequest(false));
@@ -79,21 +95,17 @@ const Vacation = () => {
     }
   });
 
-  // Sistema basato su ore
+  // Sistema basato su GIORNI (30 giorni per tutti, non ore)
+  // Le ferie sono completamente separate dalla banca ore
   const [vacationBalance, setVacationBalance] = useState({
-    totalHours: 160, // 20 giorni * 8h per FT
-    usedHours: 0,
-    remainingHours: 160,
-    pendingHours: 0,
-    totalDays: 20,
+    totalDays: 30, // 30 giorni per tutti (full-time e part-time)
     usedDays: 0,
-    remainingDays: 20,
-    pendingDays: 0,
-    bonusHours: 0, // Bonus per anzianità
-    has104: user?.has104 || false // Bonus legge 104
+    remainingDays: 30,
+    pendingDays: 0
   });
-  const [workPattern, setWorkPattern] = useState(null);
+  const [availablePeriods, setAvailablePeriods] = useState([]); // Periodi di richiesta ferie aperti
   const [loading, setLoading] = useState(true);
+  const [periodValidationError, setPeriodValidationError] = useState('');
 
   // Fetch real data on component mount
   useEffect(() => {
@@ -103,42 +115,6 @@ const Vacation = () => {
   const fetchVacationData = async () => {
     try {
       setLoading(true);
-      
-      // Simula pattern di lavoro basato sul tipo contratto utente
-      const defaultPattern = {
-        monday_hours: 8,
-        tuesday_hours: 8,
-        wednesday_hours: 8,
-        thursday_hours: 8,
-        friday_hours: 8,
-        saturday_hours: 0,
-        sunday_hours: 0,
-        weekly_hours: 40,
-        monthly_hours: 173.33
-      };
-      
-      // Personalizza pattern basato su contratto utente
-      if (user?.contract_type) {
-        const contractType = user.contract_type.toLowerCase();
-        if (contractType.includes('part') && contractType.includes('horizontal')) {
-          // Part-time orizzontale: stessi giorni, meno ore
-          defaultPattern.monday_hours = 4;
-          defaultPattern.tuesday_hours = 4;
-          defaultPattern.wednesday_hours = 4;
-          defaultPattern.thursday_hours = 4;
-          defaultPattern.friday_hours = 4;
-          defaultPattern.weekly_hours = 20;
-          defaultPattern.monthly_hours = 86.67;
-        } else if (contractType.includes('part') && contractType.includes('vertical')) {
-          // Part-time verticale: stessi orari, meno giorni
-          defaultPattern.tuesday_hours = 0;
-          defaultPattern.thursday_hours = 0;
-          defaultPattern.weekly_hours = 24;
-          defaultPattern.monthly_hours = 104;
-        }
-      }
-      
-      setWorkPattern(defaultPattern);
 
       // Fetch vacation requests
       const requestsResponse = await apiCall('/api/leave-requests?type=vacation');
@@ -147,41 +123,41 @@ const Vacation = () => {
         setVacationRequests(requestsData);
       }
 
-      // Simula saldi basati su dati esistenti
-      const balanceResponse = await apiCall('/api/leave-balances');
+      // Fetch vacation balance (GIORNI, non ore)
+      const balanceResponse = await apiCall('/api/vacation-balances');
       if (balanceResponse.ok) {
         const balanceData = await balanceResponse.json();
         
-        // Converti giorni in ore usando il pattern
-        const totalHours = balanceData.vacation.total * 8; // Assumendo 8h/giorno
-        const usedHours = balanceData.vacation.used * 8;
-        const remainingHours = balanceData.vacation.remaining * 8;
-        const pendingHours = balanceData.vacation.pending * 8;
-        
-        setVacationBalance(prev => ({
-          ...prev,
-          totalHours: totalHours,
-          usedHours: usedHours,
-          remainingHours: remainingHours,
-          pendingHours: pendingHours,
-          totalDays: balanceData.vacation.total,
-          usedDays: balanceData.vacation.used,
-          remainingDays: balanceData.vacation.remaining,
-          pendingDays: balanceData.vacation.pending
-        }));
+        setVacationBalance({
+          totalDays: balanceData.total_days || 30,
+          usedDays: balanceData.used_days || 0,
+          remainingDays: balanceData.remaining_days || 30,
+          pendingDays: balanceData.pending_days || 0
+        });
       } else {
         // Fallback con dati di default
-        setVacationBalance(prev => ({
-          ...prev,
-          totalHours: 160, // 20 giorni * 8h
-          usedHours: 0,
-          remainingHours: 160,
-          pendingHours: 0,
-          totalDays: 26,
+        setVacationBalance({
+          totalDays: 30,
           usedDays: 0,
-          remainingDays: 26,
+          remainingDays: 30,
           pendingDays: 0
-        }));
+        });
+      }
+
+      // Fetch available vacation periods (solo periodi aperti)
+      const periodsResponse = await apiCall('/api/vacation-periods/available');
+      if (periodsResponse.ok) {
+        const periodsData = await periodsResponse.json();
+        setAvailablePeriods(periodsData || []);
+      }
+
+      // Se admin, carica anche tutti i periodi (aperti e chiusi)
+      if (user?.role === 'admin') {
+        const allPeriodsResponse = await apiCall('/api/vacation-periods');
+        if (allPeriodsResponse.ok) {
+          const allPeriodsData = await allPeriodsResponse.json();
+          setVacationPeriods(allPeriodsData || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching vacation data:', error);
@@ -267,33 +243,14 @@ const Vacation = () => {
     }
   };
 
-  // Calcolo dinamico basato su dati reali
-  React.useEffect(() => {
-    // Simulazione calcolo dinamico
-    const baseDays = 26;
-    let bonusDays = 0;
-    
-    // Bonus anzianità (esempio)
-    if (user?.hireDate) {
-      const hireYear = new Date(user.hireDate).getFullYear();
-      const yearsWorked = new Date().getFullYear() - hireYear;
-      if (yearsWorked >= 10) bonusDays += 2;
-      if (yearsWorked >= 15) bonusDays += 2;
-      if (yearsWorked >= 20) bonusDays += 2;
+  // Validazione periodi quando cambiano le date nel form
+  useEffect(() => {
+    if (formData.startDate && formData.endDate) {
+      validateVacationPeriod();
+    } else {
+      setPeriodValidationError('');
     }
-    
-    // Bonus legge 104
-    if (user?.has104) {
-      bonusDays += 3; // Giorni aggiuntivi per legge 104
-    }
-    
-    setVacationBalance(prev => ({
-      ...prev,
-      totalDays: baseDays + bonusDays,
-      bonusDays: bonusDays,
-      has104: user?.has104 || false
-    }));
-  }, [user]);
+  }, [formData.startDate, formData.endDate, availablePeriods]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -303,50 +260,73 @@ const Vacation = () => {
     }));
   };
 
+  // Valida che le date siano in un periodo aperto
+  const validateVacationPeriod = async () => {
+    if (!formData.startDate || !formData.endDate) {
+      setPeriodValidationError('');
+      return;
+    }
+
+    try {
+      const response = await apiCall('/api/vacation-periods/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: formData.startDate,
+          endDate: formData.endDate
+        })
+      });
+
+      if (response.ok) {
+        const validation = await response.json();
+        if (!validation.isValid) {
+          setPeriodValidationError('Alcune date selezionate non sono disponibili nei periodi di richiesta ferie aperti');
+          return false;
+        } else {
+          setPeriodValidationError('');
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('Error validating period:', error);
+      setPeriodValidationError('');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.startDate || !formData.endDate) {
+      alert('Seleziona le date di inizio e fine');
+      return;
+    }
+
+    // Valida periodo prima di inviare
+    const isValidPeriod = await validateVacationPeriod();
+    if (!isValidPeriod && periodValidationError) {
+      alert(periodValidationError);
+      return;
+    }
+
+    // Verifica che ci sia almeno un periodo aperto
+    if (availablePeriods.length === 0) {
+      alert('Non ci sono periodi di richiesta ferie aperti al momento. Contatta l\'amministratore.');
+      return;
+    }
+
     try {
-      // Calcola le ore per il periodo richiesto
+      // Calcola i GIORNI richiesti (1 giorno = 1 giorno per tutti, non ore)
       const start = new Date(formData.startDate);
       const end = new Date(formData.endDate);
-      const dates = [];
-      
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().split('T')[0]);
-      }
+      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
-      // Calcola ore totali usando il pattern di lavoro
-      let totalHours = 0;
-      if (workPattern) {
-        dates.forEach(date => {
-          const dayOfWeek = new Date(date).getDay();
-          let dailyHours = 0;
-          
-          switch (dayOfWeek) {
-            case 1: dailyHours = workPattern.monday_hours; break;
-            case 2: dailyHours = workPattern.tuesday_hours; break;
-            case 3: dailyHours = workPattern.wednesday_hours; break;
-            case 4: dailyHours = workPattern.thursday_hours; break;
-            case 5: dailyHours = workPattern.friday_hours; break;
-            case 6: dailyHours = workPattern.saturday_hours; break;
-            case 0: dailyHours = workPattern.sunday_hours; break;
-          }
-          
-          totalHours += dailyHours;
-        });
-      } else {
-        // Fallback: 8h per giorno lavorativo
-        totalHours = dates.length * 8;
-      }
-
-      // Verifica saldo disponibile
-      if (totalHours > vacationBalance.remainingHours) {
-        alert(`Saldo insufficiente. Richieste: ${formatHours(totalHours)}, Disponibili: ${formatHours(vacationBalance.remainingHours)}`);
+      // Verifica saldo disponibile (giorni, non ore)
+      if (daysRequested > vacationBalance.remainingDays) {
+        alert(`Giorni di ferie insufficienti. Richiesti: ${daysRequested} giorni, Disponibili: ${vacationBalance.remainingDays} giorni`);
         return;
       }
 
-      // Crea richiesta usando l'API esistente
+      // Crea richiesta ferie (il backend validerà i periodi)
       const response = await apiCall('/api/leave-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -362,13 +342,14 @@ const Vacation = () => {
         const result = await response.json();
         
         // Aggiorna stato locale
+        const daysRequested = Math.ceil((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24)) + 1;
         const newRequest = {
           id: Date.now(),
           ...formData,
           status: 'pending',
           submittedAt: new Date().toISOString(),
           submittedBy: user?.firstName + ' ' + user?.lastName,
-          calculatedHours: totalHours
+          daysRequested: daysRequested
         };
         
         setVacationRequests(prev => [newRequest, ...prev]);
@@ -387,14 +368,14 @@ const Vacation = () => {
           userName: user?.firstName + ' ' + user?.lastName,
           startDate: formData.startDate,
           endDate: formData.endDate,
-          hours: totalHours,
+          daysRequested: daysRequested,
           message: `Nuova richiesta ferie da ${user?.firstName} ${user?.lastName}`
         });
         
         // Refresh data
         fetchVacationData();
         
-        alert(`Richiesta inviata con successo! Ore richieste: ${formatHours(totalHours)}`);
+        alert(`Richiesta inviata con successo! Giorni richiesti: ${daysRequested} ${daysRequested === 1 ? 'giorno' : 'giorni'}`);
       } else {
         const error = await response.json();
         alert(`Errore: ${error.error}`);
@@ -532,6 +513,128 @@ const Vacation = () => {
     return diffDays;
   };
 
+  // Funzioni gestione periodi ferie (solo admin)
+  const handlePeriodInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setPeriodFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleCreatePeriod = () => {
+    setEditingPeriod(null);
+    setPeriodFormData({
+      name: '',
+      startDate: '',
+      endDate: '',
+      vacationStartDate: '',
+      vacationEndDate: '',
+      isOpen: true,
+      maxConcurrentRequests: '',
+      notes: ''
+    });
+    setShowPeriodModal(true);
+  };
+
+  const handleEditPeriod = (period) => {
+    setEditingPeriod(period);
+    setPeriodFormData({
+      name: period.name,
+      startDate: period.start_date,
+      endDate: period.end_date,
+      vacationStartDate: period.vacation_start_date,
+      vacationEndDate: period.vacation_end_date,
+      isOpen: period.is_open,
+      maxConcurrentRequests: period.max_concurrent_requests || '',
+      notes: period.notes || ''
+    });
+    setShowPeriodModal(true);
+  };
+
+  const handleSavePeriod = async (e) => {
+    e.preventDefault();
+    try {
+      const url = editingPeriod 
+        ? `/api/vacation-periods/${editingPeriod.id}`
+        : '/api/vacation-periods';
+      
+      const method = editingPeriod ? 'PUT' : 'POST';
+      
+      const response = await apiCall(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: periodFormData.name,
+          startDate: periodFormData.startDate,
+          endDate: periodFormData.endDate,
+          vacationStartDate: periodFormData.vacationStartDate,
+          vacationEndDate: periodFormData.vacationEndDate,
+          isOpen: periodFormData.isOpen,
+          maxConcurrentRequests: periodFormData.maxConcurrentRequests ? parseInt(periodFormData.maxConcurrentRequests) : null,
+          notes: periodFormData.notes
+        })
+      });
+
+      if (response.ok) {
+        alert(`Periodo ${editingPeriod ? 'aggiornato' : 'creato'} con successo!`);
+        setShowPeriodModal(false);
+        fetchVacationData(); // Ricarica i periodi
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving period:', error);
+      alert('Errore nel salvataggio del periodo');
+    }
+  };
+
+  const handleDeletePeriod = async (periodId) => {
+    if (!confirm('Sei sicuro di voler eliminare questo periodo?')) {
+      return;
+    }
+
+    try {
+      const response = await apiCall(`/api/vacation-periods/${periodId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert('Periodo eliminato con successo!');
+        fetchVacationData(); // Ricarica i periodi
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting period:', error);
+      alert('Errore nell\'eliminazione del periodo');
+    }
+  };
+
+  const handleTogglePeriod = async (period) => {
+    try {
+      const response = await apiCall(`/api/vacation-periods/${period.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isOpen: !period.is_open
+        })
+      });
+
+      if (response.ok) {
+        fetchVacationData(); // Ricarica i periodi
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error toggling period:', error);
+      alert('Errore nell\'aggiornamento del periodo');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -577,14 +680,24 @@ const Vacation = () => {
             </div>
             
             {user?.role === 'admin' ? (
-              <button
-                onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
-              >
-                <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
-                <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                <span className="sm:hidden ml-1">Aggiungi</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setShowPeriodsManagement(!showPeriodsManagement)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+                >
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Periodi Ferie</span>
+                  <span className="sm:hidden">Periodi</span>
+                </button>
+                <button
+                  onClick={() => setShowAdminCreateModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+                >
+                  <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Aggiungi per Dipendente</span>
+                  <span className="sm:hidden ml-1">Aggiungi</span>
+                </button>
+              </>
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
@@ -598,57 +711,348 @@ const Vacation = () => {
         </div>
       </div>
 
-      {/* Vacation Balance - Hours Based - Solo per dipendenti */}
+      {/* Vacation Balance - GIORNI (non ore) - Solo per dipendenti */}
       {user?.role !== 'admin' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
+        <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Totale Ore</h3>
-            <Clock className="h-8 w-8 text-blue-400" />
+            <h3 className="text-lg font-semibold text-white">Totale Giorni</h3>
+            <Calendar className="h-8 w-8 text-blue-400" />
           </div>
-          <p className="text-3xl font-bold text-blue-400">ND</p>
-          <p className="text-slate-400 text-sm">Ore ferie annuali</p>
+          <p className="text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
+          <p className="text-slate-400 text-sm">Giorni di ferie annuali</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ ND giorni</p>
+            <p>30 giorni per tutti (full-time e part-time)</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
+        <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Ore Utilizzate</h3>
+            <h3 className="text-lg font-semibold text-white">Giorni Utilizzati</h3>
             <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
-          <p className="text-3xl font-bold text-green-400">ND</p>
+          <p className="text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
           <p className="text-slate-400 text-sm">Ferie già godute</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ ND giorni</p>
+            <p>{vacationBalance.totalDays - vacationBalance.usedDays} giorni disponibili</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
+        <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Ore Rimanenti</h3>
+            <h3 className="text-lg font-semibold text-white">Giorni Rimanenti</h3>
             <Sun className="h-8 w-8 text-yellow-400" />
           </div>
-          <p className="text-3xl font-bold text-yellow-400">ND</p>
+          <p className="text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
           <p className="text-slate-400 text-sm">Disponibili per richieste</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ ND giorni</p>
+            <p>Escludendo richieste in attesa</p>
           </div>
         </div>
         
-        <div className="bg-slate-800 rounded-lg p-6 blur-sm pointer-events-none">
+        <div className="bg-slate-800 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-white">In Attesa</h3>
             <AlertCircle className="h-8 w-8 text-orange-400" />
           </div>
-          <p className="text-3xl font-bold text-orange-400">ND</p>
+          <p className="text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
           <p className="text-slate-400 text-sm">Richieste pendenti</p>
           <div className="mt-2 text-xs text-slate-500">
-            <p>≈ ND giorni</p>
+            <p>Giorni in attesa di approvazione</p>
           </div>
         </div>
       </div>
+      )}
+
+      {/* Avviso periodi disponibili */}
+      {user?.role !== 'admin' && availablePeriods.length === 0 && (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
+            <p className="text-yellow-300">
+              Non ci sono periodi di richiesta ferie aperti al momento. Contatta l'amministratore per maggiori informazioni.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Mostra periodi disponibili */}
+      {user?.role !== 'admin' && availablePeriods.length > 0 && (
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+          <div className="flex items-center mb-2">
+            <Calendar className="h-5 w-5 text-blue-400 mr-2" />
+            <p className="text-blue-300 font-semibold">Periodi di richiesta ferie aperti:</p>
+          </div>
+          <div className="space-y-2 mt-2">
+            {availablePeriods.map(period => (
+              <div key={period.id} className="text-blue-200 text-sm">
+                • <strong>{period.name}</strong>: puoi richiedere ferie dal {new Date(period.vacation_start_date).toLocaleDateString('it-IT')} al {new Date(period.vacation_end_date).toLocaleDateString('it-IT')}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Gestione Periodi Ferie (solo admin) */}
+      {user?.role === 'admin' && showPeriodsManagement && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center">
+              <Calendar className="h-6 w-6 mr-3 text-purple-400" />
+              Gestione Periodi Richiesta Ferie
+            </h2>
+            <button
+              onClick={handleCreatePeriod}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Nuovo Periodo
+            </button>
+          </div>
+
+          {vacationPeriods.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-400 text-lg">Nessun periodo configurato</p>
+              <p className="text-slate-500 text-sm mt-2">Crea un nuovo periodo per permettere ai dipendenti di richiedere ferie</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {vacationPeriods.map(period => (
+                <div key={period.id} className="bg-slate-700 rounded-lg p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <h3 className="text-lg font-semibold text-white mr-3">{period.name}</h3>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                          period.is_open 
+                            ? 'bg-green-500/20 text-green-300 border-green-400/30' 
+                            : 'bg-red-500/20 text-red-300 border-red-400/30'
+                        }`}>
+                          {period.is_open ? 'Aperto' : 'Chiuso'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300 mt-4">
+                        <div>
+                          <p className="text-slate-400 mb-1">Periodo richieste:</p>
+                          <p className="text-white">Dal {formatDate(period.start_date)} al {formatDate(period.end_date)}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 mb-1">Periodo ferie disponibili:</p>
+                          <p className="text-white">Dal {formatDate(period.vacation_start_date)} al {formatDate(period.vacation_end_date)}</p>
+                        </div>
+                        {period.max_concurrent_requests && (
+                          <div>
+                            <p className="text-slate-400 mb-1">Max richieste contemporanee:</p>
+                            <p className="text-white">{period.max_concurrent_requests}</p>
+                          </div>
+                        )}
+                        {period.notes && (
+                          <div>
+                            <p className="text-slate-400 mb-1">Note:</p>
+                            <p className="text-white">{period.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button
+                        onClick={() => handleTogglePeriod(period)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          period.is_open
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        {period.is_open ? 'Chiudi' : 'Apri'}
+                      </button>
+                      <button
+                        onClick={() => handleEditPeriod(period)}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+                      >
+                        Modifica
+                      </button>
+                      <button
+                        onClick={() => handleDeletePeriod(period.id)}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
+                      >
+                        Elimina
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal Creazione/Modifica Periodo */}
+      {showPeriodModal && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => e.target === e.currentTarget && setShowPeriodModal(false)}
+        >
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <Calendar className="h-6 w-6 mr-2 text-purple-400" />
+                {editingPeriod ? 'Modifica Periodo' : 'Nuovo Periodo'}
+              </h2>
+              <button
+                onClick={() => setShowPeriodModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePeriod} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Nome Periodo *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={periodFormData.name}
+                  onChange={handlePeriodInputChange}
+                  required
+                  placeholder="Es: Periodo Estivo 2025"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data Inizio Richieste *
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={periodFormData.startDate}
+                    onChange={handlePeriodInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Da quando si possono inviare richieste</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data Fine Richieste *
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={periodFormData.endDate}
+                    onChange={handlePeriodInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Fino a quando si possono inviare richieste</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data Inizio Ferie *
+                  </label>
+                  <input
+                    type="date"
+                    name="vacationStartDate"
+                    value={periodFormData.vacationStartDate}
+                    onChange={handlePeriodInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Da quando si possono prendere le ferie</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data Fine Ferie *
+                  </label>
+                  <input
+                    type="date"
+                    name="vacationEndDate"
+                    value={periodFormData.vacationEndDate}
+                    onChange={handlePeriodInputChange}
+                    required
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Fino a quando si possono prendere le ferie</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Max Richieste Contemporanee
+                  </label>
+                  <input
+                    type="number"
+                    name="maxConcurrentRequests"
+                    value={periodFormData.maxConcurrentRequests}
+                    onChange={handlePeriodInputChange}
+                    min="1"
+                    placeholder="Opzionale"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Limite massimo di richieste simultanee</p>
+                </div>
+
+                <div className="flex items-center">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="isOpen"
+                      checked={periodFormData.isOpen}
+                      onChange={handlePeriodInputChange}
+                      className="h-4 w-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500"
+                    />
+                    <span className="ml-2 text-slate-300">Periodo aperto</span>
+                  </label>
+                  <p className="text-xs text-slate-400 ml-2">I dipendenti possono richiedere ferie</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Note
+                </label>
+                <textarea
+                  name="notes"
+                  value={periodFormData.notes}
+                  onChange={handlePeriodInputChange}
+                  rows={3}
+                  placeholder="Note aggiuntive sul periodo..."
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPeriodModal(false)}
+                  className="px-6 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+                >
+                  <X className="h-4 w-4 mr-2 inline" />
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  <Save className="h-4 w-4 mr-2 inline" />
+                  {editingPeriod ? 'Salva Modifiche' : 'Crea Periodo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
 
@@ -705,56 +1109,42 @@ const Vacation = () => {
               {formData.startDate && formData.endDate && (() => {
                 const start = new Date(formData.startDate);
                 const end = new Date(formData.endDate);
-                const dates = [];
-                
-                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                  dates.push(d.toISOString().split('T')[0]);
-                }
+                const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
-                let totalHours = 0;
-                if (workPattern) {
-                  dates.forEach(date => {
-                    const dayOfWeek = new Date(date).getDay();
-                    let dailyHours = 0;
-                    
-                    switch (dayOfWeek) {
-                      case 1: dailyHours = workPattern.monday_hours; break;
-                      case 2: dailyHours = workPattern.tuesday_hours; break;
-                      case 3: dailyHours = workPattern.wednesday_hours; break;
-                      case 4: dailyHours = workPattern.thursday_hours; break;
-                      case 5: dailyHours = workPattern.friday_hours; break;
-                      case 6: dailyHours = workPattern.saturday_hours; break;
-                      case 0: dailyHours = workPattern.sunday_hours; break;
-                    }
-                    
-                    totalHours += dailyHours;
-                  });
-                } else {
-                  totalHours = dates.length * 8; // Fallback
-                }
-
-                const remainingAfterRequest = vacationBalance.remainingHours - totalHours;
+                const remainingAfterRequest = vacationBalance.remainingDays - daysRequested;
                 const canRequest = remainingAfterRequest >= 0;
 
                 return (
                   <div className={`border rounded-lg p-4 ${canRequest ? 'bg-blue-500/10 border-blue-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
                     <div className="flex items-center mb-2">
                       <Calculator className="h-4 w-4 mr-2 text-blue-400" />
-                      <p className="text-blue-300 text-sm font-semibold">Calcolo Ore Richieste</p>
+                      <p className="text-blue-300 text-sm font-semibold">Calcolo Giorni Richiesti</p>
                     </div>
                     <p className="text-blue-300 text-sm">
-                      <strong>Periodo:</strong> {calculateDays(formData.startDate, formData.endDate)} giorni
+                      <strong>Periodo:</strong> {daysRequested} {daysRequested === 1 ? 'giorno' : 'giorni'}
                     </p>
                     <p className="text-blue-300 text-sm">
-                      <strong>Ore richieste:</strong> {formatHours(totalHours)}
-                    </p>
-                    <p className="text-blue-300 text-sm">
-                      <strong>Ore rimanenti dopo questa richiesta:</strong> {formatHours(remainingAfterRequest)}
+                      <strong>Giorni rimanenti dopo questa richiesta:</strong> {remainingAfterRequest} {remainingAfterRequest === 1 ? 'giorno' : 'giorni'}
                     </p>
                     {!canRequest && (
                       <p className="text-red-300 text-sm mt-2 font-semibold">
-                        ⚠️ Saldo insufficiente per questa richiesta
+                        ⚠️ Giorni di ferie insufficienti per questa richiesta
                       </p>
+                    )}
+                    {periodValidationError && (
+                      <p className="text-red-300 text-sm mt-2 font-semibold">
+                        ⚠️ {periodValidationError}
+                      </p>
+                    )}
+                    {availablePeriods.length > 0 && !periodValidationError && (
+                      <div className="mt-3 pt-3 border-t border-blue-500/20">
+                        <p className="text-blue-200 text-xs mb-2">Periodi disponibili:</p>
+                        {availablePeriods.map(period => (
+                          <div key={period.id} className="text-blue-300 text-xs mb-1">
+                            • {period.name}: dal {new Date(period.vacation_start_date).toLocaleDateString('it-IT')} al {new Date(period.vacation_end_date).toLocaleDateString('it-IT')}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );

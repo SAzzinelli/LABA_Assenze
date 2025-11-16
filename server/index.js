@@ -4578,8 +4578,6 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           } else {
             console.log(`✅ Bilancio ferie aggiornato: +${daysRequested} giorni (totale utilizzati: ${newUsedDays})`);
           }
-          
-          const newUsedDays = (balance.used_days || 0) + daysRequested;
         }
       }
     }
