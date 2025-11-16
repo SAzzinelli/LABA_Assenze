@@ -1054,28 +1054,72 @@ const Employees = () => {
                             </div>
                             
                             <div className="space-y-1">
-                              {daySchedule.workType === 'full_day' ? (
-                                <>
-                                  <div className="text-xs text-slate-300">09:00 - 13:00 (Mattina)</div>
-                                  <div className="text-xs text-slate-400">13:00 - 14:00 (Pausa)</div>
-                                  <div className="text-xs text-slate-300">14:00 - 18:00 (Pomeriggio)</div>
-                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 8.0h</div>
-                                </>
-                              ) : daySchedule.workType === 'morning' ? (
-                                <>
-                                  <div className="text-xs text-slate-300">09:00 - 13:00 (Mattina)</div>
-                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 4.0h</div>
-                                </>
-                              ) : daySchedule.workType === 'afternoon' ? (
-                                <>
-                                  <div className="text-xs text-slate-300">14:00 - 18:00 (Pomeriggio)</div>
-                                  <div className="text-xs font-semibold text-green-400 mt-1">Totale: 4.0h</div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="text-xs text-slate-300">{daySchedule.hours || 8}h lavorative</div>
-                                </>
-                              )}
+                              {(() => {
+                                // Usa gli orari dinamici dal workSchedule
+                                const startTime = daySchedule.startTime || daySchedule.start_time || '09:00';
+                                const endTime = daySchedule.endTime || daySchedule.end_time || '18:00';
+                                const breakDuration = daySchedule.breakDuration || daySchedule.break_duration || 60;
+                                const totalHours = daySchedule.totalHours || 0;
+                                
+                                // Calcola orario pausa (default 13:00-14:00, ma potrebbe essere diverso)
+                                const breakStart = daySchedule.breakStartTime || daySchedule.break_start_time || '13:00';
+                                const breakEnd = breakStart.split(':')[0] + ':' + String(parseInt(breakStart.split(':')[1]) + Math.floor(breakDuration / 60)).padStart(2, '0');
+                                
+                                // Formatta orari rimuovendo i secondi se presenti
+                                const formatTime = (timeStr) => {
+                                  if (!timeStr) return '';
+                                  return timeStr.substring(0, 5); // Prende solo HH:MM
+                                };
+                                
+                                if (daySchedule.workType === 'full_day' || daySchedule.work_type === 'full_day') {
+                                  // Calcola fine mattina (inizio pausa) e inizio pomeriggio (fine pausa)
+                                  const morningEnd = formatTime(breakStart);
+                                  const afternoonStart = formatTime(breakEnd);
+                                  
+                                  return (
+                                    <>
+                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {morningEnd} (Mattina)</div>
+                                      {breakDuration > 0 && (
+                                        <div className="text-xs text-slate-400">{morningEnd} - {afternoonStart} (Pausa)</div>
+                                      )}
+                                      <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
+                                      <div className="text-xs font-semibold text-green-400 mt-1">
+                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '7.0'}h
+                                      </div>
+                                    </>
+                                  );
+                                } else if (daySchedule.workType === 'morning' || daySchedule.work_type === 'morning') {
+                                  return (
+                                    <>
+                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Mattina)</div>
+                                      <div className="text-xs font-semibold text-green-400 mt-1">
+                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '4.0'}h
+                                      </div>
+                                    </>
+                                  );
+                                } else if (daySchedule.workType === 'afternoon' || daySchedule.work_type === 'afternoon') {
+                                  return (
+                                    <>
+                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Pomeriggio)</div>
+                                      <div className="text-xs font-semibold text-green-400 mt-1">
+                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '4.0'}h
+                                      </div>
+                                    </>
+                                  );
+                                } else {
+                                  return (
+                                    <>
+                                      <div className="text-xs text-slate-300">
+                                        {formatTime(startTime)} - {formatTime(endTime)}
+                                        {breakDuration > 0 && ` (pausa: ${breakDuration}min)`}
+                                      </div>
+                                      <div className="text-xs font-semibold text-green-400 mt-1">
+                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : (daySchedule.hours || 8)}h
+                                      </div>
+                                    </>
+                                  );
+                                }
+                              })()}
                             </div>
                           </div>
                         );

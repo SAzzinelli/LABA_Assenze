@@ -549,9 +549,15 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
             detailedWorkSchedule[dayName] = {
               active: schedule.is_working_day,
               workType: schedule.work_type,
+              work_type: schedule.work_type, // Manteniamo per compatibilità
               startTime: schedule.start_time,
+              start_time: schedule.start_time, // Manteniamo per compatibilità
               endTime: schedule.end_time,
+              end_time: schedule.end_time, // Manteniamo per compatibilità
               breakDuration: schedule.break_duration,
+              break_duration: schedule.break_duration, // Manteniamo per compatibilità
+              breakStartTime: schedule.break_start_time,
+              break_start_time: schedule.break_start_time, // Manteniamo per compatibilità
               // Calcola ore totali per il giorno
               totalHours: schedule.is_working_day ? 
                 (schedule.start_time && schedule.end_time ? 
