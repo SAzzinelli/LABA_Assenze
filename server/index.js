@@ -3975,7 +3975,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       }
     }
 
-    // Validazione specifica per permessi 104
+    // Validazione specifica per assenze 104 (3 GIORNI INTERI al mese, non permessi)
     if (type === 'permission_104') {
       // Verifica che l'utente abbia la 104
       const { data: userData, error: userError } = await supabase
@@ -3985,45 +3985,135 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         .single();
 
       if (userError || !userData || !userData.has_104) {
-        return res.status(403).json({ error: 'Non hai diritto ai permessi legge 104' });
+        return res.status(403).json({ error: 'Non hai diritto alle assenze legge 104' });
       }
 
-      // Verifica limite mensile (3 permessi al mese)
+      // Calcola giorni richiesti (1 giorno = 1 giorno intero, anche se mezza giornata)
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Verifica limite mensile (3 GIORNI al mese, non permessi)
       const currentMonth = new Date(startDate).getMonth() + 1;
       const currentYear = new Date(startDate).getFullYear();
-      
-      const { count, error: countError } = await supabase
+
+      // Recupera o crea bilancio assenze 104 per il mese corrente
+      let { data: balance, error: balanceError } = await supabase
+        .from('absence_104_balances')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .eq('year', currentYear)
+        .eq('month', currentMonth)
+        .single();
+
+      if (balanceError && balanceError.code === 'PGRST116') {
+        // Nessun bilancio trovato, creane uno nuovo con 3 giorni
+        const { data: newBalance, error: createError } = await supabase
+          .from('absence_104_balances')
+          .insert([{
+            user_id: req.user.id,
+            year: currentYear,
+            month: currentMonth,
+            total_days: 3,
+            used_days: 0,
+            remaining_days: 3
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Absence 104 balance creation error:', createError);
+          return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104' });
+        }
+
+        balance = newBalance;
+      } else if (balanceError) {
+        console.error('Absence 104 balance fetch error:', balanceError);
+        return res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
+      }
+
+      // Calcola pending_days dalle richieste in attesa del mese corrente
+      const { data: pendingRequests, error: pendingError } = await supabase
         .from('leave_requests')
-        .select('*', { count: 'exact', head: true })
+        .select('days_requested')
         .eq('user_id', req.user.id)
         .eq('type', 'permission_104')
-        .in('status', ['approved', 'pending'])
+        .eq('status', 'pending')
         .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
         .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
-      if (countError) {
-        console.error('Error checking 104 limit:', countError);
-        return res.status(500).json({ error: 'Errore nella verifica del limite permessi 104' });
+      let pendingDays = 0;
+      if (!pendingError && pendingRequests) {
+        // Ogni richiesta conta come almeno 1 giorno (anche se mezza giornata, conta come 1 giorno intero)
+        pendingDays = pendingRequests.reduce((sum, req) => {
+          // Se days_requested è 0 o null, conta comunque come 1 giorno
+          const days = req.days_requested || 1;
+          return sum + Math.ceil(days); // Arrotonda sempre per eccesso (mezza giornata = 1 giorno)
+        }, 0);
       }
 
-      if (count >= 3) {
+      // Calcola giorni già utilizzati dalle richieste approvate del mese corrente
+      const { data: approvedRequests, error: approvedError } = await supabase
+        .from('leave_requests')
+        .select('days_requested')
+        .eq('user_id', req.user.id)
+        .eq('type', 'permission_104')
+        .eq('status', 'approved')
+        .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+        .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+      let usedDays = balance.used_days || 0;
+      if (!approvedError && approvedRequests) {
+        // Ricalcola giorni utilizzati dalle richieste approvate
+        usedDays = approvedRequests.reduce((sum, req) => {
+          const days = req.days_requested || 1;
+          return sum + Math.ceil(days); // Arrotonda sempre per eccesso
+        }, 0);
+      }
+
+      const remainingDays = (balance.total_days || 3) - usedDays - pendingDays;
+
+      // Per assenze 104: anche mezza giornata conta come 1 giorno intero
+      const daysRequestedFor104 = Math.max(1, daysRequested);
+
+      if (daysRequestedFor104 > remainingDays) {
         const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleDateString('it-IT', { month: 'long' });
         return res.status(400).json({ 
-          error: `Hai già utilizzato tutti e 3 i permessi 104 per ${monthName} ${currentYear}`,
-          usedCount: count,
-          maxCount: 3
+          error: `Hai già utilizzato tutti i giorni disponibili per le assenze 104 in ${monthName} ${currentYear}`,
+          requested: daysRequestedFor104,
+          available: remainingDays,
+          used: usedDays,
+          pending: pendingDays,
+          total: balance.total_days || 3,
+          monthName,
+          year: currentYear
         });
       }
+
+      // Aggiorna il bilancio assenze 104 con i giorni pending
+      const newPendingDays = pendingDays + daysRequestedFor104;
+      await supabase.from('absence_104_balances').update({
+        pending_days: newPendingDays,
+        remaining_days: (balance.total_days || 3) - usedDays - newPendingDays,
+        updated_at: new Date().toISOString()
+      }).eq('id', balance.id);
+
+      // Usa daysRequestedFor104 come giorni richiesti (almeno 1)
+      daysRequested = daysRequestedFor104;
+    } else {
+      // Calcola i giorni richiesti per gli altri tipi
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     }
 
-    // Calcola i giorni richiesti
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
     // Calcola le ore effettive per i permessi con orari specifici
-    let calculatedHours = hours;
-    if (type === 'permission' && (exitTime || entryTime) && permissionType) {
+    // PER ASSENZE 104: NON calcolare ore (non influenzano la banca ore)
+    let calculatedHours = null;
+    if (type === 'permission_104') {
+      calculatedHours = null; // Assenze 104 non hanno ore, sono giorni interi
+    } else if (type === 'permission' && (exitTime || entryTime) && permissionType) {
+      calculatedHours = hours;
       try {
         // Ottieni il work_schedule dell'utente per il giorno specifico
         const permissionDate = new Date(startDate);
@@ -4094,11 +4184,12 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (permissionType !== undefined) insertData.permission_type = permissionType;
     
     // Per FERIE: non salvare ore (sono giorni interi, non ore)
+    // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
-    if (type !== 'vacation') {
+    if (type !== 'vacation' && type !== 'permission_104') {
       const normalizedHours = normalizeHours(calculatedHours);
       if (normalizedHours !== null) {
-        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi
+        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
 
@@ -4408,11 +4499,12 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (permissionType !== undefined) insertData.permission_type = permissionType;
     
     // Per FERIE: non salvare ore (sono giorni interi, non ore)
+    // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
-    if (type !== 'vacation') {
+    if (type !== 'vacation' && type !== 'permission_104') {
       const normalizedHours = normalizeHours(calculatedHours);
       if (normalizedHours !== null) {
-        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi
+        insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
     
@@ -4651,6 +4743,107 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       // Il pending_days verrà ricalcolato automaticamente al prossimo accesso
       // Non serve fare nulla qui perché viene ricalcolato dinamicamente
       console.log(`❌ Richiesta ferie rifiutata: ${updatedRequest.days_requested} giorni non utilizzati`);
+    }
+
+    // Se è una richiesta ASSENZA 104 approvata, aggiorna il bilancio assenze 104 (giorni, non ore)
+    // IMPORTANTE: Le assenze 104 NON influenzano la banca ore (balance_hours)
+    // Le assenze 104 sono normalmente auto-approvate, ma gestiamo anche l'approvazione manuale
+    if (updatedRequest.type === 'permission_104' && status === 'approved') {
+      const requestMonth = new Date(updatedRequest.start_date).getMonth() + 1;
+      const requestYear = new Date(updatedRequest.start_date).getFullYear();
+      const daysRequested = Math.max(1, updatedRequest.days_requested || 1); // Minimo 1 giorno intero
+
+      // Recupera o crea bilancio assenze 104
+      let { data: balance, error: balanceError } = await supabase
+        .from('absence_104_balances')
+        .select('*')
+        .eq('user_id', updatedRequest.user_id)
+        .eq('year', requestYear)
+        .eq('month', requestMonth)
+        .single();
+
+      if (balanceError && balanceError.code === 'PGRST116') {
+        // Nessun bilancio trovato, creane uno nuovo con 3 giorni
+        const { data: newBalance, error: createError } = await supabase
+          .from('absence_104_balances')
+          .insert([{
+            user_id: updatedRequest.user_id,
+            year: requestYear,
+            month: requestMonth,
+            total_days: 3,
+            used_days: daysRequested,
+            remaining_days: 3 - daysRequested
+          }])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Absence 104 balance creation error:', createError);
+        } else {
+          balance = newBalance;
+          console.log(`✅ Bilancio assenze 104 creato: +${daysRequested} giorni utilizzati`);
+        }
+      } else if (!balanceError && balance) {
+        // Calcola giorni utilizzati dalle richieste approvate del mese
+        const { data: approvedRequests, error: approvedError } = await supabase
+          .from('leave_requests')
+          .select('days_requested')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('type', 'permission_104')
+          .eq('status', 'approved')
+          .gte('start_date', `${requestYear}-${requestMonth.toString().padStart(2, '0')}-01`)
+          .lt('start_date', `${requestYear}-${(requestMonth + 1).toString().padStart(2, '0')}-01`);
+
+        let usedDays = 0;
+        if (!approvedError && approvedRequests) {
+          usedDays = approvedRequests.reduce((sum, req) => {
+            const days = req.days_requested || 1;
+            return sum + Math.ceil(days); // Arrotonda sempre per eccesso
+          }, 0);
+        }
+
+        // Calcola pending_days dalle richieste in attesa
+        const { data: pendingRequests, error: pendingError } = await supabase
+          .from('leave_requests')
+          .select('days_requested')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('type', 'permission_104')
+          .eq('status', 'pending')
+          .gte('start_date', `${requestYear}-${requestMonth.toString().padStart(2, '0')}-01`)
+          .lt('start_date', `${requestYear}-${(requestMonth + 1).toString().padStart(2, '0')}-01`);
+
+        let pendingDays = 0;
+        if (!pendingError && pendingRequests) {
+          pendingDays = pendingRequests.reduce((sum, req) => {
+            const days = req.days_requested || 1;
+            return sum + Math.ceil(days); // Arrotonda sempre per eccesso
+          }, 0);
+        }
+
+        const remainingDays = (balance.total_days || 3) - usedDays - pendingDays;
+
+        const { error: updateError } = await supabase
+          .from('absence_104_balances')
+          .update({
+            used_days: usedDays,
+            pending_days: pendingDays,
+            remaining_days: remainingDays,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', balance.id);
+
+        if (updateError) {
+          console.error('Absence 104 balance update error:', updateError);
+        } else {
+          console.log(`✅ Bilancio assenze 104 aggiornato: ${usedDays} giorni utilizzati, ${pendingDays} in attesa, ${remainingDays} rimanenti`);
+        }
+      }
+    }
+
+    // Se è una richiesta ASSENZA 104 rifiutata, aggiorna pending_days
+    if (updatedRequest.type === 'permission_104' && status === 'rejected') {
+      // Il pending_days verrà ricalcolato automaticamente nel codice sopra se ri-approvata
+      console.log(`❌ Richiesta assenza 104 rifiutata: ${updatedRequest.days_requested || 1} giorni non utilizzati`);
     }
 
     // Crea notifica per il dipendente
