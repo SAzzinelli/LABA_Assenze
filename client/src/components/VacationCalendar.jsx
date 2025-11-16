@@ -140,91 +140,91 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
   const monthStats = getMonthStats();
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6">
-      {/* Header con navigazione */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <Calendar className="h-6 w-6 text-blue-400" />
-          <h2 className="text-xl font-bold text-white">
+    <div className="bg-slate-800 rounded-lg p-3 sm:p-6 overflow-x-hidden">
+      {/* Header con navigazione - Responsive: stack verticale su mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+          <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400 flex-shrink-0" />
+          <h2 className="text-base sm:text-xl font-bold text-white truncate">
             Calendario Ferie - {monthNames[currentMonth]} {currentYear}
           </h2>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-between sm:justify-center gap-2 sm:gap-2 flex-shrink-0">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={goToToday}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm rounded-lg transition-colors touch-manipulation min-h-[44px]"
           >
             OGGI
           </button>
           <button
             onClick={goToNextMonth}
-            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Statistiche del mese */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-slate-700 rounded-lg p-4">
+      {/* Statistiche del mese - Responsive: 1 colonna su mobile, 3 su desktop */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Ferie Approvate</p>
-              <p className="text-2xl font-bold text-green-400">{monthStats.approved}</p>
+              <p className="text-slate-400 text-xs sm:text-sm">Ferie Approvate</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-400">{monthStats.approved}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-400" />
+            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
           </div>
         </div>
         
-        <div className="bg-slate-700 rounded-lg p-4">
+        <div className="bg-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">In Attesa</p>
-              <p className="text-2xl font-bold text-yellow-400">{monthStats.pending}</p>
+              <p className="text-slate-400 text-xs sm:text-sm">In Attesa</p>
+              <p className="text-xl sm:text-2xl font-bold text-yellow-400">{monthStats.pending}</p>
             </div>
-            <AlertCircle className="h-8 w-8 text-yellow-400" />
+            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0" />
           </div>
         </div>
         
-        <div className="bg-slate-700 rounded-lg p-4">
+        <div className="bg-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Giorni Totali</p>
-              <p className="text-2xl font-bold text-blue-400">{monthStats.totalDays}</p>
+              <p className="text-slate-400 text-xs sm:text-sm">Giorni Totali</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-400">{monthStats.totalDays}</p>
             </div>
-            <Plane className="h-8 w-8 text-blue-400" />
+            <Plane className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0" />
           </div>
         </div>
       </div>
 
-      {/* Calendario */}
-      <div className="bg-slate-700 rounded-lg p-4">
+      {/* Calendario - Responsive: ottimizzato per mobile */}
+      <div className="bg-slate-700 rounded-lg p-2 sm:p-4 overflow-x-auto">
         {/* Header giorni settimana */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2 min-w-[350px]">
           {dayNames.map(day => (
-            <div key={day} className="text-center text-slate-400 text-sm font-medium py-2">
+            <div key={day} className="text-center text-slate-400 text-[10px] sm:text-sm font-medium py-1 sm:py-2">
               {day}
             </div>
           ))}
         </div>
 
-        {/* Griglia giorni */}
-        <div className="grid grid-cols-7 gap-1">
+        {/* Griglia giorni - Responsive: celle più piccole su mobile */}
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1 min-w-[350px]">
           {calendarDays.map((day, index) => (
             <div
               key={index}
               className={`
-                min-h-[80px] p-2 border border-slate-600 rounded-lg cursor-pointer transition-colors
+                min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 border border-slate-600 rounded cursor-pointer transition-colors
                 ${day.isCurrentMonth ? 'bg-slate-800 hover:bg-slate-600' : 'bg-slate-900 text-slate-500'}
-                ${day.isToday ? 'ring-2 ring-blue-500' : ''}
+                ${day.isToday ? 'ring-1 sm:ring-2 ring-blue-500' : ''}
                 ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600' : ''}
               `}
               onClick={() => {
@@ -232,30 +232,30 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
                 onDateClick?.(day.date, day.requests);
               }}
             >
-              <div className="text-sm font-medium mb-1">
+              <div className="text-[10px] sm:text-sm font-medium mb-0.5 sm:mb-1">
                 {day.date.getDate()}
               </div>
               
-              {/* Indicatori richieste */}
-              <div className="space-y-1">
-                {day.requests.slice(0, 3).map((request, reqIndex) => (
+              {/* Indicatori richieste - Ottimizzati per mobile */}
+              <div className="space-y-0.5 sm:space-y-1">
+                {day.requests.slice(0, 2).map((request, reqIndex) => (
                   <div
                     key={reqIndex}
                     className={`
-                      flex items-center space-x-1 px-1 py-0.5 rounded text-xs
+                      flex items-center gap-0.5 sm:space-x-1 px-0.5 sm:px-1 py-0.5 rounded text-[8px] sm:text-xs
                       ${getStatusColor(request.status)} text-white
                     `}
                     title={`${request.submittedBy || 'Dipendente'}: ${request.status}`}
                   >
                     {getStatusIcon(request.status)}
-                    <span className="truncate">
+                    <span className="truncate hidden sm:inline">
                       {request.submittedBy ? request.submittedBy.split(' ')[0] : 'Dip'}
                     </span>
                   </div>
                 ))}
-                {day.requests.length > 3 && (
-                  <div className="text-xs text-slate-400 text-center">
-                    +{day.requests.length - 3} altre
+                {day.requests.length > 2 && (
+                  <div className="text-[8px] sm:text-xs text-slate-400 text-center">
+                    +{day.requests.length - 2}
                   </div>
                 )}
               </div>
@@ -264,18 +264,18 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
         </div>
       </div>
 
-      {/* Legenda */}
-      <div className="mt-6 flex items-center justify-center space-x-6 text-sm">
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
+      {/* Legenda - Responsive: stack verticale su mobile piccolo */}
+      <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
           <span className="text-slate-300">Approvate</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded"></div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
           <span className="text-slate-300">In Attesa</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-red-500 rounded"></div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
           <span className="text-slate-300">Rifiutate</span>
         </div>
       </div>

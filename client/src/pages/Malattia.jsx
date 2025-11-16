@@ -326,15 +326,15 @@ const SickLeave = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center">
-              <Heart className="h-8 w-8 mr-3 text-red-400" />
-              {user?.role === 'admin' ? 'Gestione Malattia' : 'Le Mie Richieste Malattia'}
+      {/* Header - Responsive: stack verticale su mobile */}
+      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
+              <Heart className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-red-400 flex-shrink-0" />
+              <span className="truncate">{user?.role === 'admin' ? 'Gestione Malattia' : 'Le Mie Richieste Malattia'}</span>
             </h1>
-            <p className="text-slate-400 mt-2">
+            <p className="text-slate-400 mt-2 text-sm sm:text-base">
               {user?.role === 'admin' 
                 ? 'Visualizza e gestisci tutte le richieste di malattia dei dipendenti'
                 : 'Gestisci le tue richieste di malattia e assenze per motivi di salute'
@@ -342,13 +342,13 @@ const SickLeave = () => {
             </p>
           </div>
           
-          {/* Tab e Pulsante per Admin */}
+          {/* Tab e Pulsante per Admin - Stack verticale su mobile */}
           {user?.role === 'admin' && (
-            <div className="flex items-center space-x-4">
-              <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:flex-shrink-0">
+              <div className="flex bg-slate-700 rounded-lg p-1 w-full sm:w-auto">
                 <button
                   onClick={() => setActiveTab('imminenti')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
                     activeTab === 'imminenti'
                       ? 'bg-red-600 text-white'
                       : 'text-slate-400 hover:text-white'
@@ -358,7 +358,7 @@ const SickLeave = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('cronologia')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
                     activeTab === 'cronologia'
                       ? 'bg-red-600 text-white'
                       : 'text-slate-400 hover:text-white'
@@ -369,20 +369,20 @@ const SickLeave = () => {
               </div>
               <button
                 onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
               >
                 <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                <span className="sm:hidden ml-1">Aggiungi</span>
+                <span className="sm:hidden">Aggiungi</span>
               </button>
             </div>
           )}
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Nuova Richiesta
             </button>
           )}
@@ -539,32 +539,34 @@ const SickLeave = () => {
         
         {!filtersCollapsed && (
           <div className="border-t border-slate-700 p-4 space-y-4">
-            {/* Filtro temporale per admin */}
+            {/* Filtro temporale per admin - Responsive: stack verticale su mobile */}
             {user?.role === 'admin' && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Calendar className="h-5 w-5 text-blue-400" />
-                  <span className="text-white font-medium">Filtro per periodo:</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                    <span className="text-white font-medium text-sm sm:text-base">Filtro per periodo:</span>
+                  </div>
                   <button
                     onClick={goToToday}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors"
+                    className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] w-full sm:w-auto"
                   >
                     OGGI
                   </button>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center justify-between sm:justify-center gap-2">
                   <button
                     onClick={goToPreviousMonth}
-                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
-                  <div className="text-white font-semibold min-w-[120px] text-center">
+                  <div className="text-white font-semibold text-sm sm:text-base text-center flex-1 sm:flex-none sm:min-w-[120px]">
                     {monthNames[currentMonth]} {currentYear}
                   </div>
                   <button
                     onClick={goToNextMonth}
-                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

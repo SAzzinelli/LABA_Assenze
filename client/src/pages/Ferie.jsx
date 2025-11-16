@@ -678,44 +678,44 @@ const Vacation = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white flex items-center">
-              <Plane className="h-8 w-8 mr-3 text-blue-400" />
-              {user?.role === 'admin' ? 'Gestione Ferie' : 'Le Mie Ferie'}
+      {/* Header - Responsive: stack verticale su mobile */}
+      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
+              <Plane className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3 text-blue-400 flex-shrink-0" />
+              <span className="truncate">{user?.role === 'admin' ? 'Gestione Ferie' : 'Le Mie Ferie'}</span>
             </h1>
-            <p className="text-slate-400 mt-2">
+            <p className="text-slate-400 mt-2 text-sm sm:text-base">
               {user?.role === 'admin' 
                 ? 'Visualizza e gestisci tutte le richieste di ferie dei dipendenti'
                 : 'Gestisci le tue richieste di ferie e visualizza il bilancio ferie'
               }
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            {/* Toggle Vista */}
-            <div className="flex bg-slate-700 rounded-lg p-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 sm:flex-shrink-0">
+            {/* Toggle Vista - Full width su mobile */}
+            <div className="flex bg-slate-700 rounded-lg p-1 w-full sm:w-auto">
               <button
                 onClick={() => setActiveView('list')}
-                className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md transition-colors flex items-center justify-center text-xs sm:text-sm touch-manipulation min-h-[44px] ${
                   activeView === 'list' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <List className="h-4 w-4 mr-2" />
+                <List className="h-4 w-4 mr-1 sm:mr-2" />
                 Lista
               </button>
               <button
                 onClick={() => setActiveView('calendar')}
-                className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+                className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md transition-colors flex items-center justify-center text-xs sm:text-sm touch-manipulation min-h-[44px] ${
                   activeView === 'calendar' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <CalendarDays className="h-4 w-4 mr-2" />
+                <CalendarDays className="h-4 w-4 mr-1 sm:mr-2" />
                 Calendario
               </button>
             </div>
@@ -724,7 +724,7 @@ const Vacation = () => {
               <>
                 <button
                   onClick={() => setShowPeriodsManagement(!showPeriodsManagement)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
                 >
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
                   <span className="hidden sm:inline">Periodi Ferie</span>
@@ -732,19 +732,19 @@ const Vacation = () => {
                 </button>
               <button
                 onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center text-sm sm:text-base"
+                className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
               >
                 <UserPlus className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-2" />
                 <span className="hidden sm:inline">Aggiungi per Dipendente</span>
-                <span className="sm:hidden ml-1">Aggiungi</span>
+                <span className="sm:hidden">Aggiungi</span>
               </button>
               </>
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center text-sm sm:text-base touch-manipulation min-h-[44px]"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center text-sm sm:text-base touch-manipulation min-h-[44px] w-full sm:w-auto"
               >
-                <Plus className="h-5 w-5 mr-2" />
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Nuova Richiesta
               </button>
             )}
