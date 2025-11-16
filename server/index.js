@@ -4745,6 +4745,310 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== VACATION PERIODS ENDPOINTS ====================
+// Gestione periodi di richiesta ferie (admin apre/chiude periodi)
+
+// Get vacation periods (aperto/chiuso, periodi disponibili)
+app.get('/api/vacation-periods', authenticateToken, async (req, res) => {
+  try {
+    const { isOpen, date } = req.query;
+    
+    let query = supabase
+      .from('vacation_periods')
+      .select('*, users:created_by(first_name, last_name)')
+      .order('start_date', { ascending: false });
+    
+    if (isOpen !== undefined) {
+      query = query.eq('is_open', isOpen === 'true');
+    }
+    
+    // Se viene passata una data, filtra solo i periodi che includono quella data
+    if (date) {
+      query = query
+        .lte('start_date', date)
+        .gte('end_date', date);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Vacation periods fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei periodi ferie' });
+    }
+    
+    res.json(data || []);
+  } catch (error) {
+    console.error('Vacation periods error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Get available vacation periods (solo quelli aperti e validi per oggi)
+app.get('/api/vacation-periods/available', authenticateToken, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from('vacation_periods')
+      .select('*')
+      .eq('is_open', true)
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .order('vacation_start_date', { ascending: true });
+    
+    if (error) {
+      console.error('Available vacation periods fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei periodi disponibili' });
+    }
+    
+    res.json(data || []);
+  } catch (error) {
+    console.error('Available vacation periods error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Check if a date range is within available vacation periods
+app.post('/api/vacation-periods/validate', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Date inizio e fine richieste' });
+    }
+    
+    // Verifica che esista almeno un periodo aperto che include tutte le date richieste
+    const { data: periods, error } = await supabase
+      .from('vacation_periods')
+      .select('*')
+      .eq('is_open', true)
+      .lte('start_date', startDate)
+      .gte('end_date', endDate);
+    
+    if (error) {
+      console.error('Period validation error:', error);
+      return res.status(500).json({ error: 'Errore nella validazione del periodo' });
+    }
+    
+    // Verifica che tutte le date richieste siano nei periodi validi per le ferie
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    let isValid = false;
+    let invalidDates = [];
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      const isInValidPeriod = periods.some(period => 
+        dateStr >= period.vacation_start_date && dateStr <= period.vacation_end_date
+      );
+      
+      if (!isInValidPeriod) {
+        invalidDates.push(dateStr);
+      }
+    }
+    
+    isValid = invalidDates.length === 0;
+    
+    res.json({
+      isValid,
+      invalidDates,
+      periods: periods || []
+    });
+  } catch (error) {
+    console.error('Period validation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Admin: Create vacation period
+app.post('/api/vacation-periods', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, startDate, endDate, vacationStartDate, vacationEndDate, isOpen, maxConcurrentRequests, notes } = req.body;
+    
+    if (!name || !startDate || !endDate || !vacationStartDate || !vacationEndDate) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+    
+    const { data, error } = await supabase
+      .from('vacation_periods')
+      .insert([{
+        name,
+        start_date: startDate,
+        end_date: endDate,
+        vacation_start_date: vacationStartDate,
+        vacation_end_date: vacationEndDate,
+        is_open: isOpen !== undefined ? isOpen : true,
+        max_concurrent_requests: maxConcurrentRequests || null,
+        created_by: req.user.id,
+        notes: notes || null
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Vacation period creation error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione del periodo' });
+    }
+    
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Vacation period creation error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Admin: Update vacation period
+app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, startDate, endDate, vacationStartDate, vacationEndDate, isOpen, maxConcurrentRequests, notes } = req.body;
+    
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (startDate !== undefined) updateData.start_date = startDate;
+    if (endDate !== undefined) updateData.end_date = endDate;
+    if (vacationStartDate !== undefined) updateData.vacation_start_date = vacationStartDate;
+    if (vacationEndDate !== undefined) updateData.vacation_end_date = vacationEndDate;
+    if (isOpen !== undefined) updateData.is_open = isOpen;
+    if (maxConcurrentRequests !== undefined) updateData.max_concurrent_requests = maxConcurrentRequests;
+    if (notes !== undefined) updateData.notes = notes;
+    updateData.updated_at = new Date().toISOString();
+    
+    const { data, error } = await supabase
+      .from('vacation_periods')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Vacation period update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento del periodo' });
+    }
+    
+    if (!data) {
+      return res.status(404).json({ error: 'Periodo non trovato' });
+    }
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Vacation period update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Admin: Delete vacation period
+app.delete('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { error } = await supabase
+      .from('vacation_periods')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Vacation period deletion error:', error);
+      return res.status(500).json({ error: 'Errore nell\'eliminazione del periodo' });
+    }
+    
+    res.json({ success: true, message: 'Periodo eliminato con successo' });
+  } catch (error) {
+    console.error('Vacation period deletion error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// ==================== VACATION BALANCES ENDPOINTS ====================
+// Bilanci ferie (giorni interi, separati dalla banca ore)
+
+// Get vacation balance for user (giorni, non ore)
+app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
+  try {
+    const { userId, year } = req.query;
+    const targetUserId = userId || req.user.id;
+    const targetYear = year ? parseInt(year) : new Date().getFullYear();
+    
+    // Verifica permessi
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    // Recupera o crea bilancio ferie
+    let { data: balance, error } = await supabase
+      .from('vacation_balances')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('year', targetYear)
+      .single();
+    
+    if (error && error.code === 'PGRST116') {
+      // Nessun bilancio trovato, creane uno nuovo con 30 giorni
+      const { data: newBalance, error: createError } = await supabase
+        .from('vacation_balances')
+        .insert([{
+          user_id: targetUserId,
+          year: targetYear,
+          total_days: 30,
+          used_days: 0,
+          pending_days: 0,
+          remaining_days: 30
+        }])
+        .select()
+        .single();
+      
+      if (createError) {
+        console.error('Vacation balance creation error:', createError);
+        return res.status(500).json({ error: 'Errore nella creazione del bilancio' });
+      }
+      
+      balance = newBalance;
+    } else if (error) {
+      console.error('Vacation balance fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero del bilancio' });
+    }
+    
+    // Calcola pending_days dalle richieste in attesa
+    const { data: pendingRequests, error: pendingError } = await supabase
+      .from('leave_requests')
+      .select('days_requested')
+      .eq('user_id', targetUserId)
+      .eq('type', 'vacation')
+      .eq('status', 'pending')
+      .gte('start_date', `${targetYear}-01-01`)
+      .lte('end_date', `${targetYear}-12-31`);
+    
+    if (!pendingError && pendingRequests) {
+      const pendingDays = pendingRequests.reduce((sum, req) => sum + (req.days_requested || 0), 0);
+      
+      // Aggiorna pending_days se diverso
+      if (balance.pending_days !== pendingDays) {
+        const remainingDays = balance.total_days - balance.used_days - pendingDays;
+        
+        const { data: updatedBalance, error: updateError } = await supabase
+          .from('vacation_balances')
+          .update({
+            pending_days: pendingDays,
+            remaining_days: remainingDays,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', balance.id)
+          .select()
+          .single();
+        
+        if (!updateError && updatedBalance) {
+          balance = updatedBalance;
+        }
+      }
+    }
+    
+    res.json(balance);
+  } catch (error) {
+    console.error('Vacation balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== 104 PERMISSIONS ENDPOINTS ====================
 
 // Get 104 permissions count for current month
