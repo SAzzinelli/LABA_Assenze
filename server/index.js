@@ -5729,6 +5729,51 @@ app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req
   }
 });
 
+// Admin: Delete leave request (per eliminare permessi/ferie di test)
+app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Recupera la richiesta per verificare che esista
+    const { data: request, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select('*, users!leave_requests_user_id_fkey(first_name, last_name)')
+      .eq('id', id)
+      .single();
+    
+    if (fetchError || !request) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+    
+    // Elimina la richiesta
+    const { error: deleteError } = await supabase
+      .from('leave_requests')
+      .delete()
+      .eq('id', id);
+    
+    if (deleteError) {
+      console.error('Leave request deletion error:', deleteError);
+      return res.status(500).json({ error: 'Errore nell\'eliminazione della richiesta' });
+    }
+    
+    const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
+    console.log(`✅ Leave request ${id} eliminata per ${userName}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Richiesta eliminata con successo`,
+      deletedRequest: {
+        id: request.id,
+        type: request.type,
+        user: userName
+      }
+    });
+  } catch (error) {
+    console.error('Leave request deletion error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Admin: Delete vacation period
 app.delete('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
