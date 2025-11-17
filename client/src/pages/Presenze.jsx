@@ -1013,17 +1013,20 @@ const getStatusText = (record) => {
                 </select>
               </div>
               
-              {(selectedMonth !== new Date().getMonth() + 1 || selectedYear !== new Date().getFullYear()) && (
-                <button
-                  onClick={() => {
-                    setSelectedMonth(new Date().getMonth() + 1);
-                    setSelectedYear(new Date().getFullYear());
-                  }}
-                  className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-                >
-                  Oggi
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setSelectedMonth(new Date().getMonth() + 1);
+                  setSelectedYear(new Date().getFullYear());
+                }}
+                disabled={selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
+                    ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                }`}
+              >
+                Oggi
+              </button>
             </div>
           </div>
           
