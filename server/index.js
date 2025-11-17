@@ -5390,9 +5390,10 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           console.error('Errore invio email dipendente:', emailError);
           // Non bloccare la risposta se l'email fallisce
         }
-    } catch (notificationError) {
-      console.error('Notification creation error:', notificationError);
-      // Non bloccare l'aggiornamento se le notifiche falliscono
+      } catch (notificationError) {
+        console.error('Notification creation error:', notificationError);
+        // Non bloccare l'aggiornamento se le notifiche falliscono
+      }
     }
 
     const statusMessages = {
