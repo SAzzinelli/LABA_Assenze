@@ -7076,31 +7076,93 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
-    // Ottieni i saldi totali per tutti i dipendenti (stessa logica di /api/attendance/total-balances)
-    const employeeIds = employees.map(emp => emp.id);
-    const { data: balanceData, error: balanceError } = await supabase
-      .from('attendance')
-      .select('user_id, balance_hours')
-      .in('user_id', employeeIds);
+    const { date: today, time: currentTime, dateTime: now } = await getCurrentDateTime();
+    const dayOfWeek = now.getDay();
 
-    if (balanceError) {
-      console.error('Balance fetch error:', balanceError);
-      return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
-    }
-
-    // Calcola il saldo totale per ogni dipendente (somma tutti i balance_hours)
+    // Calcola il saldo totale per ogni dipendente usando la stessa logica di /api/attendance/total-balance
+    // (include real-time balance per oggi)
     const balances = {};
-    if (balanceData && balanceData.length > 0) {
-      balanceData.forEach(row => {
-        const uid = row.user_id;
-        const bal = parseFloat(row.balance_hours || 0);
-        balances[uid] = (balances[uid] || 0) + bal;
-      });
+    
+    for (const emp of employees) {
+      // Ottieni tutte le presenze per questo dipendente
+      const { data: allAttendance } = await supabase
+        .from('attendance')
+        .select('balance_hours, date')
+        .eq('user_id', emp.id);
+
+      let todayBalance = 0;
+      let todayRecord = allAttendance?.find(r => r.date === today);
+      
+      // Verifica se oggi è un giorno lavorativo e calcola real-time
+      const { data: schedule } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('user_id', emp.id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      
+      if (schedule) {
+        // Recupera permessi per oggi
+        const { data: permissionsToday } = await supabase
+          .from('leave_requests')
+          .select('hours, permission_type, exit_time, entry_time')
+          .eq('user_id', emp.id)
+          .eq('type', 'permission')
+          .eq('status', 'approved')
+          .lte('start_date', today)
+          .gte('end_date', today);
+        
+        let permissionData = null;
+        if (permissionsToday && permissionsToday.length > 0) {
+          let totalHours = 0;
+          let exitTime = null;
+          let entryTime = null;
+          const permissionTypes = new Set();
+          
+          permissionsToday.forEach(perm => {
+            totalHours += parseFloat(perm.hours || 0);
+            if (perm.permission_type === 'early_exit' && perm.exit_time) {
+              permissionTypes.add('early_exit');
+              if (!exitTime || perm.exit_time < exitTime) {
+                exitTime = perm.exit_time;
+              }
+            }
+            if (perm.permission_type === 'late_entry' && perm.entry_time) {
+              permissionTypes.add('late_entry');
+              if (!entryTime || perm.entry_time > entryTime) {
+                entryTime = perm.entry_time;
+              }
+            }
+          });
+          
+          if (exitTime || entryTime) {
+            permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
+          }
+        }
+        
+        // Calcola balance real-time per oggi
+        const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+        todayBalance = result.balanceHours;
+      } else if (todayRecord) {
+        // Non è un giorno lavorativo, usa il balance dal DB
+        todayBalance = todayRecord.balance_hours || 0;
+      }
+
+      // Somma tutti i saldi, usando real-time per oggi
+      const totalBalance = (allAttendance || []).reduce((sum, record) => {
+        if (record.date === today && schedule) {
+          // Usa il balance real-time per oggi invece del DB
+          return sum + todayBalance;
+        }
+        return sum + (record.balance_hours || 0);
+      }, 0);
+
+      balances[emp.id] = Math.round(totalBalance * 100) / 100;
     }
 
     console.log('📊 Debt summary calculation:', {
       totalEmployees: employees.length,
-      totalBalanceRecords: balanceData?.length || 0,
       balances: Object.keys(balances).map(uid => {
         const emp = employees.find(e => e.id === uid);
         return {

@@ -74,7 +74,9 @@ const RecuperiOre = () => {
       const response = await apiCall('/api/attendance/total-balance');
       if (response.ok) {
         const data = await response.json();
-        const balance = data.totalBalance || 0;
+        // L'endpoint restituisce totalBalanceHours, non totalBalance
+        const balance = data.totalBalanceHours || 0;
+        console.log('💰 Total balance loaded:', balance, 'h (isDebt:', data.isDebt, ')');
         setTotalBalance(balance);
         return balance; // Ritorna il valore per usarlo subito
       }
