@@ -127,7 +127,7 @@ const Layout = ({ children }) => {
     { name: 'Dipendenti', href: '/dipendenti', icon: Users, roles: ['admin', 'supervisor'] },
     { name: 'Presenze', href: (user?.role === 'admin' || user?.role === 'supervisor') ? '/admin-attendance' : '/presenze', icon: Clock },
     { name: 'Banca Ore', href: '/banca-ore', icon: DollarSign, showIf: (u) => u?.role !== 'admin' && u?.role !== 'supervisor' },
-    { name: 'Recuperi Ore', href: '/dashboard#recuperi-ore', icon: RefreshCw },
+    { name: 'Recuperi Ore', href: '/recuperi-ore', icon: RefreshCw },
     { name: 'Permessi', href: '/permessi', icon: FileText },
     { name: 'Permessi 104', href: '/permessi-104', icon: Accessibility, showIf: (u) => u?.has_104 === true || u?.role === 'admin' },
     { name: 'Malattia', href: '/malattia', icon: Heart },

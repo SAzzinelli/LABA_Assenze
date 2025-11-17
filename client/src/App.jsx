@@ -17,6 +17,7 @@ import Malattia from './pages/Malattia';
 import Ferie from './pages/Ferie';
 import Notifiche from './pages/Notifiche';
 import Impostazioni from './pages/Impostazioni';
+import RecuperiOre from './pages/RecuperiOre';
 import Layout from './components/Layout';
 
 function App() {
@@ -184,6 +185,18 @@ function App() {
               isAuthenticated ? (
                 <Layout>
                   <Impostazioni />
+                </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/recuperi-ore"
+            element={
+              isAuthenticated ? (
+                <Layout>
+                  <RecuperiOre />
                 </Layout>
               ) : (
                 <Navigate to="/login" replace />
