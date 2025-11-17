@@ -211,8 +211,8 @@ const Layout = ({ children }) => {
           <div className="flex-shrink-0 p-4 border-t border-slate-700">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-slate-800 font-bold text-sm">
+                <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
                     {user?.role === 'admin' ? 'HR' : `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`}
                   </span>
                 </div>
