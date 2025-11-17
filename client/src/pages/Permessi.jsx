@@ -57,14 +57,21 @@ const LeaveRequests = () => {
   // Tab per admin
   const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
   
-  // Stati per dialog di approvazione/rifiuto/annullamento
+  // Stati per dialog di approvazione/rifiuto/annullamento/modifica
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
+  const [editFormData, setEditFormData] = useState({
+    entryTime: '',
+    exitTime: '',
+    hours: ''
+  });
   const [permissions104, setPermissions104] = useState({
     usedThisMonth: 0,
     maxPerMonth: 3,
@@ -228,6 +235,17 @@ const LeaveRequests = () => {
     setShowCancelDialog(true);
   };
 
+  const openEditDialog = (request) => {
+    setSelectedRequest(request);
+    setSelectedRequestId(request.id);
+    setEditFormData({
+      entryTime: request.entryTime || request.entry_time || '',
+      exitTime: request.exitTime || request.exit_time || '',
+      hours: request.hours || ''
+    });
+    setShowEditDialog(true);
+  };
+
   const confirmApprove = () => {
     handleApproveRequest(selectedRequestId, approvalNotes);
     setShowApproveDialog(false);
@@ -241,6 +259,48 @@ const LeaveRequests = () => {
   const confirmCancel = () => {
     handleCancelRequest(selectedRequestId, cancellationReason);
     setShowCancelDialog(false);
+  };
+
+  const handleEditPermission = async () => {
+    if (!selectedRequestId) return;
+    
+    try {
+      const payload = {};
+      if (editFormData.entryTime !== undefined && editFormData.entryTime !== '') {
+        payload.entryTime = editFormData.entryTime;
+      }
+      if (editFormData.exitTime !== undefined && editFormData.exitTime !== '') {
+        payload.exitTime = editFormData.exitTime;
+      }
+      if (editFormData.hours !== undefined && editFormData.hours !== '') {
+        payload.hours = parseFloat(editFormData.hours);
+      }
+
+      if (Object.keys(payload).length === 0) {
+        showError('Nessuna modifica da salvare');
+        return;
+      }
+
+      const response = await apiCall(`/api/leave-requests/${selectedRequestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        showSuccess('Permesso modificato con successo');
+        fetchRequests();
+        setShowEditDialog(false);
+      } else {
+        const error = await response.json();
+        showError(`Errore: ${error.error || 'Errore durante la modifica'}`);
+      }
+    } catch (error) {
+      console.error('Error editing permission:', error);
+      showError('Errore durante la modifica del permesso');
+    }
   };
 
   // Funzione per annullare richieste approvate (solo admin, solo permessi)
@@ -1132,16 +1192,27 @@ const LeaveRequests = () => {
                       </div>
                     )}
 
-                    {/* Pulsante di annullamento per admin - solo per richieste approvate */}
-                    {user?.role === 'admin' && canCancelRequest(request) && (
-                      <div className="mt-4 flex gap-3">
-                        <button
-                          onClick={() => openCancelDialog(request.id)}
-                          className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Annulla
-                        </button>
+                    {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
+                    {user?.role === 'admin' && request.status === 'approved' && (
+                      <div className="mt-4 flex gap-3 flex-wrap">
+                        {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && (
+                          <button
+                            onClick={() => openEditDialog(request)}
+                            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Modifica Orari
+                          </button>
+                        )}
+                        {canCancelRequest(request) && (
+                          <button
+                            onClick={() => openCancelDialog(request.id)}
+                            className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Annulla
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1243,6 +1314,92 @@ const LeaveRequests = () => {
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
               >
                 Conferma Annullamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog di modifica permesso */}
+      {showEditDialog && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowEditDialog(false)} />
+          <div className="relative bg-slate-800 border border-slate-600 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-white mb-4">Modifica Permesso</h3>
+            <p className="text-slate-300 mb-4 text-sm">
+              Modifica gli orari o le ore di permesso per correggere eventuali discrepanze.
+            </p>
+            
+            <div className="space-y-4">
+              {(selectedRequest.permissionType === 'entrata_posticipata' || selectedRequest.permissionType === 'late_entry' || selectedRequest.entryTime) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Orario di Entrata
+                  </label>
+                  <input
+                    type="time"
+                    value={editFormData.entryTime}
+                    onChange={(e) => setEditFormData({ ...editFormData, entryTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">
+                    Orario attuale: {selectedRequest.entryTime || selectedRequest.entry_time || 'Non impostato'}
+                  </p>
+                </div>
+              )}
+
+              {(selectedRequest.permissionType === 'uscita_anticipata' || selectedRequest.permissionType === 'early_exit' || selectedRequest.exitTime) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Orario di Uscita
+                  </label>
+                  <input
+                    type="time"
+                    value={editFormData.exitTime}
+                    onChange={(e) => setEditFormData({ ...editFormData, exitTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-slate-400 text-xs mt-1">
+                    Orario attuale: {selectedRequest.exitTime || selectedRequest.exit_time || 'Non impostato'}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ore di Permesso (ore decimali, es. 2.5 per 2h 30min)
+                </label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  value={editFormData.hours}
+                  onChange={(e) => setEditFormData({ ...editFormData, hours: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Es. 2.5"
+                />
+                <p className="text-slate-400 text-xs mt-1">
+                  Ore attuali: {selectedRequest.hours ? `${selectedRequest.hours}h (${formatHoursReadable(selectedRequest.hours)})` : 'Non impostate'}
+                </p>
+                <p className="text-amber-400 text-xs mt-2">
+                  💡 Suggerimento: Puoi modificare direttamente le ore per correggere discrepanze (es. se entrato più tardi del previsto)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowEditDialog(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleEditPermission}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salva Modifiche
               </button>
             </div>
           </div>

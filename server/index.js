@@ -4830,20 +4830,57 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
 app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes } = req.body;
+    const { status, notes, entryTime, exitTime, hours } = req.body;
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Stato non valido' });
+    // Verifica se la richiesta esiste
+    const { data: existingRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingRequest) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    // Prepara i dati da aggiornare
+    const updateData = {};
+    
+    // Se viene fornito status, aggiorna lo status
+    if (status && ['approved', 'rejected'].includes(status)) {
+      updateData.status = status;
+      updateData.approved_at = new Date().toISOString();
+      updateData.approved_by = req.user.id;
+    }
+    
+    // Se vengono fornite notes, aggiorna le note
+    if (notes !== undefined) {
+      updateData.notes = notes || '';
+    }
+    
+    // Se viene fornito entryTime, aggiorna l'orario di entrata (per permessi)
+    if (entryTime !== undefined && existingRequest.type === 'permission') {
+      updateData.entry_time = entryTime || null;
+    }
+    
+    // Se viene fornito exitTime, aggiorna l'orario di uscita (per permessi)
+    if (exitTime !== undefined && existingRequest.type === 'permission') {
+      updateData.exit_time = exitTime || null;
+    }
+    
+    // Se vengono fornite hours, aggiorna le ore di permesso
+    if (hours !== undefined && existingRequest.type === 'permission') {
+      updateData.hours = hours !== null ? parseFloat(hours) : null;
+    }
+
+    // Se non ci sono dati da aggiornare, restituisci errore
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'Nessun dato da aggiornare' });
     }
 
     const { data: updatedRequest, error } = await supabase
       .from('leave_requests')
-      .update({
-        status: status,
-        approved_at: new Date().toISOString(),
-        approved_by: req.user.id,
-        notes: notes || ''
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
