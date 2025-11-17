@@ -468,13 +468,25 @@ const Dashboard = () => {
       const response = await apiCall('/api/recovery-requests/debt-summary');
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Debt summary response:', {
+          success: data.success,
+          totalEmployeesWithDebt: data.totalEmployeesWithDebt,
+          totalDebtHours: data.totalDebtHours,
+          employeesWithDebt: data.employeesWithDebt?.map(e => ({
+            id: e.id,
+            name: e.name || `${e.first_name} ${e.last_name}`,
+            totalBalance: e.totalBalance,
+            debtHours: e.debtHours
+          }))
+        });
         setEmployeesWithDebt(data.employeesWithDebt || []);
         console.log('✅ Debt summary loaded:', data.employeesWithDebt?.length || 0, 'employees with debt');
       } else {
-        console.error('❌ Error fetching debt summary:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Error fetching debt summary:', response.status, errorText);
       }
     } catch (error) {
-      console.error('Error fetching debt summary:', error);
+      console.error('❌ Error fetching debt summary:', error);
       // Anche in caso di errore, mostra la sezione vuota
       setEmployeesWithDebt([]);
     }
