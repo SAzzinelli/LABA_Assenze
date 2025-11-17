@@ -4912,10 +4912,12 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     const updateData = {};
     
     // Se viene fornito status, aggiorna lo status
-    if (status && ['approved', 'rejected'].includes(status)) {
+    if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
       updateData.status = status;
-      updateData.approved_at = new Date().toISOString();
-      updateData.approved_by = req.user.id;
+      if (status === 'approved' || status === 'rejected') {
+        updateData.approved_at = new Date().toISOString();
+        updateData.approved_by = req.user.id;
+      }
     }
     
     // Se vengono fornite notes, aggiorna le note
@@ -5168,7 +5170,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
       const statusLabels = {
         'approved': 'approvata',
-        'rejected': 'rifiutata'
+        'rejected': 'rifiutata',
+        'cancelled': 'annullata'
       };
 
       // Parse date as local time to avoid UTC timezone issues
