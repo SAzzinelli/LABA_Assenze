@@ -4901,8 +4901,23 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
                 year: 'numeric',
                 timeZone: 'Europe/Rome'
               });
-          const dateRange = startDate === endDate ? formattedStart : `dal ${formattedStart} al ${formattedEnd}`;
-          return `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'una malattia' : 'un permesso'} ${dateRange}. ${reason ? `Motivo: ${reason}` : ''}`;
+          
+          // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
+          if (type === 'permission' || type === 'permission_104') {
+            // PERMESSI: sono in ORE, non giorni
+            const hours = newRequest.hours || 0;
+            const hoursFormatted = hours > 0 
+              ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+              : '0h';
+            return `L'amministratore ha registrato un permesso di ${hoursFormatted} per il ${formattedStart}.${reason ? ` Motivo: ${reason}` : ''}`;
+          } else {
+            // FERIE/MALATTIA: sono in GIORNI
+            if (startDate === endDate) {
+              return `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : 'una malattia'} per il ${formattedStart}.${reason ? ` Motivo: ${reason}` : ''}`;
+            } else {
+              return `L'amministratore ha registrato ${type === 'vacation' ? 'ferie' : 'una malattia'} dal ${formattedStart} al ${formattedEnd}.${reason ? ` Motivo: ${reason}` : ''}`;
+            }
+          }
         })(),
         related_id: newRequest.id,
         is_read: false,
