@@ -159,7 +159,6 @@ const emailTemplates = {
   // Risposta richiesta per dipendente
   requestResponse: (requestType, status, startDate, endDate, notes, requestId) => {
     const typeLabel = getItalianRequestType(requestType);
-    const statusLabel = getItalianStatus(status);
     const dateStart = formatDateItalian(startDate);
     const dateEnd = formatDateItalian(endDate);
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
@@ -171,6 +170,7 @@ const emailTemplates = {
     const isApproved = normalizedStatus === 'approved';
     const statusColor = isApproved ? '#10B981' : '#EF4444'; // Verde per approvato, Rosso per rifiutato
     const statusBg = isApproved ? '#D1FAE5' : '#FEE2E2';
+    // Usa statusText coerente con la logica dei colori (evita undefined)
     const statusText = isApproved ? 'Approvata' : 'Rifiutata';
     const headerColor = isApproved
       ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
@@ -219,7 +219,7 @@ const emailTemplates = {
                   <span class="info-label">Periodo:</span> ${dateRange}
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusLabel}</strong>
+                  <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusText}</strong>
                 </div>
                 <div class="info-row">
                   <span class="info-label">ID Richiesta:</span> #${requestId}
