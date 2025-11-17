@@ -19,14 +19,16 @@ const RecuperiOre = () => {
   const [totalBalance, setTotalBalance] = useState(0); // Saldo totale banca ore
   const [recoveryRequests, setRecoveryRequests] = useState([]); // Richieste recupero
   const [showRecoveryModal, setShowRecoveryModal] = useState(false); // Modal crea richiesta recupero
+  const [recoveryStep, setRecoveryStep] = useState(1); // Step corrente del wizard (1: Data, 2: Ore, 3: Orario)
   const [recoveryFormData, setRecoveryFormData] = useState({
-    recoveryDate: '',
-    startTime: '',
-    endTime: '',
-    hours: '', // Nuovo campo per inserire direttamente le ore
+    recoveryDate: '', // Step 1: Data recupero
+    hours: '', // Step 2: Ore da recuperare
+    startTime: '', // Step 3: Orario inizio
+    endTime: '', // Step 3: Orario fine
     reason: '',
     notes: ''
   });
+  const [suggestedTimeSlots, setSuggestedTimeSlots] = useState([]); // Slot orari suggeriti
   
   // Dati per admin gestione recuperi
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
@@ -37,14 +39,16 @@ const RecuperiOre = () => {
   const [selectedRecoveryId, setSelectedRecoveryId] = useState(null);
   const [selectedEmployeeForProposal, setSelectedEmployeeForProposal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [proposalStep, setProposalStep] = useState(1); // Step corrente del wizard admin (1: Data, 2: Ore, 3: Orario)
   const [proposalFormData, setProposalFormData] = useState({
-    recoveryDate: '',
-    startTime: '',
-    endTime: '',
-    hours: '', // Nuovo campo per inserire direttamente le ore
+    recoveryDate: '', // Step 1: Data recupero
+    hours: '', // Step 2: Ore da recuperare
+    startTime: '', // Step 3: Orario inizio
+    endTime: '', // Step 3: Orario fine
     reason: '',
     notes: ''
   });
+  const [proposalSuggestedTimeSlots, setProposalSuggestedTimeSlots] = useState([]); // Slot orari suggeriti per admin
 
   useEffect(() => {
     const loadData = async () => {
@@ -204,6 +208,7 @@ const RecuperiOre = () => {
       if (response.ok) {
         alert('Proposta recupero ore inviata con successo!');
         setShowProposeRecoveryModal(false);
+        setProposalStep(1);
         setProposalFormData({
           recoveryDate: '',
           startTime: '',
@@ -212,6 +217,7 @@ const RecuperiOre = () => {
           reason: '',
           notes: ''
         });
+        setProposalSuggestedTimeSlots([]);
         setSelectedEmployeeForProposal(null);
         await fetchPendingRecoveryRequests();
         await fetchDebtSummary();
@@ -323,37 +329,133 @@ const RecuperiOre = () => {
     return `${h}h ${m}min`;
   };
 
+  // Genera slot orari suggeriti basati sulle ore selezionate
+  const generateTimeSlots = (hours) => {
+    if (!hours || parseFloat(hours) <= 0) return [];
+    
+    const hoursNum = parseFloat(hours);
+    const slots = [];
+    
+    // Genera slot ogni ora dalle 8:00 alle 18:00
+    for (let startHour = 8; startHour <= 18 - Math.ceil(hoursNum); startHour++) {
+      const startTime = `${String(startHour).padStart(2, '0')}:00`;
+      const endTime = calculateEndTime(startTime, hoursNum.toString());
+      if (endTime) {
+        slots.push({ startTime, endTime, label: `${startTime} - ${endTime}` });
+      }
+    }
+    
+    return slots;
+  };
+
+  // Avanza al prossimo step del wizard (dipendente)
+  const handleNextStep = () => {
+    if (recoveryStep === 1) {
+      // Validazione step 1: data
+      if (!recoveryFormData.recoveryDate) {
+        alert('Seleziona una data per il recupero');
+        return;
+      }
+      setRecoveryStep(2);
+    } else if (recoveryStep === 2) {
+      // Validazione step 2: ore da recuperare
+      const hours = parseFloat(recoveryFormData.hours);
+      if (!recoveryFormData.hours || hours <= 0) {
+        alert('Inserisci le ore da recuperare');
+        return;
+      }
+      if (totalBalance >= 0) {
+        alert('Non hai debiti da recuperare');
+        return;
+      }
+      const maxHours = Math.abs(totalBalance);
+      if (hours > maxHours) {
+        alert(`Puoi recuperare massimo ${formatHoursFromDecimal(maxHours.toString())} (il tuo debito attuale)`);
+        return;
+      }
+      // Genera slot suggeriti
+      setSuggestedTimeSlots(generateTimeSlots(hours));
+      setRecoveryStep(3);
+    }
+  };
+
+  // Avanza al prossimo step del wizard (admin)
+  const handleProposalNextStep = () => {
+    if (proposalStep === 1) {
+      // Validazione step 1: data
+      if (!proposalFormData.recoveryDate) {
+        alert('Seleziona una data per il recupero');
+        return;
+      }
+      setProposalStep(2);
+    } else if (proposalStep === 2) {
+      // Validazione step 2: ore da recuperare
+      const hours = parseFloat(proposalFormData.hours);
+      if (!proposalFormData.hours || hours <= 0) {
+        alert('Inserisci le ore da recuperare');
+        return;
+      }
+      if (!selectedEmployeeForProposal) return;
+      const employeeDebt = Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0);
+      if (hours > employeeDebt) {
+        alert(`Il dipendente può recuperare massimo ${formatHoursFromDecimal(employeeDebt.toString())} (il suo debito attuale)`);
+        return;
+      }
+      // Genera slot suggeriti
+      setProposalSuggestedTimeSlots(generateTimeSlots(hours));
+      setProposalStep(3);
+    }
+  };
+
+  // Torna allo step precedente (admin)
+  const handleProposalPrevStep = () => {
+    if (proposalStep > 1) {
+      setProposalStep(proposalStep - 1);
+    }
+  };
+
+  // Seleziona uno slot orario suggerito (admin)
+  const handleSelectProposalTimeSlot = (slot) => {
+    setProposalFormData({
+      ...proposalFormData,
+      startTime: slot.startTime,
+      endTime: slot.endTime
+    });
+  };
+
+  // Torna allo step precedente
+  const handlePrevStep = () => {
+    if (recoveryStep > 1) {
+      setRecoveryStep(recoveryStep - 1);
+    }
+  };
+
+  // Seleziona uno slot orario suggerito
+  const handleSelectTimeSlot = (slot) => {
+    setRecoveryFormData({
+      ...recoveryFormData,
+      startTime: slot.startTime,
+      endTime: slot.endTime
+    });
+  };
+
   // Crea richiesta recupero ore
   const handleCreateRecoveryRequest = async () => {
     try {
       const { recoveryDate, startTime, endTime, hours, reason, notes } = recoveryFormData;
 
-      // Validazione: serve data + (startTime+endTime) OPPURE (startTime+hours)
-      if (!recoveryDate || !startTime) {
-        alert('Compila data e orario di inizio');
+      // Validazione finale
+      if (!recoveryDate || !startTime || !endTime) {
+        alert('Compila tutti i campi obbligatori');
         return;
       }
 
-      let finalEndTime = endTime;
-      let finalHours = hours;
-
-      // Se è stato inserito il campo "ore", calcola endTime
-      if (hours && hours !== '') {
-        finalEndTime = calculateEndTime(startTime, hours);
-        if (!finalEndTime) {
-          alert('Errore nel calcolo dell\'orario di fine');
-          return;
-        }
-      } 
-      // Se è stato inserito endTime, calcola le ore
-      else if (endTime && endTime !== '') {
-        finalHours = calculateHours(startTime, endTime);
-        if (!finalHours || parseFloat(finalHours) <= 0) {
-          alert('L\'orario di fine deve essere successivo all\'orario di inizio');
-          return;
-        }
-      } else {
-        alert('Inserisci o l\'orario di fine o le ore da recuperare');
+      // Verifica che le ore selezionate corrispondano ESATTAMENTE al range orario
+      const calculatedHours = parseFloat(calculateHours(startTime, endTime));
+      const requestedHours = parseFloat(hours);
+      
+      if (Math.abs(calculatedHours - requestedHours) > 0.01) {
+        alert(`Il range orario selezionato (${formatHoursFromDecimal(calculatedHours.toString())}) deve corrispondere ESATTAMENTE alle ore richieste (${formatHoursFromDecimal(requestedHours.toString())}). Le ore devono tornare matematicamente.`);
         return;
       }
 
@@ -374,6 +476,7 @@ const RecuperiOre = () => {
       if (response.ok) {
         alert('Richiesta recupero ore creata con successo!');
         setShowRecoveryModal(false);
+        setRecoveryStep(1);
         setRecoveryFormData({
           recoveryDate: '',
           startTime: '',
@@ -382,6 +485,7 @@ const RecuperiOre = () => {
           reason: '',
           notes: ''
         });
+        setSuggestedTimeSlots([]);
         await fetchRecoveryRequests();
         await fetchTotalBalance();
       } else {
@@ -617,134 +721,246 @@ const RecuperiOre = () => {
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold text-white mb-4">Nuova Richiesta Recupero Ore</h3>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Data Recupero *</label>
-                  <input
-                    type="date"
-                    value={recoveryFormData.recoveryDate}
-                    onChange={(e) => setRecoveryFormData({ ...recoveryFormData, recoveryDate: e.target.value })}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+              {/* Indicatore step */}
+              <div className="flex items-center justify-center mb-6 gap-2">
+                <div className={`flex items-center ${recoveryStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${recoveryStep >= 1 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    {recoveryStep > 1 ? '✓' : '1'}
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Data</span>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
-                  <input
-                    type="time"
-                    value={recoveryFormData.startTime}
-                    onChange={(e) => {
-                      const newStartTime = e.target.value;
-                      let newEndTime = recoveryFormData.endTime;
-                      let newHours = recoveryFormData.hours;
-                      
-                      // Se c'è un valore in "ore", ricalcola endTime
-                      if (recoveryFormData.hours && recoveryFormData.hours !== '') {
-                        newEndTime = calculateEndTime(newStartTime, recoveryFormData.hours);
-                      }
-                      // Se c'è endTime, ricalcola le ore
-                      else if (recoveryFormData.endTime && recoveryFormData.endTime !== '') {
-                        newHours = calculateHours(newStartTime, recoveryFormData.endTime);
-                      }
-                      
-                      setRecoveryFormData({ 
-                        ...recoveryFormData, 
-                        startTime: newStartTime,
-                        endTime: newEndTime,
-                        hours: newHours
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+                <div className={`w-12 h-0.5 ${recoveryStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+                <div className={`flex items-center ${recoveryStep >= 2 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${recoveryStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    {recoveryStep > 2 ? '✓' : '2'}
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Ore</span>
                 </div>
+                <div className={`w-12 h-0.5 ${recoveryStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+                <div className={`flex items-center ${recoveryStep >= 3 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${recoveryStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    3
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Orario</span>
+                </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              {/* Step 1: Data recupero */}
+              {recoveryStep === 1 && (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Quale giorno vuoi recuperare? *
+                    </label>
                     <input
-                      type="time"
-                      value={recoveryFormData.endTime}
-                      onChange={(e) => {
-                        const newEndTime = e.target.value;
-                        const newHours = calculateHours(recoveryFormData.startTime, newEndTime);
-                        setRecoveryFormData({ 
-                          ...recoveryFormData, 
-                          endTime: newEndTime,
-                          hours: newHours || ''
-                        });
-                      }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      type="date"
+                      value={recoveryFormData.recoveryDate}
+                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, recoveryDate: e.target.value })}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
                     />
                   </div>
+                  
+                  {recoveryFormData.recoveryDate && (
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                      <p className="text-sm text-blue-400">
+                        📅 Data selezionata: <strong>{new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Ore da recuperare */}
+              {recoveryStep === 2 && (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Ore da Recuperare</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Quante ore vuoi recuperare? *
+                    </label>
                     <input
                       type="number"
                       step="0.25"
                       min="0.25"
-                      max="24"
+                      max={Math.abs(totalBalance)}
                       value={recoveryFormData.hours}
-                      onChange={(e) => {
-                        const newHours = e.target.value;
-                        const newEndTime = calculateEndTime(recoveryFormData.startTime, newHours);
-                        setRecoveryFormData({ 
-                          ...recoveryFormData, 
-                          hours: newHours,
-                          endTime: newEndTime || ''
-                        });
-                      }}
+                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, hours: e.target.value })}
                       placeholder="es. 2.5"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      Debito attuale: <span className="text-red-400 font-semibold">{formatHours(Math.abs(totalBalance))}</span>
+                    </p>
+                  </div>
+                  
+                  {recoveryFormData.hours && parseFloat(recoveryFormData.hours) > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-sm text-amber-400 font-medium">
+                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(recoveryFormData.hours)}</strong> per il <strong>{recoveryFormData.recoveryDate ? new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Orario */}
+              {recoveryStep === 3 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Seleziona l'orario ({formatHoursFromDecimal(recoveryFormData.hours)})
+                    </label>
+                    
+                    {/* Slot suggeriti */}
+                    {suggestedTimeSlots.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs text-slate-400 mb-2">Suggerimenti automatici:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {suggestedTimeSlots.map((slot, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSelectTimeSlot(slot)}
+                              className={`px-3 py-2 rounded-lg border transition-colors text-sm ${
+                                recoveryFormData.startTime === slot.startTime && recoveryFormData.endTime === slot.endTime
+                                  ? 'bg-amber-500 border-amber-400 text-white'
+                                  : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                              }`}
+                            >
+                              {slot.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Input manuale */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Da</label>
+                        <input
+                          type="time"
+                          value={recoveryFormData.startTime}
+                          onChange={(e) => {
+                            const newStartTime = e.target.value;
+                            const newEndTime = calculateEndTime(newStartTime, recoveryFormData.hours);
+                            setRecoveryFormData({ 
+                              ...recoveryFormData, 
+                              startTime: newStartTime,
+                              endTime: newEndTime || ''
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">A</label>
+                        <input
+                          type="time"
+                          value={recoveryFormData.endTime}
+                          onChange={(e) => {
+                            const newEndTime = e.target.value;
+                            const calculatedHours = calculateHours(recoveryFormData.startTime, newEndTime);
+                            const requestedHours = parseFloat(recoveryFormData.hours);
+                            
+                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
+                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(recoveryFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
+                              // Reimposta endTime calcolato automaticamente
+                              const autoEndTime = calculateEndTime(recoveryFormData.startTime, recoveryFormData.hours);
+                              setRecoveryFormData({ 
+                                ...recoveryFormData, 
+                                endTime: autoEndTime || ''
+                              });
+                              return;
+                            }
+                            
+                            setRecoveryFormData({ 
+                              ...recoveryFormData, 
+                              endTime: newEndTime
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+                    
+                    {recoveryFormData.startTime && recoveryFormData.endTime && (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                        <p className="text-sm text-green-400 font-medium">
+                          ✅ Range selezionato: <strong>{recoveryFormData.startTime} - {recoveryFormData.endTime}</strong> ({formatHoursFromDecimal(calculateHours(recoveryFormData.startTime, recoveryFormData.endTime) || '0')})
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Motivo e Note (solo nello step 3) */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                    <textarea
+                      value={recoveryFormData.reason}
+                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, reason: e.target.value })}
+                      rows={3}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="Motivo della richiesta di recupero ore..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                    <textarea
+                      value={recoveryFormData.notes}
+                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, notes: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="Note aggiuntive..."
                     />
                   </div>
                 </div>
-
-                {/* Riepilogo ore richieste */}
-                {(recoveryFormData.hours && recoveryFormData.hours !== '' && parseFloat(recoveryFormData.hours) > 0) && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                    <p className="text-sm text-amber-400 font-medium">
-                      ✅ Hai richiesto un totale di <strong>{formatHoursFromDecimal(recoveryFormData.hours)}</strong>
-                    </p>
-                  </div>
+              )}
+              
+              <div className="flex gap-3 justify-between mt-6">
+                {recoveryStep > 1 ? (
+                  <button
+                    onClick={handlePrevStep}
+                    className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                  >
+                    Indietro
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowRecoveryModal(false);
+                      setRecoveryStep(1);
+                      setRecoveryFormData({
+                        recoveryDate: '',
+                        startTime: '',
+                        endTime: '',
+                        hours: '',
+                        reason: '',
+                        notes: ''
+                      });
+                      setSuggestedTimeSlots([]);
+                    }}
+                    className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                  >
+                    Annulla
+                  </button>
                 )}
                 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
-                  <textarea
-                    value={recoveryFormData.reason}
-                    onChange={(e) => setRecoveryFormData({ ...recoveryFormData, reason: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Motivo della richiesta di recupero ore..."
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
-                  <textarea
-                    value={recoveryFormData.notes}
-                    onChange={(e) => setRecoveryFormData({ ...recoveryFormData, notes: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Note aggiuntive..."
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3 justify-end mt-6">
-                <button
-                  onClick={() => setShowRecoveryModal(false)}
-                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={handleCreateRecoveryRequest}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px]"
-                >
-                  Invia Richiesta
-                </button>
+                {recoveryStep < 3 ? (
+                  <button
+                    onClick={handleNextStep}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                  >
+                    Avanti
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCreateRecoveryRequest}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                  >
+                    Invia Richiesta
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -808,13 +1024,16 @@ const RecuperiOre = () => {
                   <button
                     onClick={() => {
                       setSelectedEmployeeForProposal(employee);
+                      setProposalStep(1);
                       setProposalFormData({
                         recoveryDate: '',
                         startTime: '',
                         endTime: '',
+                        hours: '',
                         reason: '',
                         notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
                       });
+                      setProposalSuggestedTimeSlots([]);
                       setShowProposeRecoveryModal(true);
                     }}
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
@@ -969,145 +1188,247 @@ const RecuperiOre = () => {
               Proponi Recupero per {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
             </h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Data Recupero *</label>
-                <input
-                  type="date"
-                  value={proposalFormData.recoveryDate}
-                  onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+            {/* Indicatore step */}
+            <div className="flex items-center justify-center mb-6 gap-2">
+              <div className={`flex items-center ${proposalStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 1 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                  {proposalStep > 1 ? '✓' : '1'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Data</span>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
-                <input
-                  type="time"
-                  value={proposalFormData.startTime}
-                  onChange={(e) => {
-                    const newStartTime = e.target.value;
-                    let newEndTime = proposalFormData.endTime;
-                    let newHours = proposalFormData.hours;
-                    
-                    // Se c'è un valore in "ore", ricalcola endTime
-                    if (proposalFormData.hours && proposalFormData.hours !== '') {
-                      newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
-                    }
-                    // Se c'è endTime, ricalcola le ore
-                    else if (proposalFormData.endTime && proposalFormData.endTime !== '') {
-                      newHours = calculateHours(newStartTime, proposalFormData.endTime);
-                    }
-                    
-                    setProposalFormData({ 
-                      ...proposalFormData, 
-                      startTime: newStartTime,
-                      endTime: newEndTime,
-                      hours: newHours
-                    });
-                  }}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+              <div className={`w-12 h-0.5 ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+              <div className={`flex items-center ${proposalStep >= 2 ? 'text-amber-400' : 'text-slate-500'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                  {proposalStep > 2 ? '✓' : '2'}
+                </div>
+                <span className="ml-2 text-sm font-medium">Ore</span>
               </div>
+              <div className={`w-12 h-0.5 ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+              <div className={`flex items-center ${proposalStep >= 3 ? 'text-amber-400' : 'text-slate-500'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                  3
+                </div>
+                <span className="ml-2 text-sm font-medium">Orario</span>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
+            {/* Step 1: Data recupero */}
+            {proposalStep === 1 && (
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Quale giorno vuoi proporre? *
+                  </label>
                   <input
-                    type="time"
-                    value={proposalFormData.endTime}
-                    onChange={(e) => {
-                      const newEndTime = e.target.value;
-                      const newHours = calculateHours(proposalFormData.startTime, newEndTime);
-                      setProposalFormData({ 
-                        ...proposalFormData, 
-                        endTime: newEndTime,
-                        hours: newHours || ''
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    type="date"
+                    value={proposalFormData.recoveryDate}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
                   />
                 </div>
+                
+                {proposalFormData.recoveryDate && (
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-sm text-blue-400">
+                      📅 Data selezionata: <strong>{new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Ore da recuperare */}
+            {proposalStep === 2 && (
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Ore da Recuperare</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Quante ore vuoi proporre? *
+                  </label>
                   <input
                     type="number"
                     step="0.25"
                     min="0.25"
-                    max="24"
+                    max={Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0)}
                     value={proposalFormData.hours}
-                    onChange={(e) => {
-                      const newHours = e.target.value;
-                      const newEndTime = calculateEndTime(proposalFormData.startTime, newHours);
-                      setProposalFormData({ 
-                        ...proposalFormData, 
-                        hours: newHours,
-                        endTime: newEndTime || ''
-                      });
-                    }}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
                     placeholder="es. 2.5"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
+                  </p>
+                </div>
+                
+                {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-sm text-amber-400 font-medium">
+                      ✅ Hai selezionato <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong> per il <strong>{proposalFormData.recoveryDate ? new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Orario */}
+            {proposalStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Seleziona l'orario ({formatHoursFromDecimal(proposalFormData.hours)})
+                  </label>
+                  
+                  {/* Slot suggeriti */}
+                  {proposalSuggestedTimeSlots.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs text-slate-400 mb-2">Suggerimenti automatici:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {proposalSuggestedTimeSlots.map((slot, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSelectProposalTimeSlot(slot)}
+                            className={`px-3 py-2 rounded-lg border transition-colors text-sm ${
+                              proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
+                                ? 'bg-amber-500 border-amber-400 text-white'
+                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                            }`}
+                          >
+                            {slot.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Input manuale */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Da</label>
+                      <input
+                        type="time"
+                        value={proposalFormData.startTime}
+                        onChange={(e) => {
+                          const newStartTime = e.target.value;
+                          const newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
+                          setProposalFormData({ 
+                            ...proposalFormData, 
+                            startTime: newStartTime,
+                            endTime: newEndTime || ''
+                          });
+                        }}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">A</label>
+                      <input
+                        type="time"
+                        value={proposalFormData.endTime}
+                        onChange={(e) => {
+                          const newEndTime = e.target.value;
+                          const calculatedHours = calculateHours(proposalFormData.startTime, newEndTime);
+                          const requestedHours = parseFloat(proposalFormData.hours);
+                          
+                          if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
+                            alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(proposalFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
+                            // Reimposta endTime calcolato automaticamente
+                            const autoEndTime = calculateEndTime(proposalFormData.startTime, proposalFormData.hours);
+                            setProposalFormData({ 
+                              ...proposalFormData, 
+                              endTime: autoEndTime || ''
+                            });
+                            return;
+                          }
+                          
+                          setProposalFormData({ 
+                            ...proposalFormData, 
+                            endTime: newEndTime
+                          });
+                        }}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  {proposalFormData.startTime && proposalFormData.endTime && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                      <p className="text-sm text-green-400 font-medium">
+                        ✅ Range selezionato: <strong>{proposalFormData.startTime} - {proposalFormData.endTime}</strong> ({formatHoursFromDecimal(calculateHours(proposalFormData.startTime, proposalFormData.endTime) || '0')})
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Motivo e Note (solo nello step 3) */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                  <textarea
+                    value={proposalFormData.reason}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
+                    rows={3}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="Motivo della proposta di recupero ore..."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                  <textarea
+                    value={proposalFormData.notes}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="Note aggiuntive..."
                   />
                 </div>
               </div>
-
-              {/* Riepilogo ore richieste */}
-              {(proposalFormData.hours && proposalFormData.hours !== '' && parseFloat(proposalFormData.hours) > 0) && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                  <p className="text-sm text-amber-400 font-medium">
-                    ✅ Hai richiesto un totale di <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong>
-                  </p>
-                </div>
+            )}
+            
+            <div className="flex gap-3 justify-between mt-6">
+              {proposalStep > 1 ? (
+                <button
+                  onClick={handleProposalPrevStep}
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Indietro
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowProposeRecoveryModal(false);
+                    setSelectedEmployeeForProposal(null);
+                    setProposalStep(1);
+                    setProposalFormData({
+                      recoveryDate: '',
+                      startTime: '',
+                      endTime: '',
+                      hours: '',
+                      reason: '',
+                      notes: ''
+                    });
+                    setProposalSuggestedTimeSlots([]);
+                  }}
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Annulla
+                </button>
               )}
               
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
-                <textarea
-                  value={proposalFormData.reason}
-                  onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="Motivo della proposta di recupero ore..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
-                <textarea
-                  value={proposalFormData.notes}
-                  onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  placeholder="Note aggiuntive..."
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3 justify-end mt-6">
-              <button
-                onClick={() => {
-                  setShowProposeRecoveryModal(false);
-                  setSelectedEmployeeForProposal(null);
-                  setProposalFormData({
-                    recoveryDate: '',
-                    startTime: '',
-                    endTime: '',
-                    hours: '',
-                    reason: '',
-                    notes: ''
-                  });
-                }}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleProposeRecovery}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px]"
-              >
-                Invia Proposta
-              </button>
+              {proposalStep < 3 ? (
+                <button
+                  onClick={handleProposalNextStep}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                >
+                  Avanti
+                </button>
+              ) : (
+                <button
+                  onClick={handleProposeRecovery}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                >
+                  Invia Proposta
+                </button>
+              )}
             </div>
           </div>
         </div>
