@@ -12,10 +12,14 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
     const loadHolidays = async () => {
       try {
         setLoading(true);
-        const response = await apiCall(`/api/holidays?year=${year}`);
+        const currentYear = year || new Date().getFullYear();
+        const response = await apiCall(`/api/holidays?year=${currentYear}`);
         if (response.ok) {
           const data = await response.json();
-          setHolidays(data);
+          console.log(`📅 Loaded ${data.length} holidays for year ${currentYear}`);
+          setHolidays(data || []);
+        } else {
+          console.error('Failed to load holidays:', response.status);
         }
       } catch (error) {
         console.error('Error loading holidays:', error);
@@ -25,7 +29,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
     };
 
     loadHolidays();
-  }, [year]);
+  }, [year, apiCall]);
 
   const getUpcomingHolidays = () => {
     const today = new Date();

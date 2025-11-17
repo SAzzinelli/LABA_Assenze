@@ -6560,29 +6560,39 @@ app.get('/api/departments', authenticateToken, async (req, res) => {
 app.get('/api/holidays', authenticateToken, async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
+    const yearNum = parseInt(year, 10);
 
+    // Prova a recuperare dal database
     const { data, error } = await supabase
       .from('holidays')
       .select('*')
-      .gte('date', `${year}-01-01`)
-      .lte('date', `${year}-12-31`)
+      .gte('date', `${yearNum}-01-01`)
+      .lte('date', `${yearNum}-12-31`)
       .order('date');
 
     if (error) {
       console.error('Holidays fetch error:', error);
       // Se la tabella non esiste o ha errori, restituisci giorni festivi di default
-      return res.json(getDefaultHolidays(year));
+      const defaultHolidays = getDefaultHolidays(yearNum);
+      console.log(`📅 Using default holidays for year ${yearNum}: ${defaultHolidays.length} holidays`);
+      return res.json(defaultHolidays);
     }
 
     // Se non ci sono dati per l'anno richiesto, restituisci i default
     if (!data || data.length === 0) {
-      return res.json(getDefaultHolidays(year));
+      const defaultHolidays = getDefaultHolidays(yearNum);
+      console.log(`📅 No holidays in database for year ${yearNum}, using defaults: ${defaultHolidays.length} holidays`);
+      return res.json(defaultHolidays);
     }
 
+    console.log(`📅 Returning ${data.length} holidays from database for year ${yearNum}`);
     res.json(data);
   } catch (error) {
     console.error('Holidays fetch error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    const { year = new Date().getFullYear() } = req.query;
+    const yearNum = parseInt(year, 10);
+    // Fallback sempre ai default in caso di errore
+    res.json(getDefaultHolidays(yearNum));
   }
 });
 
