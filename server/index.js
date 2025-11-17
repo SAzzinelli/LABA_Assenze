@@ -3701,23 +3701,42 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     // Count monthly presences - APPROCCIO ALTERNATIVO: Conta giorni unici con QUALSIASI record di attendance
     // Se esiste un record in attendance per una data, significa che è stato lavorato quel giorno
     // (indipendentemente da clock_in, actual_hours, etc.)
+    const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+    const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+    
+    console.log(`🔍 Querying attendance for user ${userId} from ${monthStart} to ${monthEnd}`);
+    
     const { data: attendanceRecords, error: monthlyError } = await supabase
       .from('attendance')
       .select('date')
       .eq('user_id', userId)
-      .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+      .gte('date', monthStart)
+      .lt('date', monthEnd);
+    
+    console.log(`🔍 Query result: ${attendanceRecords?.length || 0} records, error: ${monthlyError ? JSON.stringify(monthlyError) : 'none'}`);
     
     // Conta giorni unici: se esiste un record, è un giorno lavorato
     let daysWithAttendance = 0;
-    if (attendanceRecords && !monthlyError && attendanceRecords.length > 0) {
-      const uniqueDays = new Set(attendanceRecords.map(record => record.date));
-      daysWithAttendance = uniqueDays.size;
-      console.log(`📊 Found ${attendanceRecords.length} attendance records for ${uniqueDays.size} unique days in month ${currentMonth}/${currentYear}`);
+    if (attendanceRecords && !monthlyError) {
+      if (attendanceRecords.length > 0) {
+        const uniqueDays = new Set(attendanceRecords.map(record => record.date));
+        daysWithAttendance = uniqueDays.size;
+        console.log(`📊 Found ${attendanceRecords.length} attendance records for ${uniqueDays.size} unique days in month ${currentMonth}/${currentYear}`);
+        console.log(`📊 Unique dates:`, Array.from(uniqueDays).sort());
+      } else {
+        console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear} (query returned empty array)`);
+      }
     } else if (monthlyError) {
       console.error('❌ Error fetching attendance records:', monthlyError);
-    } else {
-      console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear}`);
+      // In caso di errore, prova a contare comunque usando una query più semplice
+      const { count: fallbackCount } = await supabase
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('date', monthStart)
+        .lt('date', monthEnd);
+      console.log(`🔧 Fallback count: ${fallbackCount || 0} records`);
+      daysWithAttendance = fallbackCount || 0;
     }
 
     // Count approved leave DAYS in this month (not just requests count, but actual days)
