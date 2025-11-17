@@ -5774,6 +5774,203 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
   }
 });
 
+// Admin: Generate historical attendance from Oct 1, 2025 to registration date for all employees
+app.post('/api/admin/generate-historical-attendance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const startDate = '2025-10-01'; // Data di inizio fissa: 1 ottobre 2025
+    
+    console.log(`🔄 Generazione presenze storiche dal ${startDate} per tutti i dipendenti...`);
+    
+    // Trova tutti i dipendenti attivi
+    const { data: employees, error: employeesError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, created_at, hire_date')
+      .eq('role', 'employee')
+      .eq('is_active', true);
+    
+    if (employeesError || !employees || employees.length === 0) {
+      return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
+    }
+    
+    console.log(`📋 Trovati ${employees.length} dipendenti attivi`);
+    
+    const results = {
+      totalEmployees: employees.length,
+      processedEmployees: 0,
+      totalRecordsCreated: 0,
+      skippedDays: 0,
+      errors: []
+    };
+    
+    // Per ogni dipendente
+    for (const employee of employees) {
+      try {
+        console.log(`\n👤 Elaborazione: ${employee.first_name} ${employee.last_name} (${employee.id})`);
+        
+        // Determina la data di fine: data di registrazione (created_at)
+        // Generiamo presenze dal 1 ottobre 2025 fino al giorno di registrazione (incluso)
+        const registrationDate = employee.created_at ? new Date(employee.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        const endDate = registrationDate;
+        
+        console.log(`   📅 Periodo: ${startDate} → ${endDate}`);
+        
+        // Recupera gli orari di lavoro del dipendente
+        const { data: schedules, error: schedulesError } = await supabase
+          .from('work_schedules')
+          .select('*')
+          .eq('user_id', employee.id)
+          .eq('is_working_day', true);
+        
+        if (schedulesError || !schedules || schedules.length === 0) {
+          console.log(`   ⚠️ Nessun orario di lavoro configurato per ${employee.first_name} ${employee.last_name}`);
+          results.errors.push({
+            employee: `${employee.first_name} ${employee.last_name}`,
+            error: 'Nessun orario di lavoro configurato'
+          });
+          continue;
+        }
+        
+        // Recupera presenze esistenti per questo dipendente nel periodo
+        const { data: existingAttendance, error: attError } = await supabase
+          .from('attendance')
+          .select('date')
+          .eq('user_id', employee.id)
+          .gte('date', startDate)
+          .lte('date', endDate);
+        
+        if (attError) {
+          console.error(`   ❌ Errore recupero presenze:`, attError);
+          continue;
+        }
+        
+        const existingDates = new Set(existingAttendance?.map(a => a.date) || []);
+        
+        // Recupera permessi/ferie/malattia approvati per questo dipendente nel periodo
+        const { data: leaveRequests, error: leaveError } = await supabase
+          .from('leave_requests')
+          .select('start_date, end_date, type')
+          .eq('user_id', employee.id)
+          .eq('status', 'approved')
+          .lte('start_date', endDate)
+          .gte('end_date', startDate);
+        
+        if (leaveError) {
+          console.error(`   ❌ Errore recupero leave requests:`, leaveError);
+          continue;
+        }
+        
+        // Crea set di date con permessi/ferie/malattia
+        const leaveDates = new Set();
+        if (leaveRequests) {
+          for (const leave of leaveRequests) {
+            const start = new Date(leave.start_date);
+            const end = new Date(leave.end_date);
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+              leaveDates.add(d.toISOString().split('T')[0]);
+            }
+          }
+        }
+        
+        // Genera presenze per ogni giorno dal 1 ottobre alla data di registrazione
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const inserts = [];
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          const dayOfWeek = d.getDay();
+          
+          // Salta se già esiste una presenza
+          if (existingDates.has(dateStr)) {
+            results.skippedDays++;
+            continue;
+          }
+          
+          // Salta se c'è un permesso/ferie/malattia per questo giorno
+          if (leaveDates.has(dateStr)) {
+            results.skippedDays++;
+            continue;
+          }
+          
+          // Trova l'orario di lavoro per questo giorno della settimana
+          const schedule = schedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day === true);
+          
+          if (!schedule || !schedule.start_time || !schedule.end_time) {
+            // Non è un giorno lavorativo
+            continue;
+          }
+          
+          // Calcola le ore attese dall'orario
+          const expectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+          
+          if (!expectedHours || expectedHours <= 0) {
+            continue;
+          }
+          
+          // Crea record di presenza
+          inserts.push({
+            user_id: employee.id,
+            date: dateStr,
+            expected_hours: Math.round(expectedHours * 100) / 100,
+            actual_hours: Math.round(expectedHours * 100) / 100,
+            balance_hours: 0,
+            notes: '[Presenza storica - generata automaticamente]'
+          });
+        }
+        
+        if (inserts.length > 0) {
+          // Inserisci in batch
+          const { error: insertError } = await supabase
+            .from('attendance')
+            .insert(inserts);
+          
+          if (insertError) {
+            console.error(`   ❌ Errore inserimento per ${employee.first_name}:`, insertError);
+            results.errors.push({
+              employee: `${employee.first_name} ${employee.last_name}`,
+              error: insertError.message
+            });
+          } else {
+            console.log(`   ✅ Create ${inserts.length} presenze per ${employee.first_name} ${employee.last_name}`);
+            results.totalRecordsCreated += inserts.length;
+            results.processedEmployees++;
+          }
+        } else {
+          console.log(`   ⏭️ Nessuna presenza da creare per ${employee.first_name} ${employee.last_name} (tutte già esistenti o con permessi)`);
+          results.processedEmployees++;
+        }
+        
+      } catch (error) {
+        console.error(`   ❌ Errore elaborazione ${employee.first_name} ${employee.last_name}:`, error);
+        results.errors.push({
+          employee: `${employee.first_name} ${employee.last_name}`,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`\n✅ Generazione completata!`);
+    console.log(`   - Dipendenti processati: ${results.processedEmployees}/${results.totalEmployees}`);
+    console.log(`   - Record creati: ${results.totalRecordsCreated}`);
+    console.log(`   - Giorni saltati (già esistenti o con permessi): ${results.skippedDays}`);
+    console.log(`   - Errori: ${results.errors.length}`);
+    
+    res.json({
+      success: true,
+      message: `Generazione presenze storiche completata`,
+      results
+    });
+    
+  } catch (error) {
+    console.error('❌ Errore generazione presenze storiche:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 // Admin: Delete vacation period
 app.delete('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
