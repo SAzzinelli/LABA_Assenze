@@ -3819,16 +3819,40 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       .single();
 
     // Calcola giorni rimanenti del mese (TOTALE - GIÀ LAVORATI)
-    const remainingDays = Math.max(0, expectedMonthlyPresences - monthlyPresences);
+    // VERIFICA: monthlyPresences deve essere >= 0
+    const verifiedMonthlyPresences = Math.max(0, monthlyPresences || 0);
+    const verifiedExpected = Math.max(0, expectedMonthlyPresences || 0);
+    const remainingDays = Math.max(0, verifiedExpected - verifiedMonthlyPresences);
 
-    console.log(`📊 User Stats per ${userId}: monthlyPresences=${monthlyPresences}, expectedMonthlyPresences=${expectedMonthlyPresences}, remainingDays=${remainingDays}`);
-    console.log(`✅ CALCOLO: remainingDays = ${expectedMonthlyPresences} (totale) - ${monthlyPresences} (lavorati) = ${remainingDays} (RIMANENTI)`);
+    console.log(`📊 User Stats per ${userId}:`);
+    console.log(`   - daysWithAttendance: ${daysWithAttendance || 0}`);
+    console.log(`   - approvedLeaveDays: ${approvedLeaveDays || 0}`);
+    console.log(`   - monthlyPresences: ${verifiedMonthlyPresences} (somma dei due sopra)`);
+    console.log(`   - expectedMonthlyPresences: ${verifiedExpected} (totale giorni lavorativi mese)`);
+    console.log(`   - remainingDays: ${remainingDays} (${verifiedExpected} - ${verifiedMonthlyPresences})`);
+    console.log(`✅ CALCOLO VERIFICATO: remainingDays = ${verifiedExpected} (totale) - ${verifiedMonthlyPresences} (lavorati) = ${remainingDays} (RIMANENTI)`);
+    
+    // VERIFICA FINALE: remainingDays NON può essere >= expectedMonthlyPresences
+    if (remainingDays >= verifiedExpected && verifiedMonthlyPresences > 0) {
+      console.error(`❌ ERRORE BACKEND: remainingDays (${remainingDays}) >= expectedMonthlyPresences (${verifiedExpected}) ma monthlyPresences=${verifiedMonthlyPresences} > 0. Questo è un BUG!`);
+      // Forza calcolo corretto
+      const correctedRemaining = Math.max(0, verifiedExpected - verifiedMonthlyPresences);
+      console.log(`🔧 CORREZIONE: usando remainingDays=${correctedRemaining}`);
+      return res.json({
+        isClockedIn,
+        todayHours,
+        monthlyPresences: verifiedMonthlyPresences,
+        expectedMonthlyPresences: verifiedExpected,
+        remainingDays: correctedRemaining, // FORZATO: TOTALE - LAVORATI
+        workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
+      });
+    }
 
     res.json({
       isClockedIn,
       todayHours,
-      monthlyPresences: monthlyPresences || 0,
-      expectedMonthlyPresences: expectedMonthlyPresences,
+      monthlyPresences: verifiedMonthlyPresences,
+      expectedMonthlyPresences: verifiedExpected,
       remainingDays: remainingDays, // IMPORTANTE: GIORNI RIMANENTI = TOTALE - LAVORATI (NON il totale!)
       workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
     });
