@@ -690,8 +690,14 @@ const Vacation = () => {
           </div>
           <button
             onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+            disabled={user?.role !== 'admin' && availablePeriods.length === 0}
+            className={`p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg ${
+              user?.role !== 'admin' && availablePeriods.length === 0
+                ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
             aria-label="Aggiungi ferie"
+            title={user?.role !== 'admin' && availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Aggiungi ferie'}
           >
             <Plus className="h-5 w-5" />
           </button>
@@ -797,7 +803,13 @@ const Vacation = () => {
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                disabled={availablePeriods.length === 0}
+                className={`px-6 py-3 rounded-lg transition-colors flex items-center ${
+                  availablePeriods.length === 0
+                    ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                title={availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Nuova Richiesta'}
               >
                 <Plus className="h-5 w-5 mr-2" />
                 Nuova Richiesta
