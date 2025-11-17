@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { formatHours } from '../utils/hoursCalculation';
 import { useModal } from '../hooks/useModal';
 import { 
   Clock, 
@@ -231,8 +232,8 @@ const OrariLavoro = () => {
                     {pattern ? (
                       <div className="space-y-1">
                         <p className="text-sm text-gray-400">Settimanali: <span className="font-semibold text-gray-300">{weeklyHours}h</span></p>
-                        <p className="text-sm text-gray-400">Giornaliere: <span className="font-semibold text-gray-300">{dailyHours.toFixed(1)}h</span></p>
-                        <p className="text-sm text-gray-400">Ferie annue: <span className="font-semibold text-green-400">{annualVacationHours.toFixed(0)}h</span></p>
+                        <p className="text-sm text-gray-400">Giornaliere: <span className="font-semibold text-gray-300">{formatHours(dailyHours)}</span></p>
+                        <p className="text-sm text-gray-400">Ferie annue: <span className="font-semibold text-green-400">{formatHours(annualVacationHours)}</span></p>
                       </div>
                     ) : (
                       <p className="text-sm text-yellow-400">Orari non configurati</p>
@@ -381,11 +382,11 @@ const OrariLavoro = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    <span>Giornaliere: <strong>{calculateDailyHours().toFixed(1)}h</strong></span>
+                    <span>Giornaliere: <strong>{formatHours(calculateDailyHours())}</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4" />
-                    <span>Ferie annue: <strong>{calculateAnnualVacationHours().toFixed(0)}h</strong></span>
+                    <span>Ferie annue: <strong>{formatHours(calculateAnnualVacationHours())}</strong></span>
                   </div>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { formatHours } from '../utils/hoursCalculation';
 import { useModal } from '../hooks/useModal';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AddEmployeeModal from '../components/AddEmployeeModal';
@@ -1172,7 +1173,7 @@ const Employees = () => {
                                       )}
                                       <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
                                       <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '7.0'}h
+                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(7)}
                                       </div>
                                     </>
                                   );
@@ -1181,7 +1182,7 @@ const Employees = () => {
                                     <>
                                       <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Mattina)</div>
                                       <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '4.0'}h
+                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
                                       </div>
                                     </>
                                   );
@@ -1190,7 +1191,7 @@ const Employees = () => {
                                     <>
                                       <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Pomeriggio)</div>
                                       <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : '4.0'}h
+                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
                                       </div>
                                     </>
                                   );
@@ -1202,7 +1203,7 @@ const Employees = () => {
                                         {breakDuration > 0 && ` (pausa: ${breakDuration}min)`}
                                       </div>
                                       <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? totalHours.toFixed(1) : (daySchedule.hours || 8)}h
+                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(daySchedule.hours || 8)}
                                       </div>
                                     </>
                                   );

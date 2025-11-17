@@ -1510,7 +1510,7 @@ const LeaveRequests = () => {
                 {calculatedHours !== null ? (
                   <div>
                     <p className="text-blue-200 text-lg font-semibold">
-                      {calculatedHours.toFixed(2)}h ({formatHoursReadable(calculatedHours)})
+                      {formatHoursReadable(calculatedHours)}
                     </p>
                     <p className="text-blue-300 text-xs mt-1">
                       Le ore verranno calcolate automaticamente in base all'orario di lavoro del dipendente

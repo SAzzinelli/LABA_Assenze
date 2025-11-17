@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
+import { formatHours } from '../utils/hoursCalculation';
 import {
   Users,
   Clock,
@@ -710,7 +711,7 @@ const Dashboard = () => {
                           {recovery.users?.first_name} {recovery.users?.last_name}
                         </div>
                         <div className="text-amber-300 text-xs sm:text-sm">
-                          📅 {new Date(recovery.recovery_date).toLocaleDateString('it-IT')} • ⏰ {recovery.start_time} - {recovery.end_time} ({recovery.hours}h)
+                          📅 {new Date(recovery.recovery_date).toLocaleDateString('it-IT')} • ⏰ {recovery.start_time} - {recovery.end_time} ({formatHours(recovery.hours)})
                         </div>
                       </div>
                     </div>

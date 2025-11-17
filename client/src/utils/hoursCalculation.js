@@ -362,17 +362,25 @@ export function daysToHours(days, workPattern) {
 }
 
 /**
- * Formatta ore in formato leggibile (es. "8h 30m")
+ * Formatta ore in formato leggibile (es. "8h 30min" o "0h 30min")
+ * Sempre mostra ore e minuti separati, anche per valori decimali (es. 0.5h -> "0h 30min")
  */
 export function formatHours(hours) {
-  const wholeHours = Math.floor(hours);
-  const minutes = Math.round((hours - wholeHours) * 60);
-  
-  if (minutes === 0) {
-    return `${wholeHours}h`;
+  if (hours === null || hours === undefined || isNaN(hours)) {
+    return '0h';
   }
   
-  return `${wholeHours}h ${minutes}m`;
+  const wholeHours = Math.floor(Math.abs(hours));
+  const minutes = Math.round((Math.abs(hours) - wholeHours) * 60);
+  const sign = hours < 0 ? '-' : '';
+  
+  // Se ci sono minuti, mostra sempre le ore (anche se 0)
+  if (minutes > 0) {
+    return `${sign}${wholeHours}h ${minutes}min`;
+  }
+  
+  // Se non ci sono minuti, mostra solo le ore
+  return `${sign}${wholeHours}h`;
 }
 
 // =====================================================

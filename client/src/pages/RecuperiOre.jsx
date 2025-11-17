@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { formatHours } from '../utils/hoursCalculation';
 import { 
   RefreshCw, 
   Plus, 
@@ -340,7 +341,7 @@ const RecuperiOre = () => {
               </button>
             </div>
             <p className="text-amber-200">
-              Hai un debito di <span className="font-bold">{Math.abs(totalBalance).toFixed(2)}h</span> nella banca ore. 
+              Hai un debito di <span className="font-bold">{formatHours(Math.abs(totalBalance))}</span> nella banca ore. 
               Puoi richiedere di recuperare queste ore concordando degli straordinari con l'amministratore.
             </p>
           </div>
@@ -369,15 +370,15 @@ const RecuperiOre = () => {
                             day: 'numeric' 
                           })}
                         </div>
-                        <div className="text-green-300 text-sm mt-1">
-                          Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
-                        </div>
+                          <div className="text-green-300 text-sm mt-1">
+                            Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
+                          </div>
                         {recovery.reason && (
                           <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
                         )}
                       </div>
                       <div className="text-green-400 font-semibold">
-                        +{recovery.hours}h
+                        +{formatHours(recovery.hours)}
                       </div>
                     </div>
                   </div>
@@ -400,9 +401,9 @@ const RecuperiOre = () => {
                             day: 'numeric' 
                           })}
                         </div>
-                        <div className="text-yellow-300 text-sm mt-1">
-                          Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
-                        </div>
+                          <div className="text-yellow-300 text-sm mt-1">
+                            Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
+                          </div>
                         {recovery.reason && (
                           <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
                         )}
@@ -432,7 +433,7 @@ const RecuperiOre = () => {
                           })}
                         </div>
                         <div className="text-blue-300 text-sm mt-1">
-                          Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
+                          Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
                         </div>
                         {recovery.reason && (
                           <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
@@ -642,14 +643,14 @@ const RecuperiOre = () => {
                         <p className="text-red-300 text-sm">{employee.department || 'N/A'}</p>
                       </div>
                     </div>
-                    <div className="text-slate-300 text-sm mt-2">
-                      <div className="text-red-400 font-semibold">
-                        Debito: {employee.debtHours.toFixed(2)}h
-                      </div>
-                      <div className="text-slate-400 text-xs mt-1">
-                        Saldo totale: {employee.totalBalance.toFixed(2)}h
-                      </div>
-                    </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div className="text-red-400 font-semibold">
+                            Debito: {formatHours(employee.debtHours)}
+                          </div>
+                          <div className="text-slate-400 text-xs mt-1">
+                            Saldo totale: {formatHours(employee.totalBalance)}
+                          </div>
+                        </div>
                   </div>
                   <button
                     onClick={() => {
@@ -659,7 +660,7 @@ const RecuperiOre = () => {
                         startTime: '',
                         endTime: '',
                         reason: '',
-                        notes: `Proposta recupero per ${employee.debtHours.toFixed(2)}h di debito`
+                        notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
                       });
                       setShowProposeRecoveryModal(true);
                     }}
@@ -707,7 +708,7 @@ const RecuperiOre = () => {
                     </div>
                     <div className="text-slate-300 text-sm mt-2">
                       <div>📅 Data: {new Date(recovery.recovery_date).toLocaleDateString('it-IT')}</div>
-                      <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)</div>
+                      <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})</div>
                       {recovery.reason && (
                         <div className="mt-1">💬 Motivo: {recovery.reason}</div>
                       )}
