@@ -389,9 +389,19 @@ const Layout = ({ children }) => {
                                   key={notification.id}
                                   onClick={() => handleNotificationClick(notification)}
                                   className={`p-4 rounded-lg cursor-pointer transition-all duration-200 hover:scale-105 ${
-                                    !notification.is_read 
-                                      ? 'bg-blue-900/30 border border-blue-500/30 shadow-lg' 
-                                      : 'bg-slate-700/50 border border-slate-600/30'
+                                    (() => {
+                                      if (notification.is_read) {
+                                        // Notifiche lette: colori tenui
+                                        if (notification.type === 'leave_approved') return 'bg-green-900/10 border border-green-500/20';
+                                        if (notification.type === 'leave_rejected') return 'bg-red-900/10 border border-red-500/20';
+                                        return 'bg-slate-700/50 border border-slate-600/30';
+                                      } else {
+                                        // Notifiche non lette: colori vivaci
+                                        if (notification.type === 'leave_approved') return 'bg-green-900/30 border border-green-500/50 shadow-lg';
+                                        if (notification.type === 'leave_rejected') return 'bg-red-900/30 border border-red-500/50 shadow-lg';
+                                        return 'bg-blue-900/30 border border-blue-500/30 shadow-lg';
+                                      }
+                                    })()
                                   }`}
                                   style={{
                                     animationDelay: `${index * 50}ms`,
@@ -400,7 +410,12 @@ const Layout = ({ children }) => {
                                 >
                                   <div className="flex items-start space-x-3">
                                     <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-                                      !notification.is_read ? 'bg-blue-400' : 'bg-slate-500'
+                                      (() => {
+                                        if (notification.is_read) return 'bg-slate-500';
+                                        if (notification.type === 'leave_approved') return 'bg-green-400';
+                                        if (notification.type === 'leave_rejected') return 'bg-red-400';
+                                        return 'bg-blue-400';
+                                      })()
                                     }`} />
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-semibold text-white mb-1">

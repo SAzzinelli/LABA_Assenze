@@ -5251,53 +5251,60 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       console.log(`✅ Ricalcolo presenze completato per permesso cancellato`);
     }
 
-    // Crea notifica per il dipendente
-    try {
-      const typeLabels = {
-        'permission': 'Permesso',
-        'sick': 'Malattia', 
-        'vacation': 'Ferie'
-      };
+    // Crea notifica per il dipendente (solo se lo status è stato cambiato)
+    if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
+      try {
+        const typeLabels = {
+          'permission': 'Permesso',
+          'sick_leave': 'Malattia',
+          'sick': 'Malattia', 
+          'vacation': 'Ferie',
+          'permission_104': 'Permesso Legge 104',
+          'business_trip': 'Trasferta'
+        };
 
-      const statusLabels = {
-        'approved': 'approvata',
-        'rejected': 'rifiutata',
-        'cancelled': 'annullata'
-      };
+        const statusLabels = {
+          'approved': 'approvata',
+          'rejected': 'rifiutata',
+          'cancelled': 'annullata'
+        };
 
-      // Parse date as local time to avoid UTC timezone issues
-      const parseLocalDate = (dateStr) => {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        return new Date(year, month - 1, day);
-      };
-      
-      // Formatta le date in italiano
-      const formattedStartDate = parseLocalDate(updatedRequest.start_date).toLocaleDateString('it-IT', { 
-        day: '2-digit', 
-        month: 'long', 
-        year: 'numeric',
-        timeZone: 'Europe/Rome'
-      });
-      const formattedEndDate = updatedRequest.start_date === updatedRequest.end_date
-        ? formattedStartDate
-        : parseLocalDate(updatedRequest.end_date).toLocaleDateString('it-IT', { 
-            day: '2-digit', 
-            month: 'long', 
-            year: 'numeric',
-            timeZone: 'Europe/Rome'
-          });
-      const dateRange = updatedRequest.start_date === updatedRequest.end_date 
-        ? formattedStartDate 
-        : `dal ${formattedStartDate} al ${formattedEndDate}`;
+        // Parse date as local time to avoid UTC timezone issues
+        const parseLocalDate = (dateStr) => {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        };
+        
+        // Formatta le date in italiano
+        const formattedStartDate = parseLocalDate(updatedRequest.start_date).toLocaleDateString('it-IT', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric',
+          timeZone: 'Europe/Rome'
+        });
+        const formattedEndDate = updatedRequest.start_date === updatedRequest.end_date
+          ? formattedStartDate
+          : parseLocalDate(updatedRequest.end_date).toLocaleDateString('it-IT', { 
+              day: '2-digit', 
+              month: 'long', 
+              year: 'numeric',
+              timeZone: 'Europe/Rome'
+            });
+        const dateRange = updatedRequest.start_date === updatedRequest.end_date 
+          ? formattedStartDate 
+          : `dal ${formattedStartDate} al ${formattedEndDate}`;
+
+        const requestTypeLabel = typeLabels[updatedRequest.type] || updatedRequest.type;
+        const statusLabel = statusLabels[status] || status;
 
         await supabase
           .from('notifications')
           .insert([
             {
               user_id: updatedRequest.user_id,
-              title: `Richiesta ${typeLabels[updatedRequest.type] || updatedRequest.type} ${statusLabels[status]}`,
-              message: `La tua richiesta di ${typeLabels[updatedRequest.type] || updatedRequest.type} ${dateRange} è stata ${statusLabels[status]}${notes ? `. Note: ${notes}` : ''}`,
-              type: 'response',
+              title: `Richiesta di ${requestTypeLabel} ${statusLabel}`,
+              message: `La tua richiesta di ${requestTypeLabel} ${dateRange} è stata ${statusLabel}${notes ? `. Note: ${notes}` : ''}`,
+              type: status === 'approved' ? 'leave_approved' : status === 'rejected' ? 'leave_rejected' : 'response',
               request_id: updatedRequest.id,
               request_type: updatedRequest.type,
               is_read: false,

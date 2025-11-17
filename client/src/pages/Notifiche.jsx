@@ -118,17 +118,30 @@ const Notifiche = () => {
   };
 
   const getNotificationBg = (type, isRead) => {
-    if (isRead) return 'bg-slate-800/50';
+    if (isRead) {
+      // Notifiche lette: colore più tenue
+      switch (type) {
+        case 'leave_approved':
+          return 'bg-green-900/10 border-green-500/20';
+        case 'leave_rejected':
+          return 'bg-red-900/10 border-red-500/20';
+        case 'leave_pending':
+          return 'bg-yellow-900/10 border-yellow-500/20';
+        default:
+          return 'bg-slate-800/50 border-slate-600/30';
+      }
+    }
     
+    // Notifiche non lette: colori vivaci
     switch (type) {
       case 'leave_approved':
-        return 'bg-green-900/20 border-green-500/30';
+        return 'bg-green-900/30 border-green-500/50';
       case 'leave_rejected':
-        return 'bg-red-900/20 border-red-500/30';
+        return 'bg-red-900/30 border-red-500/50';
       case 'leave_pending':
-        return 'bg-yellow-900/20 border-yellow-500/30';
+        return 'bg-yellow-900/30 border-yellow-500/50';
       default:
-        return 'bg-blue-900/20 border-blue-500/30';
+        return 'bg-blue-900/30 border-blue-500/50';
     }
   };
 
@@ -207,7 +220,7 @@ const Notifiche = () => {
                 key={notification.id}
                 className={`border rounded-lg p-4 transition-all cursor-pointer hover:shadow-lg ${
                   getNotificationBg(notification.type, notification.is_read)
-                } ${!notification.is_read ? 'border-l-4' : 'border'}`}
+                } ${!notification.is_read ? 'border-l-4' : ''}`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start justify-between">
