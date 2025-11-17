@@ -494,6 +494,18 @@ const Dashboard = () => {
     if (user?.role === 'employee') {
       // Usa SOLO l'endpoint /api/attendance/current-hours per coerenza con Presenze
       try {
+        // Fetch expected monthly presences from user-stats endpoint
+        let expectedMonthlyPresences = 20; // Fallback default
+        try {
+          const statsResponse = await apiCall('/api/attendance/user-stats');
+          if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            expectedMonthlyPresences = statsData.expectedMonthlyPresences || 20;
+          }
+        } catch (statsError) {
+          console.error('❌ Error fetching user stats:', statsError);
+        }
+
         const response = await apiCall('/api/attendance/current-hours');
         if (response.ok) {
           const currentHoursData = await response.json();
@@ -508,14 +520,15 @@ const Dashboard = () => {
               ...prevKPIs,
               workedToday: formatHours(todayHours),
               remainingToday: formatHours(remainingTodayHours),
-              monthlyPresences: `${balanceData.working_days}/20`
+              monthlyPresences: `${balanceData.working_days}/${expectedMonthlyPresences}`
             }));
             
             console.log('✅ KPIs updated with current-hours endpoint:', { 
               todayHours, 
               contractHours: todayContractHours,
               remainingTodayHours,
-              workingDays: balanceData.working_days
+              workingDays: balanceData.working_days,
+              expectedMonthlyPresences
             });
           } else {
             // Non è un giorno lavorativo
@@ -523,7 +536,7 @@ const Dashboard = () => {
               ...prevKPIs,
               workedToday: '0h 0m',
               remainingToday: '0h 0m',
-              monthlyPresences: `${balanceData.working_days}/20`
+              monthlyPresences: `${balanceData.working_days}/${expectedMonthlyPresences}`
             }));
           }
         } else {

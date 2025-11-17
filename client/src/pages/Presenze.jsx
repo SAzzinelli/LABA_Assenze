@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw, Filter } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -46,6 +46,10 @@ const Attendance = () => {
   
     const [totalBalance, setTotalBalance] = useState(0);
   const [refreshing, setRefreshing] = useState(true);
+  
+  // Filtri per mese/anno
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
@@ -971,18 +975,76 @@ const getStatusText = (record) => {
         </div>
 
         {/* Attendance History - Responsive: cards on mobile, table on lg+ */}
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2" />
-            Cronologia Presenze
-          </h2>
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
+            <h2 className="text-xl font-bold flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              Cronologia Presenze
+            </h2>
+            
+            {/* Filtri Mese/Anno */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-400" />
+                <label className="text-sm text-slate-400 whitespace-nowrap">Mese:</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="bg-slate-700 text-white rounded-lg px-3 py-1.5 text-sm border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(month => (
+                    <option key={month} value={month}>
+                      {new Date(2000, month - 1).toLocaleDateString('it-IT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-slate-400 whitespace-nowrap">Anno:</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="bg-slate-700 text-white rounded-lg px-3 py-1.5 text-sm border border-slate-600 focus:border-indigo-500 focus:outline-none"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {(selectedMonth !== new Date().getMonth() + 1 || selectedYear !== new Date().getFullYear()) && (
+                <button
+                  onClick={() => {
+                    setSelectedMonth(new Date().getMonth() + 1);
+                    setSelectedYear(new Date().getFullYear());
+                  }}
+                  className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                >
+                  Oggi
+                </button>
+              )}
+            </div>
+          </div>
+          
           {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:hidden">
             {(() => {
+              // Filtra per mese/anno selezionato
+              const filteredAttendance = attendance.filter(record => {
+                const recordDate = new Date(record.date);
+                return recordDate.getMonth() + 1 === selectedMonth && recordDate.getFullYear() === selectedYear;
+              });
+              
               const today = new Date().toISOString().split('T')[0];
-              const todayExists = attendance.some(record => record.date === today);
-              let combined = [...attendance];
-              if (!todayExists) {
+              const todayDate = new Date();
+              const isCurrentMonth = selectedMonth === todayDate.getMonth() + 1 && selectedYear === todayDate.getFullYear();
+              const todayExists = filteredAttendance.some(record => record.date === today);
+              
+              let combined = [...filteredAttendance];
+              
+              // Aggiungi oggi solo se siamo nel mese/anno corrente
+              if (isCurrentMonth && !todayExists) {
                 combined = [{
                   id: 'today-realtime',
                   date: today,
@@ -990,8 +1052,18 @@ const getStatusText = (record) => {
                   expected_hours: currentHours.expectedHours,
                   balance_hours: currentHours.balanceHours,
                   status: currentHours.status
-                }, ...attendance];
+                }, ...combined];
               }
+              
+              if (combined.length === 0) {
+                return (
+                  <div className="col-span-2 text-center py-8 text-slate-400">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun record per {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</p>
+                  </div>
+                );
+              }
+              
               return combined.map((record) => (
                 <div key={record.id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 hover:border-slate-500 transition-all">
                   <div className="flex items-center justify-between mb-2 gap-2">
@@ -1036,28 +1108,34 @@ const getStatusText = (record) => {
 
           {/* Desktop Table */}
           <div className="overflow-x-auto hidden lg:block mt-2">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-slate-700">
-                  <th className="text-left py-3 px-4">Data</th>
-                  <th className="text-left py-3 px-4">Stato</th>
-                  <th className="text-left py-3 px-4">Ore Attese</th>
-                  <th className="text-left py-3 px-4">Ore Effettive</th>
-                  <th className="text-left py-3 px-4">Ore Mancanti</th>
-                  <th className="text-left py-3 px-4">Azioni</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Data</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Stato</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Ore Attese</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Ore Effettive</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Ore Mancanti</th>
+                  <th className="text-left py-3 px-4 whitespace-nowrap">Azioni</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  // Crea un array combinato con i dati del database + oggi (se non esiste)
+                  // Filtra per mese/anno selezionato
+                  const filteredAttendance = attendance.filter(record => {
+                    const recordDate = new Date(record.date);
+                    return recordDate.getMonth() + 1 === selectedMonth && recordDate.getFullYear() === selectedYear;
+                  });
+                  
                   const today = new Date().toISOString().split('T')[0];
-                  const todayExists = attendance.some(record => record.date === today);
+                  const todayDate = new Date();
+                  const isCurrentMonth = selectedMonth === todayDate.getMonth() + 1 && selectedYear === todayDate.getFullYear();
+                  const todayExists = filteredAttendance.some(record => record.date === today);
                   
-                  let combinedAttendance = [...attendance];
+                  let combinedAttendance = [...filteredAttendance];
                   
-                  // Se oggi non esiste nel database, aggiungilo usando i dati real-time
-                  // Aggiungi sempre oggi se non esiste, anche con 0 ore
-                  if (!todayExists) {
+                  // Aggiungi oggi solo se siamo nel mese/anno corrente
+                  if (isCurrentMonth && !todayExists) {
                     const todayRecord = {
                       id: 'today-realtime',
                       date: today,
@@ -1066,7 +1144,18 @@ const getStatusText = (record) => {
                       balance_hours: currentHours.balanceHours,
                       status: currentHours.status
                     };
-                    combinedAttendance = [todayRecord, ...attendance];
+                    combinedAttendance = [todayRecord, ...combinedAttendance];
+                  }
+                  
+                  if (combinedAttendance.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan="6" className="text-center py-8 text-slate-400">
+                          <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Nessun record per {new Date(selectedYear, selectedMonth - 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</p>
+                        </td>
+                      </tr>
+                    );
                   }
                   
                   return combinedAttendance.map((record) => (
@@ -1118,13 +1207,6 @@ const getStatusText = (record) => {
               </tbody>
             </table>
           </div>
-          
-          {attendance.length === 0 && (
-            <div className="text-center py-8 text-slate-400">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nessun record di presenza trovato</p>
-            </div>
-          )}
         </div>
 
         {/* Info Box */}
