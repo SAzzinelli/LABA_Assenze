@@ -3700,6 +3700,53 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     // Monthly presences = days with attendance + approved leave days
     const monthlyPresences = (daysWithAttendance || 0) + (approvedLeaveDays || 0);
 
+    // Calcola giorni lavorativi attesi del mese basandosi sull'orario di lavoro dell'utente
+    const { data: workSchedules, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('day_of_week, is_working_day')
+      .eq('user_id', userId);
+
+    let expectedMonthlyPresences = 0;
+    if (workSchedules && !scheduleError) {
+      // Crea una mappa day_of_week -> is_working_day
+      const workingDaysMap = {};
+      workSchedules.forEach(schedule => {
+        if (schedule.is_working_day) {
+          workingDaysMap[schedule.day_of_week] = true;
+        }
+      });
+
+      // Calcola il primo e l'ultimo giorno del mese
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+      
+      // Conta i giorni lavorativi nel mese (basandosi sui giorni della settimana con orario attivo)
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const date = new Date(currentYear, currentMonth - 1, day);
+        const dayOfWeek = date.getDay(); // 0 = domenica, 1 = lunedì, etc.
+        if (workingDaysMap[dayOfWeek]) {
+          expectedMonthlyPresences++;
+        }
+      }
+      
+      console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId}`);
+    } else {
+      // Fallback: se non ci sono orari, usa un valore di default basato su 5 giorni settimanali
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const lastDay = new Date(currentYear, currentMonth, 0);
+      let workingDays = 0;
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const date = new Date(currentYear, currentMonth - 1, day);
+        const dayOfWeek = date.getDay();
+        // Lunedì = 1, Venerdì = 5
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          workingDays++;
+        }
+      }
+      expectedMonthlyPresences = workingDays;
+      console.log(`⚠️ Nessun orario trovato per utente ${userId}, usato fallback: ${expectedMonthlyPresences} giorni`);
+    }
+
     // Get user workplace from profile
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -3711,7 +3758,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       isClockedIn,
       todayHours,
       monthlyPresences: monthlyPresences || 0,
-      expectedMonthlyPresences: 20, // Standard working days per month
+      expectedMonthlyPresences: expectedMonthlyPresences,
       workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
     });
 
