@@ -3698,26 +3698,26 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       }
     }
 
-    // Count monthly presences (giorni con check_in O con actual_hours > 0)
-    // IMPORTANTE: Conta giorni con clock_in O con actual_hours > 0 (presenze salvate automaticamente)
+    // Count monthly presences - APPROCCIO ALTERNATIVO: Conta giorni unici con QUALSIASI record di attendance
+    // Se esiste un record in attendance per una data, significa che è stato lavorato quel giorno
+    // (indipendentemente da clock_in, actual_hours, etc.)
     const { data: attendanceRecords, error: monthlyError } = await supabase
       .from('attendance')
-      .select('date, clock_in, actual_hours')
+      .select('date')
       .eq('user_id', userId)
       .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
       .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
     
-    // Conta giorni dove c'è clock_in O actual_hours > 0
+    // Conta giorni unici: se esiste un record, è un giorno lavorato
     let daysWithAttendance = 0;
-    if (attendanceRecords && !monthlyError) {
-      const uniqueDays = new Set();
-      attendanceRecords.forEach(record => {
-        // Giorno lavorato se: ha clock_in O ha actual_hours > 0
-        if (record.clock_in || (record.actual_hours && parseFloat(record.actual_hours) > 0)) {
-          uniqueDays.add(record.date);
-        }
-      });
+    if (attendanceRecords && !monthlyError && attendanceRecords.length > 0) {
+      const uniqueDays = new Set(attendanceRecords.map(record => record.date));
       daysWithAttendance = uniqueDays.size;
+      console.log(`📊 Found ${attendanceRecords.length} attendance records for ${uniqueDays.size} unique days in month ${currentMonth}/${currentYear}`);
+    } else if (monthlyError) {
+      console.error('❌ Error fetching attendance records:', monthlyError);
+    } else {
+      console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear}`);
     }
 
     // Count approved leave DAYS in this month (not just requests count, but actual days)
