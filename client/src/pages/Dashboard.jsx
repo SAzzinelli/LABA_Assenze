@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
 import {
   Users,
@@ -19,6 +20,7 @@ import HolidaysCalendar from '../components/HolidaysCalendar';
 
 const Dashboard = () => {
   const { user, apiCall } = useAuthStore();
+  const location = useLocation();
   const [stats, setStats] = useState({
     presentToday: 0,
     pendingRequests: 0,
@@ -78,15 +80,30 @@ const Dashboard = () => {
 
   // Scroll automatico alla sezione recuperi-ore quando si arriva con hash
   useEffect(() => {
-    if (window.location.hash === '#recuperi-ore') {
-      setTimeout(() => {
-        const element = document.getElementById('recuperi-ore');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 500); // Attendi che i dati siano caricati
+    const scrollToRecuperi = () => {
+      if (location.hash === '#recuperi-ore' || window.location.hash === '#recuperi-ore') {
+        // Prova più volte con timeout crescenti per assicurarsi che l'elemento sia renderizzato
+        const tryScroll = (attempt = 0) => {
+          const element = document.getElementById('recuperi-ore');
+          if (element) {
+            console.log('📍 Scrolling to recuperi-ore section');
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else if (attempt < 5) {
+            // Prova fino a 5 volte con timeout crescenti
+            setTimeout(() => tryScroll(attempt + 1), 300 * (attempt + 1));
+          } else {
+            console.warn('⚠️ Element recuperi-ore not found after multiple attempts');
+          }
+        };
+        tryScroll();
+      }
+    };
+
+    // Esegui quando il loading è completo o quando cambia la location
+    if (!loading) {
+      scrollToRecuperi();
     }
-  }, [loading]); // Esegui quando il loading è completo
+  }, [loading, location.hash]); // Esegui quando il loading è completo o quando cambia l'hash
 
   useEffect(() => {
     const loadDashboardData = async () => {
