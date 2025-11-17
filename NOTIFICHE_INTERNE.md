@@ -206,44 +206,21 @@ Il frontend gestisce la navigazione quando si clicca su una notifica:
 
 ---
 
-## ⚠️ PROBLEMI NOTI
+## ✅ STATO IMPLEMENTAZIONE
 
-### 1. Type Hardcoded per Nuova Richiesta
+### ✅ Tutto Completato
 
-**Problema:** Quando un dipendente crea una nuova richiesta, il `type` è sempre `'permission'` anche se è malattia o ferie.
+**Tutte le funzionalità sono implementate:**
 
-**Codice:** `server/index.js` ~4499
-```javascript
-type: 'permission',  // ⚠️ Hardcoded - dovrebbe essere dinamico
-title: 'Nuova richiesta Permesso',  // ⚠️ Hardcoded - mostra sempre "Permesso"
-```
+1. ✅ **Type Dinamici per Nuove Richieste** - Risolto
+   - Notifiche ora hanno type dinamico in base al tipo di richiesta
+   - Titolo e messaggio corretti per ogni tipo (permission, vacation, sick_leave, permission_104)
 
-**Soluzione suggerita:**
-```javascript
-const typeMap = {
-  'permission': 'permission',
-  'vacation': 'vacation',
-  'sick_leave': 'sick_leave',
-  'permission_104': 'permission_104'
-};
-const titleMap = {
-  'permission': 'Nuova richiesta Permesso',
-  'vacation': 'Nuova richiesta Ferie',
-  'sick_leave': 'Nuova richiesta Malattia',
-  'permission_104': 'Nuova richiesta Permesso Legge 104'
-};
-type: typeMap[requestType] || 'info',
-title: titleMap[requestType] || 'Nuova richiesta',
-```
-
-### 2. Recovery Requests - Nessuna Notifica
-
-**Problema:** I recovery requests non hanno notifiche interne implementate.
-
-**TODO:** Aggiungere notifiche quando:
-- Admin propone recupero
-- Dipendente accetta proposta
-- Recupero rifiutato
+2. ✅ **Recovery Requests** - Completamente Implementato
+   - Admin propone recupero → Notifica + Email al dipendente
+   - Dipendente accetta proposta → Notifica + Email all'admin
+   - Dipendente rifiuta proposta → Notifica all'admin
+   - Admin approva/rifiuta recovery → Notifica + Email al dipendente
 
 ---
 
