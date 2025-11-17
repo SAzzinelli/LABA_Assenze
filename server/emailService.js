@@ -86,8 +86,22 @@ const emailTemplates = {
     const dateEnd = formatDateItalian(endDate);
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
     
+    // Determina la pagina corretta basata sul tipo di richiesta
+    const getRequestPage = (type) => {
+      const pageMap = {
+        'sick_leave': '/malattia',
+        'vacation': '/ferie',
+        'permission': '/permessi',
+        'permission_104': '/permessi104',
+        'business_trip': '/permessi'
+      };
+      return pageMap[type] || '/permessi';
+    };
+    const requestPage = getRequestPage(requestType);
+    const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
     return {
-      subject: `🔔 Nuova Richiesta di ${typeLabel} - Sistema HR LABA`,
+      subject: `🔔 Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -114,7 +128,7 @@ const emailTemplates = {
           <div class="container">
             <div class="header">
               <h1>🔔 Nuova Richiesta di ${typeLabel}</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">È stata ricevuta una nuova richiesta che richiede la tua attenzione.</p>
@@ -130,14 +144,11 @@ const emailTemplates = {
                 <div class="info-row">
                   <span class="info-label">Periodo:</span> ${dateRange}
                 </div>
-                <div class="info-row">
-                  <span class="info-label">ID Richiesta:</span> #${requestId}
-                </div>
               </div>
               
               <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/permessi" class="btn">
-                  📊 Gestisci Richiesta
+                <a href="${baseUrl}${requestPage}" class="btn">
+                  📊 Visualizza Dettagli
                 </a>
               </div>
               
@@ -146,7 +157,7 @@ const emailTemplates = {
               </p>
             </div>
             <div class="footer">
-              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
               <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
             </div>
           </div>
@@ -176,8 +187,22 @@ const emailTemplates = {
       ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
       : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
     
+    // Determina la pagina corretta basata sul tipo di richiesta
+    const getRequestPage = (type) => {
+      const pageMap = {
+        'sick_leave': '/malattia',
+        'vacation': '/ferie',
+        'permission': '/permessi',
+        'permission_104': '/permessi104',
+        'business_trip': '/permessi'
+      };
+      return pageMap[type] || '/permessi';
+    };
+    const requestPage = getRequestPage(requestType);
+    const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
     return {
-      subject: `📋 Richiesta di ${typeLabel} ${statusText} - Sistema HR LABA`,
+      subject: `📋 Richiesta di ${typeLabel} ${statusText} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -205,7 +230,7 @@ const emailTemplates = {
           <div class="container">
             <div class="header">
               <h1>📋 Richiesta di ${typeLabel} ${statusText}</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">La tua richiesta è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
@@ -221,9 +246,6 @@ const emailTemplates = {
                 <div class="info-row">
                   <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusText}</strong>
                 </div>
-                <div class="info-row">
-                  <span class="info-label">ID Richiesta:</span> #${requestId}
-                </div>
               </div>
               
               ${notes ? `
@@ -234,13 +256,13 @@ const emailTemplates = {
               ` : ''}
               
               <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/permessi" class="btn">
+                <a href="${baseUrl}${requestPage}" class="btn">
                   📊 Visualizza Dettagli
                 </a>
               </div>
             </div>
             <div class="footer">
-              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
               <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
             </div>
           </div>
@@ -249,68 +271,6 @@ const emailTemplates = {
       `
     };
   },
-
-  // Promemoria timbratura
-  attendanceReminder: (userName, department) => ({
-    subject: `⏰ Promemoria Timbratura - LABA Firenze`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Promemoria Timbratura</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .content { padding: 30px; }
-          .reminder-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 5px; }
-          .reminder-box h2 { margin-top: 0; color: #92400E; font-size: 18px; }
-          .btn { display: inline-block; background: #F59E0B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
-          .btn:hover { background: #D97706; }
-          .checklist { list-style: none; padding: 0; }
-          .checklist li { padding: 8px 0; padding-left: 30px; position: relative; }
-          .checklist li:before { content: "✅"; position: absolute; left: 0; }
-          .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>⏰ Promemoria Timbratura</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Ciao ${userName}</p>
-          </div>
-          <div class="content">
-            <p style="font-size: 16px; margin-bottom: 20px;">Non dimenticare di registrare la tua presenza oggi!</p>
-            
-            <div class="reminder-box">
-              <h2>📅 Ricorda di Timbrare</h2>
-              <p><strong>Dipartimento:</strong> ${department || 'Ufficio'}</p>
-              <p style="margin-top: 15px;"><strong>Assicurati di timbrare correttamente:</strong></p>
-              <ul class="checklist">
-                <li>Entrata al mattino</li>
-                <li>Uscita alla sera</li>
-                <li>Pausa pranzo (se applicabile)</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
-                ⏰ Vai alla Timbratura
-              </a>
-            </div>
-          </div>
-          <div class="footer">
-            <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente dal Sistema HR LABA</p>
-            <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
 
   // Report settimanale
   weeklyReport: (userName, weekData) => {
@@ -330,7 +290,7 @@ const emailTemplates = {
     };
     
     return {
-      subject: `📊 Report Settimanale - Settimana ${weekNumber} - Sistema HR LABA`,
+      subject: `📊 Report Settimanale - Settimana ${weekNumber} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -394,7 +354,7 @@ const emailTemplates = {
               </div>
             </div>
             <div class="footer">
-              <p style="margin: 5px 0;">© LABA Firenze 2025 - Sistema HR</p>
+              <p style="margin: 5px 0;">© LABA Firenze 2025 - Gestione personale LABA</p>
               <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente</p>
             </div>
           </div>
@@ -440,7 +400,7 @@ const emailTemplates = {
           <div class="content">
             <div class="welcome-box">
               <h3>✅ Account Attivato</h3>
-              <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema HR di LABA Firenze.</p>
+              <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema di gestione personale di LABA Firenze.</p>
             </div>
             
             <div class="steps-box">
@@ -449,7 +409,6 @@ const emailTemplates = {
                 <li>Accedi al sistema con le tue credenziali</li>
                 <li>Completa il tuo profilo</li>
                 <li>Configura il tuo orario di lavoro</li>
-                <li>Inizia a timbrare le presenze</li>
               </ul>
             </div>
             
@@ -460,7 +419,7 @@ const emailTemplates = {
             </div>
           </div>
           <div class="footer">
-            <p style="margin: 5px 0;">© LABA Firenze 2025 - Sistema HR</p>
+            <p style="margin: 5px 0;">© LABA Firenze 2025 - Gestione personale LABA</p>
             <p style="margin: 5px 0;">Dipartimento: ${department || 'Ufficio'}</p>
           </div>
         </div>

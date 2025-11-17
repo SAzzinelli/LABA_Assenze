@@ -121,6 +121,10 @@ class EmailScheduler {
         return;
       }
 
+      // Le email di timbratura sono state rimosse - non più necessarie
+      console.log('   ⏰ Promemoria timbratura disabilitati (non più necessari)');
+      
+      /* 
       for (const emp of employees) {
         if (isRealEmail(emp.email)) {
           await sendEmail(emp.email, 'attendanceReminder', [
@@ -131,6 +135,7 @@ class EmailScheduler {
           console.log(`   ⏰ Promemoria inviato a: ${emp.first_name} ${emp.last_name}`);
         }
       }
+      */
 
       console.log('✅ Promemoria giornalieri inviati a tutti i dipendenti');
     } catch (error) {

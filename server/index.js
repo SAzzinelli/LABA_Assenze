@@ -6048,6 +6048,10 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
     }
 
+    // Le email di timbratura sono state rimosse - non più necessarie
+    return res.status(400).json({ error: 'Le email di promemoria timbratura non sono più disponibili' });
+    
+    /* 
     let emailResult;
     switch (type) {
       case 'attendance':
@@ -6060,7 +6064,6 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
         if (!customMessage) {
           return res.status(400).json({ error: 'Messaggio personalizzato richiesto' });
         }
-        // Per ora invio un'email generica, potresti creare un template personalizzato
         emailResult = await sendEmail(user.email, 'attendanceReminder', [
           `${user.first_name} ${user.last_name}`,
           customMessage
@@ -6069,6 +6072,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
       default:
         return res.status(400).json({ error: 'Tipo di promemoria non valido' });
     }
+    */
 
     if (emailResult.success) {
       res.json({
@@ -6200,9 +6204,8 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
     
     switch (type) {
       case 'attendance':
-        emailTemplate = 'attendanceReminder';
-        emailData = [employee.first_name, employee.department || 'Non specificato'];
-        break;
+        // Le email di timbratura sono state rimosse
+        return res.status(400).json({ error: 'Le email di promemoria timbratura non sono più disponibili' });
       case 'leave':
         emailTemplate = 'newRequest';
         emailData = [`${employee.first_name} ${employee.last_name}`, 'Permesso', new Date().toLocaleDateString('it-IT'), new Date().toLocaleDateString('it-IT'), 'MAN-' + Date.now()];
@@ -6290,11 +6293,8 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
           break;
         }
         case 'attendanceReminder':
-          result = await sendEmail(email, 'attendanceReminder', [
-            'Simone Azzinelli',
-            'Ufficio'
-          ]);
-          break;
+          // Le email di timbratura sono state rimosse
+          return res.status(400).json({ error: 'Le email di promemoria timbratura non sono più disponibili' });
         case 'weeklyReport':
           result = await sendEmail(email, 'weeklyReport', [
             'Simone Azzinelli',
