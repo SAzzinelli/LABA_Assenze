@@ -3698,14 +3698,27 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       }
     }
 
-    // Count monthly presences (giorni con check_in)
-    const { count: daysWithAttendance, error: monthlyError } = await supabase
+    // Count monthly presences (giorni con check_in O con actual_hours > 0)
+    // IMPORTANTE: Conta giorni con clock_in O con actual_hours > 0 (presenze salvate automaticamente)
+    const { data: attendanceRecords, error: monthlyError } = await supabase
       .from('attendance')
-      .select('*', { count: 'exact', head: true })
+      .select('date, clock_in, actual_hours')
       .eq('user_id', userId)
       .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`)
-      .not('clock_in', 'is', null);
+      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+    
+    // Conta giorni dove c'è clock_in O actual_hours > 0
+    let daysWithAttendance = 0;
+    if (attendanceRecords && !monthlyError) {
+      const uniqueDays = new Set();
+      attendanceRecords.forEach(record => {
+        // Giorno lavorato se: ha clock_in O ha actual_hours > 0
+        if (record.clock_in || (record.actual_hours && parseFloat(record.actual_hours) > 0)) {
+          uniqueDays.add(record.date);
+        }
+      });
+      daysWithAttendance = uniqueDays.size;
+    }
 
     // Count approved leave DAYS in this month (not just requests count, but actual days)
     const { data: approvedLeaves } = await supabase
