@@ -171,11 +171,27 @@ const Layout = ({ children }) => {
           <nav className="flex-1 px-4 py-4 space-y-2">
             {filteredNavigation.map((item) => {
               const IconComponent = item.icon;
-              const isActive = location.pathname === item.href;
+              const isActive = location.pathname === item.href.split('#')[0]; // Ignora hash per active state
+              const handleClick = (e) => {
+                // Se il link contiene hash e siamo già sulla stessa pagina, gestisci lo scroll manualmente
+                if (item.href.includes('#') && location.pathname === item.href.split('#')[0]) {
+                  e.preventDefault();
+                  const hash = item.href.split('#')[1];
+                  window.location.hash = hash;
+                  // Forza scroll dopo un breve delay
+                  setTimeout(() => {
+                    const element = document.getElementById(hash);
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 100);
+                }
+              };
               return (
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={handleClick}
                   className={`group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-lg'
@@ -243,7 +259,24 @@ const Layout = ({ children }) => {
               <nav className="mt-5 px-2 space-y-1">
                 {filteredNavigation.map((item) => {
                   const IconComponent = item.icon;
-                  const isActive = location.pathname === item.href;
+                  const isActive = location.pathname === item.href.split('#')[0]; // Ignora hash per active state
+                  const handleClick = (e) => {
+                    // Se il link contiene hash e siamo già sulla stessa pagina, gestisci lo scroll manualmente
+                    if (item.href.includes('#') && location.pathname === item.href.split('#')[0]) {
+                      e.preventDefault();
+                      const hash = item.href.split('#')[1];
+                      window.location.hash = hash;
+                      // Forza scroll dopo un breve delay
+                      setTimeout(() => {
+                        const element = document.getElementById(hash);
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      }, 100);
+                    }
+                    // Chiudi sidebar mobile dopo click
+                    setSidebarOpen(false);
+                  };
                   return (
                     <Link
                       key={item.name}
