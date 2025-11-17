@@ -87,7 +87,7 @@ const emailTemplates = {
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
     
     return {
-      subject: `🔔 Nuova Richiesta ${typeLabel} - Sistema HR LABA`,
+      subject: `🔔 Nuova Richiesta di ${typeLabel} - Sistema HR LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -113,7 +113,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔔 Nuova Richiesta ${typeLabel}</h1>
+              <h1>🔔 Nuova Richiesta di ${typeLabel}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
             </div>
             <div class="content">
@@ -164,16 +164,20 @@ const emailTemplates = {
     const dateEnd = formatDateItalian(endDate);
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
     
-    // Colori in base allo stato
-    const statusColor = status === 'approved' ? '#10B981' : '#EF4444'; // Verde per approvato, Rosso per rifiutato
-    const statusBg = status === 'approved' ? '#D1FAE5' : '#FEE2E2';
-    const statusText = status === 'approved' ? 'Approvata' : 'Rifiutata';
-    const headerColor = status === 'approved' 
+    // Normalizza lo status per confronto (trim, lowercase) per evitare problemi
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    
+    // Colori in base allo stato - VERDE solo se esattamente 'approved'
+    const isApproved = normalizedStatus === 'approved';
+    const statusColor = isApproved ? '#10B981' : '#EF4444'; // Verde per approvato, Rosso per rifiutato
+    const statusBg = isApproved ? '#D1FAE5' : '#FEE2E2';
+    const statusText = isApproved ? 'Approvata' : 'Rifiutata';
+    const headerColor = isApproved
       ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
       : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
     
     return {
-      subject: `📋 Richiesta ${typeLabel} ${statusText} - Sistema HR LABA`,
+      subject: `📋 Richiesta di ${typeLabel} ${statusText} - Sistema HR LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -200,7 +204,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>📋 Richiesta ${typeLabel} ${statusText}</h1>
+              <h1>📋 Richiesta di ${typeLabel} ${statusText}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Sistema HR LABA</p>
             </div>
             <div class="content">
