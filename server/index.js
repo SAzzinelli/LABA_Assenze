@@ -3761,15 +3761,18 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(currentYear, currentMonth - 1, day);
         const dateStr = date.toISOString().split('T')[0];
-        const dayOfWeek = date.getDay(); // 0 = domenica, 1 = lunedì, etc.
+        const dayOfWeekJS = date.getDay(); // 0 = domenica, 1 = lunedì, 6 = sabato
         
-        // Conta solo se è un giorno lavorativo E non è una festività
-        if (workingDaysMap[dayOfWeek] && !holidayDates.has(dateStr)) {
+        // Il database usa day_of_week: 0=domenica, 1=lunedì, ..., 6=sabato (stesso formato di JS getDay())
+        // Verifica se è un giorno lavorativo E non è una festività
+        if (workingDaysMap[dayOfWeekJS] && !holidayDates.has(dateStr)) {
           expectedMonthlyPresences++;
         }
       }
       
       console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId} (escluse ${holidayDates.size} festività)`);
+      console.log(`📅 Working days map:`, workingDaysMap);
+      console.log(`📅 monthlyPresences: ${monthlyPresences}, expectedMonthlyPresences: ${expectedMonthlyPresences}, remainingDays: ${Math.max(0, expectedMonthlyPresences - monthlyPresences)}`);
     } else {
       // Fallback: se non ci sono orari, usa un valore di default basato su 5 giorni settimanali
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
@@ -3795,15 +3798,17 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       .eq('id', userId)
       .single();
 
-    // Calcola giorni rimanenti del mese
+    // Calcola giorni rimanenti del mese (TOTALE - GIÀ LAVORATI)
     const remainingDays = Math.max(0, expectedMonthlyPresences - monthlyPresences);
+
+    console.log(`📊 User Stats per ${userId}: monthlyPresences=${monthlyPresences}, expectedMonthlyPresences=${expectedMonthlyPresences}, remainingDays=${remainingDays}`);
 
     res.json({
       isClockedIn,
       todayHours,
       monthlyPresences: monthlyPresences || 0,
       expectedMonthlyPresences: expectedMonthlyPresences,
-      remainingDays: remainingDays,
+      remainingDays: remainingDays, // GIORNI RIMANENTI (non totale!)
       workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
     });
 

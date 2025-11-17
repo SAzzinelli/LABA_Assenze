@@ -216,6 +216,12 @@ const Attendance = () => {
       const response = await apiCall('/api/attendance/user-stats');
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 User Stats received:', {
+          monthlyPresences: data.monthlyPresences,
+          expectedMonthlyPresences: data.expectedMonthlyPresences,
+          remainingDays: data.remainingDays
+        });
+        // IMPORTANTE: remainingDays è già calcolato come expected - monthly (rimanenti, non totale!)
         setRemainingDays(data.remainingDays || 0);
       }
     } catch (error) {
