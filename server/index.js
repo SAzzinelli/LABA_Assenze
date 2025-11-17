@@ -4557,13 +4557,32 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         const notificationType = notificationTypes[type] || 'info';
         const requestTypeText = type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'malattia' : type === 'permission_104' ? 'permesso Legge 104' : type === 'business_trip' ? 'trasferta' : 'permesso';
         
+        // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
+        let messageText = '';
+        
+        if (type === 'permission' || type === 'permission_104') {
+          // PERMESSI: sono in ORE, non giorni
+          const hours = newRequest.hours || 0;
+          const hoursFormatted = hours > 0 
+            ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+            : '0h';
+          messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
+        } else {
+          // FERIE/MALATTIA: sono in GIORNI
+          if (startDate === endDate) {
+            messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} per il ${formattedStartDate}`;
+          } else {
+            messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} dal ${formattedStartDate} al ${formattedEndDate}`;
+          }
+        }
+        
         const notificationPromises = admins.map(admin => 
           supabase
             .from('notifications')
             .insert([{
               user_id: admin.id,
-              title: `Nuova richiesta ${requestTypeLabel}`,
-              message: `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : requestTypeText === 'malattia' ? 'una' : 'un'} ${requestTypeText} ${startDate === endDate ? 'per il' : 'dal'} ${dateRange}`,
+              title: `Nuova richiesta di ${requestTypeLabel}`,
+              message: messageText,
               type: notificationType,
               is_read: false,
               request_id: newRequest.id,
@@ -5337,12 +5356,32 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               year: 'numeric',
               timeZone: 'Europe/Rome'
             });
-        const dateRange = updatedRequest.start_date === updatedRequest.end_date 
-          ? formattedStartDate 
-          : `dal ${formattedStartDate} al ${formattedEndDate}`;
 
         const requestTypeLabel = typeLabels[updatedRequest.type] || updatedRequest.type;
         const statusLabel = statusLabels[status] || status;
+
+        // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
+        let messageText = '';
+        
+        if (updatedRequest.type === 'permission' || updatedRequest.type === 'permission_104') {
+          // PERMESSI: sono in ORE, non giorni
+          const hours = updatedRequest.hours || 0;
+          const hoursFormatted = hours > 0 
+            ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+            : '0h';
+          messageText = `Il tuo ${requestTypeLabel.toLowerCase()} di ${hoursFormatted} per il ${formattedStartDate} è stato ${statusLabel}`;
+        } else {
+          // FERIE/MALATTIA: sono in GIORNI
+          if (updatedRequest.start_date === updatedRequest.end_date) {
+            messageText = `La tua richiesta di ${requestTypeLabel.toLowerCase()} per il ${formattedStartDate} è stata ${statusLabel}`;
+          } else {
+            messageText = `La tua richiesta di ${requestTypeLabel.toLowerCase()} dal ${formattedStartDate} al ${formattedEndDate} è stata ${statusLabel}`;
+          }
+        }
+        
+        if (notes) {
+          messageText += `. Note: ${notes}`;
+        }
 
         await supabase
           .from('notifications')
@@ -5350,7 +5389,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             {
               user_id: updatedRequest.user_id,
               title: `Richiesta di ${requestTypeLabel} ${statusLabel}`,
-              message: `La tua richiesta di ${requestTypeLabel} ${dateRange} è stata ${statusLabel}${notes ? `. Note: ${notes}` : ''}`,
+              message: messageText,
               type: status === 'approved' ? 'leave_approved' : status === 'rejected' ? 'leave_rejected' : 'response',
               request_id: updatedRequest.id,
               request_type: updatedRequest.type,
