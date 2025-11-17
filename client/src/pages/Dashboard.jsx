@@ -1016,6 +1016,67 @@ const Dashboard = () => {
             </div>
           )}
 
+          {/* Richieste Recupero Ore in Attesa (Admin) */}
+          {pendingRecoveryRequests.length > 0 && (
+            <div className="bg-slate-800 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                <RefreshCw className="h-6 w-6 mr-3 text-amber-400" />
+                Richieste Recupero Ore in Attesa
+              </h3>
+              <div className="space-y-3">
+                {pendingRecoveryRequests.map((recovery) => (
+                  <div key={recovery.id} className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-white font-semibold text-sm">
+                              {recovery.users?.first_name?.[0] || ''}{recovery.users?.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {recovery.users?.first_name} {recovery.users?.last_name}
+                            </h4>
+                            <p className="text-amber-300 text-sm">{recovery.users?.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div>📅 Data: {new Date(recovery.recovery_date).toLocaleDateString('it-IT')}</div>
+                          <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)</div>
+                          {recovery.reason && (
+                            <div className="mt-1">💬 Motivo: {recovery.reason}</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRecoveryId(recovery.id);
+                            setShowApproveRecoveryModal(true);
+                          }}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
+                        >
+                          Approva
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedRecoveryId(recovery.id);
+                            setRejectionReason('');
+                            setShowRejectRecoveryModal(true);
+                          }}
+                          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
+                        >
+                          Rifiuta
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {/* Presenti adesso */}
           <div className="bg-slate-800 rounded-lg p-6">
