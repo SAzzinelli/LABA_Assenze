@@ -23,6 +23,7 @@ const RecuperiOre = () => {
     recoveryDate: '',
     startTime: '',
     endTime: '',
+    hours: '', // Nuovo campo per inserire direttamente le ore
     reason: '',
     notes: ''
   });
@@ -40,6 +41,7 @@ const RecuperiOre = () => {
     recoveryDate: '',
     startTime: '',
     endTime: '',
+    hours: '', // Nuovo campo per inserire direttamente le ore
     reason: '',
     notes: ''
   });
@@ -153,10 +155,34 @@ const RecuperiOre = () => {
   const handleProposeRecovery = async () => {
     try {
       if (!selectedEmployeeForProposal) return;
-      const { recoveryDate, startTime, endTime, reason, notes } = proposalFormData;
+      const { recoveryDate, startTime, endTime, hours, reason, notes } = proposalFormData;
 
-      if (!recoveryDate || !startTime || !endTime) {
-        alert('Compila tutti i campi obbligatori');
+      // Validazione: serve data + (startTime+endTime) OPPURE (startTime+hours)
+      if (!recoveryDate || !startTime) {
+        alert('Compila data e orario di inizio');
+        return;
+      }
+
+      let finalEndTime = endTime;
+      let finalHours = hours;
+
+      // Se è stato inserito il campo "ore", calcola endTime
+      if (hours && hours !== '') {
+        finalEndTime = calculateEndTime(startTime, hours);
+        if (!finalEndTime) {
+          alert('Errore nel calcolo dell\'orario di fine');
+          return;
+        }
+      } 
+      // Se è stato inserito endTime, calcola le ore
+      else if (endTime && endTime !== '') {
+        finalHours = calculateHours(startTime, endTime);
+        if (!finalHours || parseFloat(finalHours) <= 0) {
+          alert('L\'orario di fine deve essere successivo all\'orario di inizio');
+          return;
+        }
+      } else {
+        alert('Inserisci o l\'orario di fine o le ore da recuperare');
         return;
       }
 
@@ -169,7 +195,7 @@ const RecuperiOre = () => {
           userId: selectedEmployeeForProposal.id,
           recoveryDate,
           startTime,
-          endTime,
+          endTime: finalEndTime,
           reason,
           notes
         })
@@ -182,6 +208,7 @@ const RecuperiOre = () => {
           recoveryDate: '',
           startTime: '',
           endTime: '',
+          hours: '',
           reason: '',
           notes: ''
         });
@@ -262,13 +289,71 @@ const RecuperiOre = () => {
     }
   };
 
+  // Funzione helper per calcolare endTime da startTime + ore
+  const calculateEndTime = (startTime, hours) => {
+    if (!startTime || !hours) return '';
+    const [hoursPart, minutesPart] = startTime.split(':').map(Number);
+    const totalMinutes = hoursPart * 60 + minutesPart;
+    const hoursToAdd = parseFloat(hours);
+    const minutesToAdd = Math.round(hoursToAdd * 60);
+    const newTotalMinutes = totalMinutes + minutesToAdd;
+    const newHours = Math.floor(newTotalMinutes / 60) % 24;
+    const newMinutes = newTotalMinutes % 60;
+    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
+  };
+
+  // Funzione helper per calcolare ore da startTime e endTime
+  const calculateHours = (startTime, endTime) => {
+    if (!startTime || !endTime) return '';
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const diffMinutes = endMinutes - startMinutes;
+    if (diffMinutes <= 0) return '';
+    return (diffMinutes / 60).toFixed(2);
+  };
+
+  // Funzione helper per formattare ore in "Xh Ymin"
+  const formatHoursFromDecimal = (hours) => {
+    if (!hours || hours === '') return '';
+    const h = Math.floor(Math.abs(parseFloat(hours)));
+    const m = Math.round((Math.abs(parseFloat(hours)) - h) * 60);
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}min`;
+  };
+
   // Crea richiesta recupero ore
   const handleCreateRecoveryRequest = async () => {
     try {
-      const { recoveryDate, startTime, endTime, reason, notes } = recoveryFormData;
+      const { recoveryDate, startTime, endTime, hours, reason, notes } = recoveryFormData;
 
-      if (!recoveryDate || !startTime || !endTime) {
-        alert('Compila tutti i campi obbligatori');
+      // Validazione: serve data + (startTime+endTime) OPPURE (startTime+hours)
+      if (!recoveryDate || !startTime) {
+        alert('Compila data e orario di inizio');
+        return;
+      }
+
+      let finalEndTime = endTime;
+      let finalHours = hours;
+
+      // Se è stato inserito il campo "ore", calcola endTime
+      if (hours && hours !== '') {
+        finalEndTime = calculateEndTime(startTime, hours);
+        if (!finalEndTime) {
+          alert('Errore nel calcolo dell\'orario di fine');
+          return;
+        }
+      } 
+      // Se è stato inserito endTime, calcola le ore
+      else if (endTime && endTime !== '') {
+        finalHours = calculateHours(startTime, endTime);
+        if (!finalHours || parseFloat(finalHours) <= 0) {
+          alert('L\'orario di fine deve essere successivo all\'orario di inizio');
+          return;
+        }
+      } else {
+        alert('Inserisci o l\'orario di fine o le ore da recuperare');
         return;
       }
 
@@ -280,7 +365,7 @@ const RecuperiOre = () => {
         body: JSON.stringify({
           recoveryDate,
           startTime,
-          endTime,
+          endTime: finalEndTime,
           reason,
           notes
         })
@@ -293,6 +378,7 @@ const RecuperiOre = () => {
           recoveryDate: '',
           startTime: '',
           endTime: '',
+          hours: '',
           reason: '',
           notes: ''
         });
@@ -543,26 +629,85 @@ const RecuperiOre = () => {
                   />
                 </div>
                 
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                  <input
+                    type="time"
+                    value={recoveryFormData.startTime}
+                    onChange={(e) => {
+                      const newStartTime = e.target.value;
+                      let newEndTime = recoveryFormData.endTime;
+                      let newHours = recoveryFormData.hours;
+                      
+                      // Se c'è un valore in "ore", ricalcola endTime
+                      if (recoveryFormData.hours && recoveryFormData.hours !== '') {
+                        newEndTime = calculateEndTime(newStartTime, recoveryFormData.hours);
+                      }
+                      // Se c'è endTime, ricalcola le ore
+                      else if (recoveryFormData.endTime && recoveryFormData.endTime !== '') {
+                        newHours = calculateHours(newStartTime, recoveryFormData.endTime);
+                      }
+                      
+                      setRecoveryFormData({ 
+                        ...recoveryFormData, 
+                        startTime: newStartTime,
+                        endTime: newEndTime,
+                        hours: newHours
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine</label>
                     <input
                       type="time"
-                      value={recoveryFormData.startTime}
-                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, startTime: e.target.value })}
+                      value={recoveryFormData.endTime}
+                      onChange={(e) => {
+                        const newEndTime = e.target.value;
+                        const newHours = calculateHours(recoveryFormData.startTime, newEndTime);
+                        setRecoveryFormData({ 
+                          ...recoveryFormData, 
+                          endTime: newEndTime,
+                          hours: newHours || ''
+                        });
+                      }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine *</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Ore da Recuperare</label>
                     <input
-                      type="time"
-                      value={recoveryFormData.endTime}
-                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, endTime: e.target.value })}
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      max="24"
+                      value={recoveryFormData.hours}
+                      onChange={(e) => {
+                        const newHours = e.target.value;
+                        const newEndTime = calculateEndTime(recoveryFormData.startTime, newHours);
+                        setRecoveryFormData({ 
+                          ...recoveryFormData, 
+                          hours: newHours,
+                          endTime: newEndTime || ''
+                        });
+                      }}
+                      placeholder="es. 2.5"
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                 </div>
+
+                {/* Riepilogo ore richieste */}
+                {(recoveryFormData.hours && recoveryFormData.hours !== '' && parseFloat(recoveryFormData.hours) > 0) && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-sm text-amber-400 font-medium">
+                      ✅ Hai richiesto un totale di <strong>{formatHoursFromDecimal(recoveryFormData.hours)}</strong>
+                    </p>
+                  </div>
+                )}
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
@@ -836,26 +981,85 @@ const RecuperiOre = () => {
                 />
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                <input
+                  type="time"
+                  value={proposalFormData.startTime}
+                  onChange={(e) => {
+                    const newStartTime = e.target.value;
+                    let newEndTime = proposalFormData.endTime;
+                    let newHours = proposalFormData.hours;
+                    
+                    // Se c'è un valore in "ore", ricalcola endTime
+                    if (proposalFormData.hours && proposalFormData.hours !== '') {
+                      newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
+                    }
+                    // Se c'è endTime, ricalcola le ore
+                    else if (proposalFormData.endTime && proposalFormData.endTime !== '') {
+                      newHours = calculateHours(newStartTime, proposalFormData.endTime);
+                    }
+                    
+                    setProposalFormData({ 
+                      ...proposalFormData, 
+                      startTime: newStartTime,
+                      endTime: newEndTime,
+                      hours: newHours
+                    });
+                  }}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine</label>
                   <input
                     type="time"
-                    value={proposalFormData.startTime}
-                    onChange={(e) => setProposalFormData({ ...proposalFormData, startTime: e.target.value })}
+                    value={proposalFormData.endTime}
+                    onChange={(e) => {
+                      const newEndTime = e.target.value;
+                      const newHours = calculateHours(proposalFormData.startTime, newEndTime);
+                      setProposalFormData({ 
+                        ...proposalFormData, 
+                        endTime: newEndTime,
+                        hours: newHours || ''
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Ore da Recuperare</label>
                   <input
-                    type="time"
-                    value={proposalFormData.endTime}
-                    onChange={(e) => setProposalFormData({ ...proposalFormData, endTime: e.target.value })}
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    max="24"
+                    value={proposalFormData.hours}
+                    onChange={(e) => {
+                      const newHours = e.target.value;
+                      const newEndTime = calculateEndTime(proposalFormData.startTime, newHours);
+                      setProposalFormData({ 
+                        ...proposalFormData, 
+                        hours: newHours,
+                        endTime: newEndTime || ''
+                      });
+                    }}
+                    placeholder="es. 2.5"
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
               </div>
+
+              {/* Riepilogo ore richieste */}
+              {(proposalFormData.hours && proposalFormData.hours !== '' && parseFloat(proposalFormData.hours) > 0) && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                  <p className="text-sm text-amber-400 font-medium">
+                    ✅ Hai richiesto un totale di <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong>
+                  </p>
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
@@ -889,6 +1093,7 @@ const RecuperiOre = () => {
                     recoveryDate: '',
                     startTime: '',
                     endTime: '',
+                    hours: '',
                     reason: '',
                     notes: ''
                   });
