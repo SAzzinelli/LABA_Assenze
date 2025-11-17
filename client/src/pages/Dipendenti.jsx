@@ -5,7 +5,7 @@ import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AddEmployeeModal from '../components/AddEmployeeModal';
 import CustomAlert from '../components/CustomAlert';
 import ConfirmModal from '../components/ConfirmModal';
-import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee, DollarSign, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee, DollarSign, TrendingUp, TrendingDown, Activity, LayoutGrid, List } from 'lucide-react';
 
 const Employees = () => {
   const { user, apiCall } = useAuthStore();
@@ -13,6 +13,7 @@ const Employees = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' o 'card' per desktop
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -412,6 +413,31 @@ const Employees = () => {
               className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          {/* Toggle Vista - Solo Desktop */}
+          <div className="hidden md:flex items-center gap-2 bg-slate-700 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                viewMode === 'list'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              title="Vista Lista"
+            >
+              <List className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                viewMode === 'card'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              title="Vista Card"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
           <button onClick={() => setFiltersOpen(v => !v)} className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
             <Filter className="h-5 w-5 mr-2" />
             Filtri
@@ -431,8 +457,8 @@ const Employees = () => {
         )}
       </div>
 
-      {/* Employees - Responsive: cards on mobile, table on md+ */}
-      {/* Mobile Cards */}
+      {/* Employees - Responsive: cards on mobile, table/cards on desktop based on viewMode */}
+      {/* Mobile Cards - Sempre visibili su mobile */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:hidden">
         {filteredEmployees.map((employee) => (
           <div
@@ -480,7 +506,65 @@ const Employees = () => {
         ))}
       </div>
 
-      {/* Desktop Table */}
+      {/* Desktop Cards - Visibili quando viewMode === 'card' */}
+      {viewMode === 'card' && (
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredEmployees.map((employee) => (
+            <div
+              key={employee.id}
+              onClick={() => handleViewDetails(employee)}
+              className="bg-slate-800 rounded-xl p-4 border border-slate-700 hover:border-slate-500 transition-all hover:shadow-md cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">
+                      {employee.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                  <div className="ml-3">
+                    <div className="text-white font-semibold leading-5">{employee.name}</div>
+                    <div className="text-slate-400 text-xs">{employee.email}</div>
+                  </div>
+                </div>
+                {employee.has104 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white border border-blue-400">104</span>
+                )}
+              </div>
+              <div className="mb-3 flex items-center justify-between text-sm">
+                <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600 text-xs">{employee.department}</span>
+                <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600 text-xs">{employee.position}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
+                  className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 text-xs font-medium"
+                  title="Modifica"
+                >
+                  Modifica
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleViewDetails(employee); }}
+                  className="flex-1 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 text-xs font-medium"
+                  title="Dettagli"
+                >
+                  Dettagli
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
+                  className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 text-xs font-medium"
+                  title="Elimina"
+                >
+                  Elimina
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Desktop Table - Visibile quando viewMode === 'list' */}
+      {viewMode === 'list' && (
       <div className="bg-slate-800 rounded-lg overflow-hidden hidden md:block">
         <div className="overflow-x-auto hover:overflow-hidden">
           <table className="w-full">
@@ -495,7 +579,7 @@ const Employees = () => {
                 <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                   Posizione
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-auto">
                   Azioni
                 </th>
               </tr>
@@ -556,7 +640,7 @@ const Employees = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -598,6 +682,7 @@ const Employees = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Modal Aggiungi Dipendente */}
       <AddEmployeeModal
