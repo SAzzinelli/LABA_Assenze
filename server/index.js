@@ -2553,6 +2553,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     let todayBalanceHours = 0;
     
     // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
+    // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
     const dayOfWeek = now.getDay();
     const { data: schedule } = await supabase
       .from('work_schedules')
@@ -2562,56 +2563,75 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       .eq('is_working_day', true)
       .single();
     
-    if (schedule) {
-      // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
-      const { data: permissionsToday } = await supabase
-        .from('leave_requests')
-        .select('hours, permission_type, exit_time, entry_time')
-        .eq('user_id', targetUserId)
-        .eq('type', 'permission')
-        .eq('status', 'approved')
-        .lte('start_date', today)
-        .gte('end_date', today);
+    // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
+    // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
+    if (schedule && schedule.start_time) {
+      const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      const currentTimeInMinutes = currentHour * 60 + currentMin;
+      const startTimeInMinutes = startHour * 60 + startMin;
       
-      let permissionData = null;
-      if (permissionsToday && permissionsToday.length > 0) {
-        let totalHours = 0;
-        let exitTime = null;
-        let entryTime = null;
-        const permissionTypes = new Set();
-        
-        permissionsToday.forEach(perm => {
-          totalHours += parseFloat(perm.hours || 0);
-          if (perm.permission_type === 'early_exit' && perm.exit_time) {
-            permissionTypes.add('early_exit');
-            if (!exitTime || perm.exit_time < exitTime) {
-              exitTime = perm.exit_time;
-            }
-          }
-          if (perm.permission_type === 'late_entry' && perm.entry_time) {
-            permissionTypes.add('late_entry');
-            if (!entryTime || perm.entry_time > entryTime) {
-              entryTime = perm.entry_time;
-            }
-          }
-        });
-        
-        if (exitTime || entryTime) {
-          permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
+      // Se siamo prima dell'inizio del turno (es. mezzanotte), usa il balance del DB
+      if (currentTimeInMinutes < startTimeInMinutes) {
+        console.log(`⏰ Before work start (${currentTime}:${currentMin < 10 ? '0' + currentMin : currentMin} < ${schedule.start_time}), using DB balance instead of real-time to avoid incorrect credits`);
+        if (todayRecord) {
+          todayBalance = todayRecord.balance_hours || 0;
+        } else {
+          todayBalance = 0;
         }
+      } else {
+        // Siamo durante o dopo il turno, usa calcolo real-time
+        // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
+        const { data: permissionsToday } = await supabase
+          .from('leave_requests')
+          .select('hours, permission_type, exit_time, entry_time')
+          .eq('user_id', targetUserId)
+          .eq('type', 'permission')
+          .eq('status', 'approved')
+          .lte('start_date', today)
+          .gte('end_date', today);
+        
+        let permissionData = null;
+        if (permissionsToday && permissionsToday.length > 0) {
+          let totalHours = 0;
+          let exitTime = null;
+          let entryTime = null;
+          const permissionTypes = new Set();
+          
+          permissionsToday.forEach(perm => {
+            totalHours += parseFloat(perm.hours || 0);
+            if (perm.permission_type === 'early_exit' && perm.exit_time) {
+              permissionTypes.add('early_exit');
+              if (!exitTime || perm.exit_time < exitTime) {
+                exitTime = perm.exit_time;
+              }
+            }
+            if (perm.permission_type === 'late_entry' && perm.entry_time) {
+              permissionTypes.add('late_entry');
+              if (!entryTime || perm.entry_time > entryTime) {
+                entryTime = perm.entry_time;
+              }
+            }
+          });
+          
+          if (exitTime || entryTime) {
+            permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
+          }
+        }
+        
+        // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
+        const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+        todayBalance = result.balanceHours;
+        todayBalanceHours = result.balanceHours;
+        realTimeActualHours = result.actualHours;
+        realTimeEffectiveHours = result.expectedHours;
+        realTimeContractHours = result.contractHours;
+        realTimeRemainingHours = result.remainingHours;
+        hasRealTimeCalculation = true;
+        
+        console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
       }
-      
-      // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
-      const result = calculateRealTimeHours(schedule, currentTime, permissionData);
-      todayBalance = result.balanceHours;
-      todayBalanceHours = result.balanceHours;
-      realTimeActualHours = result.actualHours;
-      realTimeEffectiveHours = result.expectedHours;
-      realTimeContractHours = result.contractHours;
-      realTimeRemainingHours = result.remainingHours;
-      hasRealTimeCalculation = true;
-      
-      console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
     } else if (todayRecord) {
       // Non è un giorno lavorativo, usa il balance dal DB
       todayBalance = todayRecord.balance_hours || 0;
