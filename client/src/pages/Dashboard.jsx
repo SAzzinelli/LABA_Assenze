@@ -1200,17 +1200,20 @@ const Dashboard = () => {
           )}
 
           {/* Monitoraggio Debiti Banca Ore (Admin) */}
-          {employeesWithDebt.length > 0 && (
-            <div className="bg-slate-800 rounded-lg p-6 mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white flex items-center">
-                  <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
-                  Monitoraggio Debiti Banca Ore
-                </h3>
-                <div className="text-sm text-slate-400">
-                  Totale: {employeesWithDebt.length} dipendenti con debito
-                </div>
+          <div className="bg-slate-800 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white flex items-center">
+                <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
+                Monitoraggio Debiti Banca Ore
+              </h3>
+              <div className="text-sm text-slate-400">
+                {employeesWithDebt.length > 0 
+                  ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
+                  : 'Nessun debito al momento'
+                }
               </div>
+            </div>
+            {employeesWithDebt.length > 0 ? (
               <div className="space-y-3">
                 {employeesWithDebt.map((employee) => (
                   <div key={employee.id} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
@@ -1258,8 +1261,13 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
+                <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
+              </div>
+            )}
+          </div>
 
           {/* Richieste Recupero Ore in Attesa (Admin) */}
           {pendingRecoveryRequests.length > 0 && (
