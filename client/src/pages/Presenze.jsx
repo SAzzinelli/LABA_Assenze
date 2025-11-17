@@ -784,11 +784,6 @@ const getStatusText = (record) => {
     new Date(record.date).toDateString() === new Date().toDateString()
   );
 
-  const completedStatuses = ['completed', 'after_hours'];
-  const shouldMaskBank = currentHours?.isWorkingDay && !completedStatuses.includes(currentHours?.status);
-  const bankAvailabilityTime = currentHours?.schedule?.end_time
-    ? currentHours.schedule.end_time.substring(0, 5)
-    : todaySchedule?.end_time?.substring(0, 5);
 
   if (loading) {
     return (
@@ -861,31 +856,6 @@ const getStatusText = (record) => {
                 <Calendar className="h-4 w-4" />
               </div>
             </div>
-          </div>
-
-          {/* BANCA ORE TOTALE */}
-          <div className="bg-slate-800 rounded-lg p-3 sm:p-6 border-2 border-indigo-500/30 col-span-2 sm:col-span-1 relative overflow-hidden">
-            <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between transition ${shouldMaskBank ? 'blur-sm opacity-40 pointer-events-none select-none' : ''}`}>
-              <div className="flex-1">
-                <p className="text-slate-400 text-xs sm:text-sm font-semibold uppercase mb-1">💰 Banca Ore</p>
-                <p className={`text-2xl sm:text-3xl font-bold ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {totalBalance >= 0 ? '+' : ''}{formatHours(totalBalance)}
-                </p>
-                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
-                  {totalBalance >= 0 ? 'Credito' : 'Debito'}
-                </p>
-              </div>
-              <div className={`hidden sm:block p-3 rounded-full ${totalBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {totalBalance >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
-              </div>
-            </div>
-
-            {shouldMaskBank && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/70 backdrop-blur-sm text-center px-4">
-                <p className="text-sm font-semibold text-slate-100">Disponibile alle ore {bankAvailabilityTime || '--:--'}</p>
-                <p className="text-xs text-slate-300">Saldo aggiornato a fine giornata lavorativa</p>
-              </div>
-            )}
           </div>
         </div>
 
