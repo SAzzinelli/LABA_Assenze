@@ -992,7 +992,7 @@ const getStatusText = (record) => {
                   status: currentHours.status
                 }, ...attendance];
               }
-              return combined.slice(0, 10).map((record) => (
+              return combined.map((record) => (
                 <div key={record.id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 hover:border-slate-500 transition-all">
                   <div className="flex items-center justify-between mb-2 gap-2">
                     <div className="font-semibold text-white text-sm sm:text-base">
@@ -1069,7 +1069,7 @@ const getStatusText = (record) => {
                     combinedAttendance = [todayRecord, ...attendance];
                   }
                   
-                  return combinedAttendance.slice(0, 10).map((record) => (
+                  return combinedAttendance.map((record) => (
                   <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                     <td className="py-3 px-4">
                       {new Date(record.date).toLocaleDateString('it-IT')}
