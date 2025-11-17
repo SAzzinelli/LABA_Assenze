@@ -1336,6 +1336,78 @@ const Dashboard = () => {
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />
+
+      {/* Modal Approva Richiesta Recupero (Admin) */}
+      {showApproveRecoveryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4">Approva Richiesta Recupero Ore</h3>
+            <p className="text-slate-300 mb-6">
+              Sei sicuro di voler approvare questa richiesta di recupero ore?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowApproveRecoveryModal(false);
+                  setSelectedRecoveryId(null);
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleApproveRecovery}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Approva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Rifiuta Richiesta Recupero (Admin) */}
+      {showRejectRecoveryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4">Rifiuta Richiesta Recupero Ore</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Motivo del Rifiuto *
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  rows={4}
+                  required
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Inserisci il motivo del rifiuto..."
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowRejectRecoveryModal(false);
+                  setSelectedRecoveryId(null);
+                  setRejectionReason('');
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleRejectRecovery}
+                disabled={!rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                Rifiuta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
