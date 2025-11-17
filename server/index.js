@@ -6565,22 +6565,98 @@ function getDefaultHolidays(year) {
   const holidays2026 = [
     { id: '13', name: 'Capodanno', date: '2026-01-01', is_national: true, is_paid: true },
     { id: '14', name: 'Epifania', date: '2026-01-06', is_national: true, is_paid: true },
-    { id: '15', name: 'Carnevale', date: '2026-02-17', is_national: true, is_paid: true },
     { id: '16', name: 'Pasqua', date: '2026-04-05', is_national: true, is_paid: true },
     { id: '17', name: 'Pasquetta', date: '2026-04-06', is_national: true, is_paid: true },
     { id: '18', name: 'Festa della Liberazione', date: '2026-04-25', is_national: true, is_paid: true },
     { id: '19', name: 'Festa del Lavoro', date: '2026-05-01', is_national: true, is_paid: true },
     { id: '20', name: 'Festa della Repubblica', date: '2026-06-02', is_national: true, is_paid: true },
-    { id: '21', name: 'Ferragosto', date: '2026-08-15', is_national: true, is_paid: true },
-    { id: '22', name: 'Tutti i Santi', date: '2026-11-01', is_national: true, is_paid: true },
-    { id: '23', name: 'Immacolata Concezione', date: '2026-12-08', is_national: true, is_paid: true },
-    { id: '24', name: 'Natale', date: '2026-12-25', is_national: true, is_paid: true },
-    { id: '25', name: 'Santo Stefano', date: '2026-12-26', is_national: true, is_paid: true },
-    { id: '26', name: 'San Silvestro', date: '2026-12-31', is_national: true, is_paid: true }
+    { id: '21', name: 'San Giovanni (Festa Toscana)', date: '2026-06-24', is_national: false, is_paid: true, region: 'Toscana' },
+    { id: '22', name: 'Ferragosto', date: '2026-08-15', is_national: true, is_paid: true },
+    { id: '23', name: 'Tutti i Santi', date: '2026-11-01', is_national: true, is_paid: true },
+    { id: '24', name: 'Immacolata Concezione', date: '2026-12-08', is_national: true, is_paid: true },
+    { id: '25', name: 'Natale', date: '2026-12-25', is_national: true, is_paid: true },
+    { id: '26', name: 'Santo Stefano', date: '2026-12-26', is_national: true, is_paid: true }
   ];
 
   return year === 2025 ? holidays2025 : year === 2026 ? holidays2026 : holidays2025;
 }
+
+// Admin: Insert holidays for a year (inserts all default holidays for 2026)
+app.post('/api/admin/holidays/insert-year', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { year = 2026 } = req.body;
+    
+    console.log(`🔄 Inserting holidays for year ${year}...`);
+    
+    // Ottieni le festività di default per l'anno
+    const defaultHolidays = getDefaultHolidays(year);
+    
+    if (!defaultHolidays || defaultHolidays.length === 0) {
+      return res.status(400).json({ error: `Nessuna festività disponibile per l'anno ${year}` });
+    }
+    
+    // Verifica quali festività esistono già
+    const { data: existingHolidays, error: fetchError } = await supabase
+      .from('holidays')
+      .select('date')
+      .gte('date', `${year}-01-01`)
+      .lte('date', `${year}-12-31`);
+    
+    if (fetchError) {
+      console.error('❌ Error fetching existing holidays:', fetchError);
+      return res.status(500).json({ error: 'Errore nel recupero delle festività esistenti' });
+    }
+    
+    const existingDates = new Set((existingHolidays || []).map(h => h.date));
+    
+    // Filtra solo le festività che non esistono già
+    const holidaysToInsert = defaultHolidays
+      .filter(holiday => !existingDates.has(holiday.date))
+      .map(holiday => ({
+        name: holiday.name,
+        date: holiday.date,
+        is_national: holiday.is_national || false,
+        is_paid: holiday.is_paid !== undefined ? holiday.is_paid : true,
+        region: holiday.region || null,
+        year: year
+      }));
+    
+    if (holidaysToInsert.length === 0) {
+      return res.json({
+        success: true,
+        message: `Tutte le festività per l'anno ${year} sono già presenti nel database`,
+        inserted: 0,
+        skipped: defaultHolidays.length,
+        total: defaultHolidays.length
+      });
+    }
+    
+    // Inserisci le festività
+    const { data: insertedHolidays, error: insertError } = await supabase
+      .from('holidays')
+      .insert(holidaysToInsert)
+      .select();
+    
+    if (insertError) {
+      console.error('❌ Error inserting holidays:', insertError);
+      return res.status(500).json({ error: 'Errore nell\'inserimento delle festività' });
+    }
+    
+    console.log(`✅ Inserted ${insertedHolidays?.length || 0} holidays for year ${year}`);
+    
+    res.json({
+      success: true,
+      message: `Festività per l'anno ${year} inserite con successo`,
+      inserted: insertedHolidays?.length || 0,
+      skipped: existingDates.size,
+      total: defaultHolidays.length,
+      holidays: insertedHolidays
+    });
+  } catch (error) {
+    console.error('❌ Holiday insertion error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
 
 // Get holidays calendar for month
 app.get('/api/holidays/calendar', authenticateToken, async (req, res) => {
