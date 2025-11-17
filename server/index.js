@@ -6050,43 +6050,6 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
 
     // Le email di timbratura sono state rimosse - non più necessarie
     return res.status(400).json({ error: 'Le email di promemoria timbratura non sono più disponibili' });
-    
-    /* 
-    let emailResult;
-    switch (type) {
-      case 'attendance':
-        emailResult = await sendEmail(user.email, 'attendanceReminder', [
-          `${user.first_name} ${user.last_name}`,
-          user.department || 'Ufficio'
-        ]);
-        break;
-      case 'custom':
-        if (!customMessage) {
-          return res.status(400).json({ error: 'Messaggio personalizzato richiesto' });
-        }
-        emailResult = await sendEmail(user.email, 'attendanceReminder', [
-          `${user.first_name} ${user.last_name}`,
-          customMessage
-        ]);
-        break;
-      default:
-        return res.status(400).json({ error: 'Tipo di promemoria non valido' });
-    }
-    */
-
-    if (emailResult.success) {
-      res.json({
-        success: true,
-        message: 'Promemoria inviato con successo',
-        messageId: emailResult.messageId
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: 'Errore nell\'invio del promemoria',
-        details: emailResult.error
-      });
-    }
   } catch (error) {
     console.error('Email reminder error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
