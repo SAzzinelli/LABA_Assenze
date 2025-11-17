@@ -7556,6 +7556,322 @@ app.post('/api/admin/reset-adriano-password', async (req, res) => {
   }
 });
 
+// ==================== RECOVERY REQUESTS ENDPOINTS ====================
+
+// Crea richiesta recupero ore (solo dipendente con debito)
+app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Solo dipendenti possono creare richieste recupero
+    if (req.user.role !== 'employee') {
+      return res.status(403).json({ error: 'Solo i dipendenti possono richiedere recupero ore' });
+    }
+
+    const { recoveryDate, startTime, endTime, hours, reason, notes } = req.body;
+
+    // Validazione
+    if (!recoveryDate || !startTime || !endTime || !hours) {
+      return res.status(400).json({ error: 'Data, orari e ore sono obbligatori' });
+    }
+
+    const hoursNum = parseFloat(hours);
+    if (isNaN(hoursNum) || hoursNum <= 0) {
+      return res.status(400).json({ error: 'Le ore devono essere un numero positivo' });
+    }
+
+    // Verifica che la data di recupero sia nel futuro
+    const recoveryDateObj = new Date(recoveryDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    recoveryDateObj.setHours(0, 0, 0, 0);
+    
+    if (recoveryDateObj <= today) {
+      return res.status(400).json({ error: 'La data di recupero deve essere nel futuro' });
+    }
+
+    // Calcola le ore dalla differenza tra startTime e endTime
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    const calculatedHours = (endMinutes - startMinutes) / 60;
+
+    if (calculatedHours <= 0) {
+      return res.status(400).json({ error: 'L\'orario di fine deve essere successivo all\'orario di inizio' });
+    }
+
+    // Verifica che ci sia un debito nella banca ore
+    const { data: balanceData } = await supabase
+      .from('attendance')
+      .select('balance_hours')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .limit(100);
+
+    const totalBalance = balanceData?.reduce((sum, row) => sum + (parseFloat(row.balance_hours) || 0), 0) || 0;
+    
+    if (totalBalance >= 0) {
+      return res.status(400).json({ error: 'Non puoi richiedere recupero ore se non hai un debito nella banca ore' });
+    }
+
+    // Crea la richiesta
+    const { data: recoveryRequest, error } = await supabase
+      .from('recovery_requests')
+      .insert({
+        user_id: userId,
+        recovery_date: recoveryDate,
+        start_time: startTime,
+        end_time: endTime,
+        hours: calculatedHours,
+        reason: reason || '',
+        notes: notes || '',
+        status: 'pending',
+        submitted_by: userId,
+        submitted_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Recovery request create error:', error);
+      return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Richiesta recupero ore creata con successo',
+      recoveryRequest
+    });
+  } catch (error) {
+    console.error('Recovery request create error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Lista richieste recupero ore
+app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
+  try {
+    const { userId, status } = req.query;
+    
+    let query = supabase
+      .from('recovery_requests')
+      .select(`
+        *,
+        users!recovery_requests_user_id_fkey(id, first_name, last_name, email, department)
+      `)
+      .order('recovery_date', { ascending: true });
+
+    // Se è un dipendente, mostra solo le sue richieste
+    if (req.user.role === 'employee') {
+      query = query.eq('user_id', req.user.id);
+    } else if (userId) {
+      // Admin può filtrare per utente
+      query = query.eq('user_id', userId);
+    }
+
+    // Filtro per status se fornito
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data: requests, error } = await query;
+
+    if (error) {
+      console.error('Recovery requests fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero delle richieste' });
+    }
+
+    res.json(requests || []);
+  } catch (error) {
+    console.error('Recovery requests fetch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Approva/rifiuta richiesta recupero ore (solo admin)
+app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Status deve essere "approved" o "rejected"' });
+    }
+
+    // Verifica che la richiesta esista
+    const { data: existingRequest, error: fetchError } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingRequest) {
+      return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    // Aggiorna la richiesta
+    const updateData = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (status === 'approved') {
+      updateData.approved_by = req.user.id;
+      updateData.approved_at = new Date().toISOString();
+      updateData.rejected_by = null;
+      updateData.rejected_at = null;
+      updateData.rejection_reason = null;
+    } else {
+      updateData.rejected_by = req.user.id;
+      updateData.rejected_at = new Date().toISOString();
+      updateData.rejection_reason = rejectionReason || '';
+      updateData.approved_by = null;
+      updateData.approved_at = null;
+    }
+
+    const { data: updatedRequest, error } = await supabase
+      .from('recovery_requests')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        users!recovery_requests_user_id_fkey(id, first_name, last_name, email)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Recovery request update error:', error);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
+    }
+
+    // TODO: Invia email di notifica se rifiutata
+    if (status === 'rejected' && updatedRequest.users?.email) {
+      // TODO: Implementare invio email
+      console.log(`📧 Email da inviare a ${updatedRequest.users.email} per richiesta recupero rifiutata`);
+    }
+
+    res.json({
+      success: true,
+      message: `Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'} con successo`,
+      recoveryRequest: updatedRequest
+    });
+  } catch (error) {
+    console.error('Recovery request update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Funzione per processare recuperi completati (chiamata periodicamente o su richiesta)
+async function processCompletedRecoveries() {
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    // Trova tutti i recuperi approvati che non sono ancora stati processati
+    // e per cui la data e l'orario sono passati
+    const { data: completedRecoveries, error } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('status', 'approved')
+      .eq('balance_added', false)
+      .lte('recovery_date', today);
+
+    if (error) {
+      console.error('Error fetching completed recoveries:', error);
+      return;
+    }
+
+    if (!completedRecoveries || completedRecoveries.length === 0) {
+      return;
+    }
+
+    console.log(`🔄 Processing ${completedRecoveries.length} completed recoveries...`);
+
+    for (const recovery of completedRecoveries) {
+      const recoveryDate = new Date(recovery.recovery_date);
+      const recoveryTime = recovery.end_time; // Fine recupero
+
+      // Verifica se la data è passata e l'orario di fine è passato
+      const isDatePast = recoveryDate < new Date(today);
+      const isTimePast = recoveryDate.toISOString().split('T')[0] === today && recoveryTime <= currentTime;
+
+      if (isDatePast || isTimePast) {
+        // Aggiungi le ore al saldo
+        // Crea un record di presenza per quella data con le ore di recupero
+        const { data: existingAttendance } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', recovery.user_id)
+          .eq('date', recovery.recovery_date)
+          .single();
+
+        if (existingAttendance) {
+          // Aggiorna il record esistente aggiungendo le ore di recupero
+          const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(recovery.hours);
+          const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(recovery.hours);
+
+          await supabase
+            .from('attendance')
+            .update({
+              actual_hours: newActualHours,
+              balance_hours: newBalanceHours,
+              notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${recovery.hours}h]`
+            })
+            .eq('id', existingAttendance.id);
+        } else {
+          // Crea nuovo record
+          await supabase
+            .from('attendance')
+            .insert({
+              user_id: recovery.user_id,
+              date: recovery.recovery_date,
+              actual_hours: parseFloat(recovery.hours),
+              expected_hours: 0, // Recupero ore, non sono ore previste
+              balance_hours: parseFloat(recovery.hours),
+              notes: `Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+            });
+        }
+
+        // Marca il recupero come completato
+        await supabase
+          .from('recovery_requests')
+          .update({
+            completed_at: new Date().toISOString(),
+            balance_added: true,
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', recovery.id);
+
+        console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance`);
+      }
+    }
+  } catch (error) {
+    console.error('Error processing completed recoveries:', error);
+  }
+}
+
+// Endpoint per processare manualmente i recuperi completati (admin)
+app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    await processCompletedRecoveries();
+    res.json({ success: true, message: 'Recuperi completati processati' });
+  } catch (error) {
+    console.error('Process completed recoveries error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
@@ -7577,6 +7893,14 @@ server.listen(PORT, () => {
   console.log('✅ Sistema salvataggio automatico presenze attivato');
   console.log('📅 Salvataggio ore: Ogni ora al minuto 0');
   console.log('📅 Finalizzazione giornata: Ogni giorno a mezzanotte');
+  
+  // Processa recuperi completati ogni ora
+  setInterval(async () => {
+    await processCompletedRecoveries();
+  }, 60 * 60 * 1000); // Ogni ora
+  
+  // Processa anche all'avvio
+  processCompletedRecoveries();
 });
 
 module.exports = app;
