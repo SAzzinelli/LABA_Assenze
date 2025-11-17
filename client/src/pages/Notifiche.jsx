@@ -104,34 +104,57 @@ const Notifiche = () => {
     }
   };
 
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'leave_approved':
-        return <CheckCircle className="h-5 w-5 text-green-400" />;
-      case 'leave_rejected':
-        return <XCircle className="h-5 w-5 text-red-400" />;
-      case 'leave_pending':
-        return <Clock className="h-5 w-5 text-yellow-400" />;
-      default:
-        return <AlertCircle className="h-5 w-5 text-blue-400" />;
+  const getNotificationIcon = (notification) => {
+    const title = (notification.title || '').toLowerCase();
+    const message = (notification.message || '').toLowerCase();
+    const type = notification.type || '';
+    
+    // Verifica se è approvata
+    if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
+      return <CheckCircle className="h-5 w-5 text-green-400" />;
     }
+    
+    // Verifica se è rifiutata
+    if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
+      return <XCircle className="h-5 w-5 text-red-400" />;
+    }
+    
+    // Verifica se è in attesa
+    if (type === 'leave_pending' || title.includes('pending') || message.includes('in attesa')) {
+      return <Clock className="h-5 w-5 text-yellow-400" />;
+    }
+    
+    // Default: blu
+    return <AlertCircle className="h-5 w-5 text-blue-400" />;
   };
 
-  const getNotificationBg = (type, isRead) => {
+  const getNotificationBg = (notification, isRead) => {
     // Mantieni sempre i colori, ma opacità leggermente inferiore se letta
     const opacity = isRead ? '20' : '30';
     const borderOpacity = isRead ? '30' : '50';
     
-    switch (type) {
-      case 'leave_approved':
-        return `bg-green-900/${opacity} border-green-500/${borderOpacity}`;
-      case 'leave_rejected':
-        return `bg-red-900/${opacity} border-red-500/${borderOpacity}`;
-      case 'leave_pending':
-        return `bg-yellow-900/${opacity} border-yellow-500/${borderOpacity}`;
-      default:
-        return `bg-blue-900/${opacity} border-blue-500/${borderOpacity}`;
+    // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
+    const title = (notification.title || '').toLowerCase();
+    const message = (notification.message || '').toLowerCase();
+    const type = notification.type || '';
+    
+    // Verifica se è approvata (nel type o nel testo)
+    if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
+      return `bg-green-900/${opacity} border-green-500/${borderOpacity}`;
     }
+    
+    // Verifica se è rifiutata (nel type o nel testo)
+    if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
+      return `bg-red-900/${opacity} border-red-500/${borderOpacity}`;
+    }
+    
+    // Verifica se è in attesa
+    if (type === 'leave_pending' || title.includes('pending') || message.includes('in attesa')) {
+      return `bg-yellow-900/${opacity} border-yellow-500/${borderOpacity}`;
+    }
+    
+    // Default: blu
+    return `bg-blue-900/${opacity} border-blue-500/${borderOpacity}`;
   };
 
   const filteredNotifications = filterUnread 
@@ -208,14 +231,14 @@ const Notifiche = () => {
               <div
                 key={notification.id}
                 className={`border rounded-lg p-4 transition-all cursor-pointer hover:shadow-lg ${
-                  getNotificationBg(notification.type, notification.is_read)
+                  getNotificationBg(notification, notification.is_read)
                 } ${!notification.is_read ? 'border-l-4' : ''}`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3 flex-1">
                     <div className="mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification)}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">

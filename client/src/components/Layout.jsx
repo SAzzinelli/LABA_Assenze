@@ -395,8 +395,22 @@ const Layout = ({ children }) => {
                                       const borderOpacity = notification.is_read ? '30' : '50';
                                       const shadow = notification.is_read ? '' : 'shadow-lg';
                                       
-                                      if (notification.type === 'leave_approved') return `bg-green-900/${opacity} border border-green-500/${borderOpacity} ${shadow}`;
-                                      if (notification.type === 'leave_rejected') return `bg-red-900/${opacity} border border-red-500/${borderOpacity} ${shadow}`;
+                                      // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
+                                      const title = (notification.title || '').toLowerCase();
+                                      const message = (notification.message || '').toLowerCase();
+                                      const type = notification.type || '';
+                                      
+                                      // Verifica se è approvata
+                                      if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
+                                        return `bg-green-900/${opacity} border border-green-500/${borderOpacity} ${shadow}`;
+                                      }
+                                      
+                                      // Verifica se è rifiutata
+                                      if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
+                                        return `bg-red-900/${opacity} border border-red-500/${borderOpacity} ${shadow}`;
+                                      }
+                                      
+                                      // Default: blu
                                       return `bg-blue-900/${opacity} border border-blue-500/${borderOpacity} ${shadow}`;
                                     })()
                                   }`}
@@ -408,9 +422,22 @@ const Layout = ({ children }) => {
                                   <div className="flex items-start space-x-3">
                                     <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
                                       (() => {
-                                        // Mantieni sempre i colori per il punto indicatore
-                                        if (notification.type === 'leave_approved') return 'bg-green-400';
-                                        if (notification.type === 'leave_rejected') return 'bg-red-400';
+                                        // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
+                                        const title = (notification.title || '').toLowerCase();
+                                        const message = (notification.message || '').toLowerCase();
+                                        const type = notification.type || '';
+                                        
+                                        // Verifica se è approvata
+                                        if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
+                                          return 'bg-green-400';
+                                        }
+                                        
+                                        // Verifica se è rifiutata
+                                        if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
+                                          return 'bg-red-400';
+                                        }
+                                        
+                                        // Default: blu
                                         return 'bg-blue-400';
                                       })()
                                     }`} />
