@@ -4858,17 +4858,54 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       updateData.notes = notes || '';
     }
     
-    // Se viene fornito entryTime, aggiorna l'orario di entrata (per permessi)
-    if (entryTime !== undefined && existingRequest.type === 'permission') {
-      updateData.entry_time = entryTime || null;
+    // Se viene fornito entryTime o exitTime, calcola automaticamente le ore
+    if ((entryTime !== undefined || exitTime !== undefined) && existingRequest.type === 'permission') {
+      if (entryTime !== undefined) {
+        updateData.entry_time = entryTime || null;
+      }
+      if (exitTime !== undefined) {
+        updateData.exit_time = exitTime || null;
+      }
+      
+      // Calcola automaticamente le ore basandosi sull'orario di lavoro
+      const permissionDate = existingRequest.start_date;
+      const dayOfWeek = new Date(permissionDate).getDay();
+      
+      // Recupera l'orario di lavoro per quel giorno
+      const { data: schedule, error: scheduleError } = await supabase
+        .from('work_schedules')
+        .select('start_time, end_time, break_duration, break_start_time')
+        .eq('user_id', existingRequest.user_id)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      
+      if (!scheduleError && schedule) {
+        const finalEntryTime = entryTime !== undefined ? entryTime : existingRequest.entry_time;
+        const finalExitTime = exitTime !== undefined ? exitTime : existingRequest.exit_time;
+        
+        // Calcola le ore in base al tipo di permesso
+        if (finalEntryTime && (existingRequest.permission_type === 'late_entry' || existingRequest.permission_type === 'entrata_posticipata')) {
+          // Entrata posticipata: ore = (entryTime - start_time) / 60
+          const startMinutes = schedule.start_time ? 
+            (parseInt(schedule.start_time.split(':')[0]) * 60 + parseInt(schedule.start_time.split(':')[1])) : 0;
+          const entryMinutes = finalEntryTime ? 
+            (parseInt(finalEntryTime.split(':')[0]) * 60 + parseInt(finalEntryTime.split(':')[1])) : 0;
+          const hoursDiff = Math.max(0, (entryMinutes - startMinutes) / 60);
+          updateData.hours = parseFloat(hoursDiff.toFixed(2));
+        } else if (finalExitTime && (existingRequest.permission_type === 'early_exit' || existingRequest.permission_type === 'uscita_anticipata')) {
+          // Uscita anticipata: ore = (end_time - exitTime) / 60
+          const endMinutes = schedule.end_time ? 
+            (parseInt(schedule.end_time.split(':')[0]) * 60 + parseInt(schedule.end_time.split(':')[1])) : 0;
+          const exitMinutes = finalExitTime ? 
+            (parseInt(finalExitTime.split(':')[0]) * 60 + parseInt(finalExitTime.split(':')[1])) : 0;
+          const hoursDiff = Math.max(0, (endMinutes - exitMinutes) / 60);
+          updateData.hours = parseFloat(hoursDiff.toFixed(2));
+        }
+      }
     }
     
-    // Se viene fornito exitTime, aggiorna l'orario di uscita (per permessi)
-    if (exitTime !== undefined && existingRequest.type === 'permission') {
-      updateData.exit_time = exitTime || null;
-    }
-    
-    // Se vengono fornite hours, aggiorna le ore di permesso
+    // Se vengono fornite hours direttamente (override manuale), usa quelle
     if (hours !== undefined && existingRequest.type === 'permission') {
       updateData.hours = hours !== null ? parseFloat(hours) : null;
     }

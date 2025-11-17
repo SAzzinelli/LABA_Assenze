@@ -235,7 +235,10 @@ const LeaveRequests = () => {
     setShowCancelDialog(true);
   };
 
-  const openEditDialog = (request) => {
+  const [editWorkSchedule, setEditWorkSchedule] = useState(null);
+  const [calculatedHours, setCalculatedHours] = useState(null);
+
+  const openEditDialog = async (request) => {
     setSelectedRequest(request);
     setSelectedRequestId(request.id);
     setEditFormData({
@@ -243,7 +246,97 @@ const LeaveRequests = () => {
       exitTime: request.exitTime || request.exit_time || '',
       hours: request.hours || ''
     });
+    
+    // Recupera l'orario di lavoro per la data del permesso
+    const permissionDate = request.permissionDate || request.startDate || request.start_date;
+    if (permissionDate) {
+      try {
+        const date = new Date(permissionDate);
+        const dayOfWeek = date.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
+        
+        // Se è un permesso di un dipendente specifico, recupera il suo orario
+        const userId = request.userId || request.user_id;
+        if (userId) {
+          const response = await apiCall(`/api/employees`);
+          if (response.ok) {
+            const employees = await response.json();
+            const employee = employees.find(emp => emp.id === userId);
+            if (employee && employee.workSchedule) {
+              const daySchedule = Object.entries(employee.workSchedule).find(([day, sched]) => {
+                const dayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' };
+                return day === dayMap[dayOfWeek] && sched.active;
+              });
+              if (daySchedule && daySchedule[1]) {
+                const schedule = daySchedule[1];
+                setEditWorkSchedule({
+                  start_time: schedule.startTime || schedule.start_time,
+                  end_time: schedule.endTime || schedule.end_time
+                });
+              }
+            }
+          }
+        } else {
+          // Fallback: usa l'orario dell'utente corrente
+          const response = await apiCall('/api/work-schedules');
+          if (response.ok) {
+            const schedules = await response.json();
+            const schedule = schedules.find(s => 
+              s.day_of_week === dayOfWeek && s.is_working_day
+            );
+            if (schedule) {
+              setEditWorkSchedule({
+                start_time: schedule.start_time,
+                end_time: schedule.end_time
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching work schedule:', error);
+      }
+    }
+    
     setShowEditDialog(true);
+    
+    // Calcola le ore iniziali dopo aver impostato lo schedule (con un piccolo delay per permettere lo stato di aggiornarsi)
+    setTimeout(() => {
+      calculateEditHours(request.entryTime || request.entry_time, request.exitTime || request.exit_time, request);
+    }, 100);
+  };
+  
+  const calculateEditHours = (entryTime, exitTime, request) => {
+    // Se non abbiamo ancora lo schedule, proviamo a recuperarlo dal selectedRequest
+    const scheduleToUse = editWorkSchedule || (selectedRequest && selectedRequest.workSchedule);
+    if (!scheduleToUse) {
+      // Non possiamo calcolare senza schedule, lascia null
+      setCalculatedHours(null);
+      return;
+    }
+    
+    let calculated = null;
+    
+    const timeToMinutes = (timeStr) => {
+      if (!timeStr) return 0;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const startTime = scheduleToUse.start_time || scheduleToUse.startTime;
+    const endTime = scheduleToUse.end_time || scheduleToUse.endTime;
+    
+    if ((request.permissionType === 'late_entry' || request.permissionType === 'entrata_posticipata' || request.entryTime) && entryTime && startTime) {
+      // Entrata posticipata: ore = (entryTime - start_time) / 60
+      const startMinutes = timeToMinutes(startTime);
+      const entryMinutes = timeToMinutes(entryTime);
+      calculated = Math.max(0, (entryMinutes - startMinutes) / 60);
+    } else if ((request.permissionType === 'early_exit' || request.permissionType === 'uscita_anticipata' || request.exitTime) && exitTime && endTime) {
+      // Uscita anticipata: ore = (end_time - exitTime) / 60
+      const endMinutes = timeToMinutes(endTime);
+      const exitMinutes = timeToMinutes(exitTime);
+      calculated = Math.max(0, (endMinutes - exitMinutes) / 60);
+    }
+    
+    setCalculatedHours(calculated);
   };
 
   const confirmApprove = () => {
@@ -266,20 +359,29 @@ const LeaveRequests = () => {
     
     try {
       const payload = {};
-      if (editFormData.entryTime !== undefined && editFormData.entryTime !== '') {
+      let hasChanges = false;
+      
+      // Controlla se entryTime è cambiato
+      const currentEntryTime = selectedRequest.entryTime || selectedRequest.entry_time || '';
+      if (editFormData.entryTime !== currentEntryTime) {
         payload.entryTime = editFormData.entryTime;
+        hasChanges = true;
       }
-      if (editFormData.exitTime !== undefined && editFormData.exitTime !== '') {
+      
+      // Controlla se exitTime è cambiato
+      const currentExitTime = selectedRequest.exitTime || selectedRequest.exit_time || '';
+      if (editFormData.exitTime !== currentExitTime) {
         payload.exitTime = editFormData.exitTime;
-      }
-      if (editFormData.hours !== undefined && editFormData.hours !== '') {
-        payload.hours = parseFloat(editFormData.hours);
+        hasChanges = true;
       }
 
-      if (Object.keys(payload).length === 0) {
+      if (!hasChanges) {
         showError('Nessuna modifica da salvare');
         return;
       }
+
+      // Non inviare hours: verrà calcolato automaticamente dal backend
+      // in base all'orario di lavoro del dipendente
 
       const response = await apiCall(`/api/leave-requests/${selectedRequestId}`, {
         method: 'PUT',
@@ -290,9 +392,11 @@ const LeaveRequests = () => {
       });
 
       if (response.ok) {
-        showSuccess('Permesso modificato con successo');
+        showSuccess('Permesso modificato con successo! Le ore sono state calcolate automaticamente.');
         fetchRequests();
         setShowEditDialog(false);
+        setCalculatedHours(null);
+        setEditWorkSchedule(null);
       } else {
         const error = await response.json();
         showError(`Errore: ${error.error || 'Errore durante la modifica'}`);
@@ -1334,16 +1438,32 @@ const LeaveRequests = () => {
               {(selectedRequest.permissionType === 'entrata_posticipata' || selectedRequest.permissionType === 'late_entry' || selectedRequest.entryTime) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Orario di Entrata
+                    Orario di Entrata *
                   </label>
                   <input
                     type="time"
                     value={editFormData.entryTime}
-                    onChange={(e) => setEditFormData({ ...editFormData, entryTime: e.target.value })}
+                    onChange={(e) => {
+                      const newEntryTime = e.target.value;
+                      setEditFormData({ ...editFormData, entryTime: newEntryTime });
+                      // Calcola le ore usando editWorkSchedule o selectedRequest come fallback
+                      const schedule = editWorkSchedule || (selectedRequest.workSchedule ? {
+                        start_time: Object.values(selectedRequest.workSchedule).find(s => s.active)?.startTime || Object.values(selectedRequest.workSchedule).find(s => s.active)?.start_time,
+                        end_time: Object.values(selectedRequest.workSchedule).find(s => s.active)?.endTime || Object.values(selectedRequest.workSchedule).find(s => s.active)?.end_time
+                      } : null);
+                      if (schedule) {
+                        calculateEditHours(newEntryTime, editFormData.exitTime, { ...selectedRequest, workSchedule: schedule });
+                      }
+                    }}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     Orario attuale: {selectedRequest.entryTime || selectedRequest.entry_time || 'Non impostato'}
+                    {editWorkSchedule && (
+                      <span className="block mt-1">
+                        Orario normale di entrata: {editWorkSchedule.start_time}
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -1351,39 +1471,65 @@ const LeaveRequests = () => {
               {(selectedRequest.permissionType === 'uscita_anticipata' || selectedRequest.permissionType === 'early_exit' || selectedRequest.exitTime) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Orario di Uscita
+                    Orario di Uscita *
                   </label>
                   <input
                     type="time"
                     value={editFormData.exitTime}
-                    onChange={(e) => setEditFormData({ ...editFormData, exitTime: e.target.value })}
+                    onChange={(e) => {
+                      const newExitTime = e.target.value;
+                      setEditFormData({ ...editFormData, exitTime: newExitTime });
+                      // Calcola le ore usando editWorkSchedule o selectedRequest come fallback
+                      const schedule = editWorkSchedule || (selectedRequest.workSchedule ? {
+                        start_time: Object.values(selectedRequest.workSchedule).find(s => s.active)?.startTime || Object.values(selectedRequest.workSchedule).find(s => s.active)?.start_time,
+                        end_time: Object.values(selectedRequest.workSchedule).find(s => s.active)?.endTime || Object.values(selectedRequest.workSchedule).find(s => s.active)?.end_time
+                      } : null);
+                      if (schedule) {
+                        calculateEditHours(editFormData.entryTime, newExitTime, { ...selectedRequest, workSchedule: schedule });
+                      }
+                    }}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     Orario attuale: {selectedRequest.exitTime || selectedRequest.exit_time || 'Non impostato'}
+                    {editWorkSchedule && (
+                      <span className="block mt-1">
+                        Orario normale di uscita: {editWorkSchedule.end_time}
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ore di Permesso (ore decimali, es. 2.5 per 2h 30min)
-                </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  value={editFormData.hours}
-                  onChange={(e) => setEditFormData({ ...editFormData, hours: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Es. 2.5"
-                />
-                <p className="text-slate-400 text-xs mt-1">
-                  Ore attuali: {selectedRequest.hours ? `${selectedRequest.hours}h (${formatHoursReadable(selectedRequest.hours)})` : 'Non impostate'}
-                </p>
-                <p className="text-amber-400 text-xs mt-2">
-                  💡 Suggerimento: Puoi modificare direttamente le ore per correggere discrepanze (es. se entrato più tardi del previsto)
-                </p>
+              {/* Mostra le ore calcolate automaticamente */}
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <Clock className="h-5 w-5 text-blue-400 mr-2" />
+                  <span className="text-blue-300 font-medium">Ore di Permesso (calcolate automaticamente)</span>
+                </div>
+                {calculatedHours !== null ? (
+                  <div>
+                    <p className="text-blue-200 text-lg font-semibold">
+                      {calculatedHours.toFixed(2)}h ({formatHoursReadable(calculatedHours)})
+                    </p>
+                    <p className="text-blue-300 text-xs mt-1">
+                      Le ore verranno calcolate automaticamente in base all'orario di lavoro del dipendente
+                    </p>
+                  </div>
+                ) : selectedRequest.hours ? (
+                  <div>
+                    <p className="text-blue-200 text-lg font-semibold">
+                      Attuali: {selectedRequest.hours}h ({formatHoursReadable(selectedRequest.hours)})
+                    </p>
+                    <p className="text-blue-300 text-xs mt-1">
+                      Modifica l'orario sopra per ricalcolare automaticamente le ore
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-blue-300 text-sm">
+                    Modifica l'orario per vedere le ore calcolate automaticamente
+                  </p>
+                )}
               </div>
             </div>
 
