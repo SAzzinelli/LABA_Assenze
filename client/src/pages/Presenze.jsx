@@ -221,8 +221,16 @@ const Attendance = () => {
           expectedMonthlyPresences: data.expectedMonthlyPresences,
           remainingDays: data.remainingDays
         });
-        // IMPORTANTE: remainingDays è già calcolato come expected - monthly (rimanenti, non totale!)
-        setRemainingDays(data.remainingDays || 0);
+        // IMPORTANTE: remainingDays = expectedMonthlyPresences - monthlyPresences (RIMANENTI, NON TOTALE!)
+        // Verifica che non sia il totale
+        const calculatedRemaining = Math.max(0, (data.expectedMonthlyPresences || 0) - (data.monthlyPresences || 0));
+        console.log(`✅ Verifica calcolo: ${data.expectedMonthlyPresences} (totale) - ${data.monthlyPresences} (lavorati) = ${calculatedRemaining} (rimanenti)`);
+        console.log(`✅ Valore da backend: remainingDays=${data.remainingDays}, calcolato=${calculatedRemaining}`);
+        
+        // Usa il valore dal backend (già calcolato correttamente)
+        const finalRemainingDays = data.remainingDays !== undefined ? data.remainingDays : calculatedRemaining;
+        console.log(`✅ Imposto remainingDays=${finalRemainingDays} (NON ${data.expectedMonthlyPresences} che è il TOTALE)`);
+        setRemainingDays(finalRemainingDays);
       }
     } catch (error) {
       console.error('Error fetching user stats:', error);

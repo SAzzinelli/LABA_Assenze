@@ -3822,13 +3822,14 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     const remainingDays = Math.max(0, expectedMonthlyPresences - monthlyPresences);
 
     console.log(`📊 User Stats per ${userId}: monthlyPresences=${monthlyPresences}, expectedMonthlyPresences=${expectedMonthlyPresences}, remainingDays=${remainingDays}`);
+    console.log(`✅ CALCOLO: remainingDays = ${expectedMonthlyPresences} (totale) - ${monthlyPresences} (lavorati) = ${remainingDays} (RIMANENTI)`);
 
     res.json({
       isClockedIn,
       todayHours,
       monthlyPresences: monthlyPresences || 0,
       expectedMonthlyPresences: expectedMonthlyPresences,
-      remainingDays: remainingDays, // GIORNI RIMANENTI (non totale!)
+      remainingDays: remainingDays, // IMPORTANTE: GIORNI RIMANENTI = TOTALE - LAVORATI (NON il totale!)
       workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
     });
 
