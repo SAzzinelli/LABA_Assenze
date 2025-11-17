@@ -376,6 +376,78 @@ const Dashboard = () => {
     }
   };
 
+  // Fetch saldo totale banca ore
+  const fetchTotalBalance = async () => {
+    try {
+      const response = await apiCall('/api/attendance/total-balance');
+      if (response.ok) {
+        const data = await response.json();
+        setTotalBalance(data.totalBalance || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching total balance:', error);
+    }
+  };
+
+  // Fetch richieste recupero ore
+  const fetchRecoveryRequests = async () => {
+    try {
+      const response = await apiCall('/api/recovery-requests');
+      if (response.ok) {
+        const data = await response.json();
+        setRecoveryRequests(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recovery requests:', error);
+    }
+  };
+
+  // Crea richiesta recupero ore
+  const handleCreateRecoveryRequest = async () => {
+    try {
+      const { recoveryDate, startTime, endTime, reason, notes } = recoveryFormData;
+      
+      if (!recoveryDate || !startTime || !endTime) {
+        alert('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      const response = await apiCall('/api/recovery-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          recoveryDate,
+          startTime,
+          endTime,
+          reason,
+          notes
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Richiesta recupero ore creata con successo!');
+        setShowRecoveryModal(false);
+        setRecoveryFormData({
+          recoveryDate: '',
+          startTime: '',
+          endTime: '',
+          reason: '',
+          notes: ''
+        });
+        await fetchRecoveryRequests();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore nella creazione della richiesta');
+      }
+    } catch (error) {
+      console.error('Error creating recovery request:', error);
+      alert('Errore nella creazione della richiesta');
+    }
+  };
+
   const fetchUpcomingEvents = async () => {
     try {
       const today = new Date();
