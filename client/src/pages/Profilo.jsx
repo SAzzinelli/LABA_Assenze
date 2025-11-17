@@ -22,7 +22,6 @@ import {
   TrendingDown,
   Activity
 } from 'lucide-react';
-import HourPicker from '../components/HourPicker';
 
 const Profile = () => {
   const { user, apiCall } = useAuthStore();
@@ -780,24 +779,30 @@ const Profile = () => {
                     Orario Mattina
                   </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <HourPicker
-                    label="Inizio"
-                    value={parseTimeRange(workSchedule[selectedDay].morning).start}
-                    onChange={(time) => {
-                      const { end } = parseTimeRange(workSchedule[selectedDay].morning);
-                      handleWorkScheduleChange('morning', formatTimeRange(time, end));
-                    }}
-                    placeholder="09:00"
-                  />
-                  <HourPicker
-                    label="Fine"
-                    value={parseTimeRange(workSchedule[selectedDay].morning).end}
-                    onChange={(time) => {
-                      const { start } = parseTimeRange(workSchedule[selectedDay].morning);
-                      handleWorkScheduleChange('morning', formatTimeRange(start, time));
-                    }}
-                    placeholder="13:00"
-                  />
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Inizio</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].morning).start || '09:00'}
+                      onChange={(e) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].morning);
+                        handleWorkScheduleChange('morning', formatTimeRange(e.target.value, end));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Fine</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].morning).end || '13:00'}
+                      onChange={(e) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].morning);
+                        handleWorkScheduleChange('morning', formatTimeRange(start, e.target.value));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 </div>
               )}
@@ -809,24 +814,30 @@ const Profile = () => {
                     Pausa Pranzo
                   </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <HourPicker
-                    label="Inizio"
-                    value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start}
-                    onChange={(time) => {
-                      const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
-                      handleWorkScheduleChange('lunchBreak', formatTimeRange(time, end));
-                    }}
-                    placeholder="13:00"
-                  />
-                  <HourPicker
-                    label="Fine"
-                    value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end}
-                    onChange={(time) => {
-                      const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
-                      handleWorkScheduleChange('lunchBreak', formatTimeRange(start, time));
-                    }}
-                    placeholder="14:00"
-                  />
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Inizio</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start || '13:00'}
+                      onChange={(e) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                        handleWorkScheduleChange('lunchBreak', formatTimeRange(e.target.value, end));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Fine</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end || '14:00'}
+                      onChange={(e) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                        handleWorkScheduleChange('lunchBreak', formatTimeRange(start, e.target.value));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 </div>
               )}
@@ -838,24 +849,30 @@ const Profile = () => {
                     Orario Pomeriggio
                   </label>
                 <div className="grid grid-cols-2 gap-4">
-                  <HourPicker
-                    label="Inizio"
-                    value={parseTimeRange(workSchedule[selectedDay].afternoon).start}
-                    onChange={(time) => {
-                      const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
-                      handleWorkScheduleChange('afternoon', formatTimeRange(time, end));
-                    }}
-                    placeholder="14:00"
-                  />
-                  <HourPicker
-                    label="Fine"
-                    value={parseTimeRange(workSchedule[selectedDay].afternoon).end}
-                    onChange={(time) => {
-                      const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
-                      handleWorkScheduleChange('afternoon', formatTimeRange(start, time));
-                    }}
-                    placeholder="18:00"
-                  />
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Inizio</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].afternoon).start || '14:00'}
+                      onChange={(e) => {
+                        const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                        handleWorkScheduleChange('afternoon', formatTimeRange(e.target.value, end));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Fine</label>
+                    <input
+                      type="time"
+                      value={parseTimeRange(workSchedule[selectedDay].afternoon).end || '18:00'}
+                      onChange={(e) => {
+                        const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                        handleWorkScheduleChange('afternoon', formatTimeRange(start, e.target.value));
+                      }}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
                 </div>
               )}
