@@ -340,21 +340,80 @@ const Profile = () => {
       const schedules = [];
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       
+      // Helper per calcolare minuti tra due orari
+      const timeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
       dayNames.forEach((dayName, index) => {
         const daySchedule = workSchedule[dayName];
-        if (daySchedule) {
+        if (daySchedule && daySchedule.active) {
+          let startTime = null;
+          let endTime = null;
+          let breakDuration = 0;
+          let breakStartTime = null;
+          const workType = daySchedule.workType === 'full' ? 'full_day' : 
+                          daySchedule.workType === 'morning' ? 'morning' : 
+                          daySchedule.workType === 'afternoon' ? 'afternoon' : 'none';
+          
+          if (workType === 'full_day') {
+            // Giornata completa: start_time = inizio mattina, end_time = fine pomeriggio
+            const morningRange = parseTimeRange(daySchedule.morning);
+            const afternoonRange = parseTimeRange(daySchedule.afternoon);
+            const lunchBreakRange = parseTimeRange(daySchedule.lunchBreak);
+            
+            startTime = morningRange.start || null;
+            endTime = afternoonRange.end || null;
+            
+            // Calcola break_duration dalla pausa pranzo (in minuti)
+            if (lunchBreakRange.start && lunchBreakRange.end) {
+              breakStartTime = lunchBreakRange.start;
+              const breakStart = timeToMinutes(lunchBreakRange.start);
+              const breakEnd = timeToMinutes(lunchBreakRange.end);
+              breakDuration = Math.max(0, breakEnd - breakStart);
+            } else {
+              breakDuration = 60; // Default 1 ora
+            }
+          } else if (workType === 'morning') {
+            // Solo mattina
+            const morningRange = parseTimeRange(daySchedule.morning);
+            startTime = morningRange.start || null;
+            endTime = morningRange.end || null;
+            breakDuration = 0;
+          } else if (workType === 'afternoon') {
+            // Solo pomeriggio
+            const afternoonRange = parseTimeRange(daySchedule.afternoon);
+            startTime = afternoonRange.start || null;
+            endTime = afternoonRange.end || null;
+            breakDuration = 0;
+          }
+          
           schedules.push({
             day_of_week: index,
             is_working_day: daySchedule.active,
-            work_type: daySchedule.workType === 'full' ? 'full_day' : 
-                      daySchedule.workType === 'morning' ? 'morning' : 
-                      daySchedule.workType === 'afternoon' ? 'afternoon' : 'none',
-            start_time: daySchedule.morning.split('-')[0] || daySchedule.afternoon.split('-')[0] || null,
-            end_time: daySchedule.morning.split('-')[1] || daySchedule.afternoon.split('-')[1] || null,
-            break_duration: 60
+            work_type: workType,
+            start_time: startTime,
+            end_time: endTime,
+            break_duration: breakDuration,
+            break_start_time: breakStartTime
+          });
+        } else {
+          // Giorno non lavorativo
+          schedules.push({
+            day_of_week: index,
+            is_working_day: false,
+            work_type: 'none',
+            start_time: null,
+            end_time: null,
+            break_duration: 0,
+            break_start_time: null
           });
         }
       });
+
+      console.log('Saving schedules:', schedules);
 
       // Usa apiCall invece di fetch diretto
       const response = await apiCall('/api/work-schedules', {
@@ -365,19 +424,22 @@ const Profile = () => {
         body: JSON.stringify({ schedules })
       });
 
-      if (response.ok || response.success) {
+      if (response.ok) {
+        const result = await response.json();
         // Salva anche nel localStorage come backup
         localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
         alert('Orario di lavoro salvato con successo!');
-        console.log('Work schedule saved to API:', schedules);
+        console.log('Work schedule saved to API:', result);
       } else {
-        throw new Error('Errore nel salvare l\'orario di lavoro');
+        const errorData = await response.json().catch(() => ({ error: 'Errore sconosciuto' }));
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || 'Errore nel salvare l\'orario di lavoro');
       }
     } catch (error) {
       console.error('Error saving work schedule:', error);
       // Fallback to localStorage
       localStorage.setItem('workSchedule', JSON.stringify(workSchedule));
-      alert('Orario salvato localmente (errore API)');
+      alert(`Errore: ${error.message || 'Errore nel salvare l\'orario di lavoro'}. I dati sono stati salvati localmente.`);
     }
   };
 
