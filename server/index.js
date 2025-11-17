@@ -7558,26 +7558,28 @@ app.post('/api/admin/reset-adriano-password', async (req, res) => {
 
 // ==================== RECOVERY REQUESTS ENDPOINTS ====================
 
-// Crea richiesta recupero ore (solo dipendente con debito)
+// Crea richiesta recupero ore (dipendente con debito o proposta admin)
 app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    // Dipendenti possono richiedere, admin può proporre
+    const { recoveryDate, startTime, endTime, hours, reason, notes, userId: targetUserId } = req.body;
     
-    // Solo dipendenti possono creare richieste recupero
-    if (req.user.role !== 'employee') {
-      return res.status(403).json({ error: 'Solo i dipendenti possono richiedere recupero ore' });
+    // Determina userId: se admin propone, usa targetUserId, altrimenti usa req.user.id
+    const userId = (req.user.role === 'admin' && targetUserId) ? targetUserId : req.user.id;
+    
+    // Se admin propone, deve specificare userId
+    if (req.user.role === 'admin' && !targetUserId) {
+      return res.status(400).json({ error: 'Admin deve specificare userId per proporre recupero' });
     }
-
-    const { recoveryDate, startTime, endTime, hours, reason, notes } = req.body;
+    
+    // Dipendenti non possono creare richieste per altri
+    if (req.user.role === 'employee' && targetUserId && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Non puoi creare richieste per altri dipendenti' });
+    }
 
     // Validazione
-    if (!recoveryDate || !startTime || !endTime || !hours) {
-      return res.status(400).json({ error: 'Data, orari e ore sono obbligatori' });
-    }
-
-    const hoursNum = parseFloat(hours);
-    if (isNaN(hoursNum) || hoursNum <= 0) {
-      return res.status(400).json({ error: 'Le ore devono essere un numero positivo' });
+    if (!recoveryDate || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Data e orari sono obbligatori' });
     }
 
     // Verifica che la data di recupero sia nel futuro
@@ -7601,21 +7603,31 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'L\'orario di fine deve essere successivo all\'orario di inizio' });
     }
 
-    // Verifica che ci sia un debito nella banca ore
-    const { data: balanceData } = await supabase
-      .from('attendance')
-      .select('balance_hours')
-      .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(100);
-
-    const totalBalance = balanceData?.reduce((sum, row) => sum + (parseFloat(row.balance_hours) || 0), 0) || 0;
+    // Verifica che ci sia un debito nella banca ore (solo per dipendenti)
+    // Admin può proporre recuperi anche senza debito esplicito
+    const isAdminProposal = req.user.role === 'admin' && req.body.userId && req.body.userId !== req.user.id;
     
-    if (totalBalance >= 0) {
-      return res.status(400).json({ error: 'Non puoi richiedere recupero ore se non hai un debito nella banca ore' });
+    if (!isAdminProposal) {
+      // Per dipendenti, verifica il debito
+      const { data: balanceData } = await supabase
+        .from('attendance')
+        .select('balance_hours')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(100);
+
+      const totalBalance = balanceData?.reduce((sum, row) => sum + (parseFloat(row.balance_hours) || 0), 0) || 0;
+      
+      if (totalBalance >= 0) {
+        return res.status(400).json({ error: 'Non puoi richiedere recupero ore se non hai un debito nella banca ore' });
+      }
     }
 
     // Crea la richiesta
+    // Se è admin che propone, submitted_by è l'admin, altrimenti è il dipendente
+    const submittedById = isAdminProposal ? req.user.id : userId;
+    const requestStatus = isAdminProposal ? 'proposed' : 'pending'; // 'proposed' = proposta admin, 'pending' = richiesta dipendente
+    
     const { data: recoveryRequest, error } = await supabase
       .from('recovery_requests')
       .insert({
@@ -7626,8 +7638,8 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
         hours: calculatedHours,
         reason: reason || '',
         notes: notes || '',
-        status: 'pending',
-        submitted_by: userId,
+        status: requestStatus,
+        submitted_by: submittedById,
         submitted_at: new Date().toISOString()
       })
       .select()
@@ -7638,13 +7650,101 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
     }
 
+    // Se è una proposta admin, invia notifica al dipendente
+    if (isAdminProposal) {
+      // TODO: Implementare invio email/notifica push al dipendente
+      console.log(`📧 Notifica da inviare a ${userId} per proposta recupero ore da admin ${req.user.id}`);
+      
+      // Crea notifica per il dipendente (se il sistema di notifiche esiste)
+      try {
+        const { data: employee } = await supabase
+          .from('users')
+          .select('email, first_name, last_name')
+          .eq('id', userId)
+          .single();
+        
+        if (employee) {
+          console.log(`📧 Proposta recupero ore inviata a ${employee.email}`);
+          // Qui si potrebbe inviare una email o creare una notifica in-app
+        }
+      } catch (notifError) {
+        console.error('Error sending notification:', notifError);
+        // Non bloccare la creazione della richiesta se la notifica fallisce
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Richiesta recupero ore creata con successo',
+      message: isAdminProposal ? 'Proposta recupero ore creata con successo' : 'Richiesta recupero ore creata con successo',
       recoveryRequest
     });
   } catch (error) {
     console.error('Recovery request create error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Endpoint per vedere tutti i dipendenti con debito (solo admin)
+app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Ottieni tutti i dipendenti attivi
+    const { data: employees, error: employeesError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, department')
+      .eq('role', 'employee')
+      .eq('is_active', true);
+
+    if (employeesError) {
+      console.error('Employees fetch error:', employeesError);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
+    }
+
+    // Ottieni i saldi totali per tutti i dipendenti
+    const employeeIds = employees.map(emp => emp.id);
+    const { data: balanceData, error: balanceError } = await supabase
+      .from('attendance')
+      .select('user_id, balance_hours')
+      .in('user_id', employeeIds)
+      .order('date', { ascending: false });
+
+    if (balanceError) {
+      console.error('Balance fetch error:', balanceError);
+      return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
+    }
+
+    // Calcola il saldo totale per ogni dipendente
+    const balances = {};
+    balanceData.forEach(row => {
+      const uid = row.user_id;
+      if (!balances[uid]) {
+        balances[uid] = 0;
+      }
+      balances[uid] += parseFloat(row.balance_hours || 0);
+    });
+
+    // Filtra solo i dipendenti con debito (saldo negativo)
+    const employeesWithDebt = employees
+      .map(emp => ({
+        ...emp,
+        name: `${emp.first_name} ${emp.last_name}`,
+        totalBalance: balances[emp.id] || 0,
+        debtHours: Math.abs(Math.min(0, balances[emp.id] || 0))
+      }))
+      .filter(emp => emp.totalBalance < 0)
+      .sort((a, b) => a.totalBalance - b.totalBalance); // Ordina per debito più alto
+
+    res.json({
+      success: true,
+      employeesWithDebt,
+      totalEmployeesWithDebt: employeesWithDebt.length,
+      totalDebtHours: employeesWithDebt.reduce((sum, emp) => sum + emp.debtHours, 0)
+    });
+  } catch (error) {
+    console.error('Debt summary error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -7689,19 +7789,13 @@ app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
   }
 });
 
-// Approva/rifiuta richiesta recupero ore (solo admin)
+// Approva/rifiuta richiesta recupero ore
+// Admin può approvare/rifiutare richieste pending o proposed
+// Dipendente può accettare/rifiutare proposte proposed (da admin)
 app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Accesso negato' });
-    }
-
     const { id } = req.params;
     const { status, rejectionReason } = req.body;
-
-    if (!status || !['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ error: 'Status deve essere "approved" o "rejected"' });
-    }
 
     // Verifica che la richiesta esista
     const { data: existingRequest, error: fetchError } = await supabase
@@ -7712,6 +7806,27 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
 
     if (fetchError || !existingRequest) {
       return res.status(404).json({ error: 'Richiesta non trovata' });
+    }
+
+    // Logica permessi
+    if (req.user.role === 'admin') {
+      // Admin può approvare/rifiutare richieste pending o proposed
+      if (!status || !['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: 'Status deve essere "approved" o "rejected"' });
+      }
+    } else if (req.user.role === 'employee') {
+      // Dipendente può solo accettare/rifiutare proposte (status 'proposed') per lui
+      if (existingRequest.user_id !== req.user.id) {
+        return res.status(403).json({ error: 'Accesso negato' });
+      }
+      if (existingRequest.status !== 'proposed') {
+        return res.status(400).json({ error: 'Puoi accettare/rifiutare solo proposte dell\'amministratore' });
+      }
+      if (!status || !['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: 'Status deve essere "approved" o "rejected"' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Accesso negato' });
     }
 
     // Aggiorna la richiesta
@@ -7749,10 +7864,16 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
     }
 
-    // TODO: Invia email di notifica se rifiutata
+    // Invia notifica se rifiutata o se dipendente accetta proposta admin
     if (status === 'rejected' && updatedRequest.users?.email) {
       // TODO: Implementare invio email
       console.log(`📧 Email da inviare a ${updatedRequest.users.email} per richiesta recupero rifiutata`);
+    }
+    
+    // Se dipendente accetta proposta admin, notifica admin
+    if (status === 'approved' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
+      // TODO: Implementare notifica admin che dipendente ha accettato
+      console.log(`📧 Notifica admin: dipendente ${req.user.email} ha accettato proposta recupero`);
     }
 
     res.json({
@@ -7773,8 +7894,8 @@ async function processCompletedRecoveries() {
     const today = now.toISOString().split('T')[0];
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    // Trova tutti i recuperi approvati che non sono ancora stati processati
-    // e per cui la data e l'orario sono passati
+    // Trova tutti i recuperi approvati (sia da dipendente che proposte admin approvate)
+    // che non sono ancora stati processati e per cui la data e l'orario sono passati
     const { data: completedRecoveries, error } = await supabase
       .from('recovery_requests')
       .select('*')

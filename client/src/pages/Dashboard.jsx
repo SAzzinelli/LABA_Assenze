@@ -60,10 +60,20 @@ const Dashboard = () => {
   
   // Dati per admin gestione recuperi
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
+  const [employeesWithDebt, setEmployeesWithDebt] = useState([]); // Dipendenti con debito (admin)
   const [showApproveRecoveryModal, setShowApproveRecoveryModal] = useState(false);
   const [showRejectRecoveryModal, setShowRejectRecoveryModal] = useState(false);
+  const [showProposeRecoveryModal, setShowProposeRecoveryModal] = useState(false);
   const [selectedRecoveryId, setSelectedRecoveryId] = useState(null);
+  const [selectedEmployeeForProposal, setSelectedEmployeeForProposal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [proposalFormData, setProposalFormData] = useState({
+    recoveryDate: '',
+    startTime: '',
+    endTime: '',
+    reason: '',
+    notes: ''
+  });
 
 
   useEffect(() => {
@@ -93,6 +103,7 @@ const Dashboard = () => {
         if (user?.role === 'admin') {
           await fetchRecentRequests();
           await fetchPendingRecoveryRequests();
+          await fetchDebtSummary();
         }
         
         // Fetch upcoming events for all users
@@ -415,13 +426,91 @@ const Dashboard = () => {
     try {
       if (user?.role !== 'admin') return;
       
-      const response = await apiCall('/api/recovery-requests?status=pending');
-      if (response.ok) {
-        const data = await response.json();
-        setPendingRecoveryRequests(data || []);
+      // Admin vede sia richieste pending che proposte proposed
+      const [pendingResponse, proposedResponse] = await Promise.all([
+        apiCall('/api/recovery-requests?status=pending'),
+        apiCall('/api/recovery-requests?status=proposed')
+      ]);
+      
+      let allRequests = [];
+      if (pendingResponse.ok) {
+        const pendingData = await pendingResponse.json();
+        allRequests = [...allRequests, ...(pendingData || [])];
       }
+      if (proposedResponse.ok) {
+        const proposedData = await proposedResponse.json();
+        allRequests = [...allRequests, ...(proposedData || [])];
+      }
+      
+      setPendingRecoveryRequests(allRequests);
     } catch (error) {
       console.error('Error fetching pending recovery requests:', error);
+    }
+  };
+
+  // Fetch dipendenti con debito (admin)
+  const fetchDebtSummary = async () => {
+    try {
+      if (user?.role !== 'admin') return;
+      
+      const response = await apiCall('/api/recovery-requests/debt-summary');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeesWithDebt(data.employeesWithDebt || []);
+      }
+    } catch (error) {
+      console.error('Error fetching debt summary:', error);
+    }
+  };
+
+  // Proponi recupero ore a dipendente (admin)
+  const handleProposeRecovery = async () => {
+    try {
+      if (!selectedEmployeeForProposal) return;
+      
+      const { recoveryDate, startTime, endTime, reason, notes } = proposalFormData;
+      
+      if (!recoveryDate || !startTime || !endTime) {
+        alert('Compila tutti i campi obbligatori');
+        return;
+      }
+
+      const response = await apiCall('/api/recovery-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: selectedEmployeeForProposal.id,
+          recoveryDate,
+          startTime,
+          endTime,
+          reason,
+          notes
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Proposta recupero ore inviata con successo!');
+        setShowProposeRecoveryModal(false);
+        setSelectedEmployeeForProposal(null);
+        setProposalFormData({
+          recoveryDate: '',
+          startTime: '',
+          endTime: '',
+          reason: '',
+          notes: ''
+        });
+        await fetchDebtSummary();
+        await fetchPendingRecoveryRequests();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore nella creazione della proposta');
+      }
+    } catch (error) {
+      console.error('Error proposing recovery:', error);
+      alert('Errore nella creazione della proposta');
     }
   };
 
@@ -816,8 +905,9 @@ const Dashboard = () => {
         (() => {
           const approvedRecoveries = recoveryRequests.filter(r => r.status === 'approved' && !r.balance_added);
           const pendingRecoveries = recoveryRequests.filter(r => r.status === 'pending');
+          const proposedRecoveries = recoveryRequests.filter(r => r.status === 'proposed'); // Proposte admin
           
-          if (approvedRecoveries.length === 0 && pendingRecoveries.length === 0) {
+          if (approvedRecoveries.length === 0 && pendingRecoveries.length === 0 && proposedRecoveries.length === 0) {
             return null;
           }
 
@@ -860,7 +950,7 @@ const Dashboard = () => {
               )}
 
               {pendingRecoveries.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 mb-6">
                   <h4 className="text-sm font-semibold text-yellow-400 mb-2">⏳ In attesa di approvazione</h4>
                   {pendingRecoveries.map((recovery) => (
                     <div key={recovery.id} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
@@ -883,6 +973,99 @@ const Dashboard = () => {
                         </div>
                         <div className="text-yellow-400 font-semibold">
                           In attesa
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {proposedRecoveries.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-blue-400 mb-2">📩 Proposte dall'amministratore</h4>
+                  {proposedRecoveries.map((recovery) => (
+                    <div key={recovery.id} className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </div>
+                          <div className="text-blue-300 text-sm mt-1">
+                            Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
+                          </div>
+                          {recovery.reason && (
+                            <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          )}
+                          {recovery.notes && (
+                            <div className="text-slate-300 text-xs mt-1 italic">{recovery.notes}</div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              try {
+                                const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'approved'
+                                  })
+                                });
+
+                                if (response.ok) {
+                                  alert('Proposta recupero accettata!');
+                                  await fetchRecoveryRequests();
+                                } else {
+                                  const error = await response.json();
+                                  alert(error.error || 'Errore nell\'accettazione della proposta');
+                                }
+                              } catch (error) {
+                                console.error('Error accepting proposal:', error);
+                                alert('Errore nell\'accettazione della proposta');
+                              }
+                            }}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
+                          >
+                            Accetta
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const reason = prompt('Motivo del rifiuto (opzionale):');
+                              try {
+                                const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
+                                  method: 'PUT',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({
+                                    status: 'rejected',
+                                    rejectionReason: reason || ''
+                                  })
+                                });
+
+                                if (response.ok) {
+                                  alert('Proposta recupero rifiutata');
+                                  await fetchRecoveryRequests();
+                                } else {
+                                  const error = await response.json();
+                                  alert(error.error || 'Errore nel rifiuto della proposta');
+                                }
+                              } catch (error) {
+                                console.error('Error rejecting proposal:', error);
+                                alert('Errore nel rifiuto della proposta');
+                              }
+                            }}
+                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
+                          >
+                            Rifiuta
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1009,6 +1192,68 @@ const Dashboard = () => {
                           {' '}al {new Date(person.end_date).toLocaleDateString('it-IT')}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Monitoraggio Debiti Banca Ore (Admin) */}
+          {employeesWithDebt.length > 0 && (
+            <div className="bg-slate-800 rounded-lg p-6 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
+                  Monitoraggio Debiti Banca Ore
+                </h3>
+                <div className="text-sm text-slate-400">
+                  Totale: {employeesWithDebt.length} dipendenti con debito
+                </div>
+              </div>
+              <div className="space-y-3">
+                {employeesWithDebt.map((employee) => (
+                  <div key={employee.id} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-white font-semibold text-sm">
+                              {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {employee.first_name} {employee.last_name}
+                            </h4>
+                            <p className="text-red-300 text-sm">{employee.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div className="text-red-400 font-semibold">
+                            Debito: {employee.debtHours.toFixed(2)}h
+                          </div>
+                          <div className="text-slate-400 text-xs mt-1">
+                            Saldo totale: {employee.totalBalance.toFixed(2)}h
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployeeForProposal(employee);
+                          setProposalFormData({
+                            recoveryDate: '',
+                            startTime: '',
+                            endTime: '',
+                            reason: '',
+                            notes: `Proposta recupero per ${employee.debtHours.toFixed(2)}h di debito`
+                          });
+                          setShowProposeRecoveryModal(true);
+                        }}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                      >
+                        Proponi Recupero
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1403,6 +1648,103 @@ const Dashboard = () => {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >
                 Rifiuta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Proponi Recupero Ore (Admin) */}
+      {showProposeRecoveryModal && selectedEmployeeForProposal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Proponi Recupero Ore a {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
+            </h3>
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-300 text-sm">
+                <strong>Debito attuale:</strong> {selectedEmployeeForProposal.debtHours.toFixed(2)}h
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Data Recupero *</label>
+                <input
+                  type="date"
+                  value={proposalFormData.recoveryDate}
+                  onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                  <input
+                    type="time"
+                    value={proposalFormData.startTime}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, startTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine *</label>
+                  <input
+                    type="time"
+                    value={proposalFormData.endTime}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, endTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                <textarea
+                  value={proposalFormData.reason}
+                  onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Motivo della proposta di recupero ore..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                <textarea
+                  value={proposalFormData.notes}
+                  onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Note aggiuntive..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowProposeRecoveryModal(false);
+                  setSelectedEmployeeForProposal(null);
+                  setProposalFormData({
+                    recoveryDate: '',
+                    startTime: '',
+                    endTime: '',
+                    reason: '',
+                    notes: ''
+                  });
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleProposeRecovery}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Invia Proposta
               </button>
             </div>
           </div>
