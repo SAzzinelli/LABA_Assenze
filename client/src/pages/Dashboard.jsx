@@ -9,7 +9,10 @@ import {
   Target,
   Calendar,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Timer,
+  RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -42,6 +45,18 @@ const Dashboard = () => {
   
   // Dati per admin dashboard real-time
   const [adminRealTimeData, setAdminRealTimeData] = useState([]);
+  
+  // Dati per recupero ore (dipendente)
+  const [totalBalance, setTotalBalance] = useState(0); // Saldo totale banca ore
+  const [recoveryRequests, setRecoveryRequests] = useState([]); // Richieste recupero
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false); // Modal crea richiesta recupero
+  const [recoveryFormData, setRecoveryFormData] = useState({
+    recoveryDate: '',
+    startTime: '',
+    endTime: '',
+    reason: '',
+    notes: ''
+  });
 
 
   useEffect(() => {
@@ -180,6 +195,14 @@ const Dashboard = () => {
         console.log('📊 Hours balance loaded:', balanceData);
         // Update KPIs with correct balance data
         updateKPIsWithBalance(balanceData);
+        
+        // Recupera saldo totale per verificare debito
+        await fetchTotalBalance();
+      }
+      
+      // Fetch recovery requests per dipendente
+      if (user?.role === 'employee') {
+        await fetchRecoveryRequests();
       }
     } catch (error) {
       console.error('Error fetching attendance data:', error);
@@ -604,6 +627,192 @@ const Dashboard = () => {
               </div>
             );
           })}
+          </div>
+        </div>
+      )}
+
+      {/* Sezione Recupero Ore (solo dipendente con debito) */}
+      {user?.role === 'employee' && totalBalance < 0 && (
+        <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white flex items-center">
+              <RefreshCw className="h-6 w-6 mr-3 text-amber-400" />
+              Recupero Ore
+            </h3>
+            <button
+              onClick={() => setShowRecoveryModal(true)}
+              className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nuova Richiesta
+            </button>
+          </div>
+          <p className="text-amber-200 mb-4">
+            Hai un debito di <span className="font-bold">{Math.abs(totalBalance).toFixed(2)}h</span> nella banca ore. 
+            Puoi richiedere di recuperare queste ore concordando degli straordinari con l'amministratore.
+          </p>
+        </div>
+      )}
+
+      {/* Recuperi Programmati (solo dipendente) */}
+      {user?.role === 'employee' && (
+        (() => {
+          const approvedRecoveries = recoveryRequests.filter(r => r.status === 'approved' && !r.balance_added);
+          const pendingRecoveries = recoveryRequests.filter(r => r.status === 'pending');
+          
+          if (approvedRecoveries.length === 0 && pendingRecoveries.length === 0) {
+            return null;
+          }
+
+          return (
+            <div className="bg-slate-800 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+                <Timer className="h-6 w-6 mr-3 text-blue-400" />
+                Recuperi Programmati
+              </h3>
+              
+              {approvedRecoveries.length > 0 && (
+                <div className="space-y-3 mb-6">
+                  <h4 className="text-sm font-semibold text-green-400 mb-2">✅ Approvati</h4>
+                  {approvedRecoveries.map((recovery) => (
+                    <div key={recovery.id} className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </div>
+                          <div className="text-green-300 text-sm mt-1">
+                            Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
+                          </div>
+                          {recovery.reason && (
+                            <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          )}
+                        </div>
+                        <div className="text-green-400 font-semibold">
+                          +{recovery.hours}h
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {pendingRecoveries.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-yellow-400 mb-2">⏳ In attesa di approvazione</h4>
+                  {pendingRecoveries.map((recovery) => (
+                    <div key={recovery.id} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div>
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </div>
+                          <div className="text-yellow-300 text-sm mt-1">
+                            Dalle {recovery.start_time} alle {recovery.end_time} ({recovery.hours}h)
+                          </div>
+                          {recovery.reason && (
+                            <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          )}
+                        </div>
+                        <div className="text-yellow-400 font-semibold">
+                          In attesa
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()
+      )}
+
+      {/* Modal Crea Richiesta Recupero */}
+      {showRecoveryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4">Nuova Richiesta Recupero Ore</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Data Recupero *</label>
+                <input
+                  type="date"
+                  value={recoveryFormData.recoveryDate}
+                  onChange={(e) => setRecoveryFormData({ ...recoveryFormData, recoveryDate: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Inizio *</label>
+                  <input
+                    type="time"
+                    value={recoveryFormData.startTime}
+                    onChange={(e) => setRecoveryFormData({ ...recoveryFormData, startTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Orario Fine *</label>
+                  <input
+                    type="time"
+                    value={recoveryFormData.endTime}
+                    onChange={(e) => setRecoveryFormData({ ...recoveryFormData, endTime: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                <textarea
+                  value={recoveryFormData.reason}
+                  onChange={(e) => setRecoveryFormData({ ...recoveryFormData, reason: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Motivo della richiesta di recupero ore..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                <textarea
+                  value={recoveryFormData.notes}
+                  onChange={(e) => setRecoveryFormData({ ...recoveryFormData, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Note aggiuntive..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowRecoveryModal(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleCreateRecoveryRequest}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+              >
+                Invia Richiesta
+              </button>
+            </div>
           </div>
         </div>
       )}
