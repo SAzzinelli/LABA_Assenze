@@ -457,9 +457,14 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         setEmployeesWithDebt(data.employeesWithDebt || []);
+        console.log('✅ Debt summary loaded:', data.employeesWithDebt?.length || 0, 'employees with debt');
+      } else {
+        console.error('❌ Error fetching debt summary:', response.status);
       }
     } catch (error) {
       console.error('Error fetching debt summary:', error);
+      // Anche in caso di errore, mostra la sezione vuota
+      setEmployeesWithDebt([]);
     }
   };
 
