@@ -57,6 +57,13 @@ const Dashboard = () => {
     reason: '',
     notes: ''
   });
+  
+  // Dati per admin gestione recuperi
+  const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
+  const [showApproveRecoveryModal, setShowApproveRecoveryModal] = useState(false);
+  const [showRejectRecoveryModal, setShowRejectRecoveryModal] = useState(false);
+  const [selectedRecoveryId, setSelectedRecoveryId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
 
   useEffect(() => {
@@ -85,6 +92,7 @@ const Dashboard = () => {
         // Fetch recent requests for admin
         if (user?.role === 'admin') {
           await fetchRecentRequests();
+          await fetchPendingRecoveryRequests();
         }
         
         // Fetch upcoming events for all users
@@ -399,6 +407,83 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching recovery requests:', error);
+    }
+  };
+
+  // Fetch richieste recupero in attesa (admin)
+  const fetchPendingRecoveryRequests = async () => {
+    try {
+      if (user?.role !== 'admin') return;
+      
+      const response = await apiCall('/api/recovery-requests?status=pending');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingRecoveryRequests(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pending recovery requests:', error);
+    }
+  };
+
+  // Approva richiesta recupero (admin)
+  const handleApproveRecovery = async () => {
+    try {
+      if (!selectedRecoveryId) return;
+
+      const response = await apiCall(`/api/recovery-requests/${selectedRecoveryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'approved'
+        })
+      });
+
+      if (response.ok) {
+        alert('Richiesta recupero approvata con successo!');
+        setShowApproveRecoveryModal(false);
+        setSelectedRecoveryId(null);
+        await fetchPendingRecoveryRequests();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore nell\'approvazione della richiesta');
+      }
+    } catch (error) {
+      console.error('Error approving recovery request:', error);
+      alert('Errore nell\'approvazione della richiesta');
+    }
+  };
+
+  // Rifiuta richiesta recupero (admin)
+  const handleRejectRecovery = async () => {
+    try {
+      if (!selectedRecoveryId) return;
+
+      const response = await apiCall(`/api/recovery-requests/${selectedRecoveryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'rejected',
+          rejectionReason: rejectionReason
+        })
+      });
+
+      if (response.ok) {
+        alert('Richiesta recupero rifiutata');
+        setShowRejectRecoveryModal(false);
+        setSelectedRecoveryId(null);
+        setRejectionReason('');
+        await fetchPendingRecoveryRequests();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore nel rifiuto della richiesta');
+      }
+    } catch (error) {
+      console.error('Error rejecting recovery request:', error);
+      alert('Errore nel rifiuto della richiesta');
     }
   };
 

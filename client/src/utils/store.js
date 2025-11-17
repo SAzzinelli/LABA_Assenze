@@ -174,6 +174,17 @@ export const useAuthStore = create(
           headers,
           credentials: 'include',
         });
+        
+        // Non loggare errori 403 per endpoint admin-only (attesi per dipendenti)
+        // Questi endpoint hanno controlli lato backend e non dovrebbero essere chiamati da dipendenti
+        if (response.status === 403) {
+          const adminOnlyEndpoints = ['/api/attendance/current', '/api/attendance/sick-today'];
+          const isAdminOnlyEndpoint = adminOnlyEndpoints.some(endpoint => url.includes(endpoint));
+          if (isAdminOnlyEndpoint) {
+            // Silently return per evitare errori in console - sono attesi per dipendenti
+            return response;
+          }
+        }
 
         // Se riceviamo un 401, proviamo a refreshare il token
         if (response.status === 401 && token) {
