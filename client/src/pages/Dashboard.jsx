@@ -76,6 +76,18 @@ const Dashboard = () => {
   });
 
 
+  // Scroll automatico alla sezione recuperi-ore quando si arriva con hash
+  useEffect(() => {
+    if (window.location.hash === '#recuperi-ore') {
+      setTimeout(() => {
+        const element = document.getElementById('recuperi-ore');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 500); // Attendi che i dati siano caricati
+    }
+  }, [loading]); // Esegui quando il loading è completo
+
   useEffect(() => {
     const loadDashboardData = async () => {
       setLoading(true);
@@ -884,7 +896,7 @@ const Dashboard = () => {
 
       {/* Sezione Recupero Ore (solo dipendente con debito) */}
       {user?.role === 'employee' && totalBalance < 0 && (
-        <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
+        <div id="recuperi-ore" className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6 scroll-mt-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-white flex items-center">
               <RefreshCw className="h-6 w-6 mr-3 text-amber-400" />
@@ -1205,7 +1217,7 @@ const Dashboard = () => {
           )}
 
           {/* Monitoraggio Debiti Banca Ore (Admin) */}
-          <div className="bg-slate-800 rounded-lg p-6 mb-6">
+          <div id="recuperi-ore" className="bg-slate-800 rounded-lg p-6 mb-6 scroll-mt-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white flex items-center">
                 <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
