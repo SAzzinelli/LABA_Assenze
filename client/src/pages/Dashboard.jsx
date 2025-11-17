@@ -211,16 +211,29 @@ const Dashboard = () => {
   // Fetch employees for admin dashboard
   const fetchEmployees = async () => {
     try {
+      // Solo admin può accedere a questo endpoint
+      if (user?.role !== 'admin') {
+        return;
+      }
+      
       const response = await apiCall('/api/attendance/current');
       if (response.ok) {
         const data = await response.json();
         console.log('🔍 Fetched current attendance data:', data);
         setCurrentAttendance(data);
         console.log('📊 Current attendance loaded:', data.length, 'employees currently working');
+      } else if (response.status === 403) {
+        // 403 è atteso per non-admin, ignora silenziosamente
+        console.log('⚠️ Access denied to current attendance (expected for non-admin)');
       } else {
         console.error('❌ Failed to fetch current attendance:', response.status);
       }
     } catch (error) {
+      // Ignora errori 403 (accesso negato) per non-admin
+      if (error.message?.includes('403') || error.message?.includes('Accesso negato')) {
+        console.log('⚠️ Access denied to current attendance (expected for non-admin)');
+        return;
+      }
       console.error('Error fetching current attendance:', error);
     }
   };
@@ -314,15 +327,28 @@ const Dashboard = () => {
 
   const fetchSickToday = async () => {
     try {
-      if (user?.role === 'admin') {
-        const response = await apiCall('/api/attendance/sick-today');
-        if (response.ok) {
-          const data = await response.json();
-          setSickToday(data);
-          console.log('🤒 Employees sick today:', data.length);
-        }
+      // Solo admin può accedere a questo endpoint
+      if (user?.role !== 'admin') {
+        return;
+      }
+      
+      const response = await apiCall('/api/attendance/sick-today');
+      if (response.ok) {
+        const data = await response.json();
+        setSickToday(data);
+        console.log('🤒 Employees sick today:', data.length);
+      } else if (response.status === 403) {
+        // 403 è atteso per non-admin, ignora silenziosamente
+        console.log('⚠️ Access denied to sick-today (expected for non-admin)');
+      } else {
+        console.error('❌ Failed to fetch sick today:', response.status);
       }
     } catch (error) {
+      // Ignora errori 403 (accesso negato) per non-admin
+      if (error.message?.includes('403') || error.message?.includes('Accesso negato')) {
+        console.log('⚠️ Access denied to sick-today (expected for non-admin)');
+        return;
+      }
       console.error('Error fetching sick today:', error);
     }
   };
