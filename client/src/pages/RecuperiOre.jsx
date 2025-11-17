@@ -52,10 +52,11 @@ const RecuperiOre = () => {
           await fetchPendingRecoveryRequests();
           await fetchDebtSummary();
         } else {
-          await fetchTotalBalance();
-          if (totalBalance < 0) {
-            await fetchRecoveryRequests();
-          }
+          // Carica sempre il saldo e le richieste, così abbiamo tutti i dati
+          const balance = await fetchTotalBalance();
+          // Carica sempre le richieste di recupero, anche se non c'è debito
+          // (potrebbero esserci recuperi già approvati o in attesa)
+          await fetchRecoveryRequests();
         }
       } catch (error) {
         console.error('Error loading recovery data:', error);
@@ -73,10 +74,14 @@ const RecuperiOre = () => {
       const response = await apiCall('/api/attendance/total-balance');
       if (response.ok) {
         const data = await response.json();
-        setTotalBalance(data.totalBalance || 0);
+        const balance = data.totalBalance || 0;
+        setTotalBalance(balance);
+        return balance; // Ritorna il valore per usarlo subito
       }
+      return 0;
     } catch (error) {
       console.error('Error fetching total balance:', error);
+      return 0;
     }
   };
 
@@ -510,12 +515,13 @@ const RecuperiOre = () => {
               </div>
             )}
           </div>
-        ) : totalBalance >= 0 && (
+        ) : totalBalance >= 0 ? (
+          // Mostra "in regola" SOLO se non c'è debito E non ci sono recuperi programmati
           <div className="bg-slate-800 rounded-lg p-6 text-center">
             <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
             <p className="text-slate-400">Nessun recupero programmato. La tua banca ore è in regola.</p>
           </div>
-        )}
+        ) : null}
 
         {/* Modal Crea Richiesta Recupero */}
         {showRecoveryModal && (
