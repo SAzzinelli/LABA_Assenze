@@ -364,6 +364,260 @@ const emailTemplates = {
     };
   },
 
+  // Proposta recupero ore da admin a dipendente
+  recoveryProposal: (userName, recoveryDate, startTime, endTime, hours, reason) => {
+    const dateFormatted = formatDateExtended(recoveryDate);
+    const hoursFormatted = (() => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+    
+    return {
+      subject: `🔄 Proposta Recupero Ore - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Proposta Recupero Ore</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h2 { margin-top: 0; color: #1E40AF; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #1E40AF; }
+            .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #2563EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔄 Proposta Recupero Ore</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>L'amministratore ti ha proposto un recupero ore per compensare il tuo debito nella banca ore.</p>
+              
+              <div class="info-box">
+                <h2>📋 Dettagli Proposta</h2>
+                <div class="info-row">
+                  <span class="info-label">Data Recupero:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Orario:</span> ${startTime} - ${endTime}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore da Recuperare:</span> ${hoursFormatted}
+                </div>
+                ${reason ? `
+                <div class="info-row">
+                  <span class="info-label">Motivo:</span> ${reason}
+                </div>
+                ` : ''}
+              </div>
+              
+              <p style="margin-top: 20px; font-size: 14px; color: #6B7280;">
+                Accedi al sistema per accettare o rifiutare questa proposta.
+              </p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
+                  📊 Gestisci Proposta
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
+  // Risposta recupero ore (approvata/rifiutata)
+  recoveryResponse: (userName, recoveryDate, startTime, endTime, hours, status, reason) => {
+    const dateFormatted = formatDateExtended(recoveryDate);
+    const hoursFormatted = (() => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+    
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const isApproved = normalizedStatus === 'approved';
+    const statusText = isApproved ? 'Approvata' : 'Rifiutata';
+    const statusColor = isApproved ? '#10B981' : '#EF4444';
+    const statusBg = isApproved ? '#D1FAE5' : '#FEE2E2';
+    const headerColor = isApproved
+      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+      : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+    
+    return {
+      subject: `🔄 Recupero Ore ${statusText} - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Recupero Ore ${statusText}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .status-box { background: ${statusBg}; border-left: 4px solid ${statusColor}; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .status-box h2 { margin-top: 0; color: ${statusColor}; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #374151; }
+            .btn { display: inline-block; background: ${statusColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { opacity: 0.9; }
+            .notes-box { background: #F9FAFB; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #E5E7EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔄 Recupero Ore ${statusText}</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>La tua richiesta di recupero ore è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
+              
+              <div class="status-box">
+                <h2>📝 Dettagli Recupero</h2>
+                <div class="info-row">
+                  <span class="info-label">Data Recupero:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Orario:</span> ${startTime} - ${endTime}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore:</span> ${hoursFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusText}</strong>
+                </div>
+              </div>
+              
+              ${reason ? `
+                <div class="notes-box">
+                  <strong>Motivo:</strong><br>
+                  ${reason}
+                </div>
+              ` : ''}
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
+                  📊 Visualizza Dettagli
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
+  // Notifica admin quando dipendente accetta proposta recupero
+  recoveryAccepted: (adminName, employeeName, recoveryDate, startTime, endTime, hours) => {
+    const dateFormatted = formatDateExtended(recoveryDate);
+    const hoursFormatted = (() => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+    
+    return {
+      subject: `✅ Proposta Recupero Ore Accettata - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Proposta Recupero Accettata</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #D1FAE5; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h2 { margin-top: 0; color: #065F46; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #065F46; }
+            .btn { display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #059669; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ Proposta Recupero Accettata</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${adminName},</p>
+              <p><strong>${employeeName}</strong> ha accettato la tua proposta di recupero ore.</p>
+              
+              <div class="info-box">
+                <h2>📋 Dettagli Recupero</h2>
+                <div class="info-row">
+                  <span class="info-label">Dipendente:</span> ${employeeName}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Data Recupero:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Orario:</span> ${startTime} - ${endTime}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore:</span> ${hoursFormatted}
+                </div>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
+                  📊 Visualizza Dettagli
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
   welcome: (userName, department) => ({
     subject: `🎉 Benvenuto in LABA Firenze!`,
     html: `

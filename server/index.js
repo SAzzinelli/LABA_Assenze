@@ -4489,22 +4489,44 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         .eq('is_active', true);
 
       if (!adminsError && admins && admins.length > 0) {
+        // Determina tipo e titolo dinamici in base al tipo di richiesta
+        const typeLabels = {
+          'permission': 'Permesso',
+          'vacation': 'Ferie',
+          'sick_leave': 'Malattia',
+          'permission_104': 'Permesso Legge 104',
+          'business_trip': 'Trasferta'
+        };
+        
+        const notificationTypes = {
+          'permission': 'permission',
+          'vacation': 'vacation',
+          'sick_leave': 'sick_leave',
+          'permission_104': 'permission_104',
+          'business_trip': 'permission'
+        };
+        
+        const requestTypeLabel = typeLabels[type] || 'Richiesta';
+        const notificationType = notificationTypes[type] || 'info';
+        const requestTypeText = type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'malattia' : type === 'permission_104' ? 'permesso Legge 104' : type === 'business_trip' ? 'trasferta' : 'permesso';
+        
         const notificationPromises = admins.map(admin => 
           supabase
             .from('notifications')
             .insert([{
               user_id: admin.id,
-              title: 'Nuova richiesta Permesso',
-              message: `${userName} ha richiesto un permesso ${startDate === endDate ? 'per il' : 'dal'} ${dateRange}`,
-              type: 'permission',
+              title: `Nuova richiesta ${requestTypeLabel}`,
+              message: `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : requestTypeText === 'malattia' ? 'una' : 'un'} ${requestTypeText} ${startDate === endDate ? 'per il' : 'dal'} ${dateRange}`,
+              type: notificationType,
               is_read: false,
               request_id: newRequest.id,
+              request_type: type,
               created_at: new Date().toISOString()
             }])
         );
 
         await Promise.all(notificationPromises);
-        console.log(`✅ Notifiche create per ${admins.length} admin`);
+        console.log(`✅ Notifiche create per ${admins.length} admin (tipo: ${notificationType})`);
 
         // Invia email a tutti gli admin
         try {
@@ -6986,22 +7008,63 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nella creazione della richiesta' });
     }
 
-    // Se è una proposta admin, invia notifica al dipendente
+    // Se è una proposta admin, invia notifica e email al dipendente
     if (isAdminProposal) {
-      // TODO: Implementare invio email/notifica push al dipendente
-      console.log(`📧 Notifica da inviare a ${userId} per proposta recupero ore da admin ${req.user.id}`);
-      
-      // Crea notifica per il dipendente (se il sistema di notifiche esiste)
       try {
-        const { data: employee } = await supabase
+        const { data: employee, error: employeeError } = await supabase
           .from('users')
-          .select('email, first_name, last_name')
+          .select('id, email, first_name, last_name')
           .eq('id', userId)
           .single();
         
-        if (employee) {
-          console.log(`📧 Proposta recupero ore inviata a ${employee.email}`);
-          // Qui si potrebbe inviare una email o creare una notifica in-app
+        if (employeeError || !employee) {
+          console.error('Error fetching employee for notification:', employeeError);
+        } else {
+          // Crea notifica in-app per il dipendente
+          const formattedDate = new Date(recoveryDate).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
+          
+          const hoursFormatted = (() => {
+            const h = Math.floor(Math.abs(calculatedHours));
+            const m = Math.round((Math.abs(calculatedHours) - h) * 60);
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}min`;
+          })();
+          
+          await supabase
+            .from('notifications')
+            .insert([{
+              user_id: userId,
+              title: 'Proposta Recupero Ore',
+              message: `L'amministratore ti ha proposto un recupero ore il ${formattedDate} dalle ${startTime} alle ${endTime} (${hoursFormatted})`,
+              type: 'recovery_proposal',
+              is_read: false,
+              related_id: recoveryRequest.id,
+              created_at: new Date().toISOString()
+            }]);
+          
+          console.log(`✅ Notifica creata per dipendente ${employee.first_name} ${employee.last_name}`);
+          
+          // Invia email al dipendente
+          if (isRealEmail(employee.email)) {
+            try {
+              await sendEmail(employee.email, 'recoveryProposal', [
+                `${employee.first_name} ${employee.last_name}`,
+                recoveryDate,
+                startTime,
+                endTime,
+                calculatedHours,
+                reason || ''
+              ]);
+              console.log(`✅ Email inviata a ${employee.email}`);
+            } catch (emailError) {
+              console.error('Error sending recovery proposal email:', emailError);
+            }
+          }
         }
       } catch (notifError) {
         console.error('Error sending notification:', notifError);
@@ -7279,16 +7342,151 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
     }
 
-    // Invia notifica se rifiutata o se dipendente accetta proposta admin
-    if (status === 'rejected' && updatedRequest.users?.email) {
-      // TODO: Implementare invio email
-      console.log(`📧 Email da inviare a ${updatedRequest.users.email} per richiesta recupero rifiutata`);
-    }
-    
-    // Se dipendente accetta proposta admin, notifica admin
-    if (status === 'approved' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
-      // TODO: Implementare notifica admin che dipendente ha accettato
-      console.log(`📧 Notifica admin: dipendente ${req.user.email} ha accettato proposta recupero`);
+    // Gestione notifiche e email in base allo scenario
+    try {
+      const employee = updatedRequest.users;
+      const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : 'Dipendente';
+      
+      // Scenario 1: Admin approva/rifiuta recovery request del dipendente
+      if (req.user.role === 'admin' && existingRequest.status === 'pending') {
+        // Notifica in-app al dipendente
+        const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Europe/Rome'
+        });
+        
+        const hoursFormatted = (() => {
+          const h = Math.floor(Math.abs(existingRequest.hours));
+          const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
+          if (m === 0) return `${h}h`;
+          return `${h}h ${m}min`;
+        })();
+        
+        await supabase
+          .from('notifications')
+          .insert([{
+            user_id: existingRequest.user_id,
+            title: `Recupero Ore ${status === 'approved' ? 'Approvato' : 'Rifiutato'}`,
+            message: `La tua richiesta di recupero ore del ${formattedDate} (${hoursFormatted}) è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`,
+            type: status === 'approved' ? 'recovery_approved' : 'recovery_rejected',
+            is_read: false,
+            related_id: id,
+            created_at: new Date().toISOString()
+          }]);
+        
+        // Email al dipendente
+        if (employee && isRealEmail(employee.email)) {
+          try {
+            await sendEmail(employee.email, 'recoveryResponse', [
+              employeeName,
+              existingRequest.recovery_date,
+              existingRequest.start_time,
+              existingRequest.end_time,
+              existingRequest.hours,
+              status,
+              rejectionReason || ''
+            ]);
+            console.log(`✅ Email inviata a ${employee.email} per recovery ${status}`);
+          } catch (emailError) {
+            console.error('Error sending recovery response email:', emailError);
+          }
+        }
+      }
+      
+      // Scenario 2: Dipendente accetta proposta admin
+      if (status === 'approved' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
+        // Recupera admin che ha proposto
+        const { data: adminData } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name')
+          .eq('id', existingRequest.submitted_by)
+          .single();
+        
+        if (adminData) {
+          // Notifica in-app all'admin
+          const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
+          
+          const hoursFormatted = (() => {
+            const h = Math.floor(Math.abs(existingRequest.hours));
+            const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}min`;
+          })();
+          
+          await supabase
+            .from('notifications')
+            .insert([{
+              user_id: existingRequest.submitted_by,
+              title: 'Proposta Recupero Ore Accettata',
+              message: `${employeeName} ha accettato la tua proposta di recupero ore del ${formattedDate} (${hoursFormatted})`,
+              type: 'recovery_accepted',
+              is_read: false,
+              related_id: id,
+              created_at: new Date().toISOString()
+            }]);
+          
+          // Email all'admin
+          if (isRealEmail(adminData.email)) {
+            try {
+              await sendEmail(adminData.email, 'recoveryAccepted', [
+                `${adminData.first_name} ${adminData.last_name}`,
+                employeeName,
+                existingRequest.recovery_date,
+                existingRequest.start_time,
+                existingRequest.end_time,
+                existingRequest.hours
+              ]);
+              console.log(`✅ Email inviata a ${adminData.email} per proposta accettata`);
+            } catch (emailError) {
+              console.error('Error sending recovery accepted email:', emailError);
+            }
+          }
+        }
+      }
+      
+      // Scenario 3: Dipendente rifiuta proposta admin
+      if (status === 'rejected' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
+        // Recupera admin che ha proposto
+        const { data: adminData } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name')
+          .eq('id', existingRequest.submitted_by)
+          .single();
+        
+        if (adminData) {
+          // Notifica in-app all'admin
+          const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
+          
+          await supabase
+            .from('notifications')
+            .insert([{
+              user_id: existingRequest.submitted_by,
+              title: 'Proposta Recupero Ore Rifiutata',
+              message: `${employeeName} ha rifiutato la tua proposta di recupero ore del ${formattedDate}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`,
+              type: 'recovery_rejected',
+              is_read: false,
+              related_id: id,
+              created_at: new Date().toISOString()
+            }]);
+          
+          console.log(`✅ Notifica creata per admin ${adminData.first_name} ${adminData.last_name}`);
+        }
+      }
+    } catch (notifError) {
+      console.error('Error creating notifications for recovery:', notifError);
+      // Non bloccare l'aggiornamento se le notifiche falliscono
     }
 
     res.json({
