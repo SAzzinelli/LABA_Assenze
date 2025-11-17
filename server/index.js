@@ -7703,39 +7703,56 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
-    // Ottieni i saldi totali per tutti i dipendenti
+    // Ottieni i saldi totali per tutti i dipendenti (stessa logica di /api/attendance/total-balances)
     const employeeIds = employees.map(emp => emp.id);
     const { data: balanceData, error: balanceError } = await supabase
       .from('attendance')
       .select('user_id, balance_hours')
-      .in('user_id', employeeIds)
-      .order('date', { ascending: false });
+      .in('user_id', employeeIds);
 
     if (balanceError) {
       console.error('Balance fetch error:', balanceError);
       return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
     }
 
-    // Calcola il saldo totale per ogni dipendente
+    // Calcola il saldo totale per ogni dipendente (somma tutti i balance_hours)
     const balances = {};
-    balanceData.forEach(row => {
-      const uid = row.user_id;
-      if (!balances[uid]) {
-        balances[uid] = 0;
-      }
-      balances[uid] += parseFloat(row.balance_hours || 0);
+    if (balanceData && balanceData.length > 0) {
+      balanceData.forEach(row => {
+        const uid = row.user_id;
+        const bal = parseFloat(row.balance_hours || 0);
+        balances[uid] = (balances[uid] || 0) + bal;
+      });
+    }
+
+    console.log('📊 Debt summary calculation:', {
+      totalEmployees: employees.length,
+      totalBalanceRecords: balanceData?.length || 0,
+      balances: Object.keys(balances).map(uid => {
+        const emp = employees.find(e => e.id === uid);
+        return {
+          id: uid,
+          name: emp ? `${emp.first_name} ${emp.last_name}` : uid,
+          balance: balances[uid]
+        };
+      })
     });
 
     // Filtra solo i dipendenti con debito (saldo negativo)
     const employeesWithDebt = employees
-      .map(emp => ({
-        ...emp,
-        name: `${emp.first_name} ${emp.last_name}`,
-        totalBalance: balances[emp.id] || 0,
-        debtHours: Math.abs(Math.min(0, balances[emp.id] || 0))
-      }))
+      .map(emp => {
+        const balance = balances[emp.id] || 0;
+        return {
+          ...emp,
+          name: `${emp.first_name} ${emp.last_name}`,
+          totalBalance: balance,
+          debtHours: Math.abs(Math.min(0, balance))
+        };
+      })
       .filter(emp => emp.totalBalance < 0)
-      .sort((a, b) => a.totalBalance - b.totalBalance); // Ordina per debito più alto
+      .sort((a, b) => a.totalBalance - b.totalBalance); // Ordina per debito più alto (più negativo prima)
+
+    console.log('💰 Employees with debt:', employeesWithDebt.length, employeesWithDebt.map(e => `${e.name}: ${e.totalBalance.toFixed(2)}h`));
 
     res.json({
       success: true,
