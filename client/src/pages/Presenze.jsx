@@ -11,6 +11,7 @@ const Attendance = () => {
     working_days: 0,
     absent_days: 0
   });
+  const [remainingDays, setRemainingDays] = useState(0);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -63,7 +64,8 @@ const Attendance = () => {
           fetchAttendance(),
           fetchHoursBalance(),
           fetchTotalBalance(),
-          fetchWorkSchedules()
+          fetchWorkSchedules(),
+          fetchUserStats()
         ]);
         
         // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
@@ -129,7 +131,8 @@ const Attendance = () => {
         await Promise.all([
           fetchAttendance(),
           fetchHoursBalance(),
-          fetchTotalBalance()
+          fetchTotalBalance(),
+          fetchUserStats()
         ]);
         await calculateRealTimeHours();
       } finally {
@@ -205,6 +208,18 @@ const Attendance = () => {
       }
     } catch (error) {
       console.error('Error fetching hours balance:', error);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await apiCall('/api/attendance/user-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setRemainingDays(data.remainingDays || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
     }
   };
 
@@ -858,6 +873,21 @@ const getStatusText = (record) => {
               </div>
               <div className="hidden sm:block p-3 rounded-full text-purple-400">
                 <Calendar className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* GIORNI RIMANENTI */}
+          <div className="bg-slate-800 rounded-lg p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni Rimanenti</p>
+                <p className="text-xl sm:text-2xl font-bold text-orange-400">
+                  {remainingDays}
+                </p>
+              </div>
+              <div className="hidden sm:block p-3 rounded-full text-orange-400">
+                <TrendingUp className="h-4 w-4" />
               </div>
             </div>
           </div>

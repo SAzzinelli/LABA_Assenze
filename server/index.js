@@ -3754,11 +3754,15 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       .eq('id', userId)
       .single();
 
+    // Calcola giorni rimanenti del mese
+    const remainingDays = Math.max(0, expectedMonthlyPresences - monthlyPresences);
+
     res.json({
       isClockedIn,
       todayHours,
       monthlyPresences: monthlyPresences || 0,
       expectedMonthlyPresences: expectedMonthlyPresences,
+      remainingDays: remainingDays,
       workplace: userData?.workplace || 'LABA Firenze - Sede Via Vecchietti'
     });
 
@@ -5935,6 +5939,130 @@ app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req
   } catch (error) {
     console.error('Vacation period update error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Admin: Migrate existing notifications to new format (fix old notifications)
+app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔄 Starting notification migration...');
+    
+    // Recupera tutte le notifiche con request_type permission o permission_104
+    const { data: notifications, error: notifError } = await supabase
+      .from('notifications')
+      .select('id, request_id, request_type, message, title')
+      .in('request_type', ['permission', 'permission_104']);
+    
+    if (notifError) {
+      console.error('❌ Error fetching notifications:', notifError);
+      return res.status(500).json({ error: 'Errore nel recupero delle notifiche' });
+    }
+    
+    if (!notifications || notifications.length === 0) {
+      return res.json({ 
+        success: true, 
+        message: 'Nessuna notifica da migrare',
+        updated: 0 
+      });
+    }
+    
+    console.log(`📋 Found ${notifications.length} notifications to migrate`);
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    
+    // Per ogni notifica, recupera la richiesta associata e riformatta
+    for (const notification of notifications) {
+      if (!notification.request_id) {
+        continue; // Skip se non ha request_id
+      }
+      
+      try {
+        // Recupera la richiesta associata
+        const { data: request, error: requestError } = await supabase
+          .from('leave_requests')
+          .select('type, hours, start_date, end_date, status')
+          .eq('id', notification.request_id)
+          .single();
+        
+        if (requestError || !request) {
+          console.log(`⚠️ Request not found for notification ${notification.id}`);
+          continue;
+        }
+        
+        // Riformatta il messaggio usando la stessa logica delle nuove notifiche
+        const parseLocalDate = (dateStr) => {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        };
+        
+        const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric',
+          timeZone: 'Europe/Rome'
+        });
+        
+        const typeLabels = {
+          'permission': 'Permesso',
+          'permission_104': 'Permesso Legge 104'
+        };
+        
+        const statusLabels = {
+          'approved': 'approvata',
+          'rejected': 'rifiutata',
+          'cancelled': 'annullata'
+        };
+        
+        let newMessage = '';
+        
+        if (request.type === 'permission' || request.type === 'permission_104') {
+          // PERMESSI: sono in ORE
+          const hours = request.hours || 0;
+          const hoursFormatted = hours > 0 
+            ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+            : '0h';
+          const requestTypeLabel = typeLabels[request.type] || 'Permesso';
+          const statusLabel = statusLabels[request.status] || request.status || 'aggiornata';
+          newMessage = `Il tuo ${requestTypeLabel.toLowerCase()} di ${hoursFormatted} per il ${formattedStartDate} è stato ${statusLabel}`;
+        } else {
+          // Non è un permesso, salta (dovrebbe essere già corretto)
+          continue;
+        }
+        
+        // Aggiorna la notifica solo se il messaggio è diverso
+        if (notification.message !== newMessage) {
+          const { error: updateError } = await supabase
+            .from('notifications')
+            .update({ message: newMessage })
+            .eq('id', notification.id);
+          
+          if (updateError) {
+            console.error(`❌ Error updating notification ${notification.id}:`, updateError);
+            errorCount++;
+          } else {
+            updatedCount++;
+            console.log(`✅ Updated notification ${notification.id}`);
+          }
+        }
+      } catch (err) {
+        console.error(`❌ Error processing notification ${notification.id}:`, err);
+        errorCount++;
+      }
+    }
+    
+    console.log(`✅ Migration completed: ${updatedCount} updated, ${errorCount} errors`);
+    
+    res.json({
+      success: true,
+      message: `Migrazione completata: ${updatedCount} notifiche aggiornate`,
+      updated: updatedCount,
+      errors: errorCount,
+      total: notifications.length
+    });
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    res.status(500).json({ error: 'Errore nella migrazione delle notifiche' });
   }
 });
 
