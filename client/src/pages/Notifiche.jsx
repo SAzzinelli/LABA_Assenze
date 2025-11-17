@@ -118,30 +118,19 @@ const Notifiche = () => {
   };
 
   const getNotificationBg = (type, isRead) => {
-    if (isRead) {
-      // Notifiche lette: colore più tenue
-      switch (type) {
-        case 'leave_approved':
-          return 'bg-green-900/10 border-green-500/20';
-        case 'leave_rejected':
-          return 'bg-red-900/10 border-red-500/20';
-        case 'leave_pending':
-          return 'bg-yellow-900/10 border-yellow-500/20';
-        default:
-          return 'bg-slate-800/50 border-slate-600/30';
-      }
-    }
+    // Mantieni sempre i colori, ma opacità leggermente inferiore se letta
+    const opacity = isRead ? '20' : '30';
+    const borderOpacity = isRead ? '30' : '50';
     
-    // Notifiche non lette: colori vivaci
     switch (type) {
       case 'leave_approved':
-        return 'bg-green-900/30 border-green-500/50';
+        return `bg-green-900/${opacity} border-green-500/${borderOpacity}`;
       case 'leave_rejected':
-        return 'bg-red-900/30 border-red-500/50';
+        return `bg-red-900/${opacity} border-red-500/${borderOpacity}`;
       case 'leave_pending':
-        return 'bg-yellow-900/30 border-yellow-500/50';
+        return `bg-yellow-900/${opacity} border-yellow-500/${borderOpacity}`;
       default:
-        return 'bg-blue-900/30 border-blue-500/50';
+        return `bg-blue-900/${opacity} border-blue-500/${borderOpacity}`;
     }
   };
 
@@ -230,9 +219,7 @@ const Notifiche = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className={`font-semibold ${
-                          notification.is_read ? 'text-slate-400' : 'text-white'
-                        }`}>
+                        <h3 className="font-semibold text-white">
                           {notification.title}
                         </h3>
                         {!notification.is_read && (
@@ -241,9 +228,7 @@ const Notifiche = () => {
                           </span>
                         )}
                       </div>
-                      <p className={`mt-1 ${
-                        notification.is_read ? 'text-slate-500' : 'text-slate-300'
-                      }`} dangerouslySetInnerHTML={{
+                      <p className="mt-1 text-slate-300" dangerouslySetInnerHTML={{
                         __html: (() => {
                           let msg = notification.message;
                           // Formatta date in formato anglosassone (YYYY-MM-DD) in italiano
