@@ -5160,6 +5160,97 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       console.log(`❌ Richiesta assenza 104 rifiutata: ${updatedRequest.days_requested || 1} giorni non utilizzati`);
     }
 
+    // Se un PERMESSO viene CANCELLATO, ricalcola le presenze per ripristinare le ore attese originali
+    if (updatedRequest.type === 'permission' && status === 'cancelled') {
+      console.log(`🔄 Permesso cancellato - ricalcolo presenze per ${updatedRequest.start_date}...`);
+      
+      // Calcola tutte le date del permesso (dal start_date al end_date)
+      const startDate = new Date(updatedRequest.start_date);
+      const endDate = new Date(updatedRequest.end_date);
+      const datesToRecalculate = [];
+      
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        datesToRecalculate.push(d.toISOString().split('T')[0]);
+      }
+      
+      // Per ogni data, ricalcola le ore attese delle presenze
+      for (const dateStr of datesToRecalculate) {
+        const dayOfWeek = new Date(dateStr).getDay();
+        
+        // Recupera l'orario di lavoro per quel giorno
+        const { data: schedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, break_duration')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (!scheduleError && schedule) {
+          // Calcola le ore attese originali (senza permessi)
+          const expectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+          
+          // Recupera permessi APPROVATI per questa data (escludendo quello appena cancellato)
+          const { data: approvedPermissions, error: permError } = await supabase
+            .from('leave_requests')
+            .select('hours')
+            .eq('user_id', updatedRequest.user_id)
+            .eq('type', 'permission')
+            .eq('status', 'approved')
+            .lte('start_date', dateStr)
+            .gte('end_date', dateStr)
+            .neq('id', updatedRequest.id); // Escludi il permesso appena cancellato
+          
+          let permissionHours = 0;
+          if (!permError && approvedPermissions) {
+            permissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+          }
+          
+          // Ore attese finali = ore originali - ore permessi approvati rimanenti
+          const finalExpectedHours = Math.max(0, expectedHours - permissionHours);
+          
+          // Recupera la presenza per questa data
+          const { data: attendanceRecord, error: attError } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('user_id', updatedRequest.user_id)
+            .eq('date', dateStr)
+            .single();
+          
+          if (!attError && attendanceRecord) {
+            // Aggiorna la presenza con le nuove ore attese
+            const newActualHours = Math.max(0, finalExpectedHours); // Le ore effettive diventano uguali alle attese (presenza completa)
+            const newBalanceHours = newActualHours - finalExpectedHours; // Dovrebbe essere 0
+            
+            const { error: updateAttError } = await supabase
+              .from('attendance')
+              .update({
+                expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                actual_hours: Math.round(newActualHours * 100) / 100,
+                balance_hours: Math.round(newBalanceHours * 100) / 100,
+                notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Ore ricalcolate dopo cancellazione permesso]` : '[Ore ricalcolate dopo cancellazione permesso]'
+              })
+              .eq('user_id', updatedRequest.user_id)
+              .eq('date', dateStr);
+            
+            if (updateAttError) {
+              console.error(`❌ Errore aggiornamento presenza per ${dateStr}:`, updateAttError);
+            } else {
+              console.log(`✅ Presenza ${dateStr} aggiornata: ${finalExpectedHours}h attese (${expectedHours}h - ${permissionHours}h permessi)`);
+            }
+          } else if (attError && attError.code !== 'PGRST116') {
+            console.error(`❌ Errore recupero presenza per ${dateStr}:`, attError);
+          }
+        }
+      }
+      
+      console.log(`✅ Ricalcolo presenze completato per permesso cancellato`);
+    }
+
     // Crea notifica per il dipendente
     try {
       const typeLabels = {
@@ -5250,9 +5341,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       // Non bloccare l'aggiornamento se le notifiche falliscono
     }
 
+    const statusMessages = {
+      'approved': 'approvata',
+      'rejected': 'rifiutata',
+      'cancelled': 'annullata'
+    };
+    
     res.json({
       success: true,
-      message: `Richiesta ${status === 'approved' ? 'approvata' : 'rifiutata'} con successo`,
+      message: `Richiesta ${statusMessages[status] || 'aggiornata'} con successo`,
       request: updatedRequest
     });
   } catch (error) {
