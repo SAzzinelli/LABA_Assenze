@@ -3725,6 +3725,22 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
         console.log(`📊 Unique dates:`, Array.from(uniqueDays).sort());
       } else {
         console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear} (query returned empty array)`);
+        // FALLBACK: Prova query alternativa senza filtri di data per vedere se ci sono record
+        const { data: allRecords, error: allError } = await supabase
+          .from('attendance')
+          .select('date')
+          .eq('user_id', userId)
+          .limit(100);
+        console.log(`🔧 Fallback query: found ${allRecords?.length || 0} total records for user (first 100)`);
+        if (allRecords && allRecords.length > 0) {
+          const monthRecords = allRecords.filter(r => {
+            const recordDate = new Date(r.date);
+            return recordDate.getFullYear() === currentYear && recordDate.getMonth() + 1 === currentMonth;
+          });
+          const uniqueDays = new Set(monthRecords.map(record => record.date));
+          daysWithAttendance = uniqueDays.size;
+          console.log(`🔧 Fallback: Found ${monthRecords.length} records in month, ${uniqueDays.size} unique days`);
+        }
       }
     } else if (monthlyError) {
       console.error('❌ Error fetching attendance records:', monthlyError);
