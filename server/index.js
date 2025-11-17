@@ -3687,18 +3687,55 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`)
       .not('clock_in', 'is', null);
 
-    // Count approved leave days in this month
-    const { count: approvedLeaveDays } = await supabase
+    // Count approved leave DAYS in this month (not just requests count, but actual days)
+    const { data: approvedLeaves } = await supabase
       .from('leave_requests')
-      .select('*', { count: 'exact', head: true })
+      .select('start_date, end_date, type')
       .eq('user_id', userId)
       .eq('status', 'approved')
-      .in('type', ['permission', 'sick', 'vacation'])
+      .in('type', ['vacation', 'sick_leave'])
       .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('end_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+      .lte('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
-    // Monthly presences = days with attendance + approved leave days
+    // Calcola i giorni effettivi di permessi/ferie/malattia nel mese
+    let approvedLeaveDays = 0;
+    if (approvedLeaves && approvedLeaves.length > 0) {
+      const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+      const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+      
+      approvedLeaves.forEach(leave => {
+        const start = new Date(leave.start_date);
+        const end = new Date(leave.end_date);
+        const monthStartDate = new Date(monthStart);
+        const monthEndDate = new Date(monthEnd);
+        
+        // Calcola i giorni nel range che cadono nel mese corrente
+        const actualStart = start < monthStartDate ? monthStartDate : start;
+        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
+        
+        if (actualStart <= actualEnd) {
+          const daysDiff = Math.ceil((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
+          approvedLeaveDays += daysDiff;
+        }
+      });
+    }
+
+    // Monthly presences = days with attendance + approved leave days (giorni effettivi)
     const monthlyPresences = (daysWithAttendance || 0) + (approvedLeaveDays || 0);
+
+    // Recupera le festività del mese per escluderle dai giorni lavorativi attesi
+    const { data: holidays } = await supabase
+      .from('holidays')
+      .select('date')
+      .gte('date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+      .lt('date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+
+    const holidayDates = new Set();
+    if (holidays && holidays.length > 0) {
+      holidays.forEach(holiday => {
+        holidayDates.add(holiday.date);
+      });
+    }
 
     // Calcola giorni lavorativi attesi del mese basandosi sull'orario di lavoro dell'utente
     const { data: workSchedules, error: scheduleError } = await supabase
@@ -3720,16 +3757,19 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
       const lastDay = new Date(currentYear, currentMonth, 0);
       
-      // Conta i giorni lavorativi nel mese (basandosi sui giorni della settimana con orario attivo)
+      // Conta i giorni lavorativi nel mese ESCLUDENDO le festività
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(currentYear, currentMonth - 1, day);
+        const dateStr = date.toISOString().split('T')[0];
         const dayOfWeek = date.getDay(); // 0 = domenica, 1 = lunedì, etc.
-        if (workingDaysMap[dayOfWeek]) {
+        
+        // Conta solo se è un giorno lavorativo E non è una festività
+        if (workingDaysMap[dayOfWeek] && !holidayDates.has(dateStr)) {
           expectedMonthlyPresences++;
         }
       }
       
-      console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId}`);
+      console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId} (escluse ${holidayDates.size} festività)`);
     } else {
       // Fallback: se non ci sono orari, usa un valore di default basato su 5 giorni settimanali
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
@@ -3737,14 +3777,15 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       let workingDays = 0;
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(currentYear, currentMonth - 1, day);
+        const dateStr = date.toISOString().split('T')[0];
         const dayOfWeek = date.getDay();
-        // Lunedì = 1, Venerdì = 5
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        // Lunedì = 1, Venerdì = 5 E non è una festività
+        if (dayOfWeek >= 1 && dayOfWeek <= 5 && !holidayDates.has(dateStr)) {
           workingDays++;
         }
       }
       expectedMonthlyPresences = workingDays;
-      console.log(`⚠️ Nessun orario trovato per utente ${userId}, usato fallback: ${expectedMonthlyPresences} giorni`);
+      console.log(`⚠️ Nessun orario trovato per utente ${userId}, usato fallback: ${expectedMonthlyPresences} giorni (escluse ${holidayDates.size} festività)`);
     }
 
     // Get user workplace from profile
