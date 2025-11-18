@@ -38,35 +38,6 @@ const Layout = ({ children }) => {
     await logout();
   };
 
-  // Carica notifiche
-  const loadNotifications = async () => {
-    try {
-      const response = await apiCall('/api/notifications?limit=10&unread_only=false');
-      if (response.ok) {
-        const data = await response.json();
-        // Controlla nuove notifiche per mostrare notifiche desktop
-        checkNewNotifications(data);
-        setNotifications(data);
-        setUnreadCount(data.filter(n => !n.is_read).length);
-      } else if (response.status === 401) {
-        // Token scaduto, fai logout automatico
-        logout();
-        window.location.href = '/login';
-      } else {
-        // Log altri errori HTTP per debug
-        console.warn('⚠️ Failed to load notifications:', response.status, response.statusText);
-      }
-    } catch (error) {
-      // Gestisci errori di rete in modo più dettagliato
-      if (error instanceof TypeError && error.message.includes('Load failed')) {
-        console.warn('⚠️ Network error loading notifications (possibly CORS or connection issue):', error.message);
-        // Non bloccare l'app per errori di rete temporanei
-        // Le notifiche verranno ricaricate al prossimo intervallo
-      } else {
-        console.error('❌ Error loading notifications:', error);
-      }
-    }
-  };
 
   // Marca notifica come letta
   const handleNotificationClick = (notification) => {
@@ -116,13 +87,48 @@ const Layout = ({ children }) => {
   };
 
   // Carica notifiche al mount e ogni 30 secondi
+  // Usa useRef per evitare che loadNotifications cambi ad ogni render
+  const loadNotificationsRef = React.useRef(null);
+  loadNotificationsRef.current = React.useCallback(async () => {
+    try {
+      const response = await apiCall('/api/notifications?limit=10&unread_only=false');
+      if (response.ok) {
+        const data = await response.json();
+        // Controlla nuove notifiche per mostrare notifiche desktop
+        checkNewNotifications(data);
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      } else if (response.status === 401) {
+        // Token scaduto, fai logout automatico
+        logout();
+        window.location.href = '/login';
+      } else {
+        // Log altri errori HTTP per debug
+        console.warn('⚠️ Failed to load notifications:', response.status, response.statusText);
+      }
+    } catch (error) {
+      // Gestisci errori di rete in modo più dettagliato
+      if (error instanceof TypeError && error.message.includes('Load failed')) {
+        console.warn('⚠️ Network error loading notifications (possibly CORS or connection issue):', error.message);
+        // Non bloccare l'app per errori di rete temporanei
+        // Le notifiche verranno ricaricate al prossimo intervallo
+      } else {
+        console.error('❌ Error loading notifications:', error);
+      }
+    }
+  }, [apiCall, checkNewNotifications, logout]);
+
   React.useEffect(() => {
     if (user) {
-      loadNotifications();
-      const interval = setInterval(loadNotifications, 30000); // Aggiorna ogni 30 secondi
+      // Carica immediatamente
+      loadNotificationsRef.current();
+      // Poi ogni 30 secondi
+      const interval = setInterval(() => {
+        loadNotificationsRef.current();
+      }, 30000); // Aggiorna ogni 30 secondi
       return () => clearInterval(interval);
     }
-  }, [user, checkNewNotifications]);
+  }, [user]); // Solo user come dipendenza - loadNotificationsRef.current è sempre aggiornato
 
   // Funzione per tradurre i ruoli in italiano
   const getRoleDisplay = (role) => {

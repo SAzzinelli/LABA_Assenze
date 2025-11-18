@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 const DESKTOP_NOTIFICATIONS_KEY = 'desktopNotificationsEnabled';
 
@@ -177,8 +177,8 @@ export function useDesktopNotifications() {
     localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
   };
 
-  // Mostra una notifica desktop
-  const showNotification = (title, message, url = null) => {
+  // Mostra una notifica desktop - memoizzata per evitare ricreazioni
+  const showNotification = useCallback((title, message, url = null) => {
     if (!enabled || permission !== 'granted') {
       return;
     }
@@ -209,26 +209,7 @@ export function useDesktopNotifications() {
     } catch (error) {
       console.error('Error showing notification:', error);
     }
-  };
-
-  // Controlla nuove notifiche e mostra notifiche desktop
-  const checkNewNotifications = (currentNotifications) => {
-    if (!enabled || permission !== 'granted' || !currentNotifications || currentNotifications.length === 0) {
-      previousNotificationsRef.current = currentNotifications || [];
-      return;
-    }
-
-    const previousIds = new Set(previousNotificationsRef.current.map(n => n.id));
-    const newNotifications = currentNotifications.filter(n => !previousIds.has(n.id) && !n.is_read);
-
-    // Mostra notifiche per quelle nuove e non lette
-    newNotifications.forEach(notification => {
-      const url = getNotificationUrl(notification);
-      showNotification(notification.title || 'Nuova notifica', notification.message || '', url);
-    });
-
-    previousNotificationsRef.current = currentNotifications;
-  };
+  }, [enabled, permission]);
 
   // Ottieni l'URL corretto per il tipo di notifica
   const getNotificationUrl = (notification) => {
@@ -249,6 +230,26 @@ export function useDesktopNotifications() {
     }
     return '/dashboard';
   };
+
+  // Controlla nuove notifiche e mostra notifiche desktop
+  // Usa useCallback per evitare che la funzione cambi ad ogni render
+  const checkNewNotifications = useCallback((currentNotifications) => {
+    if (!enabled || permission !== 'granted' || !currentNotifications || currentNotifications.length === 0) {
+      previousNotificationsRef.current = currentNotifications || [];
+      return;
+    }
+
+    const previousIds = new Set(previousNotificationsRef.current.map(n => n.id));
+    const newNotifications = currentNotifications.filter(n => !previousIds.has(n.id) && !n.is_read);
+
+    // Mostra notifiche per quelle nuove e non lette
+    newNotifications.forEach(notification => {
+      const url = getNotificationUrl(notification);
+      showNotification(notification.title || 'Nuova notifica', notification.message || '', url);
+    });
+
+    previousNotificationsRef.current = currentNotifications;
+  }, [enabled, permission, showNotification]); // Dipendenze: enabled, permission e showNotification
 
   // Aggiorna il permesso se cambia (es. l'utente lo cambia manualmente)
   useEffect(() => {
