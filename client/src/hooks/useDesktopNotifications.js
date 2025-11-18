@@ -59,22 +59,38 @@ export function useDesktopNotifications() {
     // Safari richiede che questo avvenga in un contesto di interazione utente (click)
     try {
       console.log('🔔 Attempting to request notification permission...');
+      console.log('🔔 Notification object:', typeof Notification);
+      console.log('🔔 Notification.requestPermission type:', typeof Notification.requestPermission);
+      console.log('🔔 Current permission before request:', Notification.permission);
+      
+      // Verifica HTTPS (richiesto per notifiche su Chrome/Safari)
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        console.error('❌ Notifiche richiedono HTTPS (tranne localhost)');
+        alert('⚠️ Le notifiche richiedono una connessione HTTPS. Il sito deve essere servito tramite HTTPS per funzionare.');
+        return false;
+      }
       
       // Safari supporta sia Promise-based che callback-based
       // Prova prima Promise-based (moderno), poi callback-based (legacy)
       let result;
       
       if (typeof Notification.requestPermission === 'function') {
+        console.log('🔔 Using Promise-based API...');
         // Promise-based API (standard moderno) - Safari 16+ supporta questo
         try {
+          // Chiama direttamente Notification.requestPermission() 
+          // Questo dovrebbe mostrare il prompt del browser
+          console.log('🔔 Calling Notification.requestPermission() now...');
           result = await Notification.requestPermission();
           console.log('🔔 Permission result (Promise):', result);
+          console.log('🔔 Notification.permission after request:', Notification.permission);
         } catch (promiseError) {
           // Se la Promise fallisce, potrebbe essere che Safari usi ancora la callback API
           console.log('🔔 Promise API failed, trying callback API...', promiseError);
           
           // Usa callback-based API (legacy Safari)
           return new Promise((resolve) => {
+            console.log('🔔 Using callback-based API...');
             Notification.requestPermission((callbackResult) => {
               console.log('🔔 Permission result (Callback):', callbackResult);
               setPermission(callbackResult);
@@ -94,8 +110,10 @@ export function useDesktopNotifications() {
           });
         }
       } else {
+        console.error('❌ Notification.requestPermission is not a function!');
         // Callback-based API (browser molto vecchi)
         return new Promise((resolve) => {
+          console.log('🔔 Using callback-based API (only option)...');
           Notification.requestPermission((callbackResult) => {
             console.log('🔔 Permission result (Callback-only):', callbackResult);
             setPermission(callbackResult);

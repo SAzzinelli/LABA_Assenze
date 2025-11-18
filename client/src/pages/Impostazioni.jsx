@@ -329,11 +329,34 @@ const Settings = () => {
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Requesting notification permission...');
+                        console.log('🔔 Button clicked - Requesting notification permission...');
+                        console.log('🔔 Current Notification.permission:', Notification.permission);
+                        console.log('🔔 window.location.protocol:', window.location.protocol);
+                        console.log('🔔 Is HTTPS?:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+                        
+                        // Verifica HTTPS (richiesto per notifiche)
+                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                          alert('⚠️ Le notifiche richiedono una connessione HTTPS. Il sito deve essere servito tramite HTTPS per funzionare.');
+                          return;
+                        }
+
+                        // Verifica che Notification.requestPermission esista
+                        if (typeof Notification.requestPermission !== 'function') {
+                          console.error('❌ Notification.requestPermission is not a function!');
+                          alert('⚠️ Il browser non supporta la richiesta di permesso per le notifiche.');
+                          return;
+                        }
+
+                        console.log('🔔 Notification.requestPermission is a function, calling it...');
                         const success = await requestPermission();
-                        console.log('Permission result:', Notification.permission, 'success:', success);
-                        // Non mostrare alert se il permesso è denied dopo la richiesta
-                        // Il messaggio informativo sotto spiegherà cosa fare
+                        console.log('🔔 Final Notification.permission:', Notification.permission);
+                        console.log('🔔 Request permission result - success:', success);
+                        
+                        // Aggiorna il permesso subito dopo la richiesta
+                        setTimeout(() => {
+                          const newPermission = Notification.permission;
+                          console.log('🔔 Permission after 500ms:', newPermission);
+                        }, 500);
                       }}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
                     >
