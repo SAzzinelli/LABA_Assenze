@@ -7906,92 +7906,37 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
-    const { date: today, time: currentTime, dateTime: now } = await getCurrentDateTime();
-    const dayOfWeek = now.getDay();
+    const currentYear = new Date().getFullYear();
 
-    // Calcola il saldo totale per ogni dipendente usando la stessa logica di /api/attendance/total-balance
-    // (include real-time balance per oggi)
+    // IMPORTANTE: Usa lo stesso endpoint della pagina "Banca Ore" per coerenza
+    // Il debito deve essere basato sul saldo della "Banca Ore" (overtime ledger),
+    // NON sul saldo totale delle presenze giornaliere
     const balances = {};
     
     for (const emp of employees) {
-      // Ottieni tutte le presenze per questo dipendente
-      const { data: allAttendance } = await supabase
-        .from('attendance')
-        .select('balance_hours, date')
-        .eq('user_id', emp.id);
-
-      let todayBalance = 0;
-      let todayRecord = allAttendance?.find(r => r.date === today);
-      
-      // Verifica se oggi è un giorno lavorativo e calcola real-time
-      const { data: schedule } = await supabase
-        .from('work_schedules')
+      // Ottieni il saldo della "Banca Ore" (overtime) dal current_balances
+      const { data: currentBalances, error: balanceError } = await supabase
+        .from('current_balances')
         .select('*')
         .eq('user_id', emp.id)
-        .eq('day_of_week', dayOfWeek)
-        .eq('is_working_day', true)
+        .eq('category', 'overtime')
+        .eq('year', currentYear)
         .single();
-      
-      if (schedule) {
-        // Recupera permessi per oggi
-        const { data: permissionsToday } = await supabase
-          .from('leave_requests')
-          .select('hours, permission_type, exit_time, entry_time')
-          .eq('user_id', emp.id)
-          .eq('type', 'permission')
-          .eq('status', 'approved')
-          .lte('start_date', today)
-          .gte('end_date', today);
-        
-        let permissionData = null;
-        if (permissionsToday && permissionsToday.length > 0) {
-          let totalHours = 0;
-          let exitTime = null;
-          let entryTime = null;
-          const permissionTypes = new Set();
-          
-          permissionsToday.forEach(perm => {
-            totalHours += parseFloat(perm.hours || 0);
-            if (perm.permission_type === 'early_exit' && perm.exit_time) {
-              permissionTypes.add('early_exit');
-              if (!exitTime || perm.exit_time < exitTime) {
-                exitTime = perm.exit_time;
-              }
-            }
-            if (perm.permission_type === 'late_entry' && perm.entry_time) {
-              permissionTypes.add('late_entry');
-              if (!entryTime || perm.entry_time > entryTime) {
-                entryTime = perm.entry_time;
-              }
-            }
-          });
-          
-          if (exitTime || entryTime) {
-            permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
-          }
-        }
-        
-        // Calcola balance real-time per oggi
-        const result = calculateRealTimeHours(schedule, currentTime, permissionData);
-        todayBalance = result.balanceHours;
-      } else if (todayRecord) {
-        // Non è un giorno lavorativo, usa il balance dal DB
-        todayBalance = todayRecord.balance_hours || 0;
+
+      if (balanceError && balanceError.code !== 'PGRST116') {
+        // Errore diverso da "nessun record trovato"
+        console.error(`Error fetching overtime balance for ${emp.id}:`, balanceError);
+        balances[emp.id] = 0;
+      } else if (currentBalances) {
+        // Usa il current_balance della "Banca Ore" (overtime)
+        balances[emp.id] = Math.round((currentBalances.current_balance || 0) * 100) / 100;
+      } else {
+        // Nessun record trovato = saldo 0
+        balances[emp.id] = 0;
       }
-
-      // Somma tutti i saldi, usando real-time per oggi
-      const totalBalance = (allAttendance || []).reduce((sum, record) => {
-        if (record.date === today && schedule) {
-          // Usa il balance real-time per oggi invece del DB
-          return sum + todayBalance;
-        }
-        return sum + (record.balance_hours || 0);
-      }, 0);
-
-      balances[emp.id] = Math.round(totalBalance * 100) / 100;
     }
 
-    console.log('📊 Debt summary calculation:', {
+    console.log('📊 Debt summary calculation (using Banca Ore overtime balance):', {
       totalEmployees: employees.length,
       balances: Object.keys(balances).map(uid => {
         const emp = employees.find(e => e.id === uid);
@@ -8003,7 +7948,7 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       })
     });
 
-    // Filtra solo i dipendenti con debito (saldo negativo)
+    // Filtra solo i dipendenti con debito (saldo negativo nella Banca Ore)
     const employeesWithDebt = employees
       .map(emp => {
         const balance = balances[emp.id] || 0;
@@ -8017,7 +7962,7 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       .filter(emp => emp.totalBalance < 0)
       .sort((a, b) => a.totalBalance - b.totalBalance); // Ordina per debito più alto (più negativo prima)
 
-    console.log('💰 Employees with debt:', employeesWithDebt.length, employeesWithDebt.map(e => `${e.name}: ${e.totalBalance.toFixed(2)}h`));
+    console.log('💰 Employees with debt (Banca Ore):', employeesWithDebt.length, employeesWithDebt.map(e => `${e.name}: ${e.totalBalance.toFixed(2)}h`));
 
     res.json({
       success: true,

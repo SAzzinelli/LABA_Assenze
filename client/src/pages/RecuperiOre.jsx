@@ -75,20 +75,26 @@ const RecuperiOre = () => {
   }, [user]);
 
   // Fetch saldo totale banca ore (dipendente)
+  // IMPORTANTE: Usa lo stesso endpoint della pagina "Banca Ore" per coerenza
+  // Il debito deve essere basato sul saldo della "Banca Ore" (overtime ledger),
+  // NON sul saldo totale delle presenze giornaliere
   const fetchTotalBalance = async () => {
     try {
-      const response = await apiCall('/api/attendance/total-balance');
+      const currentYear = new Date().getFullYear();
+      const response = await apiCall(`/api/hours/current-balances?year=${currentYear}`);
       if (response.ok) {
-        const data = await response.json();
-        // L'endpoint restituisce totalBalanceHours, non totalBalance
-        const balance = data.totalBalanceHours || 0;
-        console.log('💰 Total balance loaded:', balance, 'h (isDebt:', data.isDebt, ')');
+        const balances = await response.json();
+        // Cerca il saldo della category "overtime" (Banca Ore)
+        const overtimeBalance = balances.find(b => b.category === 'overtime');
+        const balance = overtimeBalance?.current_balance || 0;
+        console.log('💰 Overtime balance loaded from Banca Ore:', balance, 'h');
+        console.log('💰 Overtime balance details:', overtimeBalance);
         setTotalBalance(balance);
         return balance; // Ritorna il valore per usarlo subito
       }
       return 0;
     } catch (error) {
-      console.error('Error fetching total balance:', error);
+      console.error('Error fetching overtime balance:', error);
       return 0;
     }
   };
