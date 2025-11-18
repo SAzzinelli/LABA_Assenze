@@ -7532,6 +7532,7 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
     };
 
     // Genera tutte le date del mese per il calendario
+    const dayLabels = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
     const monthDates = [];
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
