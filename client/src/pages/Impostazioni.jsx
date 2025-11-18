@@ -35,7 +35,7 @@ import {
 
 const Settings = () => {
   const { user, apiCall } = useAuthStore();
-  const { isSupported, enabled, permission, requestPermission, disable } = useDesktopNotifications();
+  const { isSupported, enabled, permission, updatePermission, disable } = useDesktopNotifications();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'company' : 'notifications');
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
@@ -366,14 +366,27 @@ const Settings = () => {
                               console.log('🔔 Permission result (Promise):', result);
                               console.log('🔔 Notification.permission after request:', Notification.permission);
                               
-                              // Aggiorna lo stato usando la funzione del hook
-                              // La funzione del hook controllerà se il permesso è già stato concesso/negato
-                              // e aggiornerà solo lo stato senza fare una nuova richiesta
-                              requestPermission().catch((err) => {
-                                console.error('❌ Error updating permission state:', err);
-                              });
+                              // Aggiorna solo lo stato senza fare un'altra richiesta
+                              updatePermission();
+                              
+                              // Se granted, mostra una notifica di test
+                              if (result === 'granted') {
+                                setTimeout(() => {
+                                  try {
+                                    new Notification('Notifiche abilitate', {
+                                      body: 'Riceverai notifiche per le nuove richieste',
+                                      icon: '/favicon.ico',
+                                      tag: 'permission-granted'
+                                    });
+                                  } catch (err) {
+                                    console.error('Error showing test notification:', err);
+                                  }
+                                }, 100);
+                              }
                             }).catch((error) => {
                               console.error('❌ Error in permission promise:', error);
+                              // Aggiorna lo stato anche in caso di errore
+                              updatePermission();
                             });
                           } else {
                             // Callback-based API (Safari legacy) - dobbiamo passare una callback
@@ -382,18 +395,29 @@ const Settings = () => {
                               console.log('🔔 Permission result (Callback):', callbackResult);
                               console.log('🔔 Notification.permission after request:', Notification.permission);
                               
-                              // Aggiorna lo stato usando la funzione del hook
-                              requestPermission().catch((err) => {
-                                console.error('❌ Error updating permission state:', err);
-                              });
+                              // Aggiorna solo lo stato senza fare un'altra richiesta
+                              updatePermission();
+                              
+                              // Se granted, mostra una notifica di test
+                              if (callbackResult === 'granted') {
+                                setTimeout(() => {
+                                  try {
+                                    new Notification('Notifiche abilitate', {
+                                      body: 'Riceverai notifiche per le nuove richieste',
+                                      icon: '/favicon.ico',
+                                      tag: 'permission-granted'
+                                    });
+                                  } catch (err) {
+                                    console.error('Error showing test notification:', err);
+                                  }
+                                }, 100);
+                              }
                             });
                           }
                         } catch (error) {
                           console.error('❌ Error calling Notification.requestPermission():', error);
-                          // Fallback: prova con la funzione del hook (anche se potrebbe non funzionare su Safari)
-                          requestPermission().catch((err) => {
-                            console.error('❌ Error in fallback requestPermission:', err);
-                          });
+                          // Aggiorna lo stato anche in caso di errore
+                          updatePermission();
                         }
                       }}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"

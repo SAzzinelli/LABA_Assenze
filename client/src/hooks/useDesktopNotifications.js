@@ -29,6 +29,22 @@ export function useDesktopNotifications() {
     return 'Notification' in window;
   };
 
+  // Aggiorna solo lo stato del permesso senza fare una nuova richiesta
+  const updatePermission = () => {
+    if (!isSupported()) {
+      return;
+    }
+    const currentPermission = Notification.permission;
+    setPermission(currentPermission);
+    if (currentPermission === 'granted') {
+      setEnabled(true);
+      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+    } else {
+      setEnabled(false);
+      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+    }
+  };
+
   // Richiedi permesso per le notifiche
   const requestPermission = async () => {
     if (!isSupported()) {
@@ -38,20 +54,16 @@ export function useDesktopNotifications() {
 
     const currentPermission = Notification.permission;
     
-    // Se il permesso è già granted, non fare nulla
+    // Se il permesso è già granted, aggiorna solo lo stato
     if (currentPermission === 'granted') {
-      setPermission('granted');
-      setEnabled(true);
-      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+      updatePermission();
       return true;
     }
 
     // Se il permesso è già denied, non tentare di richiederlo
     // L'utente deve abilitarlo manualmente dalle impostazioni del browser
     if (currentPermission === 'denied') {
-      setPermission('denied');
-      setEnabled(false);
-      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+      updatePermission();
       return false;
     }
 
@@ -261,6 +273,7 @@ export function useDesktopNotifications() {
     permission,
     enabled: enabled && permission === 'granted',
     requestPermission,
+    updatePermission,
     disable,
     showNotification,
     checkNewNotifications
