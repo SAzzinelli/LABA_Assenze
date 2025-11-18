@@ -324,19 +324,41 @@ const Settings = () => {
                     >
                       Disabilita
                     </button>
-                  ) : permission === 'default' ? (
+                  ) : (
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        
+                        // Rileva il browser
+                        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                        const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+                        
+                        console.log('🔔 ============================================');
                         console.log('🔔 Button clicked - Requesting notification permission...');
+                        console.log('🔔 Browser detection:', { isSafari, isChrome, isFirefox });
+                        console.log('🔔 User Agent:', navigator.userAgent);
                         console.log('🔔 Current Notification.permission:', Notification.permission);
                         console.log('🔔 window.location.protocol:', window.location.protocol);
-                        console.log('🔔 Is HTTPS?:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
+                        console.log('🔔 window.location.hostname:', window.location.hostname);
+                        console.log('🔔 Is HTTPS?:', window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                        console.log('🔔 Notification object exists?:', typeof Notification !== 'undefined');
+                        console.log('🔔 Notification.requestPermission exists?:', typeof Notification.requestPermission);
+                        console.log('🔔 Notification.requestPermission type:', typeof Notification.requestPermission);
                         
                         // Verifica HTTPS (richiesto per notifiche)
-                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                        if (!isSecure) {
+                          console.error('❌ HTTPS required for notifications');
                           alert('⚠️ Le notifiche richiedono una connessione HTTPS. Il sito deve essere servito tramite HTTPS per funzionare.');
+                          return;
+                        }
+
+                        // Se il permesso è già denied, informa l'utente
+                        if (Notification.permission === 'denied') {
+                          console.warn('⚠️ Permission already denied - user must enable manually');
+                          updatePermission();
                           return;
                         }
 
@@ -347,30 +369,27 @@ const Settings = () => {
                           return;
                         }
 
-                        // IMPORTANTE: Safari richiede che Notification.requestPermission() 
-                        // sia chiamato DIRETTAMENTE nel gestore del click, senza async/await
-                        // che potrebbero rompere la catena del gesto utente
-                        console.log('🔔 Calling Notification.requestPermission() directly in user gesture...');
+                        console.log('🔔 Calling Notification.requestPermission() NOW (synchronously in click handler)...');
                         
-                        // Chiama direttamente Notification.requestPermission() nel contesto del click
-                        // Questo è necessario per Safari che richiede la chiamata sincrona nel gestore
+                        // IMPORTANTE: Chiama Notification.requestPermission() DIRETTAMENTE nel click handler
+                        // Questo è richiesto da Safari (e raccomandato da altri browser) per mostrare il prompt
                         try {
-                          // Prova prima con Promise-based API (moderno)
-                          const permissionPromise = Notification.requestPermission();
+                          // Chiama direttamente - può restituire una Promise o undefined (callback API)
+                          const result = Notification.requestPermission();
                           
-                          // Gestisci il risultato (può essere una Promise o undefined per callback API)
-                          if (permissionPromise && typeof permissionPromise.then === 'function') {
+                          console.log('🔔 Notification.requestPermission() returned:', result);
+                          console.log('🔔 Return type:', typeof result);
+                          
+                          // Gestisci il risultato (può essere una Promise o una stringa diretta)
+                          if (result && typeof result.then === 'function') {
                             // Promise-based API (Chrome, Firefox, Safari 16+)
-                            console.log('🔔 Using Promise-based API...');
-                            permissionPromise.then((result) => {
-                              console.log('🔔 Permission result (Promise):', result);
-                              console.log('🔔 Notification.permission after request:', Notification.permission);
-                              
-                              // Aggiorna solo lo stato senza fare un'altra richiesta
+                            console.log('🔔 Promise-based API detected - waiting for result...');
+                            result.then((permissionResult) => {
+                              console.log('🔔 ✅ Permission result from Promise:', permissionResult);
+                              console.log('🔔 Notification.permission after Promise resolve:', Notification.permission);
                               updatePermission();
                               
-                              // Se granted, mostra una notifica di test
-                              if (result === 'granted') {
+                              if (permissionResult === 'granted') {
                                 setTimeout(() => {
                                   try {
                                     new Notification('Notifiche abilitate', {
@@ -378,56 +397,113 @@ const Settings = () => {
                                       icon: '/favicon.ico',
                                       tag: 'permission-granted'
                                     });
+                                    console.log('🔔 ✅ Test notification shown');
                                   } catch (err) {
-                                    console.error('Error showing test notification:', err);
+                                    console.error('❌ Error showing test notification:', err);
                                   }
                                 }, 100);
+                              } else {
+                                console.log('🔔 ⚠️ Permission denied or dismissed:', permissionResult);
                               }
                             }).catch((error) => {
                               console.error('❌ Error in permission promise:', error);
-                              // Aggiorna lo stato anche in caso di errore
                               updatePermission();
                             });
+                          } else if (typeof result === 'string') {
+                            // Alcuni browser (molto rari) restituiscono direttamente la stringa
+                            console.log('🔔 ✅ Direct string result:', result);
+                            console.log('🔔 Notification.permission:', Notification.permission);
+                            updatePermission();
+                            
+                            if (result === 'granted') {
+                              setTimeout(() => {
+                                try {
+                                  new Notification('Notifiche abilitate', {
+                                    body: 'Riceverai notifiche per le nuove richieste',
+                                    icon: '/favicon.ico',
+                                    tag: 'permission-granted'
+                                  });
+                                  console.log('🔔 ✅ Test notification shown');
+                                } catch (err) {
+                                  console.error('❌ Error showing test notification:', err);
+                                }
+                              }, 100);
+                            }
                           } else {
-                            // Callback-based API (Safari legacy) - dobbiamo passare una callback
-                            console.log('🔔 Using callback-based API (legacy Safari)...');
-                            Notification.requestPermission((callbackResult) => {
-                              console.log('🔔 Permission result (Callback):', callbackResult);
-                              console.log('🔔 Notification.permission after request:', Notification.permission);
-                              
-                              // Aggiorna solo lo stato senza fare un'altra richiesta
+                            // Callback-based API (Safari legacy) - dovremmo passare una callback
+                            // Ma alcuni Safari moderni possono restituire undefined e poi chiamare la callback
+                            console.log('🔔 ⚠️ Callback-based API or undefined result - checking permission after short delay...');
+                            
+                            // Aspetta un po' e controlla il permesso
+                            setTimeout(() => {
+                              const delayedPermission = Notification.permission;
+                              console.log('🔔 Notification.permission after delay:', delayedPermission);
                               updatePermission();
                               
-                              // Se granted, mostra una notifica di test
-                              if (callbackResult === 'granted') {
-                                setTimeout(() => {
-                                  try {
-                                    new Notification('Notifiche abilitate', {
-                                      body: 'Riceverai notifiche per le nuove richieste',
-                                      icon: '/favicon.ico',
-                                      tag: 'permission-granted'
-                                    });
-                                  } catch (err) {
-                                    console.error('Error showing test notification:', err);
-                                  }
-                                }, 100);
+                              if (delayedPermission === 'granted') {
+                                try {
+                                  new Notification('Notifiche abilitate', {
+                                    body: 'Riceverai notifiche per le nuove richieste',
+                                    icon: '/favicon.ico',
+                                    tag: 'permission-granted'
+                                  });
+                                  console.log('🔔 ✅ Test notification shown');
+                                } catch (err) {
+                                  console.error('❌ Error showing test notification:', err);
+                                }
                               }
-                            });
+                            }, 500);
+                            
+                            // Prova anche con callback esplicita per Safari legacy
+                            if (isSafari && typeof Notification.requestPermission === 'function') {
+                              console.log('🔔 Attempting callback-based API for Safari...');
+                              try {
+                                Notification.requestPermission((callbackResult) => {
+                                  console.log('🔔 ✅ Permission result from callback:', callbackResult);
+                                  console.log('🔔 Notification.permission:', Notification.permission);
+                                  updatePermission();
+                                  
+                                  if (callbackResult === 'granted') {
+                                    setTimeout(() => {
+                                      try {
+                                        new Notification('Notifiche abilitate', {
+                                          body: 'Riceverai notifiche per le nuove richieste',
+                                          icon: '/favicon.ico',
+                                          tag: 'permission-granted'
+                                        });
+                                        console.log('🔔 ✅ Test notification shown');
+                                      } catch (err) {
+                                        console.error('❌ Error showing test notification:', err);
+                                      }
+                                    }, 100);
+                                  }
+                                });
+                              } catch (callbackError) {
+                                console.warn('⚠️ Callback API also failed:', callbackError);
+                              }
+                            }
                           }
                         } catch (error) {
                           console.error('❌ Error calling Notification.requestPermission():', error);
-                          // Aggiorna lo stato anche in caso di errore
+                          console.error('❌ Error details:', {
+                            name: error.name,
+                            message: error.message,
+                            stack: error.stack
+                          });
                           updatePermission();
                         }
+                        
+                        console.log('🔔 ============================================');
                       }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        permission === 'denied' 
+                          ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50' 
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                      }`}
+                      disabled={permission === 'denied'}
                     >
-                      Abilita
+                      {permission === 'denied' ? 'Bloccato - Vedi istruzioni sotto' : 'Abilita'}
                     </button>
-                  ) : (
-                    <span className="px-4 py-2 bg-slate-600 text-slate-400 rounded-lg cursor-not-allowed">
-                      Bloccato
-                    </span>
                   )}
                 </div>
               )}
@@ -445,14 +521,43 @@ const Settings = () => {
                   ℹ️ Notifiche bloccate
                 </p>
                 <p className="text-yellow-400 text-sm mb-2">
-                  Per abilitare le notifiche su Safari:
+                  Il permesso per le notifiche è stato bloccato. Per abilitarlo:
                 </p>
-                <ol className="text-yellow-300 text-xs list-decimal list-inside space-y-1 ml-2">
-                  <li>Vai su Safari → Impostazioni → Siti web</li>
-                  <li>Seleziona "Notifiche" nella barra laterale</li>
-                  <li>Cerca questo sito nella lista</li>
-                  <li>Imposta il permesso su "Consenti"</li>
-                </ol>
+                {(() => {
+                  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                  const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                  
+                  if (isChrome) {
+                    return (
+                      <ol className="text-yellow-300 text-xs list-decimal list-inside space-y-1 ml-2">
+                        <li>Clicca sull'icona del lucchetto o del sito (a sinistra della barra degli indirizzi)</li>
+                        <li>Seleziona "Notifiche"</li>
+                        <li>Cambia da "Blocca" a "Consenti"</li>
+                        <li>Ricarica la pagina</li>
+                      </ol>
+                    );
+                  } else if (isSafari) {
+                    return (
+                      <ol className="text-yellow-300 text-xs list-decimal list-inside space-y-1 ml-2">
+                        <li>Vai su Safari → Impostazioni → Siti web</li>
+                        <li>Seleziona "Notifiche" nella barra laterale</li>
+                        <li>Cerca questo sito nella lista</li>
+                        <li>Imposta il permesso su "Consenti"</li>
+                        <li>Ricarica la pagina</li>
+                      </ol>
+                    );
+                  } else {
+                    return (
+                      <ol className="text-yellow-300 text-xs list-decimal list-inside space-y-1 ml-2">
+                        <li>Vai nelle impostazioni del browser</li>
+                        <li>Cerca "Notifiche" o "Permessi sito"</li>
+                        <li>Trova questo sito nella lista</li>
+                        <li>Cambia il permesso da "Blocca" a "Consenti"</li>
+                        <li>Ricarica la pagina</li>
+                      </ol>
+                    );
+                  }
+                })()}
               </div>
             )}
             {permission === 'default' && (
