@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
+import { useDesktopNotifications } from '../hooks/useDesktopNotifications';
 import {
   LogOut,
   Bell,
@@ -31,6 +32,7 @@ const Layout = ({ children }) => {
   const [notificationsOpen, setNotificationsOpen] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { checkNewNotifications } = useDesktopNotifications();
 
   const handleLogout = async () => {
     await logout();
@@ -42,6 +44,8 @@ const Layout = ({ children }) => {
       const response = await apiCall('/api/notifications?limit=10&unread_only=false');
       if (response.ok) {
         const data = await response.json();
+        // Controlla nuove notifiche per mostrare notifiche desktop
+        checkNewNotifications(data);
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.is_read).length);
       } else if (response.status === 401) {
@@ -108,7 +112,7 @@ const Layout = ({ children }) => {
       const interval = setInterval(loadNotifications, 30000); // Aggiorna ogni 30 secondi
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, checkNewNotifications]);
 
   // Funzione per tradurre i ruoli in italiano
   const getRoleDisplay = (role) => {

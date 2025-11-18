@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useDesktopNotifications } from '../hooks/useDesktopNotifications';
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -34,6 +35,7 @@ import {
 
 const Settings = () => {
   const { user, apiCall } = useAuthStore();
+  const { isSupported, enabled, permission, requestPermission, disable } = useDesktopNotifications();
   const [activeTab, setActiveTab] = useState(user?.role === 'admin' ? 'company' : 'notifications');
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
@@ -325,7 +327,80 @@ const Settings = () => {
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
+      {/* Notifiche Desktop */}
       <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white flex items-center">
+          <Bell className="h-5 w-5 mr-2 text-indigo-400" />
+          Notifiche Desktop
+        </h3>
+        <p className="text-slate-400 text-sm mb-4">
+          Ricevi notifiche desktop dal browser quando arrivano nuove richieste o aggiornamenti.
+        </p>
+        <div className="space-y-3">
+          <div className="p-4 bg-slate-700 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-white font-medium">Notifiche Browser</h4>
+                <p className="text-slate-400 text-sm">
+                  {isSupported 
+                    ? permission === 'granted' 
+                      ? 'Le notifiche desktop sono abilitate'
+                      : permission === 'denied'
+                        ? 'Le notifiche sono state bloccate. Abilitala manualmente dalle impostazioni del browser.'
+                        : 'Clicca su "Abilita" per ricevere notifiche desktop'
+                    : 'Il tuo browser non supporta le notifiche desktop'
+                  }
+                </p>
+              </div>
+              {isSupported && (
+                <div className="flex items-center space-x-3">
+                  {permission === 'granted' && enabled ? (
+                    <button
+                      onClick={disable}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                    >
+                      Disabilita
+                    </button>
+                  ) : permission === 'default' ? (
+                    <button
+                      onClick={async () => {
+                        const success = await requestPermission();
+                        if (!success) {
+                          alert('Impossibile abilitare le notifiche. Controlla le impostazioni del browser.');
+                        }
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                    >
+                      Abilita
+                    </button>
+                  ) : (
+                    <span className="px-4 py-2 bg-slate-600 text-slate-400 rounded-lg cursor-not-allowed">
+                      Bloccato
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {!isSupported && (
+              <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                <p className="text-yellow-400 text-sm">
+                  ⚠️ Le notifiche desktop sono supportate solo su browser moderni (Chrome, Firefox, Safari, Edge).
+                </p>
+              </div>
+            )}
+            {permission === 'denied' && (
+              <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                <p className="text-yellow-400 text-sm">
+                  ℹ️ Per abilitare le notifiche, vai nelle impostazioni del browser e consenti le notifiche per questo sito.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Notifiche Email */}
+      <div className="space-y-4 mt-8">
         <h3 className="text-lg font-semibold text-white">Impostazioni Notifiche Email</h3>
         <p className="text-slate-400 text-sm mb-4">
           Configura le notifiche email che desideri ricevere dal sistema HR.
