@@ -7907,11 +7907,12 @@ async function calculateOvertimeBalance(userId, year = null) {
     const currentYear = year || new Date().getFullYear();
     const startDate = `${currentYear}-01-01`;
     const endDate = `${currentYear}-12-31`;
+    const { date: today } = await getCurrentDateTime();
 
     // Calcola il saldo totale dalle presenze dell'anno
     const { data: attendance, error: attendanceError } = await supabase
       .from('attendance')
-      .select('balance_hours')
+      .select('balance_hours, date')
       .eq('user_id', userId)
       .gte('date', startDate)
       .lte('date', endDate);
@@ -7926,15 +7927,28 @@ async function calculateOvertimeBalance(userId, year = null) {
       };
     }
 
-    // Calcola il saldo totale: somma di tutti i balance_hours
+    // IMPORTANTE: Escludi la giornata corrente dalla somma del debito
+    // Il balance_hours di oggi include le ore ancora da lavorare, che non sono debito
+    // Il debito deve essere basato solo sui giorni già completati
     const totalBalance = attendance && attendance.length > 0
       ? attendance.reduce((sum, record) => {
+          // Escludi la giornata corrente: le ore rimanenti oggi non sono debito
+          if (record.date === today) {
+            return sum;
+          }
           const balance = parseFloat(record.balance_hours || 0);
           return sum + balance;
         }, 0)
       : 0;
 
     const roundedBalance = Math.round(totalBalance * 100) / 100;
+
+    // Log per debug
+    const todayRecord = attendance?.find(r => r.date === today);
+    if (todayRecord) {
+      const todayBalance = parseFloat(todayRecord.balance_hours || 0);
+      console.log(`💰 Balance for user ${userId}: Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
+    }
 
     // Determina lo status
     let status, debtHours, creditHours;
