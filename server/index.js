@@ -7475,12 +7475,22 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
 
+    // Genera header base per calendario (anche se non ci sono utenti)
+    const dayLabels = ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'];
+    const monthDatesForHeader = [];
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dayOfWeek = d.getUTCDay();
+      const dayNumber = d.getUTCDate();
+      monthDatesForHeader.push(`${dayLabels[dayOfWeek]} ${dayNumber}`);
+    }
+    const baseHeader = ['Nome', 'Cognome', ...monthDatesForHeader, 'Ore Permesso', 'Giorni Malattia', 'Giorni Ferie'];
+
     if (!users || users.length === 0) {
       return res
         .status(200)
         .setHeader('Content-Type', 'text/csv; charset=utf-8')
         .setHeader('Content-Disposition', `attachment; filename="report-presenze-${yearParam}-${String(monthParam).padStart(2, '0')}.csv"`)
-        .send('\ufeffNome;Cognome;Lunedì;Martedì;Mercoledì;Giovedì;Venerdì;Sabato;Domenica;Ore Permesso;Giorni Malattia;Giorni Ferie\n');
+        .send('\ufeff' + baseHeader.join(';') + '\n');
     }
 
     const userIds = users.map(u => u.id);
@@ -7521,24 +7531,43 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       return `${sign}${hours}h ${minutes}m`;
     };
 
+    // Genera tutte le date del mese per il calendario
+    const monthDates = [];
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      const dayOfWeek = d.getUTCDay();
+      const dayNumber = d.getUTCDate();
+      monthDates.push({
+        date: dateStr,
+        dayLabel: dayLabels[dayOfWeek],
+        dayNumber: dayNumber,
+        columnHeader: `${dayLabels[dayOfWeek]} ${dayNumber}`
+      });
+    }
+
+    // Crea mappa delle presenze per data e utente
+    const attendanceMap = {};
+    (attendanceData || []).forEach(record => {
+      if (!attendanceMap[record.user_id]) {
+        attendanceMap[record.user_id] = {};
+      }
+      attendanceMap[record.user_id][record.date] = Number(record.actual_hours || 0);
+    });
+
     const summary = {};
     users.forEach(user => {
       summary[user.id] = {
         firstName: user.first_name || '',
         lastName: user.last_name || '',
-        dowHours: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+        dailyHours: {}, // Mappa data -> ore lavorate
         permissionHours: 0,
         sickDays: 0,
         vacationDays: 0
       };
-    });
-
-    (attendanceData || []).forEach(record => {
-      const entry = summary[record.user_id];
-      if (!entry) return;
-      const recordDate = new Date(`${record.date}T00:00:00Z`);
-      const day = recordDate.getUTCDay();
-      entry.dowHours[day] += Number(record.actual_hours || 0);
+      // Inizializza tutte le date del mese con 0 ore
+      monthDates.forEach(dateInfo => {
+        summary[user.id].dailyHours[dateInfo.date] = attendanceMap[user.id]?.[dateInfo.date] || 0;
+      });
     });
 
     const calculateOverlapDays = (requestStart, requestEnd) => {
@@ -7573,21 +7602,11 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       }
     });
 
-    const dayOrder = [1, 2, 3, 4, 5, 6, 0];
-    const dayLabels = [
-      'Lunedì',
-      'Martedì',
-      'Mercoledì',
-      'Giovedì',
-      'Venerdì',
-      'Sabato',
-      'Domenica'
-    ];
-
+    // Header con tutte le date del mese in formato calendario
     const header = [
       'Nome',
       'Cognome',
-      ...dayLabels,
+      ...monthDates.map(d => d.columnHeader),
       'Ore Permesso',
       'Giorni Malattia',
       'Giorni Ferie'
@@ -7608,7 +7627,7 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
       const row = [
         csvEscape(entry.firstName),
         csvEscape(entry.lastName),
-        ...dayOrder.map(day => formatHoursToHhMm(entry.dowHours[day] || 0)),
+        ...monthDates.map(dateInfo => formatHoursToHhMm(entry.dailyHours[dateInfo.date] || 0)),
         formatHoursToHhMm(entry.permissionHours),
         entry.sickDays,
         entry.vacationDays

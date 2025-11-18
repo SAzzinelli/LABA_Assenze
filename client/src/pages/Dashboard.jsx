@@ -771,7 +771,7 @@ const Dashboard = () => {
                 
                 if (isWorking) {
                   badgeColor = 'bg-green-500';
-                  statusText = 'Lavorando';
+                  statusText = 'A lavoro';
                   statusColor = 'text-green-400';
                 } else if (isOnBreak) {
                   badgeColor = 'bg-yellow-500';
