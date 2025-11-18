@@ -8199,6 +8199,65 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nell\'aggiornamento della richiesta' });
     }
 
+    // IMPORTANTE: Se la recovery viene approvata e la data/orario è già passato,
+    // processa immediatamente per aggiornare il saldo banca ore
+    if (status === 'approved') {
+      const { date: today, time: currentTime } = await getCurrentDateTime();
+      const recoveryDate = new Date(existingRequest.recovery_date);
+      const isDatePast = recoveryDate.toISOString().split('T')[0] < today;
+      const isTimePast = recoveryDate.toISOString().split('T')[0] === today && 
+                        existingRequest.end_time <= currentTime;
+
+      if (isDatePast || isTimePast) {
+        // Processa immediatamente per aggiornare il saldo banca ore
+        console.log(`🔄 Processing approved recovery ${id} immediately (date/time passed)`);
+        
+        // Aggiungi le ore al saldo della banca ore nella tabella attendance
+        const { data: existingAttendance } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', existingRequest.user_id)
+          .eq('date', existingRequest.recovery_date)
+          .single();
+
+        if (existingAttendance) {
+          const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(existingRequest.hours);
+          const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(existingRequest.hours);
+
+          await supabase
+            .from('attendance')
+            .update({
+              actual_hours: newActualHours,
+              balance_hours: newBalanceHours,
+              notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${existingRequest.hours}h]`
+            })
+            .eq('id', existingAttendance.id);
+        } else {
+          await supabase
+            .from('attendance')
+            .insert({
+              user_id: existingRequest.user_id,
+              date: existingRequest.recovery_date,
+              actual_hours: parseFloat(existingRequest.hours),
+              expected_hours: 0,
+              balance_hours: parseFloat(existingRequest.hours),
+              notes: `Recupero ore: +${existingRequest.hours}h (dalle ${existingRequest.start_time} alle ${existingRequest.end_time})`
+            });
+        }
+
+        // Marca come processato
+        await supabase
+          .from('recovery_requests')
+          .update({
+            balance_added: true,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', id);
+
+        console.log(`✅ Recovery ${id} processed immediately: +${existingRequest.hours}h added to balance`);
+      }
+    }
+
     // Gestione notifiche e email in base allo scenario
     try {
       const employee = updatedRequest.users;
