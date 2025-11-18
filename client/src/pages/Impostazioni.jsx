@@ -326,7 +326,7 @@ const Settings = () => {
                     </button>
                   ) : permission === 'default' ? (
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         console.log('🔔 Button clicked - Requesting notification permission...');
@@ -335,7 +335,7 @@ const Settings = () => {
                         console.log('🔔 Is HTTPS?:', window.location.protocol === 'https:' || window.location.hostname === 'localhost');
                         
                         // Verifica HTTPS (richiesto per notifiche)
-                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
                           alert('⚠️ Le notifiche richiedono una connessione HTTPS. Il sito deve essere servito tramite HTTPS per funzionare.');
                           return;
                         }
@@ -347,16 +347,54 @@ const Settings = () => {
                           return;
                         }
 
-                        console.log('🔔 Notification.requestPermission is a function, calling it...');
-                        const success = await requestPermission();
-                        console.log('🔔 Final Notification.permission:', Notification.permission);
-                        console.log('🔔 Request permission result - success:', success);
+                        // IMPORTANTE: Safari richiede che Notification.requestPermission() 
+                        // sia chiamato DIRETTAMENTE nel gestore del click, senza async/await
+                        // che potrebbero rompere la catena del gesto utente
+                        console.log('🔔 Calling Notification.requestPermission() directly in user gesture...');
                         
-                        // Aggiorna il permesso subito dopo la richiesta
-                        setTimeout(() => {
-                          const newPermission = Notification.permission;
-                          console.log('🔔 Permission after 500ms:', newPermission);
-                        }, 500);
+                        // Chiama direttamente Notification.requestPermission() nel contesto del click
+                        // Questo è necessario per Safari che richiede la chiamata sincrona nel gestore
+                        try {
+                          // Prova prima con Promise-based API (moderno)
+                          const permissionPromise = Notification.requestPermission();
+                          
+                          // Gestisci il risultato (può essere una Promise o undefined per callback API)
+                          if (permissionPromise && typeof permissionPromise.then === 'function') {
+                            // Promise-based API (Chrome, Firefox, Safari 16+)
+                            console.log('🔔 Using Promise-based API...');
+                            permissionPromise.then((result) => {
+                              console.log('🔔 Permission result (Promise):', result);
+                              console.log('🔔 Notification.permission after request:', Notification.permission);
+                              
+                              // Aggiorna lo stato usando la funzione del hook
+                              // La funzione del hook controllerà se il permesso è già stato concesso/negato
+                              // e aggiornerà solo lo stato senza fare una nuova richiesta
+                              requestPermission().catch((err) => {
+                                console.error('❌ Error updating permission state:', err);
+                              });
+                            }).catch((error) => {
+                              console.error('❌ Error in permission promise:', error);
+                            });
+                          } else {
+                            // Callback-based API (Safari legacy) - dobbiamo passare una callback
+                            console.log('🔔 Using callback-based API (legacy Safari)...');
+                            Notification.requestPermission((callbackResult) => {
+                              console.log('🔔 Permission result (Callback):', callbackResult);
+                              console.log('🔔 Notification.permission after request:', Notification.permission);
+                              
+                              // Aggiorna lo stato usando la funzione del hook
+                              requestPermission().catch((err) => {
+                                console.error('❌ Error updating permission state:', err);
+                              });
+                            });
+                          }
+                        } catch (error) {
+                          console.error('❌ Error calling Notification.requestPermission():', error);
+                          // Fallback: prova con la funzione del hook (anche se potrebbe non funzionare su Safari)
+                          requestPermission().catch((err) => {
+                            console.error('❌ Error in fallback requestPermission:', err);
+                          });
+                        }
                       }}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
                     >

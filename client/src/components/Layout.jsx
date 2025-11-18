@@ -52,9 +52,19 @@ const Layout = ({ children }) => {
         // Token scaduto, fai logout automatico
         logout();
         window.location.href = '/login';
+      } else {
+        // Log altri errori HTTP per debug
+        console.warn('⚠️ Failed to load notifications:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      // Gestisci errori di rete in modo più dettagliato
+      if (error instanceof TypeError && error.message.includes('Load failed')) {
+        console.warn('⚠️ Network error loading notifications (possibly CORS or connection issue):', error.message);
+        // Non bloccare l'app per errori di rete temporanei
+        // Le notifiche verranno ricaricate al prossimo intervallo
+      } else {
+        console.error('❌ Error loading notifications:', error);
+      }
     }
   };
 
