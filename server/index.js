@@ -7887,6 +7887,120 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
   }
 });
 
+// =====================================================
+// FUNZIONE CENTRALIZZATA: Calcolo Saldo Banca Ore
+// =====================================================
+/**
+ * Calcola il saldo della Banca Ore (overtime balance) per un utente
+ * basandosi sulle presenze giornaliere dell'anno.
+ * 
+ * @param {string} userId - ID dell'utente
+ * @param {number} year - Anno di riferimento (default: anno corrente)
+ * @returns {Promise<Object>} { balance, status, debtHours, creditHours }
+ *   - balance: saldo totale (positivo = credito, negativo = debito, 0 = in pari)
+ *   - status: 'positive' | 'negative' | 'zero'
+ *   - debtHours: ore di debito (solo se balance < 0)
+ *   - creditHours: ore di credito (solo se balance > 0)
+ */
+async function calculateOvertimeBalance(userId, year = null) {
+  try {
+    const currentYear = year || new Date().getFullYear();
+    const startDate = `${currentYear}-01-01`;
+    const endDate = `${currentYear}-12-31`;
+
+    // Calcola il saldo totale dalle presenze dell'anno
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('balance_hours')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (attendanceError) {
+      console.error(`Error fetching attendance for user ${userId}:`, attendanceError);
+      return {
+        balance: 0,
+        status: 'zero',
+        debtHours: 0,
+        creditHours: 0
+      };
+    }
+
+    // Calcola il saldo totale: somma di tutti i balance_hours
+    const totalBalance = attendance && attendance.length > 0
+      ? attendance.reduce((sum, record) => {
+          const balance = parseFloat(record.balance_hours || 0);
+          return sum + balance;
+        }, 0)
+      : 0;
+
+    const roundedBalance = Math.round(totalBalance * 100) / 100;
+
+    // Determina lo status
+    let status, debtHours, creditHours;
+    if (roundedBalance > 0) {
+      status = 'positive';
+      creditHours = roundedBalance;
+      debtHours = 0;
+    } else if (roundedBalance < 0) {
+      status = 'negative';
+      debtHours = Math.abs(roundedBalance);
+      creditHours = 0;
+    } else {
+      status = 'zero';
+      debtHours = 0;
+      creditHours = 0;
+    }
+
+    return {
+      balance: roundedBalance,
+      status,
+      debtHours,
+      creditHours
+    };
+  } catch (error) {
+    console.error(`Error calculating overtime balance for user ${userId}:`, error);
+    return {
+      balance: 0,
+      status: 'zero',
+      debtHours: 0,
+      creditHours: 0
+    };
+  }
+}
+
+// =====================================================
+// ENDPOINT CENTRALIZZATO: Saldo Banca Ore
+// =====================================================
+/**
+ * Endpoint unico per ottenere il saldo della Banca Ore
+ * Usato da tutte le sezioni: dipendente, admin, recuperi ore, ecc.
+ */
+app.get('/api/hours/overtime-balance', authenticateToken, async (req, res) => {
+  try {
+    const { userId, year } = req.query;
+    const targetUserId = userId || req.user.id;
+    const targetYear = year ? parseInt(year) : null;
+
+    // Verifica permessi: admin può vedere qualsiasi utente, dipendente solo se stesso
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const balanceData = await calculateOvertimeBalance(targetUserId, targetYear);
+
+    res.json({
+      success: true,
+      userId: targetUserId,
+      year: targetYear || new Date().getFullYear(),
+      ...balanceData
+    });
+  } catch (error) {
+    console.error('Overtime balance endpoint error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint per vedere tutti i dipendenti con debito (solo admin)
 app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, res) => {
   try {
@@ -7907,40 +8021,16 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
     }
 
     const currentYear = new Date().getFullYear();
-    const startDate = `${currentYear}-01-01`;
-    const endDate = `${currentYear}-12-31`;
 
-    // IMPORTANTE: Calcola il debito direttamente dalle presenze giornaliere dell'anno
-    // Il debito = somma di tutti i balance_hours negativi (ore lavorate < ore previste)
+    // IMPORTANTE: Usa la funzione centralizzata per calcolare i saldi
     const balances = {};
     
     for (const emp of employees) {
-      // Calcola il debito totale dalle presenze dell'anno
-      // Debito = somma di tutti i balance_hours dove actual_hours < expected_hours
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('attendance')
-        .select('balance_hours, actual_hours, expected_hours')
-        .eq('user_id', emp.id)
-        .gte('date', startDate)
-        .lte('date', endDate);
-
-      if (attendanceError) {
-        console.error(`Error fetching attendance for ${emp.id}:`, attendanceError);
-        balances[emp.id] = 0;
-      } else if (attendance && attendance.length > 0) {
-        // Calcola il saldo totale: somma di tutti i balance_hours
-        const totalBalance = attendance.reduce((sum, record) => {
-          const balance = parseFloat(record.balance_hours || 0);
-          return sum + balance;
-        }, 0);
-        balances[emp.id] = Math.round(totalBalance * 100) / 100;
-      } else {
-        // Nessuna presenza = saldo 0
-        balances[emp.id] = 0;
-      }
+      const balanceData = await calculateOvertimeBalance(emp.id, currentYear);
+      balances[emp.id] = balanceData.balance;
     }
 
-    console.log('📊 Debt summary calculation (using attendance balance_hours):', {
+    console.log('📊 Debt summary calculation (using centralized function):', {
       totalEmployees: employees.length,
       balances: Object.keys(balances).map(uid => {
         const emp = employees.find(e => e.id === uid);
