@@ -3,7 +3,21 @@ import { useEffect, useRef, useState } from 'react';
 const DESKTOP_NOTIFICATIONS_KEY = 'desktopNotificationsEnabled';
 
 export function useDesktopNotifications() {
-  const [permission, setPermission] = useState(Notification.permission || 'default');
+  // Inizializza il permesso - Safari potrebbe non avere sempre 'default' inizialmente
+  const getInitialPermission = () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return 'default';
+    }
+    // Safari potrebbe non restituire 'default' se non ha mai fatto richiesta
+    // Quindi forziamo 'default' se non è né 'granted' né 'denied'
+    const perm = Notification.permission;
+    if (!perm || (perm !== 'granted' && perm !== 'denied')) {
+      return 'default';
+    }
+    return perm;
+  };
+
+  const [permission, setPermission] = useState(getInitialPermission());
   const [enabled, setEnabled] = useState(() => {
     const saved = localStorage.getItem(DESKTOP_NOTIFICATIONS_KEY);
     return saved === 'true' && permission === 'granted';
@@ -44,26 +58,64 @@ export function useDesktopNotifications() {
     // Se il permesso è 'default', possiamo richiederlo
     // Safari richiede che questo avvenga in un contesto di interazione utente (click)
     try {
-      // Verifica che Notification.requestPermission sia una funzione
-      if (typeof Notification.requestPermission !== 'function') {
-        // Alcuni browser usano la callback-based API
-        Notification.requestPermission((result) => {
-          setPermission(result);
-          if (result === 'granted') {
-            setEnabled(true);
-            localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
-            showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
-          } else {
-            setEnabled(false);
-            localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
-          }
+      console.log('🔔 Attempting to request notification permission...');
+      
+      // Safari supporta sia Promise-based che callback-based
+      // Prova prima Promise-based (moderno), poi callback-based (legacy)
+      let result;
+      
+      if (typeof Notification.requestPermission === 'function') {
+        // Promise-based API (standard moderno) - Safari 16+ supporta questo
+        try {
+          result = await Notification.requestPermission();
+          console.log('🔔 Permission result (Promise):', result);
+        } catch (promiseError) {
+          // Se la Promise fallisce, potrebbe essere che Safari usi ancora la callback API
+          console.log('🔔 Promise API failed, trying callback API...', promiseError);
+          
+          // Usa callback-based API (legacy Safari)
+          return new Promise((resolve) => {
+            Notification.requestPermission((callbackResult) => {
+              console.log('🔔 Permission result (Callback):', callbackResult);
+              setPermission(callbackResult);
+              if (callbackResult === 'granted') {
+                setEnabled(true);
+                localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+                setTimeout(() => {
+                  showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
+                }, 100);
+                resolve(true);
+              } else {
+                setEnabled(false);
+                localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+                resolve(false);
+              }
+            });
+          });
+        }
+      } else {
+        // Callback-based API (browser molto vecchi)
+        return new Promise((resolve) => {
+          Notification.requestPermission((callbackResult) => {
+            console.log('🔔 Permission result (Callback-only):', callbackResult);
+            setPermission(callbackResult);
+            if (callbackResult === 'granted') {
+              setEnabled(true);
+              localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+              setTimeout(() => {
+                showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
+              }, 100);
+              resolve(true);
+            } else {
+              setEnabled(false);
+              localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+              resolve(false);
+            }
+          });
         });
-        // Per callback-based, non possiamo restituire il risultato immediatamente
-        return true; // Assumiamo che la richiesta sia stata avviata
       }
 
-      // Promise-based API (standard moderno)
-      const result = await Notification.requestPermission();
+      // Se siamo qui, abbiamo ottenuto il risultato dalla Promise API
       setPermission(result);
       
       if (result === 'granted') {
@@ -77,14 +129,14 @@ export function useDesktopNotifications() {
       } else {
         setEnabled(false);
         localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+        // Se il risultato è 'denied', potrebbe essere che Safari l'abbia bloccato automaticamente
+        // ma non significa che il sito sia nella lista - potrebbe semplicemente essere stato negato
         return false;
       }
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
-      // In caso di errore, imposta denied
-      setPermission('denied');
-      setEnabled(false);
-      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+      console.error('❌ Error requesting notification permission:', error);
+      // In caso di errore, non assumiamo denied - potrebbe essere un errore di rete o altro
+      // Manteniamo il permesso corrente
       return false;
     }
   };
@@ -171,12 +223,17 @@ export function useDesktopNotifications() {
   // Aggiorna il permesso se cambia (es. l'utente lo cambia manualmente)
   useEffect(() => {
     if (isSupported()) {
-      setPermission(Notification.permission);
+      const currentPerm = getInitialPermission();
+      setPermission(currentPerm);
       
       // Se il permesso è stato revocato dall'utente, disabilita
-      if (Notification.permission !== 'granted') {
+      if (currentPerm !== 'granted') {
         setEnabled(false);
         localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+      } else {
+        // Se è granted, abilita
+        setEnabled(true);
+        localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
       }
     }
   }, []);

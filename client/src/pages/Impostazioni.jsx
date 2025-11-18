@@ -309,8 +309,8 @@ const Settings = () => {
                     ? permission === 'granted' 
                       ? 'Le notifiche desktop sono abilitate'
                       : permission === 'denied'
-                        ? 'Le notifiche sono state bloccate. Abilitala manualmente dalle impostazioni del browser.'
-                        : 'Clicca su "Abilita" per ricevere notifiche desktop'
+                        ? 'Le notifiche sono state bloccate. Vedi istruzioni sotto per abilitarle manualmente.'
+                        : 'Clicca su "Abilita" per richiedere il permesso per le notifiche desktop'
                     : 'Il tuo browser non supporta le notifiche desktop'
                   }
                 </p>
