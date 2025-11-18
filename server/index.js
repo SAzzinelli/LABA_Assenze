@@ -7907,36 +7907,40 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
     }
 
     const currentYear = new Date().getFullYear();
+    const startDate = `${currentYear}-01-01`;
+    const endDate = `${currentYear}-12-31`;
 
-    // IMPORTANTE: Usa lo stesso endpoint della pagina "Banca Ore" per coerenza
-    // Il debito deve essere basato sul saldo della "Banca Ore" (overtime ledger),
-    // NON sul saldo totale delle presenze giornaliere
+    // IMPORTANTE: Calcola il debito direttamente dalle presenze giornaliere dell'anno
+    // Il debito = somma di tutti i balance_hours negativi (ore lavorate < ore previste)
     const balances = {};
     
     for (const emp of employees) {
-      // Ottieni il saldo della "Banca Ore" (overtime) dal current_balances
-      const { data: currentBalances, error: balanceError } = await supabase
-        .from('current_balances')
-        .select('*')
+      // Calcola il debito totale dalle presenze dell'anno
+      // Debito = somma di tutti i balance_hours dove actual_hours < expected_hours
+      const { data: attendance, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('balance_hours, actual_hours, expected_hours')
         .eq('user_id', emp.id)
-        .eq('category', 'overtime')
-        .eq('year', currentYear)
-        .single();
+        .gte('date', startDate)
+        .lte('date', endDate);
 
-      if (balanceError && balanceError.code !== 'PGRST116') {
-        // Errore diverso da "nessun record trovato"
-        console.error(`Error fetching overtime balance for ${emp.id}:`, balanceError);
+      if (attendanceError) {
+        console.error(`Error fetching attendance for ${emp.id}:`, attendanceError);
         balances[emp.id] = 0;
-      } else if (currentBalances) {
-        // Usa il current_balance della "Banca Ore" (overtime)
-        balances[emp.id] = Math.round((currentBalances.current_balance || 0) * 100) / 100;
+      } else if (attendance && attendance.length > 0) {
+        // Calcola il saldo totale: somma di tutti i balance_hours
+        const totalBalance = attendance.reduce((sum, record) => {
+          const balance = parseFloat(record.balance_hours || 0);
+          return sum + balance;
+        }, 0);
+        balances[emp.id] = Math.round(totalBalance * 100) / 100;
       } else {
-        // Nessun record trovato = saldo 0
+        // Nessuna presenza = saldo 0
         balances[emp.id] = 0;
       }
     }
 
-    console.log('📊 Debt summary calculation (using Banca Ore overtime balance):', {
+    console.log('📊 Debt summary calculation (using attendance balance_hours):', {
       totalEmployees: employees.length,
       balances: Object.keys(balances).map(uid => {
         const emp = employees.find(e => e.id === uid);
@@ -7962,7 +7966,7 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
       .filter(emp => emp.totalBalance < 0)
       .sort((a, b) => a.totalBalance - b.totalBalance); // Ordina per debito più alto (più negativo prima)
 
-    console.log('💰 Employees with debt (Banca Ore):', employeesWithDebt.length, employeesWithDebt.map(e => `${e.name}: ${e.totalBalance.toFixed(2)}h`));
+    console.log('💰 Employees with debt (from attendance):', employeesWithDebt.length, employeesWithDebt.map(e => `${e.name}: ${e.totalBalance.toFixed(2)}h`));
 
     res.json({
       success: true,
