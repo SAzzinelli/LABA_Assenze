@@ -7279,7 +7279,9 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
 
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
-    const { limit = 50, unread_only = false } = req.query;
+    // Per admin, aumenta il limite a 200 per vedere tutte le notifiche
+    const defaultLimit = req.user.role === 'admin' ? 200 : 50;
+    const { limit = defaultLimit, unread_only = false } = req.query;
     
     let query = supabase
       .from('notifications')
@@ -7299,6 +7301,115 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recuperare le notifiche' });
     }
 
+    // Per admin, aggiungi anche le richieste pending senza notifica (notifiche "virtuali")
+    if (req.user.role === 'admin' && !unread_only) {
+      try {
+        // Recupera tutte le richieste pending senza una notifica associata per questo admin
+        const { data: pendingRequests, error: pendingError } = await supabase
+          .from('leave_requests')
+          .select(`
+            *,
+            users!leave_requests_user_id_fkey(first_name, last_name, email)
+          `)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        if (!pendingError && pendingRequests && pendingRequests.length > 0) {
+          // Verifica quali richieste non hanno già una notifica
+          const requestIds = pendingRequests.map(r => r.id);
+          const { data: existingNotifications, error: existingError } = await supabase
+            .from('notifications')
+            .select('request_id')
+            .eq('user_id', req.user.id)
+            .in('request_id', requestIds);
+
+          if (!existingError && existingNotifications) {
+            const existingRequestIds = new Set(existingNotifications.map(n => n.request_id));
+            
+            // Crea notifiche "virtuali" per le richieste senza notifica
+            const virtualNotifications = pendingRequests
+              .filter(req => !existingRequestIds.has(req.id))
+              .map(req => {
+                const typeLabels = {
+                  'permission': 'Permesso',
+                  'vacation': 'Ferie',
+                  'sick_leave': 'Malattia',
+                  'permission_104': 'Permesso Legge 104',
+                  'business_trip': 'Trasferta'
+                };
+                
+                const parseLocalDate = (dateStr) => {
+                  const [year, month, day] = dateStr.split('-').map(Number);
+                  return new Date(year, month - 1, day);
+                };
+                
+                const formattedStartDate = parseLocalDate(req.start_date).toLocaleDateString('it-IT', { 
+                  day: '2-digit', 
+                  month: 'long', 
+                  year: 'numeric',
+                  timeZone: 'Europe/Rome'
+                });
+                
+                const formattedEndDate = req.start_date === req.end_date
+                  ? formattedStartDate
+                  : parseLocalDate(req.end_date).toLocaleDateString('it-IT', { 
+                      day: '2-digit', 
+                      month: 'long', 
+                      year: 'numeric',
+                      timeZone: 'Europe/Rome'
+                    });
+
+                const requestTypeLabel = typeLabels[req.type] || req.type;
+                const userName = req.users ? `${req.users.first_name} ${req.users.last_name}` : 'Dipendente';
+                const requestTypeText = req.type === 'vacation' ? 'ferie' : req.type === 'sick_leave' ? 'malattia' : req.type === 'permission_104' ? 'permesso Legge 104' : 'permesso';
+                
+                let messageText = '';
+                if (req.type === 'permission' || req.type === 'permission_104') {
+                  const hours = req.hours || 0;
+                  const hoursFormatted = hours > 0 
+                    ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+                    : '0h';
+                  messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
+                } else {
+                  if (req.start_date === req.end_date) {
+                    messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} per il ${formattedStartDate}`;
+                  } else {
+                    messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} dal ${formattedStartDate} al ${formattedEndDate}`;
+                  }
+                }
+
+                return {
+                  id: `virtual_${req.id}`,
+                  user_id: req.user_id,
+                  title: `Nuova richiesta di ${requestTypeLabel}`,
+                  message: messageText,
+                  type: req.type === 'vacation' ? 'vacation' : req.type === 'sick_leave' ? 'sick_leave' : req.type === 'permission_104' ? 'permission_104' : 'permission',
+                  is_read: false,
+                  request_id: req.id,
+                  request_type: req.type,
+                  created_at: req.created_at || req.submitted_at,
+                  is_virtual: true // Flag per identificare notifiche virtuali
+                };
+              });
+
+            // Combina notifiche reali e virtuali, ordinate per data
+            const allNotifications = [...(data || []), ...virtualNotifications];
+            allNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            // Limita il risultato se necessario
+            const limitedNotifications = allNotifications.slice(0, parseInt(limit));
+            
+            console.log(`📬 Admin notifications: ${data?.length || 0} real, ${virtualNotifications.length} virtual, total: ${limitedNotifications.length}`);
+            
+            return res.json(limitedNotifications);
+          }
+        }
+      } catch (virtualError) {
+        console.error('Error creating virtual notifications:', virtualError);
+        // In caso di errore, restituisci solo le notifiche reali
+      }
+    }
+
     res.json(data);
   } catch (error) {
     console.error('Notifications fetch error:', error);
@@ -7311,6 +7422,98 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Se è una notifica virtuale (id inizia con "virtual_"), crea la notifica reale
+    if (id.startsWith('virtual_')) {
+      const requestId = id.replace('virtual_', '');
+      
+      // Verifica che la richiesta esista
+      const { data: request, error: requestError } = await supabase
+        .from('leave_requests')
+        .select(`
+          *,
+          users!leave_requests_user_id_fkey(first_name, last_name, email)
+        `)
+        .eq('id', requestId)
+        .single();
+      
+      if (requestError || !request) {
+        return res.status(404).json({ error: 'Richiesta non trovata' });
+      }
+      
+      // Crea la notifica reale per l'admin
+      const typeLabels = {
+        'permission': 'Permesso',
+        'vacation': 'Ferie',
+        'sick_leave': 'Malattia',
+        'permission_104': 'Permesso Legge 104',
+        'business_trip': 'Trasferta'
+      };
+      
+      const parseLocalDate = (dateStr) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      };
+      
+      const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
+      });
+      
+      const formattedEndDate = request.start_date === request.end_date
+        ? formattedStartDate
+        : parseLocalDate(request.end_date).toLocaleDateString('it-IT', { 
+            day: '2-digit', 
+            month: 'long', 
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
+
+      const requestTypeLabel = typeLabels[request.type] || request.type;
+      const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
+      const requestTypeText = request.type === 'vacation' ? 'ferie' : request.type === 'sick_leave' ? 'malattia' : request.type === 'permission_104' ? 'permesso Legge 104' : 'permesso';
+      
+      let messageText = '';
+      if (request.type === 'permission' || request.type === 'permission_104') {
+        const hours = request.hours || 0;
+        const hoursFormatted = hours > 0 
+          ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+          : '0h';
+        messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
+      } else {
+        if (request.start_date === request.end_date) {
+          messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} per il ${formattedStartDate}`;
+        } else {
+          messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} dal ${formattedStartDate} al ${formattedEndDate}`;
+        }
+      }
+
+      const { data: newNotification, error: createError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: req.user.id,
+          title: `Nuova richiesta di ${requestTypeLabel}`,
+          message: messageText,
+          type: request.type === 'vacation' ? 'vacation' : request.type === 'sick_leave' ? 'sick_leave' : request.type === 'permission_104' ? 'permission_104' : 'permission',
+          is_read: true, // Marca come letta perché l'admin l'ha appena visualizzata
+          request_id: requestId,
+          request_type: request.type,
+          created_at: request.created_at || request.submitted_at,
+          read_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating notification from virtual:', createError);
+        return res.status(500).json({ error: 'Errore nella creazione della notifica' });
+      }
+
+      return res.json({ success: true, data: newNotification });
+    }
+    
+    // Notifica reale - aggiorna normalmente
     const { data, error } = await supabase
       .from('notifications')
       .update({ 
