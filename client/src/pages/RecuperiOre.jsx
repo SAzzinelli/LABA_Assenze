@@ -37,8 +37,11 @@ const RecuperiOre = () => {
   const [suggestedTimeSlots, setSuggestedTimeSlots] = useState([]); // Slot orari suggeriti
   
   // Dati per admin gestione recuperi
+  const [activeTab, setActiveTab] = useState('debt'); // 'debt' o 'proposals'
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
   const [employeesWithDebt, setEmployeesWithDebt] = useState([]); // Dipendenti con debito (admin)
+  const [allEmployees, setAllEmployees] = useState([]); // Tutti i dipendenti per la tab "Proposte"
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [showApproveRecoveryModal, setShowApproveRecoveryModal] = useState(false);
   const [showRejectRecoveryModal, setShowRejectRecoveryModal] = useState(false);
   const [showProposeRecoveryModal, setShowProposeRecoveryModal] = useState(false);
@@ -63,6 +66,7 @@ const RecuperiOre = () => {
         if (user?.role === 'admin') {
           await fetchPendingRecoveryRequests();
           await fetchDebtSummary();
+          await fetchAllEmployees();
         } else {
           // Il saldo viene caricato automaticamente dall'hook useOvertimeBalance
           // Carica sempre le richieste di recupero, anche se non c'è debito
@@ -138,6 +142,55 @@ const RecuperiOre = () => {
     } catch (error) {
       console.error('❌ Error fetching debt summary:', error);
       setEmployeesWithDebt([]);
+    }
+  };
+
+  // Fetch tutti i dipendenti per la tab "Proposte" (admin)
+  const fetchAllEmployees = async () => {
+    try {
+      if (user?.role !== 'admin') return;
+      
+      setLoadingEmployees(true);
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const data = await response.json();
+        // Filtra solo dipendenti attivi
+        const activeEmployees = data.filter(emp => emp.isActive !== false);
+        
+        // Carica il saldo banca ore per ogni dipendente
+        const employeesWithBalance = await Promise.all(
+          activeEmployees.map(async (emp) => {
+            try {
+              const balanceResponse = await apiCall(`/api/hours/overtime-balance?userId=${emp.id}`);
+              if (balanceResponse.ok) {
+                const balanceData = await balanceResponse.json();
+                return {
+                  ...emp,
+                  balance: balanceData.balance || 0,
+                  status: balanceData.status || 'zero',
+                  debtHours: balanceData.debtHours || 0,
+                  creditHours: balanceData.creditHours || 0
+                };
+              }
+              return { ...emp, balance: 0, status: 'zero', debtHours: 0, creditHours: 0 };
+            } catch (error) {
+              console.error(`Error fetching balance for ${emp.id}:`, error);
+              return { ...emp, balance: 0, status: 'zero', debtHours: 0, creditHours: 0 };
+            }
+          })
+        );
+        
+        setAllEmployees(employeesWithBalance);
+        console.log('✅ All employees loaded for proposals:', employeesWithBalance.length);
+      } else {
+        console.error('❌ Error fetching all employees:', response.status);
+        setAllEmployees([]);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching all employees:', error);
+      setAllEmployees([]);
+    } finally {
+      setLoadingEmployees(false);
     }
   };
 
@@ -382,11 +435,18 @@ const RecuperiOre = () => {
         return;
       }
       if (!selectedEmployeeForProposal) return;
-      const employeeDebt = Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0);
-      if (hours > employeeDebt) {
-        alert(`Il dipendente può recuperare massimo ${formatHoursFromDecimal(employeeDebt.toString())} (il suo debito attuale)`);
-        return;
+      
+      // Se è nella tab "Debiti", limita alle ore di debito
+      // Se è nella tab "Proposte", non c'è limite (può proporre straordinari anche in positivo)
+      if (activeTab === 'debt') {
+        const employeeDebt = Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0);
+        if (hours > employeeDebt) {
+          alert(`Il dipendente può recuperare massimo ${formatHoursFromDecimal(employeeDebt.toString())} (il suo debito attuale)`);
+          return;
+        }
       }
+      // Per la tab "Proposte", non c'è limite - può proporre qualsiasi quantità di straordinari
+      
       // Genera slot suggeriti
       setProposalSuggestedTimeSlots(generateTimeSlots(hours));
       setProposalStep(3);
@@ -965,20 +1025,53 @@ const RecuperiOre = () => {
         </h1>
       </div>
 
-      {/* Monitoraggio Debiti Banca Ore */}
+      {/* Tab Navigation */}
       <div className="bg-slate-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white flex items-center">
             <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
-            Monitoraggio Debiti Banca Ore
+            Gestione Recuperi Ore
           </h3>
-          <div className="text-sm text-slate-400">
-            {employeesWithDebt.length > 0 
-              ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
-              : 'Nessun debito al momento'
-            }
-          </div>
         </div>
+        
+        {/* Tab Buttons */}
+        <div className="flex gap-2 mb-6 border-b border-slate-700">
+          <button
+            onClick={() => setActiveTab('debt')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+              activeTab === 'debt'
+                ? 'text-red-400 border-red-400'
+                : 'text-slate-400 border-transparent hover:text-slate-300'
+            }`}
+          >
+            <AlertCircle className="h-4 w-4 inline mr-2" />
+            Debiti ({employeesWithDebt.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('proposals')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+              activeTab === 'proposals'
+                ? 'text-blue-400 border-blue-400'
+                : 'text-slate-400 border-transparent hover:text-slate-300'
+            }`}
+          >
+            <Plus className="h-4 w-4 inline mr-2" />
+            Proposte Straordinari
+          </button>
+        </div>
+
+        {/* Tab Content: Debiti */}
+        {activeTab === 'debt' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
+              <div className="text-sm text-slate-400">
+                {employeesWithDebt.length > 0 
+                  ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
+                  : 'Nessun debito al momento'
+                }
+              </div>
+            </div>
         {employeesWithDebt.length > 0 ? (
           <div className="space-y-3">
             {employeesWithDebt.map((employee) => (
@@ -1035,6 +1128,114 @@ const RecuperiOre = () => {
             <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
             <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
             <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
+          </div>
+        )}
+          </div>
+        )}
+
+        {/* Tab Content: Proposte Straordinari */}
+        {activeTab === 'proposals' && (
+          <div>
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Proponi Straordinari a Qualsiasi Dipendente</h4>
+              <p className="text-sm text-slate-400">
+                Puoi proporre straordinari anche a dipendenti in pari o in positivo (es. eventi dopo cena, progetti speciali).
+                Queste ore verranno aggiunte al saldo positivo della banca ore.
+              </p>
+            </div>
+
+            {loadingEmployees ? (
+              <div className="text-center py-8">
+                <div className="text-slate-400">Caricamento dipendenti...</div>
+              </div>
+            ) : allEmployees.length > 0 ? (
+              <div className="space-y-3">
+                {allEmployees.map((employee) => (
+                  <div 
+                    key={employee.id} 
+                    className={`rounded-lg p-4 border ${
+                      employee.balance < 0
+                        ? 'bg-red-500/10 border-red-500/20'
+                        : employee.balance > 0
+                          ? 'bg-green-500/10 border-green-500/20'
+                          : 'bg-slate-700/50 border-slate-600'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                            employee.balance < 0
+                              ? 'bg-red-500'
+                              : employee.balance > 0
+                                ? 'bg-green-500'
+                                : 'bg-slate-500'
+                          }`}>
+                            <span className="text-white font-semibold text-sm">
+                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}
+                              {employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                            </h4>
+                            <p className="text-slate-300 text-sm">{employee.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div className={`font-semibold ${
+                            employee.balance < 0
+                              ? 'text-red-400'
+                              : employee.balance > 0
+                                ? 'text-green-400'
+                                : 'text-slate-400'
+                          }`}>
+                            Saldo attuale: {formatHours(employee.balance)}
+                            {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
+                            {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
+                            {employee.balance === 0 && ' (In pari)'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployeeForProposal({
+                            id: employee.id,
+                            first_name: employee.firstName || employee.first_name,
+                            last_name: employee.lastName || employee.last_name,
+                            department: employee.department,
+                            balance: employee.balance,
+                            debtHours: employee.debtHours || 0
+                          });
+                          setProposalStep(1);
+                          setProposalFormData({
+                            recoveryDate: '',
+                            startTime: '',
+                            endTime: '',
+                            hours: '',
+                            reason: '',
+                            notes: employee.balance < 0 
+                              ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                              : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
+                          });
+                          setProposalSuggestedTimeSlots([]);
+                          setShowProposeRecoveryModal(true);
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                      >
+                        <Plus className="h-4 w-4 inline mr-2" />
+                        Proponi Straordinario
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p>Nessun dipendente disponibile</p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1231,19 +1432,36 @@ const RecuperiOre = () => {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Quante ore vuoi proporre? *
                   </label>
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0.25"
-                    max={Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0)}
-                    value={proposalFormData.hours}
-                    onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
-                    placeholder="es. 2.5"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
-                  </p>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
+                      value={proposalFormData.hours}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
+                      placeholder="es. 2.5"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                    />
+                    {activeTab === 'debt' && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
+                      </p>
+                    )}
+                    {activeTab === 'proposals' && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Saldo attuale: <span className={`font-semibold ${
+                          (selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
+                          (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                        }`}>
+                          {formatHours(selectedEmployeeForProposal.balance || 0)}
+                        </span>
+                        {selectedEmployeeForProposal.balance !== undefined && (
+                          <span className="text-xs text-slate-500 ml-2">
+                            (puoi proporre qualsiasi quantità di straordinari)
+                          </span>
+                        )}
+                      </p>
+                    )}
                 </div>
                 
                 {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
