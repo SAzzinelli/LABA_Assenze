@@ -22,6 +22,15 @@ export function useDesktopNotifications() {
       return false;
     }
 
+    // Se il permesso è già denied, non tentare di richiederlo
+    // L'utente deve abilitarlo manualmente dalle impostazioni del browser
+    if (Notification.permission === 'denied') {
+      setPermission('denied');
+      setEnabled(false);
+      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+      return false;
+    }
+
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
@@ -39,6 +48,9 @@ export function useDesktopNotifications() {
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
+      setPermission('denied');
+      setEnabled(false);
+      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
       return false;
     }
   };

@@ -22,19 +22,27 @@ const Notifiche = () => {
   const [filterUnread, setFilterUnread] = useState(false);
 
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/api/notifications');
+      // Per admin usa limite 200, per dipendenti 50
+      const limit = user?.role === 'admin' ? 200 : 50;
+      const response = await apiCall(`/api/notifications?limit=${limit}&unread_only=false`);
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data);
+        setNotifications(data || []);
+      } else {
+        console.error('Error fetching notifications:', response.status);
+        setNotifications([]);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
