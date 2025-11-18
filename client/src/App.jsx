@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './utils/store';
 
@@ -21,7 +21,18 @@ import RecuperiOre from './pages/RecuperiOre';
 import Layout from './components/Layout';
 
 function App() {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, checkAuth, token, startTokenExpiryMonitor } = useAuthStore();
+
+  // Verifica autenticazione all'avvio dell'app
+  useEffect(() => {
+    // Controlla se il token è ancora valido
+    const isValid = checkAuth();
+    
+    if (isValid && token) {
+      // Avvia il monitoraggio della scadenza del token se l'utente è autenticato
+      startTokenExpiryMonitor();
+    }
+  }, []); // Eseguito solo all'avvio
 
   return (
     <Router>

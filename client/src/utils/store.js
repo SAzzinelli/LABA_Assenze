@@ -8,6 +8,7 @@ export const useAuthStore = create(
       token: null,
       isAuthenticated: false,
       loading: false,
+      tokenExpiryMonitorInterval: null,
 
       // Login function
       login: async (email, password) => {
@@ -33,8 +34,9 @@ export const useAuthStore = create(
               loading: false,
             });
             
-            // Avvia l'auto-refresh del token
+            // Avvia l'auto-refresh del token e il monitoraggio della scadenza
             get().startTokenRefresh();
+            get().startTokenExpiryMonitor();
             
             return { success: true };
           } else {
@@ -96,12 +98,43 @@ export const useAuthStore = create(
           console.error('Logout error:', error);
         } finally {
           // Pulisci sempre lo stato locale
+          const { tokenExpiryMonitorInterval } = get();
+          if (tokenExpiryMonitorInterval) {
+            clearInterval(tokenExpiryMonitorInterval);
+          }
           set({
             user: null,
             token: null,
             isAuthenticated: false,
             loading: false,
+            tokenExpiryMonitorInterval: null,
           });
+        }
+      },
+
+      // Check if token is expired (helper function)
+      isTokenExpired: (token) => {
+        if (!token) return true;
+        try {
+          // JWT tokens have 3 parts separated by dots: header.payload.signature
+          const parts = token.split('.');
+          if (parts.length !== 3) return true;
+          
+          // Decode the payload (second part)
+          const payload = JSON.parse(atob(parts[1]));
+          
+          // Check if token has expiry (exp field is in seconds since epoch)
+          if (payload.exp) {
+            const expirationTime = payload.exp * 1000; // Convert to milliseconds
+            const currentTime = Date.now();
+            return currentTime >= expirationTime;
+          }
+          
+          // If no expiry field, assume it's expired
+          return true;
+        } catch (error) {
+          console.error('Error checking token expiry:', error);
+          return true; // If we can't decode, assume expired
         }
       },
 
@@ -109,6 +142,13 @@ export const useAuthStore = create(
       checkAuth: () => {
         const { token, user } = get();
         if (token && user) {
+          // Verifica se il token è scaduto
+          if (get().isTokenExpired(token)) {
+            console.log('🔒 Token scaduto, logout automatico...');
+            get().logout();
+            set({ isAuthenticated: false });
+            return false;
+          }
           set({ isAuthenticated: true });
           return true;
         }
@@ -126,6 +166,15 @@ export const useAuthStore = create(
         const refreshInterval = setInterval(async () => {
           const { token, user } = get();
           if (token && user) {
+            // Verifica se il token è scaduto prima di tentare il refresh
+            if (get().isTokenExpired(token)) {
+              console.log('🔒 Token scaduto durante auto-refresh, logout automatico...');
+              clearInterval(refreshInterval);
+              get().logout();
+              window.location.href = '/login';
+              return;
+            }
+
             try {
               console.log('🔄 Auto-refresh token...');
               const response = await fetch('/api/auth/refresh', {
@@ -145,16 +194,57 @@ export const useAuthStore = create(
                 });
                 console.log('✅ Token auto-rinnovato');
               } else {
-                console.log('❌ Auto-refresh fallito');
+                console.log('❌ Auto-refresh fallito, logout automatico...');
                 clearInterval(refreshInterval);
+                get().logout();
+                window.location.href = '/login';
               }
             } catch (error) {
               console.error('❌ Errore auto-refresh:', error);
+              clearInterval(refreshInterval);
+              get().logout();
+              window.location.href = '/login';
             }
+          } else {
+            clearInterval(refreshInterval);
           }
         }, 30 * 60 * 1000); // 30 minuti
 
         return refreshInterval;
+      },
+
+      // Monitor token expiry every 5 minutes
+      startTokenExpiryMonitor: () => {
+        // Pulisci l'intervallo esistente se presente
+        const existingInterval = get().tokenExpiryMonitorInterval;
+        if (existingInterval) {
+          clearInterval(existingInterval);
+        }
+
+        const checkInterval = setInterval(() => {
+          const { token, user, isAuthenticated } = get();
+          
+          // Se l'utente è autenticato ma il token è scaduto, fai logout
+          if (isAuthenticated && token) {
+            if (get().isTokenExpired(token)) {
+              console.log('🔒 Token scaduto rilevato, logout automatico...');
+              clearInterval(checkInterval);
+              set({ tokenExpiryMonitorInterval: null });
+              get().logout();
+              window.location.href = '/login';
+            }
+          } else if (isAuthenticated && !token) {
+            // Se l'utente risulta autenticato ma non c'è token, fai logout
+            console.log('🔒 Token mancante, logout automatico...');
+            clearInterval(checkInterval);
+            set({ tokenExpiryMonitorInterval: null });
+            get().logout();
+            window.location.href = '/login';
+          }
+        }, 5 * 60 * 1000); // Controlla ogni 5 minuti
+
+        set({ tokenExpiryMonitorInterval: checkInterval });
+        return checkInterval;
       },
 
       // Helper function for authenticated API calls
@@ -220,24 +310,25 @@ export const useAuthStore = create(
             } else {
               console.log('❌ Refresh token fallito, logout richiesto');
               // Se il refresh fallisce, fai logout
-              set({
-                user: null,
-                token: null,
-                isAuthenticated: false,
-              });
+              get().logout();
               // Reindirizza al login
               window.location.href = '/login';
+              return response; // Ritorna la response originale
             }
           } catch (refreshError) {
             console.error('❌ Errore durante refresh token:', refreshError);
             // Se c'è un errore nel refresh, fai logout
-            set({
-              user: null,
-              token: null,
-              isAuthenticated: false,
-            });
+            get().logout();
             window.location.href = '/login';
+            return response; // Ritorna la response originale
           }
+        }
+        
+        // Se riceviamo un 401 senza token o se il token è scaduto, fai logout
+        if (response.status === 401 && (!token || get().isTokenExpired(token))) {
+          console.log('🔒 Token non valido o scaduto (401), logout automatico...');
+          get().logout();
+          window.location.href = '/login';
         }
 
         return response;
@@ -249,6 +340,7 @@ export const useAuthStore = create(
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
+        // Non salvare tokenExpiryMonitorInterval (non serializzabile)
       }),
     }
   )
