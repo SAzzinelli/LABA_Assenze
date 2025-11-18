@@ -326,8 +326,12 @@ const Settings = () => {
                     </button>
                   ) : permission === 'default' ? (
                     <button
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Requesting notification permission...');
                         const success = await requestPermission();
+                        console.log('Permission result:', Notification.permission, 'success:', success);
                         // Non mostrare alert se il permesso è denied dopo la richiesta
                         // Il messaggio informativo sotto spiegherà cosa fare
                       }}
@@ -352,8 +356,24 @@ const Settings = () => {
             )}
             {permission === 'denied' && (
               <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
-                <p className="text-yellow-400 text-sm">
-                  ℹ️ Per abilitare le notifiche, vai nelle impostazioni del browser e consenti le notifiche per questo sito.
+                <p className="text-yellow-400 text-sm font-medium mb-2">
+                  ℹ️ Notifiche bloccate
+                </p>
+                <p className="text-yellow-400 text-sm mb-2">
+                  Per abilitare le notifiche su Safari:
+                </p>
+                <ol className="text-yellow-300 text-xs list-decimal list-inside space-y-1 ml-2">
+                  <li>Vai su Safari → Impostazioni → Siti web</li>
+                  <li>Seleziona "Notifiche" nella barra laterale</li>
+                  <li>Cerca questo sito nella lista</li>
+                  <li>Imposta il permesso su "Consenti"</li>
+                </ol>
+              </div>
+            )}
+            {permission === 'default' && (
+              <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <p className="text-blue-300 text-sm">
+                  💡 Clicca su "Abilita" per richiedere il permesso per le notifiche. Il browser mostrerà un prompt per confermare.
                 </p>
               </div>
             )}

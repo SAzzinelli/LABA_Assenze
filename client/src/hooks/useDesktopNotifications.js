@@ -22,24 +22,57 @@ export function useDesktopNotifications() {
       return false;
     }
 
+    const currentPermission = Notification.permission;
+    
+    // Se il permesso è già granted, non fare nulla
+    if (currentPermission === 'granted') {
+      setPermission('granted');
+      setEnabled(true);
+      localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+      return true;
+    }
+
     // Se il permesso è già denied, non tentare di richiederlo
     // L'utente deve abilitarlo manualmente dalle impostazioni del browser
-    if (Notification.permission === 'denied') {
+    if (currentPermission === 'denied') {
       setPermission('denied');
       setEnabled(false);
       localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
       return false;
     }
 
+    // Se il permesso è 'default', possiamo richiederlo
+    // Safari richiede che questo avvenga in un contesto di interazione utente (click)
     try {
+      // Verifica che Notification.requestPermission sia una funzione
+      if (typeof Notification.requestPermission !== 'function') {
+        // Alcuni browser usano la callback-based API
+        Notification.requestPermission((result) => {
+          setPermission(result);
+          if (result === 'granted') {
+            setEnabled(true);
+            localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
+            showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
+          } else {
+            setEnabled(false);
+            localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
+          }
+        });
+        // Per callback-based, non possiamo restituire il risultato immediatamente
+        return true; // Assumiamo che la richiesta sia stata avviata
+      }
+
+      // Promise-based API (standard moderno)
       const result = await Notification.requestPermission();
       setPermission(result);
       
       if (result === 'granted') {
         setEnabled(true);
         localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'true');
-        // Mostra una notifica di test
-        showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
+        // Mostra una notifica di test (ma solo se permission è granted)
+        setTimeout(() => {
+          showNotification('Notifiche abilitate', 'Riceverai notifiche per le nuove richieste', '/dashboard');
+        }, 100);
         return true;
       } else {
         setEnabled(false);
@@ -48,6 +81,7 @@ export function useDesktopNotifications() {
       }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
+      // In caso di errore, imposta denied
       setPermission('denied');
       setEnabled(false);
       localStorage.setItem(DESKTOP_NOTIFICATIONS_KEY, 'false');
