@@ -63,16 +63,44 @@ const MonteOre = () => {
     try {
       setLoading(true);
       
-      // Fetch current balance
-      const balanceResponse = await apiCall(`/api/hours/current-balances?year=${filters.year}`);
+      // Fetch current balance usando l'endpoint centralizzato (coerente con tutta l'app)
+      const balanceResponse = await apiCall(`/api/hours/overtime-balance?year=${filters.year}`);
+      
+      // Fetch dettagli del ledger (total_accrued, total_used, pending_requests)
+      const ledgerResponse = await apiCall(`/api/hours/current-balances?year=${filters.year}`);
+
+      // Combina i dati: usa il saldo centralizzato e i dettagli del ledger
+      let overtimeBalance = {
+        total_accrued: 0,
+        total_used: 0,
+        current_balance: 0,
+        pending_requests: 0
+      };
 
       if (balanceResponse.ok) {
-        const balances = await balanceResponse.json();
-        const overtimeBalance = balances.find(b => b.category === 'overtime');
-        if (overtimeBalance) {
-          setOvertimeBalance(overtimeBalance);
+        const balanceData = await balanceResponse.json();
+        overtimeBalance.current_balance = balanceData.balance || 0;
+        console.log('💰 Overtime balance (centralized):', {
+          balance: balanceData.balance,
+          status: balanceData.status,
+          debtHours: balanceData.debtHours,
+          creditHours: balanceData.creditHours
+        });
+      }
+
+      if (ledgerResponse.ok) {
+        const balances = await ledgerResponse.json();
+        const ledgerData = balances.find(b => b.category === 'overtime');
+        if (ledgerData) {
+          // Mantieni total_accrued, total_used, pending_requests dal ledger
+          overtimeBalance.total_accrued = ledgerData.total_accrued || 0;
+          overtimeBalance.total_used = ledgerData.total_used || 0;
+          overtimeBalance.pending_requests = ledgerData.pending_requests || 0;
+          // current_balance viene già dal nuovo endpoint centralizzato sopra
         }
       }
+
+      setOvertimeBalance(overtimeBalance);
 
       // Fetch transactions
       const transactionsResponse = await fetch(`/api/hours/hours-ledger?category=overtime&year=${filters.year}`, {

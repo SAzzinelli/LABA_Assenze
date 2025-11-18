@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { useOvertimeBalance } from '../hooks/useOvertimeBalance';
 import { formatHours } from '../utils/hoursCalculation';
 import { 
   RefreshCw, 
@@ -16,7 +17,12 @@ const RecuperiOre = () => {
   const [loading, setLoading] = useState(true);
 
   // Dati per recupero ore (dipendente)
-  const [totalBalance, setTotalBalance] = useState(0); // Saldo totale banca ore
+  // Usa hook centralizzato per saldo banca ore
+  const currentYear = new Date().getFullYear();
+  const { balance: totalBalance, status: balanceStatus, debtHours, creditHours, refetch: refetchBalance } = useOvertimeBalance({
+    year: currentYear,
+    autoFetch: user?.role === 'employee'
+  });
   const [recoveryRequests, setRecoveryRequests] = useState([]); // Richieste recupero
   const [showRecoveryModal, setShowRecoveryModal] = useState(false); // Modal crea richiesta recupero
   const [recoveryStep, setRecoveryStep] = useState(1); // Step corrente del wizard (1: Data, 2: Ore, 3: Orario)
@@ -58,8 +64,7 @@ const RecuperiOre = () => {
           await fetchPendingRecoveryRequests();
           await fetchDebtSummary();
         } else {
-          // Carica sempre il saldo e le richieste, così abbiamo tutti i dati
-          const balance = await fetchTotalBalance();
+          // Il saldo viene caricato automaticamente dall'hook useOvertimeBalance
           // Carica sempre le richieste di recupero, anche se non c'è debito
           // (potrebbero esserci recuperi già approvati o in attesa)
           await fetchRecoveryRequests();
@@ -73,31 +78,6 @@ const RecuperiOre = () => {
 
     loadData();
   }, [user]);
-
-  // Fetch saldo totale banca ore (dipendente)
-  // IMPORTANTE: Usa l'endpoint centralizzato per coerenza in tutta l'applicazione
-  const fetchTotalBalance = async () => {
-    try {
-      const currentYear = new Date().getFullYear();
-      const response = await apiCall(`/api/hours/overtime-balance?year=${currentYear}`);
-      if (response.ok) {
-        const data = await response.json();
-        const balance = data.balance || 0;
-        console.log('💰 Overtime balance (centralized):', {
-          balance,
-          status: data.status,
-          debtHours: data.debtHours,
-          creditHours: data.creditHours
-        });
-        setTotalBalance(balance);
-        return balance; // Ritorna il valore per usarlo subito
-      }
-      return 0;
-    } catch (error) {
-      console.error('Error fetching overtime balance:', error);
-      return 0;
-    }
-  };
 
   // Fetch richieste recupero ore
   const fetchRecoveryRequests = async () => {
@@ -493,7 +473,7 @@ const RecuperiOre = () => {
         });
         setSuggestedTimeSlots([]);
         await fetchRecoveryRequests();
-        await fetchTotalBalance();
+        await refetchBalance();
       } else {
         const error = await response.json();
         alert(error.error || 'Errore nella creazione della richiesta');
