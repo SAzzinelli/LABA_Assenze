@@ -78,26 +78,60 @@ const AdminPermessi104 = () => {
     }
   };
 
+  // Debug: mostra struttura dati prima del matching
+  if (requests.length > 0 && employees104.length > 0) {
+    console.log('🔍 DEBUG MATCHING:');
+    console.log('  Richieste totali:', requests.length);
+    console.log('  Dipendenti 104 totali:', employees104.length);
+    console.log('  Prima richiesta user_id:', requests[0].user_id);
+    console.log('  Prima richiesta user?.id:', requests[0].user?.id);
+    console.log('  Prima richiesta users?.id:', requests[0].users?.id);
+    console.log('  Primo dipendente ID:', employees104[0].id);
+    
+    // Mostra tutti gli user_id unici nelle richieste
+    const allUserIds = requests.map(r => ({
+      user_id: r.user_id,
+      user_id_value: r.user?.id,
+      users_id_value: r.users?.id,
+      final: r.user_id || r.user?.id || r.users?.id
+    }));
+    console.log('  Tutti gli user_id nelle richieste:', allUserIds);
+  }
+  
   // Raggruppa richieste per dipendente
   const requestsByEmployee = employees104.map(emp => {
     // Le richieste possono avere user_id o user.id o users.id - gestiamo tutti i casi
     const empRequests = requests.filter(req => {
       // Le richieste dal DB hanno user_id come campo diretto, oppure users come oggetto con id
       const userId = req.user_id || req.user?.id || req.users?.id;
-      const matches = userId === emp.id;
-      if (matches) {
-        console.log(`✅ Richiesta ${req.id} corrisponde a ${emp.name}:`, {
-          requestUserId: userId,
-          empId: emp.id,
-          start_date: req.start_date || req.startDate,
-          status: req.status,
-          days_requested: req.days_requested
+      
+      // Debug dettagliato per vedere perché non matcha
+      if (userId && userId === emp.id) {
+        console.log(`✅ MATCH TROVATO! ${emp.name}:`, {
+          request_id: req.id,
+          userId_source: req.user_id ? 'user_id' : req.user?.id ? 'user.id' : 'users.id',
+          userId_value: userId,
+          emp_id: emp.id,
+          match: true
+        });
+      } else if (userId) {
+        console.log(`❌ NO MATCH per ${emp.name}:`, {
+          request_id: req.id,
+          userId_value: userId,
+          userId_type: typeof userId,
+          emp_id: emp.id,
+          emp_id_type: typeof emp.id,
+          strict_equals: userId === emp.id,
+          loose_equals: userId == emp.id,
+          string_comparison: String(userId) === String(emp.id)
         });
       }
+      
+      const matches = userId === emp.id;
       return matches;
     });
     
-    console.log(`👤 ${emp.name} (${emp.id}): ${empRequests.length} richieste trovate`);
+    console.log(`👤 ${emp.name} (${emp.id}): ${empRequests.length} richieste trovate su ${requests.length} totali`);
     
     const now = new Date();
     const currentMonth = now.getMonth(); // 0-11
