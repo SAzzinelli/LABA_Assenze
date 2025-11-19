@@ -20,7 +20,10 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Activity
+  Activity,
+  Key,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const Profile = () => {
@@ -462,8 +465,24 @@ const Profile = () => {
 
   const tabs = [
     { id: 'personal', name: 'Informazioni Personali', icon: User },
-    { id: 'schedule', name: 'Orario di Lavoro', icon: Clock }
+    { id: 'schedule', name: 'Orario di Lavoro', icon: Clock },
+    { id: 'password', name: 'Cambio Password', icon: Key }
   ];
+
+  // Stato per cambio password
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const dayNames = {
     monday: 'Lunedì',
@@ -952,10 +971,285 @@ const Profile = () => {
     </div>
   );
 
+  const handlePasswordChange = (field, value) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+    setPasswordError('');
+    setPasswordSuccess(false);
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess(false);
+
+    // Validazioni
+    if (!passwordData.currentPassword) {
+      setPasswordError('Inserisci la password attuale');
+      return;
+    }
+
+    if (!passwordData.newPassword) {
+      setPasswordError('Inserisci la nuova password');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('La nuova password deve essere di almeno 6 caratteri');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Le password non corrispondono');
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError('La nuova password deve essere diversa da quella attuale');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const response = await apiCall('/api/user/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (response.ok) {
+        setPasswordSuccess(true);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setTimeout(() => {
+          setPasswordSuccess(false);
+        }, 5000);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Errore sconosciuto' }));
+        setPasswordError(errorData.error || 'Errore nel cambio password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('Errore di connessione. Riprova più tardi.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const renderPasswordTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <Key className="h-6 w-6 mr-3 text-indigo-400" />
+            Cambio Password
+          </h3>
+          <p className="text-slate-400 mt-2 text-sm">
+            Cambia la tua password per mantenere il tuo account sicuro
+          </p>
+        </div>
+      </div>
+
+      {/* Messaggio di successo */}
+      {passwordSuccess && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-300">
+                Password cambiata con successo!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messaggio di errore */}
+      {passwordError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-300">
+                {passwordError}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form cambio password */}
+      <form onSubmit={handleChangePassword} className="space-y-6">
+        <div className="bg-slate-700/50 rounded-lg p-6 space-y-6">
+          {/* Password attuale */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Password Attuale
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.current ? 'text' : 'password'}
+                value={passwordData.currentPassword}
+                onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Inserisci la password attuale"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('current')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+              >
+                {showPasswords.current ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Nuova password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Nuova Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.new ? 'text' : 'password'}
+                value={passwordData.newPassword}
+                onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Inserisci la nuova password (min. 6 caratteri)"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('new')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+              >
+                {showPasswords.new ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              La password deve contenere almeno 6 caratteri
+            </p>
+          </div>
+
+          {/* Conferma nuova password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Conferma Nuova Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.confirm ? 'text' : 'password'}
+                value={passwordData.confirmPassword}
+                onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Ripeti la nuova password"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+              >
+                {showPasswords.confirm ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+            {passwordData.newPassword && passwordData.confirmPassword && (
+              <p className={`mt-1 text-xs ${
+                passwordData.newPassword === passwordData.confirmPassword
+                  ? 'text-green-400'
+                  : 'text-red-400'
+              }`}>
+                {passwordData.newPassword === passwordData.confirmPassword
+                  ? '✓ Le password corrispondono'
+                  : '✗ Le password non corrispondono'}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Pulsante salva */}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={changingPassword}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center font-medium"
+          >
+            {changingPassword ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Aggiornamento...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Cambia Password
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+
+      {/* Info box */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-blue-400 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="ml-3">
+            <h4 className="text-sm font-medium text-blue-300">Suggerimenti per una password sicura</h4>
+            <ul className="mt-2 text-sm text-blue-200 list-disc list-inside space-y-1">
+              <li>Usa almeno 6 caratteri</li>
+              <li>Combina lettere maiuscole e minuscole</li>
+              <li>Includi numeri e caratteri speciali</li>
+              <li>Non condividere la tua password con nessuno</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'personal': return renderPersonalTab();
       case 'schedule': return renderScheduleTab();
+      case 'password': return renderPasswordTab();
       default: return renderPersonalTab();
     }
   };

@@ -303,6 +303,65 @@ app.put('/api/user', authenticateToken, async (req, res) => {
   }
 });
 
+// Change password
+app.post('/api/user/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validazione input
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Password attuale e nuova password sono richieste' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'La nuova password deve essere di almeno 6 caratteri' });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'La nuova password deve essere diversa da quella attuale' });
+    }
+
+    // Recupera l'utente con la password hashata
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, password')
+      .eq('id', req.user.id)
+      .single();
+
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Verifica la password attuale
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Password attuale non corretta' });
+    }
+
+    // Hasha la nuova password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Aggiorna la password nel database
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('id', req.user.id)
+      .select('id, email, first_name, last_name');
+
+    if (updateError) {
+      console.error('Error updating password:', updateError);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento della password' });
+    }
+
+    console.log(`✅ Password cambiata con successo per utente ${req.user.id}`);
+    res.json({ success: true, message: 'Password cambiata con successo' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Errore interno del server durante il cambio password' });
+  }
+});
+
 // Registration
 app.post('/api/auth/register', async (req, res) => {
   try {
