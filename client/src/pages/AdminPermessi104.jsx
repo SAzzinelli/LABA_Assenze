@@ -28,17 +28,29 @@ const AdminPermessi104 = () => {
       const response = await apiCall('/api/leave-requests?type=permission_104');
       if (response.ok) {
         const data = await response.json();
-        console.log('📋 Richieste 104 caricate:', data);
-        console.log('📋 Prima richiesta esempio:', data[0] ? {
-          id: data[0].id,
-          user_id: data[0].user_id,
-          user: data[0].user,
-          users: data[0].users,
-          start_date: data[0].start_date,
-          startDate: data[0].startDate,
-          days_requested: data[0].days_requested,
-          status: data[0].status
-        } : 'Nessuna richiesta');
+        console.log('📋 Richieste 104 caricate:', data.length, 'totale');
+        if (data.length > 0) {
+          console.log('📋 Prima richiesta esempio:', {
+            id: data[0].id,
+            user_id: data[0].user_id,
+            user: data[0].user ? {
+              id: data[0].user.id,
+              name: data[0].user.name
+            } : null,
+            users: data[0].users ? {
+              id: data[0].users.id,
+              first_name: data[0].users.first_name,
+              last_name: data[0].users.last_name
+            } : null,
+            start_date: data[0].start_date,
+            startDate: data[0].startDate,
+            days_requested: data[0].days_requested,
+            status: data[0].status
+          });
+          // Mostra tutti gli user_id unici presenti nelle richieste
+          const uniqueUserIds = [...new Set(data.map(r => r.user_id || r.user?.id || r.users?.id))].filter(Boolean);
+          console.log('📋 User IDs presenti nelle richieste:', uniqueUserIds);
+        }
         setRequests(data);
       }
     } catch (error) {
@@ -54,6 +66,11 @@ const AdminPermessi104 = () => {
       if (response.ok) {
         const data = await response.json();
         const with104 = data.filter(emp => emp.has104 === true);
+        console.log('👥 Dipendenti con 104 trovati:', with104.map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          has104: emp.has104
+        })));
         setEmployees104(with104);
       }
     } catch (error) {
