@@ -29,6 +29,16 @@ const AdminPermessi104 = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('📋 Richieste 104 caricate:', data);
+        console.log('📋 Prima richiesta esempio:', data[0] ? {
+          id: data[0].id,
+          user_id: data[0].user_id,
+          user: data[0].user,
+          users: data[0].users,
+          start_date: data[0].start_date,
+          startDate: data[0].startDate,
+          days_requested: data[0].days_requested,
+          status: data[0].status
+        } : 'Nessuna richiesta');
         setRequests(data);
       }
     } catch (error) {
@@ -120,6 +130,19 @@ const AdminPermessi104 = () => {
     }, 0);
     
     console.log(`📈 Totale giorni utilizzati per ${emp.name}:`, usedDaysThisMonth);
+    console.log(`📊 DEBUG FINALE per ${emp.name}:`, {
+      totalRequests: empRequests.length,
+      thisMonthApprovedCount: thisMonthApproved.length,
+      thisMonthApproved: thisMonthApproved.map(r => ({
+        id: r.id,
+        start_date: r.start_date || r.startDate,
+        days_requested: r.days_requested,
+        status: r.status
+      })),
+      usedDaysThisMonth,
+      currentMonth: currentMonth + 1,
+      currentYear
+    });
 
     // Calcola giorni pending del mese corrente
     const thisMonthPending = empRequests.filter(req => {
