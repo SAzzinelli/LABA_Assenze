@@ -80,13 +80,11 @@ const AdminPermessi104 = () => {
     const thisMonthApproved = empRequests.filter(req => {
       const startDate = req.start_date || req.startDate;
       if (!startDate) {
-        console.warn(`⚠️ Richiesta senza start_date:`, req.id);
         return false;
       }
       
       const reqDate = parseLocalDate(startDate);
       if (!reqDate || isNaN(reqDate.getTime())) {
-        console.warn(`⚠️ Richiesta con data non valida:`, startDate, req.id);
         return false;
       }
       
@@ -95,44 +93,14 @@ const AdminPermessi104 = () => {
       const isThisMonth = reqMonth === currentMonth && reqYear === currentYear;
       const isApproved = req.status === 'approved';
       
-      console.log(`🔍 Verifica richiesta ${req.id}:`, {
-        startDate,
-        parsedDate: reqDate.toISOString(),
-        reqMonth: reqMonth + 1, // +1 per mostrare 1-12
-        reqYear,
-        currentMonth: currentMonth + 1,
-        currentYear,
-        isThisMonth,
-        status: req.status,
-        isApproved,
-        included: isThisMonth && isApproved,
-        days_requested: req.days_requested
-      });
-      
       return isThisMonth && isApproved;
     });
 
     // Somma i giorni richiesti (non solo conta le richieste)
     const usedDaysThisMonth = thisMonthApproved.reduce((sum, req) => {
       const days = req.days_requested || 1;
-      console.log(`📊 Sommando giorni: ${days} (totale: ${sum + Math.ceil(days)})`);
       return sum + Math.ceil(days);
     }, 0);
-    
-    console.log(`📈 Totale giorni utilizzati per ${emp.name}:`, usedDaysThisMonth);
-    console.log(`📊 DEBUG FINALE per ${emp.name}:`, {
-      totalRequests: empRequests.length,
-      thisMonthApprovedCount: thisMonthApproved.length,
-      thisMonthApproved: thisMonthApproved.map(r => ({
-        id: r.id,
-        start_date: r.start_date || r.startDate,
-        days_requested: r.days_requested,
-        status: r.status
-      })),
-      usedDaysThisMonth,
-      currentMonth: currentMonth + 1,
-      currentYear
-    });
 
     // Calcola giorni pending del mese corrente
     const thisMonthPending = empRequests.filter(req => {
