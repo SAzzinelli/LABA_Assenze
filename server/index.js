@@ -4292,11 +4292,27 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero delle richieste' });
     }
 
+    // Debug: mostra struttura prima di formattare
+    if (requests.length > 0) {
+      console.log('🔍 DEBUG Leave requests - Prima richiesta RAW:', {
+        id: requests[0].id,
+        user_id: requests[0].user_id,
+        users: requests[0].users,
+        type: requests[0].type,
+        days_requested: requests[0].days_requested,
+        status: requests[0].status
+      });
+    }
+
     const formattedRequests = requests.map(req => ({
       id: req.id,
       type: req.type,
       startDate: req.start_date,
       endDate: req.end_date,
+      start_date: req.start_date, // Manteniamo anche snake_case per compatibilità
+      end_date: req.end_date,
+      days_requested: req.days_requested, // Importante per permessi 104
+      user_id: req.user_id || (req.users ? req.users.id : null), // Aggiunto user_id diretto
       reason: req.reason,
       status: req.status,
       submittedAt: req.created_at,
@@ -4314,13 +4330,19 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       exitTime: req.exit_time,
       entryTime: req.entry_time,
       permissionDate: req.start_date, // Per compatibilità
-      user: {
+      user: req.users ? {
         id: req.users.id,
         name: `${req.users.first_name} ${req.users.last_name}`,
         email: req.users.email,
         department: 'Non specificato'
-      },
-      submittedBy: `${req.users.first_name} ${req.users.last_name}` // Per compatibilità con frontend
+      } : null,
+      users: req.users ? { // Manteniamo anche users per compatibilità
+        id: req.users.id,
+        first_name: req.users.first_name,
+        last_name: req.users.last_name,
+        email: req.users.email
+      } : null,
+      submittedBy: req.users ? `${req.users.first_name} ${req.users.last_name}` : 'Utente sconosciuto' // Per compatibilità con frontend
     }));
 
     res.json(formattedRequests);
