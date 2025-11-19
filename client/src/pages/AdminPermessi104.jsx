@@ -79,14 +79,35 @@ const AdminPermessi104 = () => {
     // Le richieste dal DB hanno start_date (snake_case), non startDate
     const thisMonthApproved = empRequests.filter(req => {
       const startDate = req.start_date || req.startDate;
-      if (!startDate) return false;
+      if (!startDate) {
+        console.warn(`⚠️ Richiesta senza start_date:`, req.id);
+        return false;
+      }
       
       const reqDate = parseLocalDate(startDate);
-      if (!reqDate || isNaN(reqDate.getTime())) return false;
+      if (!reqDate || isNaN(reqDate.getTime())) {
+        console.warn(`⚠️ Richiesta con data non valida:`, startDate, req.id);
+        return false;
+      }
       
-      const isThisMonth = reqDate.getMonth() === currentMonth && 
-                         reqDate.getFullYear() === currentYear;
+      const reqMonth = reqDate.getMonth();
+      const reqYear = reqDate.getFullYear();
+      const isThisMonth = reqMonth === currentMonth && reqYear === currentYear;
       const isApproved = req.status === 'approved';
+      
+      console.log(`🔍 Verifica richiesta ${req.id}:`, {
+        startDate,
+        parsedDate: reqDate.toISOString(),
+        reqMonth: reqMonth + 1, // +1 per mostrare 1-12
+        reqYear,
+        currentMonth: currentMonth + 1,
+        currentYear,
+        isThisMonth,
+        status: req.status,
+        isApproved,
+        included: isThisMonth && isApproved,
+        days_requested: req.days_requested
+      });
       
       return isThisMonth && isApproved;
     });
