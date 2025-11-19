@@ -4292,18 +4292,6 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero delle richieste' });
     }
 
-    // Debug: mostra struttura prima di formattare
-    if (requests.length > 0) {
-      console.log('🔍 DEBUG Leave requests - Prima richiesta RAW:', {
-        id: requests[0].id,
-        user_id: requests[0].user_id,
-        users: requests[0].users,
-        type: requests[0].type,
-        days_requested: requests[0].days_requested,
-        status: requests[0].status
-      });
-    }
-
     const formattedRequests = requests.map(req => ({
       id: req.id,
       type: req.type,

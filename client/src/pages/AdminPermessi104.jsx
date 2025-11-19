@@ -28,29 +28,6 @@ const AdminPermessi104 = () => {
       const response = await apiCall('/api/leave-requests?type=permission_104');
       if (response.ok) {
         const data = await response.json();
-        console.log('📋 Richieste 104 caricate:', data.length, 'totale');
-        if (data.length > 0) {
-          console.log('📋 Prima richiesta esempio:', {
-            id: data[0].id,
-            user_id: data[0].user_id,
-            user: data[0].user ? {
-              id: data[0].user.id,
-              name: data[0].user.name
-            } : null,
-            users: data[0].users ? {
-              id: data[0].users.id,
-              first_name: data[0].users.first_name,
-              last_name: data[0].users.last_name
-            } : null,
-            start_date: data[0].start_date,
-            startDate: data[0].startDate,
-            days_requested: data[0].days_requested,
-            status: data[0].status
-          });
-          // Mostra tutti gli user_id unici presenti nelle richieste
-          const uniqueUserIds = [...new Set(data.map(r => r.user_id || r.user?.id || r.users?.id))].filter(Boolean);
-          console.log('📋 User IDs presenti nelle richieste:', uniqueUserIds);
-        }
         setRequests(data);
       }
     } catch (error) {
@@ -66,11 +43,6 @@ const AdminPermessi104 = () => {
       if (response.ok) {
         const data = await response.json();
         const with104 = data.filter(emp => emp.has104 === true);
-        console.log('👥 Dipendenti con 104 trovati:', with104.map(emp => ({
-          id: emp.id,
-          name: emp.name,
-          has104: emp.has104
-        })));
         setEmployees104(with104);
       }
     } catch (error) {
@@ -78,60 +50,14 @@ const AdminPermessi104 = () => {
     }
   };
 
-  // Debug: mostra struttura dati prima del matching
-  if (requests.length > 0 && employees104.length > 0) {
-    console.log('🔍 DEBUG MATCHING:');
-    console.log('  Richieste totali:', requests.length);
-    console.log('  Dipendenti 104 totali:', employees104.length);
-    console.log('  Prima richiesta user_id:', requests[0].user_id);
-    console.log('  Prima richiesta user?.id:', requests[0].user?.id);
-    console.log('  Prima richiesta users?.id:', requests[0].users?.id);
-    console.log('  Primo dipendente ID:', employees104[0].id);
-    
-    // Mostra tutti gli user_id unici nelle richieste
-    const allUserIds = requests.map(r => ({
-      user_id: r.user_id,
-      user_id_value: r.user?.id,
-      users_id_value: r.users?.id,
-      final: r.user_id || r.user?.id || r.users?.id
-    }));
-    console.log('  Tutti gli user_id nelle richieste:', allUserIds);
-  }
-  
   // Raggruppa richieste per dipendente
   const requestsByEmployee = employees104.map(emp => {
     // Le richieste possono avere user_id o user.id o users.id - gestiamo tutti i casi
     const empRequests = requests.filter(req => {
       // Le richieste dal DB hanno user_id come campo diretto, oppure users come oggetto con id
       const userId = req.user_id || req.user?.id || req.users?.id;
-      
-      // Debug dettagliato per vedere perché non matcha
-      if (userId && userId === emp.id) {
-        console.log(`✅ MATCH TROVATO! ${emp.name}:`, {
-          request_id: req.id,
-          userId_source: req.user_id ? 'user_id' : req.user?.id ? 'user.id' : 'users.id',
-          userId_value: userId,
-          emp_id: emp.id,
-          match: true
-        });
-      } else if (userId) {
-        console.log(`❌ NO MATCH per ${emp.name}:`, {
-          request_id: req.id,
-          userId_value: userId,
-          userId_type: typeof userId,
-          emp_id: emp.id,
-          emp_id_type: typeof emp.id,
-          strict_equals: userId === emp.id,
-          loose_equals: userId == emp.id,
-          string_comparison: String(userId) === String(emp.id)
-        });
-      }
-      
-      const matches = userId === emp.id;
-      return matches;
+      return userId === emp.id;
     });
-    
-    console.log(`👤 ${emp.name} (${emp.id}): ${empRequests.length} richieste trovate su ${requests.length} totali`);
     
     const now = new Date();
     const currentMonth = now.getMonth(); // 0-11
