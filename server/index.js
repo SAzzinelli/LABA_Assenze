@@ -198,7 +198,9 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         role: user.role,
         firstName: user.first_name,
-        lastName: user.last_name
+        lastName: user.last_name,
+        has_104: user.has_104 || false,
+        has104: user.has_104 || false // Manteniamo per compatibilità
       },
       token
     });
@@ -4973,7 +4975,12 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     // Calcola i giorni richiesti
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    let daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Per permessi 104, minimo 1 giorno intero
+    if (type === 'permission_104') {
+      daysRequested = Math.max(1, daysRequested);
+    }
 
     // Se admin crea FERIE, verifica bilancio ferie (ma NON valida periodi - admin può bypassare)
     if (type === 'vacation') {
@@ -5153,6 +5160,49 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       }, 100);
     }
 
+    // Se admin crea permesso 104 approvato direttamente, aggiorna bilancio assenze 104
+    if (type === 'permission_104' && insertData.status === 'approved') {
+      const requestMonth = new Date(startDate).getMonth() + 1;
+      const requestYear = new Date(startDate).getFullYear();
+      const daysRequestedFor104 = Math.max(1, daysRequested); // Minimo 1 giorno
+
+      // Aggiorna bilancio assenze 104 dopo la creazione
+      setTimeout(async () => {
+        let { data: balance, error: balanceError } = await supabase
+          .from('absence_104_balances')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('year', requestYear)
+          .eq('month', requestMonth)
+          .single();
+
+        if (balanceError && balanceError.code === 'PGRST116') {
+          // Crea nuovo bilancio
+          await supabase.from('absence_104_balances').insert([{
+            user_id: userId,
+            year: requestYear,
+            month: requestMonth,
+            total_days: 3,
+            used_days: daysRequestedFor104,
+            pending_days: 0,
+            remaining_days: 3 - daysRequestedFor104
+          }]);
+          console.log(`✅ Bilancio assenze 104 creato per admin: +${daysRequestedFor104} giorni utilizzati`);
+        } else if (!balanceError && balance) {
+          // Aggiorna bilancio esistente
+          const newUsedDays = (balance.used_days || 0) + daysRequestedFor104;
+          const pendingDays = balance.pending_days || 0;
+          await supabase.from('absence_104_balances').update({
+            used_days: newUsedDays,
+            pending_days: pendingDays,
+            remaining_days: (balance.total_days || 3) - newUsedDays - pendingDays,
+            updated_at: new Date().toISOString()
+          }).eq('id', balance.id);
+          console.log(`✅ Bilancio assenze 104 aggiornato per admin: ${newUsedDays} giorni utilizzati`);
+        }
+      }, 100);
+    }
+
     const normalizedExitTime = normalizeTime(exitTime);
     const normalizedEntryTime = normalizeTime(entryTime);
 
@@ -5185,7 +5235,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       const notificationData = {
         user_id: userId,
         type: 'leave_approved',
-        title: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : 'Permesso'} aggiunto dall'admin`,
+        title: `${type === 'vacation' ? 'Ferie' : type === 'sick_leave' ? 'Malattia' : type === 'permission_104' ? 'Permesso Legge 104' : 'Permesso'} aggiunto dall'admin`,
         message: (() => {
           // Parse date as local time to avoid UTC timezone issues
           const parseLocalDate = (dateStr) => {
@@ -5208,9 +5258,13 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
                 timeZone: 'Europe/Rome'
               });
           
-          // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
-          if (type === 'permission' || type === 'permission_104') {
-            // PERMESSI: sono in ORE, non giorni
+          // Formatta il messaggio in modo logico: permessi (ore) vs permessi 104/ferie/malattia (giorni)
+          if (type === 'permission_104') {
+            // PERMESSI 104: sono in GIORNI, non ore
+            const days = newRequest.days_requested || 1;
+            return `L'amministratore ha registrato un permesso Legge 104 di ${days} ${days === 1 ? 'giorno' : 'giorni'} per il ${formattedStart}.${reason ? ` Motivo: ${reason}` : ''}`;
+          } else if (type === 'permission') {
+            // PERMESSI NORMALI: sono in ORE, non giorni
             const hours = newRequest.hours || 0;
             const hoursFormatted = hours > 0 
               ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`

@@ -56,18 +56,41 @@ const AdminPermessi104 = () => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
-    const thisMonthRequests = empRequests.filter(req => {
+    // Calcola giorni utilizzati dalle richieste approvate del mese corrente
+    const thisMonthApproved = empRequests.filter(req => {
       const reqDate = new Date(req.startDate);
       return reqDate.getMonth() === currentMonth && 
              reqDate.getFullYear() === currentYear &&
              req.status === 'approved';
     });
 
+    // Somma i giorni richiesti (non solo conta le richieste)
+    const usedDaysThisMonth = thisMonthApproved.reduce((sum, req) => {
+      const days = req.days_requested || 1;
+      return sum + Math.ceil(days);
+    }, 0);
+
+    // Calcola giorni pending del mese corrente
+    const thisMonthPending = empRequests.filter(req => {
+      const reqDate = new Date(req.startDate);
+      return reqDate.getMonth() === currentMonth && 
+             reqDate.getFullYear() === currentYear &&
+             req.status === 'pending';
+    });
+
+    const pendingDaysThisMonth = thisMonthPending.reduce((sum, req) => {
+      const days = req.days_requested || 1;
+      return sum + Math.ceil(days);
+    }, 0);
+
+    const remaining = Math.max(0, 3 - usedDaysThisMonth - pendingDaysThisMonth);
+
     return {
       employee: emp,
-      usedThisMonth: thisMonthRequests.length,
-      remaining: 3 - thisMonthRequests.length,
-      allRequests: empRequests
+      usedThisMonth: usedDaysThisMonth,
+      pendingThisMonth: pendingDaysThisMonth,
+      remaining: remaining,
+      allRequests: empRequests // Tutte le richieste, non solo quelle del mese corrente
     };
   });
 
@@ -164,6 +187,95 @@ const AdminPermessi104 = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lista completa richieste 104 */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <h2 className="text-xl font-bold mb-4 flex items-center">
+          <Calendar className="h-5 w-5 mr-2 text-blue-400" />
+          Tutte le Richieste 104
+        </h2>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar className="h-16 w-16 mx-auto text-slate-600 mb-4" />
+            <p className="text-slate-400">Nessuna richiesta 104 registrata</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {requests
+              .sort((a, b) => new Date(b.startDate || b.submittedAt) - new Date(a.startDate || a.submittedAt))
+              .map((request) => (
+              <div key={request.id} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <Accessibility className="h-5 w-5 text-blue-400" />
+                      <span className="font-semibold text-white">
+                        {request.user?.name || request.submittedBy || 'Dipendente'}
+                      </span>
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <span className="text-slate-300">
+                        {request.startDate === request.endDate ? (
+                          new Date(request.startDate).toLocaleDateString('it-IT', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric' 
+                          })
+                        ) : (
+                          <>
+                            dal {new Date(request.startDate).toLocaleDateString('it-IT', { 
+                              day: 'numeric', 
+                              month: 'long' 
+                            })} al {new Date(request.endDate).toLocaleDateString('it-IT', { 
+                              day: 'numeric', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            })}
+                          </>
+                        )}
+                      </span>
+                      {request.days_requested && (
+                        <span className="text-xs text-blue-300 ml-2">
+                          ({request.days_requested} {request.days_requested === 1 ? 'giorno' : 'giorni'})
+                        </span>
+                      )}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        request.status === 'approved' 
+                          ? 'bg-green-900/30 text-green-400 border border-green-500/30' 
+                          : request.status === 'pending'
+                            ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-500/30'
+                            : 'bg-red-900/30 text-red-400 border border-red-500/30'
+                      }`}>
+                        {request.status === 'approved' ? 'Approvato' : request.status === 'pending' ? 'In Attesa' : 'Rifiutato'}
+                      </span>
+                    </div>
+                    
+                    {request.notes && (
+                      <p className="text-sm text-slate-400 ml-8">
+                        Note: {request.notes}
+                      </p>
+                    )}
+                    
+                    <p className="text-xs text-slate-500 ml-8 mt-1">
+                      Richiesto il: {new Date(request.submittedAt).toLocaleDateString('it-IT', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
