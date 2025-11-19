@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS absence_104_balances (
   month INTEGER NOT NULL, -- 1-12
   total_days INTEGER NOT NULL DEFAULT 3, -- Giorni totali disponibili al mese (sempre 3)
   used_days INTEGER NOT NULL DEFAULT 0, -- Giorni utilizzati nel mese
+  pending_days INTEGER NOT NULL DEFAULT 0, -- Giorni in attesa di approvazione nel mese
   remaining_days INTEGER NOT NULL DEFAULT 3, -- Giorni rimanenti nel mese
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -38,5 +39,6 @@ CREATE TRIGGER trigger_absence_104_updated_at
 COMMENT ON TABLE absence_104_balances IS 'Bilancio assenze legge 104: 3 giorni interi al mese per dipendenti con has104=true, non cumulabili, reset mensile';
 COMMENT ON COLUMN absence_104_balances.total_days IS 'Sempre 3 giorni per mese';
 COMMENT ON COLUMN absence_104_balances.used_days IS 'Giorni utilizzati nel mese corrente';
-COMMENT ON COLUMN absence_104_balances.remaining_days IS 'Giorni rimanenti nel mese (3 - used_days)';
+COMMENT ON COLUMN absence_104_balances.pending_days IS 'Giorni in attesa di approvazione nel mese corrente';
+COMMENT ON COLUMN absence_104_balances.remaining_days IS 'Giorni rimanenti nel mese (3 - used_days - pending_days)';
 
