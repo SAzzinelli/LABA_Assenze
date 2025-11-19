@@ -100,7 +100,7 @@ const MonteOre = () => {
         }
       }
 
-      setOvertimeBalance(overtimeBalance);
+          setOvertimeBalance(overtimeBalance);
 
       // Fetch transactions
       const transactionsResponse = await fetch(`/api/hours/hours-ledger?category=overtime&year=${filters.year}`, {

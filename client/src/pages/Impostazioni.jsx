@@ -626,48 +626,48 @@ const Settings = () => {
         </div>
 
         {/* Invio Email Manuale */}
-        <div className="bg-slate-700 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-white flex items-center mb-4">
+          <div className="bg-slate-700 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-white flex items-center mb-4">
             <Send className="h-5 w-5 mr-2 text-indigo-400" />
             Invio Email Manuale
-          </h3>
+            </h3>
           <p className="text-slate-400 text-sm mb-6">
             Invia un'email personalizzata a un dipendente specifico.
           </p>
 
-          <div className="space-y-4">
-            <div>
+            <div className="space-y-4">
+              <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Dipendente <span className="text-red-400">*</span>
               </label>
-              <div className="relative">
-                <select
-                  value={settings.emailManagement.selectedEmployee}
-                  onChange={(e) => handleSettingChange('emailManagement', 'selectedEmployee', e.target.value)}
+                <div className="relative">
+                  <select
+                    value={settings.emailManagement.selectedEmployee}
+                    onChange={(e) => handleSettingChange('emailManagement', 'selectedEmployee', e.target.value)}
                   className="w-full px-4 py-3 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
-                >
+                  >
                   <option value="">Seleziona un dipendente</option>
-                  {settings.emailManagement.employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
+                    {settings.emailManagement.employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
                       {emp.firstName || emp.first_name} {emp.lastName || emp.last_name} {emp.email ? `(${emp.email})` : ''}
-                    </option>
-                  ))}
-                </select>
+                      </option>
+                    ))}
+                  </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                  </svg>
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div>
+              <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Messaggio <span className="text-red-400">*</span>
               </label>
-              <textarea
-                value={settings.emailManagement.customMessage}
-                onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
+                  <textarea
+                    value={settings.emailManagement.customMessage}
+                    onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
                 className="w-full px-4 py-3 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 rows="6"
                 placeholder="Scrivi il messaggio che vuoi inviare al dipendente..."
@@ -675,33 +675,33 @@ const Settings = () => {
               <p className="text-slate-500 text-xs mt-1">
                 Il messaggio verrà inviato come email al dipendente selezionato.
               </p>
-            </div>
+                </div>
 
-            <button
-              onClick={sendEmail}
+              <button
+                onClick={sendEmail}
               disabled={emailLoading || !settings.emailManagement.selectedEmployee || !settings.emailManagement.customMessage.trim()}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium"
-            >
-              {emailLoading ? (
+              >
+                {emailLoading ? (
                 <>
                   <Clock className="h-4 w-4 mr-2 animate-spin" />
                   Invio in corso...
                 </>
-              ) : (
+                ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Invia Email
                 </>
-              )}
-            </button>
+                )}
+              </button>
 
-            {emailResult && (
+              {emailResult && (
               <div className={`p-4 rounded-lg flex items-start ${
                 emailResult.success 
                   ? 'bg-green-900/30 border border-green-500/30 text-green-300' 
                   : 'bg-red-900/30 border border-red-500/30 text-red-300'
-              }`}>
-                {emailResult.success ? (
+                }`}>
+                  {emailResult.success ? (
                   <CheckCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" />
                 ) : (
                   <AlertCircle className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" />

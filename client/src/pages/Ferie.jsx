@@ -311,7 +311,7 @@ const Vacation = () => {
     if (!isValidPeriod && periodValidationError) {
       alert(periodValidationError);
       return;
-    }
+      }
 
     // Verifica che ci sia almeno un periodo aperto
     if (availablePeriods.length === 0) {

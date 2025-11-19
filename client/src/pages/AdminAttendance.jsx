@@ -1264,52 +1264,52 @@ const AdminAttendance = () => {
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
-                  <div className="relative">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Nome o cognome..."
-                      className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Nome o cognome..."
+                    className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+                  
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = new Date().getFullYear() - 2 + i;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
                       </option>
-                    ))}
-                  </select>
-                </div>
-                    
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const year = new Date().getFullYear() - 2 + i;
-                      return (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
+                    );
+                  })}
+                </select>
+              </div>
               </div>
               <div className="flex items-end">
                 <button

@@ -700,12 +700,12 @@ const Attendance = () => {
     }) : '--:--';
   };
 
-const formatHours = (hours) => {
-  if (hours === null || hours === undefined) return '0h 0m';
-  const h = Math.floor(Math.abs(hours));
+  const formatHours = (hours) => {
+    if (hours === null || hours === undefined) return '0h 0m';
+    const h = Math.floor(Math.abs(hours));
   const m = Math.floor((Math.abs(hours) - h) * 60);
-  return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
-};
+    return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
+  };
 
 const formatHoursWithSign = (hours) => {
   if (hours === null || hours === undefined) return '0h 0m';
@@ -744,7 +744,7 @@ function computeStatusInfo(record = {}) {
   }
 
   if (is_justified_absence) {
-    const leaveTypeText = {
+      const leaveTypeText = {
       sick_leave: 'Malattia',
       vacation: 'Ferie',
       permission: 'Permesso'
@@ -786,7 +786,7 @@ const getStatusColor = (record) => {
 
 const getStatusText = (record) => {
   return computeStatusInfo(record).text;
-};
+  };
 
   const getBalanceColor = (balance) => {
     if (balance > 0) return 'text-green-400';
@@ -1034,9 +1034,9 @@ const getStatusText = (record) => {
         <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <h2 className="text-xl font-bold flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Cronologia Presenze
-            </h2>
+            <Calendar className="h-5 w-5 mr-2" />
+            Cronologia Presenze
+          </h2>
             
             {/* Filtri Mese/Anno */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1147,7 +1147,7 @@ const getStatusText = (record) => {
                         return (
                           <div className={`font-bold text-xs sm:text-sm ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                             {deficit > 0 ? formatHours(deficit) : '0h 0m'}
-                          </div>
+                      </div>
                         );
                       })()}
                     </div>
@@ -1242,12 +1242,12 @@ const getStatusText = (record) => {
                       })()}
                     </td>
                     <td className="py-3 px-4">
-                      {(() => {
+                        {(() => {
                         const deficit = getDisplayedDeficit(record);
                         return (
                           <span className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                             {deficit > 0 ? formatHours(deficit) : '0h 0m'}
-                          </span>
+                      </span>
                         );
                       })()}
                     </td>

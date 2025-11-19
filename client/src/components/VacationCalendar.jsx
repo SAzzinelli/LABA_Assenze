@@ -181,37 +181,37 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               <div className="min-w-0 flex-1">
                 <h2 className="text-base sm:text-xl font-bold text-white truncate">
                   {monthNames[currentMonth]} {currentYear}
-                </h2>
+          </h2>
                 <p className="text-xs text-slate-400 sm:hidden">Calendario Ferie</p>
               </div>
-            </div>
-            
+        </div>
+        
             {/* Navigazione mese - Compatta su mobile */}
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <button
-                onClick={goToPreviousMonth}
+          <button
+            onClick={goToPreviousMonth}
                 className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Mese precedente"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={goToToday}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={goToToday}
                 className="px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
-              >
+          >
                 <span className="hidden sm:inline">OGGI</span>
                 <span className="sm:hidden">Oggi</span>
-              </button>
-              <button
-                onClick={goToNextMonth}
+          </button>
+          <button
+            onClick={goToNextMonth}
                 className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Mese successivo"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
             </div>
-          </div>
         </div>
+      </div>
 
         {/* Statistiche del mese - Compatte su mobile */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
@@ -230,7 +230,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">In Attesa</p>
                 <p className="text-lg sm:text-2xl font-bold text-yellow-400">{monthStats.pending}</p>
-              </div>
+        </div>
               <AlertCircle className="h-4 w-4 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0 mx-auto sm:mx-0 mt-1 sm:mt-0" />
             </div>
           </div>
@@ -240,7 +240,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">Giorni</p>
                 <p className="text-lg sm:text-2xl font-bold text-blue-400">{monthStats.totalDays}</p>
-              </div>
+        </div>
               <Plane className="h-4 w-4 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0 mx-auto sm:mx-0 mt-1 sm:mt-0" />
             </div>
           </div>
@@ -394,15 +394,15 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 rounded flex-shrink-0"></div>
-            <span className="text-slate-300">Approvate</span>
-          </div>
+          <span className="text-slate-300">Approvate</span>
+        </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-yellow-500 rounded flex-shrink-0"></div>
-            <span className="text-slate-300">In Attesa</span>
-          </div>
+          <span className="text-slate-300">In Attesa</span>
+        </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
-            <span className="text-slate-300">Rifiutate</span>
+          <span className="text-slate-300">Rifiutate</span>
           </div>
         </div>
       </div>

@@ -28,6 +28,7 @@ const AdminPermessi104 = () => {
       const response = await apiCall('/api/leave-requests?type=permission_104');
       if (response.ok) {
         const data = await response.json();
+        console.log('📋 Richieste 104 caricate:', data);
         setRequests(data);
       }
     } catch (error) {
@@ -52,27 +53,67 @@ const AdminPermessi104 = () => {
 
   // Raggruppa richieste per dipendente
   const requestsByEmployee = employees104.map(emp => {
-    const empRequests = requests.filter(req => req.user?.id === emp.id);
+    // Le richieste possono avere user_id o user.id - gestiamo entrambi
+    const empRequests = requests.filter(req => {
+      const userId = req.user_id || req.user?.id;
+      return userId === emp.id;
+    });
+    
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
+    console.log(`🔍 Calcolo permessi per ${emp.name}:`, {
+      totalRequests: empRequests.length,
+      currentMonth,
+      currentYear,
+      requests: empRequests.map(req => ({
+        id: req.id,
+        start_date: req.start_date || req.startDate,
+        status: req.status,
+        days_requested: req.days_requested,
+        user_id: req.user_id || req.user?.id
+      }))
+    });
+    
     // Calcola giorni utilizzati dalle richieste approvate del mese corrente
+    // Le richieste dal DB hanno start_date (snake_case), non startDate
     const thisMonthApproved = empRequests.filter(req => {
-      const reqDate = new Date(req.startDate);
-      return reqDate.getMonth() === currentMonth && 
-             reqDate.getFullYear() === currentYear &&
-             req.status === 'approved';
+      const startDate = req.start_date || req.startDate;
+      if (!startDate) {
+        console.warn('⚠️ Richiesta senza start_date:', req);
+        return false;
+      }
+      const reqDate = new Date(startDate);
+      const isThisMonth = reqDate.getMonth() === currentMonth && 
+                         reqDate.getFullYear() === currentYear;
+      const isApproved = req.status === 'approved';
+      
+      if (isThisMonth && isApproved) {
+        console.log(`✅ Richiesta approvata del mese corrente:`, {
+          date: startDate,
+          days: req.days_requested,
+          month: reqDate.getMonth(),
+          year: reqDate.getFullYear()
+        });
+      }
+      
+      return isThisMonth && isApproved;
     });
 
     // Somma i giorni richiesti (non solo conta le richieste)
     const usedDaysThisMonth = thisMonthApproved.reduce((sum, req) => {
       const days = req.days_requested || 1;
+      console.log(`📊 Sommando giorni: ${days} (totale: ${sum + Math.ceil(days)})`);
       return sum + Math.ceil(days);
     }, 0);
+    
+    console.log(`📈 Totale giorni utilizzati per ${emp.name}:`, usedDaysThisMonth);
 
     // Calcola giorni pending del mese corrente
     const thisMonthPending = empRequests.filter(req => {
-      const reqDate = new Date(req.startDate);
+      const startDate = req.start_date || req.startDate;
+      if (!startDate) return false;
+      const reqDate = new Date(startDate);
       return reqDate.getMonth() === currentMonth && 
              reqDate.getFullYear() === currentYear &&
              req.status === 'pending';
@@ -170,20 +211,23 @@ const AdminPermessi104 = () => {
                   <div className="border-t border-slate-600 pt-3 mt-3">
                     <p className="text-xs text-slate-400 mb-2">Ultimi permessi:</p>
                     <div className="space-y-1">
-                      {allRequests.slice(0, 3).map(req => (
-                        <div key={req.id} className="flex items-center justify-between text-xs">
-                          <span className="text-slate-300">
-                            {new Date(req.startDate).toLocaleDateString('it-IT')}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full ${
-                            req.status === 'approved' 
-                              ? 'bg-green-900/30 text-green-400' 
-                              : 'bg-yellow-900/30 text-yellow-400'
-                          }`}>
-                            {req.status === 'approved' ? '✓' : '⏳'}
-                          </span>
-                        </div>
-                      ))}
+                      {allRequests.slice(0, 3).map(req => {
+                        const startDate = req.start_date || req.startDate;
+                        return (
+                          <div key={req.id} className="flex items-center justify-between text-xs">
+                            <span className="text-slate-300">
+                              {startDate ? new Date(startDate).toLocaleDateString('it-IT') : 'N/A'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full ${
+                              req.status === 'approved' 
+                                ? 'bg-green-900/30 text-green-400' 
+                                : 'bg-yellow-900/30 text-yellow-400'
+                            }`}>
+                              {req.status === 'approved' ? '✓' : '⏳'}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -212,36 +256,47 @@ const AdminPermessi104 = () => {
         ) : (
           <div className="space-y-3">
             {requests
-              .sort((a, b) => new Date(b.startDate || b.submittedAt) - new Date(a.startDate || a.submittedAt))
-              .map((request) => (
+              .sort((a, b) => {
+                const dateA = a.start_date || a.startDate || a.submitted_at || a.submittedAt;
+                const dateB = b.start_date || b.startDate || b.submitted_at || b.submittedAt;
+                return new Date(dateB) - new Date(dateA);
+              })
+              .map((request) => {
+                const startDate = request.start_date || request.startDate;
+                const endDate = request.end_date || request.endDate;
+                const userName = request.users?.first_name && request.users?.last_name
+                  ? `${request.users.first_name} ${request.users.last_name}`
+                  : request.user?.name || request.submittedBy || 'Dipendente';
+                
+                return (
               <div key={request.id} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <Accessibility className="h-5 w-5 text-blue-400" />
                       <span className="font-semibold text-white">
-                        {request.user?.name || request.submittedBy || 'Dipendente'}
+                        {userName}
                       </span>
                       <Calendar className="h-4 w-4 text-slate-400" />
                       <span className="text-slate-300">
-                        {request.startDate === request.endDate ? (
-                          new Date(request.startDate).toLocaleDateString('it-IT', { 
+                        {startDate && endDate && startDate === endDate ? (
+                          new Date(startDate).toLocaleDateString('it-IT', { 
                             day: 'numeric', 
                             month: 'long', 
                             year: 'numeric' 
                           })
-                        ) : (
+                        ) : startDate && endDate ? (
                           <>
-                            dal {new Date(request.startDate).toLocaleDateString('it-IT', { 
+                            dal {new Date(startDate).toLocaleDateString('it-IT', { 
                               day: 'numeric', 
                               month: 'long' 
-                            })} al {new Date(request.endDate).toLocaleDateString('it-IT', { 
+                            })} al {new Date(endDate).toLocaleDateString('it-IT', { 
                               day: 'numeric', 
                               month: 'long', 
                               year: 'numeric' 
                             })}
                           </>
-                        )}
+                        ) : 'Data non disponibile'}
                       </span>
                       {request.days_requested && (
                         <span className="text-xs text-blue-300 ml-2">
@@ -266,18 +321,21 @@ const AdminPermessi104 = () => {
                     )}
                     
                     <p className="text-xs text-slate-500 ml-8 mt-1">
-                      Richiesto il: {new Date(request.submittedAt).toLocaleDateString('it-IT', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      Richiesto il: {request.submitted_at || request.submittedAt 
+                        ? new Date(request.submitted_at || request.submittedAt).toLocaleDateString('it-IT', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        : 'Data non disponibile'}
                     </p>
                   </div>
                 </div>
               </div>
-            ))}
+                );
+              })}
           </div>
         )}
       </div>

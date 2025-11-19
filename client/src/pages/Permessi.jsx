@@ -1238,7 +1238,7 @@ const LeaveRequests = () => {
                               )}
                             </span>
                           ) : (
-                            <span>Tipo: {getPermissionTypeText(request)}</span>
+                        <span>Tipo: {getPermissionTypeText(request)}</span>
                           )}
                         </span>
                       </div>
@@ -1309,13 +1309,13 @@ const LeaveRequests = () => {
                           </button>
                         )}
                         {canCancelRequest(request) && (
-                          <button
-                            onClick={() => openCancelDialog(request.id)}
+                        <button
+                          onClick={() => openCancelDialog(request.id)}
                             className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            Annulla
-                          </button>
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Annulla
+                        </button>
                         )}
                       </div>
                     )}

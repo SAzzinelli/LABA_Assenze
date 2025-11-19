@@ -23,7 +23,7 @@ const Notifiche = () => {
 
   useEffect(() => {
     if (user) {
-      fetchNotifications();
+    fetchNotifications();
     }
   }, [user]);
 
@@ -119,21 +119,21 @@ const Notifiche = () => {
     
     // Verifica se è approvata
     if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
-      return <CheckCircle className="h-5 w-5 text-green-400" />;
+        return <CheckCircle className="h-5 w-5 text-green-400" />;
     }
     
     // Verifica se è rifiutata
     if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
-      return <XCircle className="h-5 w-5 text-red-400" />;
+        return <XCircle className="h-5 w-5 text-red-400" />;
     }
     
     // Verifica se è in attesa
     if (type === 'leave_pending' || title.includes('pending') || message.includes('in attesa')) {
-      return <Clock className="h-5 w-5 text-yellow-400" />;
+        return <Clock className="h-5 w-5 text-yellow-400" />;
     }
     
     // Default: blu
-    return <AlertCircle className="h-5 w-5 text-blue-400" />;
+        return <AlertCircle className="h-5 w-5 text-blue-400" />;
   };
 
   const getNotificationBg = (notification, isRead) => {
