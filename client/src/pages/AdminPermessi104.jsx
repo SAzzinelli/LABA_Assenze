@@ -59,43 +59,34 @@ const AdminPermessi104 = () => {
       return userId === emp.id;
     });
     
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
     
-    console.log(`🔍 Calcolo permessi per ${emp.name}:`, {
-      totalRequests: empRequests.length,
-      currentMonth,
-      currentYear,
-      requests: empRequests.map(req => ({
-        id: req.id,
-        start_date: req.start_date || req.startDate,
-        status: req.status,
-        days_requested: req.days_requested,
-        user_id: req.user_id || req.user?.id
-      }))
-    });
+    // Helper per parsare la data locale (evita problemi di timezone)
+    const parseLocalDate = (dateStr) => {
+      if (!dateStr) return null;
+      // Se è già una stringa ISO (YYYY-MM-DD), parsala come local time
+      if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const [year, month, day] = dateStr.split('T')[0].split('-').map(Number);
+        return new Date(year, month - 1, day); // month è 0-indexed
+      }
+      // Altrimenti usa new Date() normale
+      return new Date(dateStr);
+    };
     
     // Calcola giorni utilizzati dalle richieste approvate del mese corrente
     // Le richieste dal DB hanno start_date (snake_case), non startDate
     const thisMonthApproved = empRequests.filter(req => {
       const startDate = req.start_date || req.startDate;
-      if (!startDate) {
-        console.warn('⚠️ Richiesta senza start_date:', req);
-        return false;
-      }
-      const reqDate = new Date(startDate);
+      if (!startDate) return false;
+      
+      const reqDate = parseLocalDate(startDate);
+      if (!reqDate || isNaN(reqDate.getTime())) return false;
+      
       const isThisMonth = reqDate.getMonth() === currentMonth && 
                          reqDate.getFullYear() === currentYear;
       const isApproved = req.status === 'approved';
-      
-      if (isThisMonth && isApproved) {
-        console.log(`✅ Richiesta approvata del mese corrente:`, {
-          date: startDate,
-          days: req.days_requested,
-          month: reqDate.getMonth(),
-          year: reqDate.getFullYear()
-        });
-      }
       
       return isThisMonth && isApproved;
     });
@@ -113,7 +104,10 @@ const AdminPermessi104 = () => {
     const thisMonthPending = empRequests.filter(req => {
       const startDate = req.start_date || req.startDate;
       if (!startDate) return false;
-      const reqDate = new Date(startDate);
+      
+      const reqDate = parseLocalDate(startDate);
+      if (!reqDate || isNaN(reqDate.getTime())) return false;
+      
       return reqDate.getMonth() === currentMonth && 
              reqDate.getFullYear() === currentYear &&
              req.status === 'pending';
