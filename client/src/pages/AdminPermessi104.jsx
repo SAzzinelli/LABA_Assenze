@@ -63,11 +63,24 @@ const AdminPermessi104 = () => {
 
   // Raggruppa richieste per dipendente
   const requestsByEmployee = employees104.map(emp => {
-    // Le richieste possono avere user_id o user.id - gestiamo entrambi
+    // Le richieste possono avere user_id o user.id o users.id - gestiamo tutti i casi
     const empRequests = requests.filter(req => {
-      const userId = req.user_id || req.user?.id;
-      return userId === emp.id;
+      // Le richieste dal DB hanno user_id come campo diretto, oppure users come oggetto con id
+      const userId = req.user_id || req.user?.id || req.users?.id;
+      const matches = userId === emp.id;
+      if (matches) {
+        console.log(`✅ Richiesta ${req.id} corrisponde a ${emp.name}:`, {
+          requestUserId: userId,
+          empId: emp.id,
+          start_date: req.start_date || req.startDate,
+          status: req.status,
+          days_requested: req.days_requested
+        });
+      }
+      return matches;
     });
+    
+    console.log(`👤 ${emp.name} (${emp.id}): ${empRequests.length} richieste trovate`);
     
     const now = new Date();
     const currentMonth = now.getMonth(); // 0-11
