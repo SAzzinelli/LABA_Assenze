@@ -996,8 +996,10 @@ const Dashboard = () => {
           </div>
           {/* Fine grid per Richieste Recenti e In programma oggi */}
 
-      {/* Giorni Festivi */}
-      <HolidaysCalendar year={new Date().getFullYear()} />
+          {/* Giorni Festivi */}
+          <HolidaysCalendar year={new Date().getFullYear()} />
+        </>
+      )}
 
     </div>
   );
