@@ -80,7 +80,7 @@ const getItalianStatus = (status) => {
 // Template email per notifiche
 const emailTemplates = {
   // Notifica admin per nuova richiesta
-  newRequest: (userName, requestType, startDate, endDate, requestId) => {
+  newRequest: (userName, requestType, startDate, endDate, requestId, entryTime = null, exitTime = null, hours = null, permissionType = null) => {
     const typeLabel = getItalianRequestType(requestType);
     const dateStart = formatDateItalian(startDate);
     const dateEnd = formatDateItalian(endDate);
@@ -99,6 +99,56 @@ const emailTemplates = {
     };
     const requestPage = getRequestPage(requestType);
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
+    // Formatta le ore in formato leggibile
+    const formatHours = (hoursValue) => {
+      if (!hoursValue || hoursValue === 0) return '0h';
+      const h = Math.floor(hoursValue);
+      const m = Math.round((hoursValue - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    };
+    
+    // Genera informazioni specifiche per permessi entrata/uscita
+    let permissionDetails = '';
+    if (requestType === 'permission' || requestType === 'Permesso') {
+      if (permissionType === 'late_entry' || permissionType === 'entrata_posticipata') {
+        // Entrata posticipata
+        if (entryTime) {
+          permissionDetails = `
+            <div class="info-row">
+              <span class="info-label">Entrata alle ore:</span> ${entryTime}
+            </div>
+            ${hours ? `
+            <div class="info-row">
+              <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+            </div>
+            ` : ''}
+          `;
+        }
+      } else if (permissionType === 'early_exit' || permissionType === 'uscita_anticipata') {
+        // Uscita anticipata
+        if (exitTime) {
+          permissionDetails = `
+            <div class="info-row">
+              <span class="info-label">Uscita alle ore:</span> ${exitTime}
+            </div>
+            ${hours ? `
+            <div class="info-row">
+              <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+            </div>
+            ` : ''}
+          `;
+        }
+      } else if (hours) {
+        // Permesso generico con ore
+        permissionDetails = `
+          <div class="info-row">
+            <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+          </div>
+        `;
+      }
+    }
     
     return {
       subject: `Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
@@ -144,6 +194,7 @@ const emailTemplates = {
                 <div class="info-row">
                   <span class="info-label">Periodo:</span> ${dateRange}
                 </div>
+                ${permissionDetails}
               </div>
               
               <div style="text-align: center;">
@@ -168,7 +219,7 @@ const emailTemplates = {
   },
 
   // Risposta richiesta per dipendente
-  requestResponse: (requestType, status, startDate, endDate, notes, requestId) => {
+  requestResponse: (requestType, status, startDate, endDate, notes, requestId, entryTime = null, exitTime = null, hours = null, permissionType = null) => {
     const typeLabel = getItalianRequestType(requestType);
     const dateStart = formatDateItalian(startDate);
     const dateEnd = formatDateItalian(endDate);
@@ -200,6 +251,56 @@ const emailTemplates = {
     };
     const requestPage = getRequestPage(requestType);
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
+    // Formatta le ore in formato leggibile
+    const formatHours = (hoursValue) => {
+      if (!hoursValue || hoursValue === 0) return '0h';
+      const h = Math.floor(hoursValue);
+      const m = Math.round((hoursValue - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    };
+    
+    // Genera informazioni specifiche per permessi entrata/uscita
+    let permissionDetails = '';
+    if (requestType === 'permission' || requestType === 'Permesso') {
+      if (permissionType === 'late_entry' || permissionType === 'entrata_posticipata') {
+        // Entrata posticipata
+        if (entryTime) {
+          permissionDetails = `
+            <div class="info-row">
+              <span class="info-label">Entrata alle ore:</span> ${entryTime}
+            </div>
+            ${hours ? `
+            <div class="info-row">
+              <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+            </div>
+            ` : ''}
+          `;
+        }
+      } else if (permissionType === 'early_exit' || permissionType === 'uscita_anticipata') {
+        // Uscita anticipata
+        if (exitTime) {
+          permissionDetails = `
+            <div class="info-row">
+              <span class="info-label">Uscita alle ore:</span> ${exitTime}
+            </div>
+            ${hours ? `
+            <div class="info-row">
+              <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+            </div>
+            ` : ''}
+          `;
+        }
+      } else if (hours) {
+        // Permesso generico con ore
+        permissionDetails = `
+          <div class="info-row">
+            <span class="info-label">Permesso:</span> <strong>${formatHours(hours)}</strong>
+          </div>
+        `;
+      }
+    }
     
     return {
       subject: `Richiesta di ${typeLabel} - Gestione personale LABA`,
@@ -243,6 +344,7 @@ const emailTemplates = {
                 <div class="info-row">
                   <span class="info-label">Periodo:</span> ${dateRange}
                 </div>
+                ${permissionDetails}
                 <div class="info-row">
                   <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusText}</strong>
                 </div>

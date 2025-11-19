@@ -4827,13 +4827,28 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
         // Invia email a tutti gli admin
         try {
-          await sendEmailToAdmins('newRequest', [
-            userName,
-            type,
-            startDate, // Passa la data originale YYYY-MM-DD, il template la formatterà
-            endDate,   // Passa la data originale YYYY-MM-DD, il template la formatterà
-            newRequest.id
-          ]);
+          // Per permessi, passa anche entry_time, exit_time e hours
+          if (type === 'permission') {
+            await sendEmailToAdmins('newRequest', [
+              userName,
+              type,
+              startDate, // Passa la data originale YYYY-MM-DD, il template la formatterà
+              endDate,   // Passa la data originale YYYY-MM-DD, il template la formatterà
+              newRequest.id,
+              newRequest.entry_time || null,
+              newRequest.exit_time || null,
+              newRequest.hours || null,
+              newRequest.permission_type || null
+            ]);
+          } else {
+            await sendEmailToAdmins('newRequest', [
+              userName,
+              type,
+              startDate, // Passa la data originale YYYY-MM-DD, il template la formatterà
+              endDate,   // Passa la data originale YYYY-MM-DD, il template la formatterà
+              newRequest.id
+            ]);
+          }
           console.log('✅ Email inviate agli admin');
         } catch (emailError) {
           console.error('⚠️ Errore invio email admin:', emailError);
@@ -5658,14 +5673,30 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
               const requestId = updatedRequest.id;
               
-              await sendEmail(user.email, 'requestResponse', [
-                requestType, 
-                status, 
-                updatedRequest.start_date, 
-                updatedRequest.end_date, 
-                notes || '', 
-                requestId
-              ]);
+              // Per permessi, passa anche entry_time, exit_time e hours
+              if (updatedRequest.type === 'permission') {
+                await sendEmail(user.email, 'requestResponse', [
+                  requestType, 
+                  status, 
+                  updatedRequest.start_date, 
+                  updatedRequest.end_date, 
+                  notes || '', 
+                  requestId,
+                  updatedRequest.entry_time || null,
+                  updatedRequest.exit_time || null,
+                  updatedRequest.hours || null,
+                  updatedRequest.permission_type || null
+                ]);
+              } else {
+                await sendEmail(user.email, 'requestResponse', [
+                  requestType, 
+                  status, 
+                  updatedRequest.start_date, 
+                  updatedRequest.end_date, 
+                  notes || '', 
+                  requestId
+                ]);
+              }
               console.log(`Email inviata a ${user.email} per risposta richiesta`);
             } else {
               console.log('Email non inviata: privacy - email non reale o non autorizzata');
