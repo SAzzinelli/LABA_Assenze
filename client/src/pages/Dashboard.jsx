@@ -739,8 +739,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-          {/* Presenti adesso */}
+          {/* Presenti adesso - Full width con 2 colonne interne */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
               <Clock className="h-6 w-6 mr-3 text-green-400" />
@@ -757,7 +756,7 @@ const Dashboard = () => {
             );
             
             return presentNow.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {presentNow.map((person) => {
                 const isWorking = person.status === 'working';
                 const isOnBreak = person.status === 'on_break';
@@ -836,6 +835,8 @@ const Dashboard = () => {
           })()}
           </div>
 
+          {/* Grid per Richieste Recenti e In programma oggi */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mt-3 sm:mt-4 md:mt-6">
           {/* Richieste Recenti */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
@@ -913,12 +914,9 @@ const Dashboard = () => {
             )}
           </div>
           </div>
-        </div>
-        </>
-      )}
 
-      {/* Calendario Overview Eventi */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          {/* In programma oggi */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
           In programma oggi
@@ -995,6 +993,8 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+          </div>
+          {/* Fine grid per Richieste Recenti e In programma oggi */}
 
       {/* Giorni Festivi */}
       <HolidaysCalendar year={new Date().getFullYear()} />
