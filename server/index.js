@@ -782,6 +782,94 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
   }
 });
 
+// Reset employee password (Admin only)
+app.post('/api/admin/employees/:id/reset-password', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sendEmail } = require('./emailService');
+
+    // Trova il dipendente
+    const { data: employee, error: employeeError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, role')
+      .eq('id', id)
+      .eq('role', 'employee')
+      .single();
+
+    if (employeeError || !employee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    // Genera una password temporanea casuale (12 caratteri: lettere, numeri, caratteri speciali)
+    const generateRandomPassword = () => {
+      const length = 12;
+      const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';
+      let password = '';
+      
+      // Assicura almeno un carattere di ogni tipo
+      password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]; // minuscola
+      password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]; // maiuscola
+      password += '0123456789'[Math.floor(Math.random() * 10)]; // numero
+      password += '!@#$%&*'[Math.floor(Math.random() * 7)]; // speciale
+      
+      // Riempi il resto
+      for (let i = password.length; i < length; i++) {
+        password += charset[Math.floor(Math.random() * charset.length)];
+      }
+      
+      // Mescola la password
+      return password.split('').sort(() => Math.random() - 0.5).join('');
+    };
+
+    const newPassword = generateRandomPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Aggiorna la password nel database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Password reset error:', updateError);
+      return res.status(500).json({ error: 'Errore durante il reset della password' });
+    }
+
+    // Invia email con la nuova password
+    const userName = `${employee.first_name} ${employee.last_name}`;
+    try {
+      const emailResult = await sendEmail(employee.email, 'resetPassword', [userName, newPassword]);
+      if (!emailResult.success) {
+        console.error('Email send error:', emailResult.error);
+        // Non fallire se l'email non viene inviata, ma avvisa l'admin
+        return res.status(200).json({
+          success: true,
+          message: `Password resettata con successo, ma l'email non è stata inviata. La nuova password è: ${newPassword}`,
+          password: newPassword, // Includi la password nella risposta come fallback
+          warning: 'Email non inviata'
+        });
+      }
+    } catch (emailError) {
+      console.error('Email send error:', emailError);
+      // Fallback: restituisci la password nella risposta
+      return res.status(200).json({
+        success: true,
+        message: `Password resettata con successo, ma l'email non è stata inviata. La nuova password è: ${newPassword}`,
+        password: newPassword,
+        warning: 'Email non inviata'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Password resettata con successo. La nuova password è stata inviata via email a ${employee.email}`
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Add new employee (Admin only)
 app.post('/api/employees', authenticateToken, async (req, res) => {
   try {
@@ -9368,6 +9456,82 @@ app.post('/api/admin/reset-adriano-password', async (req, res) => {
   } catch (error) {
     console.error('❌ Reset password error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint temporaneo per correggere gli orari di pausa pranzo di Silvia Consorti
+app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log('🔧 Correzione orari pausa pranzo per Silvia Consorti...');
+
+    // Trova Silvia Consorti
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .ilike('first_name', 'Silvia')
+      .ilike('last_name', 'Consorti');
+
+    if (userError) {
+      console.error('❌ Errore nel recupero utente:', userError);
+      return res.status(500).json({ error: userError.message });
+    }
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ error: 'Silvia Consorti non trovata nel database' });
+    }
+
+    const silvia = users[0];
+    console.log(`✅ Trovata: ${silvia.first_name} ${silvia.last_name} (ID: ${silvia.id})`);
+
+    // Recupera i work_schedules di Silvia prima dell'aggiornamento
+    const { data: schedulesBefore, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('id, day_of_week, break_start_time, break_duration, is_working_day')
+      .eq('user_id', silvia.id);
+
+    if (scheduleError) {
+      console.error('❌ Errore nel recupero schedules:', scheduleError);
+      return res.status(500).json({ error: scheduleError.message });
+    }
+
+    console.log(`📋 Trovati ${schedulesBefore.length} orari di lavoro`);
+
+    // Aggiorna tutti i giorni lavorativi con break_start_time = '13:30'
+    const { data: updated, error: updateError } = await supabase
+      .from('work_schedules')
+      .update({ break_start_time: '13:30' })
+      .eq('user_id', silvia.id)
+      .eq('is_working_day', true)
+      .select();
+
+    if (updateError) {
+      console.error('❌ Errore nell\'aggiornamento:', updateError);
+      return res.status(500).json({ error: updateError.message });
+    }
+
+    console.log(`✅ Aggiornati ${updated.length} orari di lavoro`);
+    
+    res.json({
+      success: true,
+      message: `Correzione completata! ${updated.length} orari aggiornati con break_start_time = 13:30`,
+      user: `${silvia.first_name} ${silvia.last_name}`,
+      updated: updated.length,
+      schedules: updated.map(s => ({
+        day: s.day_of_week,
+        break_start: s.break_start_time,
+        break_duration: s.break_duration,
+        break_end: (() => {
+          const [hour, min] = s.break_start_time.split(':').map(Number);
+          const endMin = min + (s.break_duration || 60);
+          const endHour = hour + Math.floor(endMin / 60);
+          const endMinFinal = endMin % 60;
+          return `${String(endHour).padStart(2, '0')}:${String(endMinFinal).padStart(2, '0')}`;
+        })()
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Errore generale:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
   }
 });
 

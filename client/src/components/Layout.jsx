@@ -440,27 +440,29 @@ const Layout = ({ children }) => {
                                   }}
                                 >
                                   <div className="flex items-start space-x-3">
-                                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-                                      (() => {
-                                        // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
-                                        const title = (notification.title || '').toLowerCase();
-                                        const message = (notification.message || '').toLowerCase();
-                                        const type = notification.type || '';
-                                        
-                                        // Verifica se è approvata
-                                        if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
-                                          return 'bg-green-400';
-                                        }
-                                        
-                                        // Verifica se è rifiutata
-                                        if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
-                                          return 'bg-red-400';
-                                        }
-                                        
-                                        // Default: blu
-                                        return 'bg-blue-400';
-                                      })()
-                                    }`} />
+                                    {!notification.is_read && (
+                                      <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+                                        (() => {
+                                          // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
+                                          const title = (notification.title || '').toLowerCase();
+                                          const message = (notification.message || '').toLowerCase();
+                                          const type = notification.type || '';
+                                          
+                                          // Verifica se è approvata
+                                          if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
+                                            return 'bg-green-400';
+                                          }
+                                          
+                                          // Verifica se è rifiutata
+                                          if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
+                                            return 'bg-red-400';
+                                          }
+                                          
+                                          // Default: blu
+                                          return 'bg-blue-400';
+                                        })()
+                                      }`} />
+                                    )}
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-semibold text-white mb-1">
                                         {notification.title}

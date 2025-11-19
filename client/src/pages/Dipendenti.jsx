@@ -6,7 +6,7 @@ import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AddEmployeeModal from '../components/AddEmployeeModal';
 import CustomAlert from '../components/CustomAlert';
 import ConfirmModal from '../components/ConfirmModal';
-import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee, DollarSign, TrendingUp, TrendingDown, Activity, LayoutGrid, List } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Search, Filter, X, Save, User, Mail, Phone, Calendar, Briefcase, CheckSquare, Eye, Clock, Sun, Moon, Coffee, DollarSign, TrendingUp, TrendingDown, Activity, LayoutGrid, List, Key } from 'lucide-react';
 
 const Employees = () => {
   const { user, apiCall } = useAuthStore();
@@ -280,6 +280,29 @@ const Employees = () => {
     }
   };
 
+  const handleResetPassword = async (employee) => {
+    if (!window.confirm(`Sei sicuro di voler resettare la password per ${employee.name}?\n\nUna nuova password temporanea verrà generata e inviata via email.`)) {
+      return;
+    }
+
+    try {
+      const response = await apiCall(`/api/admin/employees/${employee.id}/reset-password`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showAlert('success', 'Successo!', data.message || `Password resettata con successo. La nuova password è stata inviata via email a ${employee.email}`);
+      } else {
+        const error = await response.json();
+        showAlert('error', 'Errore', error.error || 'Errore durante il reset della password');
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      showAlert('error', 'Errore', 'Errore di connessione durante il reset della password');
+    }
+  };
+
   const handleViewDetails = async (employee) => {
     console.log('Opening details for:', employee);
     setSelectedEmployee(employee);
@@ -496,6 +519,14 @@ const Employees = () => {
                 Modifica
               </button>
               <button
+                onClick={(e) => { e.stopPropagation(); handleResetPassword(employee); }}
+                className="flex-1 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
+                title="Reset Password"
+              >
+                <Key className="h-4 w-4 inline mr-1" />
+                Reset
+              </button>
+              <button
                 onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
                 className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
                 title="Elimina"
@@ -550,6 +581,14 @@ const Employees = () => {
                   title="Dettagli"
                 >
                   Dettagli
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleResetPassword(employee); }}
+                  className="flex-1 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 text-xs font-medium"
+                  title="Reset Password"
+                >
+                  <Key className="h-3 w-3 inline mr-1" />
+                  Reset
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
@@ -663,6 +702,17 @@ const Employees = () => {
                       >
                         <Eye className="h-4 w-4" />
                         <span className="text-xs font-medium">Dettagli</span>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResetPassword(employee);
+                        }}
+                        className="flex items-center space-x-2 px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 hover:border-yellow-400/50 transition-all duration-200 hover:scale-105"
+                        title="Reset Password"
+                      >
+                        <Key className="h-4 w-4" />
+                        <span className="text-xs font-medium">Reset</span>
                       </button>
                       <button 
                         onClick={(e) => {

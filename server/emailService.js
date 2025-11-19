@@ -101,7 +101,7 @@ const emailTemplates = {
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
     
     return {
-      subject: `🔔 Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
+      subject: `Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -127,14 +127,14 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔔 Nuova Richiesta di ${typeLabel}</h1>
+              <h1>Nuova Richiesta di ${typeLabel}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">È stata ricevuta una nuova richiesta che richiede la tua attenzione.</p>
               
               <div class="info-box">
-                <h2>📋 Dettagli Richiesta</h2>
+                <h2>Dettagli Richiesta</h2>
                 <div class="info-row">
                   <span class="info-label">Dipendente:</span> ${userName}
                 </div>
@@ -148,7 +148,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${baseUrl}${requestPage}" class="btn">
-                  📊 Visualizza Dettagli
+                  Visualizza Dettagli
                 </a>
               </div>
               
@@ -202,7 +202,7 @@ const emailTemplates = {
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
     
     return {
-      subject: `📋 Richiesta di ${typeLabel} ${statusText} - Gestione personale LABA`,
+      subject: `Richiesta di ${typeLabel} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -229,14 +229,14 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>📋 Richiesta di ${typeLabel} ${statusText}</h1>
+              <h1>Richiesta di ${typeLabel}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">La tua richiesta è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
               
               <div class="status-box">
-                <h2>📝 Dettagli Richiesta</h2>
+                <h2>Dettagli Richiesta</h2>
                 <div class="info-row">
                   <span class="info-label">Tipo Richiesta:</span> ${typeLabel}
                 </div>
@@ -257,7 +257,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${baseUrl}${requestPage}" class="btn">
-                  📊 Visualizza Dettagli
+                  Visualizza Dettagli
                 </a>
               </div>
             </div>
@@ -290,7 +290,7 @@ const emailTemplates = {
     };
     
     return {
-      subject: `📊 Report Settimanale - Settimana ${weekNumber} - Gestione personale LABA`,
+      subject: `Report Settimanale - Settimana ${weekNumber} - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -320,7 +320,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>📊 Report Settimanale</h1>
+              <h1>Report Settimanale</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Settimana ${weekNumber}</p>
             </div>
             <div class="content">
@@ -328,7 +328,7 @@ const emailTemplates = {
               <p>Ecco il riepilogo delle tue presenze e ore lavorate per la settimana:</p>
               
               <div class="stats-box">
-                <h2>📈 Riepilogo Settimanale</h2>
+                <h2>Riepilogo Settimanale</h2>
                 <div class="stat-row">
                   <span class="stat-label">Ore Lavorate Totali:</span>
                   <span class="stat-value">${formatHours(totalHours)}</span>
@@ -349,7 +349,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
-                  📊 Visualizza Dettagli Completi
+                  Visualizza Dettagli Completi
                 </a>
               </div>
             </div>
@@ -375,7 +375,7 @@ const emailTemplates = {
     })();
     
     return {
-      subject: `🔄 Proposta Recupero Ore - Gestione personale LABA`,
+      subject: `Proposta Recupero Ore - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -401,7 +401,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔄 Proposta Recupero Ore</h1>
+              <h1>Proposta Recupero Ore</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
@@ -409,7 +409,7 @@ const emailTemplates = {
               <p>L'amministratore ti ha proposto un recupero ore per compensare il tuo debito nella banca ore.</p>
               
               <div class="info-box">
-                <h2>📋 Dettagli Proposta</h2>
+                <h2>Dettagli Proposta</h2>
                 <div class="info-row">
                   <span class="info-label">Data Recupero:</span> ${dateFormatted}
                 </div>
@@ -432,7 +432,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
-                  📊 Gestisci Proposta
+                  Gestisci Proposta
                 </a>
               </div>
             </div>
@@ -467,7 +467,7 @@ const emailTemplates = {
       : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
     
     return {
-      subject: `🔄 Recupero Ore ${statusText} - Gestione personale LABA`,
+      subject: `Recupero Ore - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -494,7 +494,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🔄 Recupero Ore ${statusText}</h1>
+              <h1>Recupero Ore</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
@@ -502,7 +502,7 @@ const emailTemplates = {
               <p>La tua richiesta di recupero ore è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
               
               <div class="status-box">
-                <h2>📝 Dettagli Recupero</h2>
+                <h2>Dettagli Recupero</h2>
                 <div class="info-row">
                   <span class="info-label">Data Recupero:</span> ${dateFormatted}
                 </div>
@@ -526,7 +526,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
-                  📊 Visualizza Dettagli
+                  Visualizza Dettagli
                 </a>
               </div>
             </div>
@@ -552,7 +552,7 @@ const emailTemplates = {
     })();
     
     return {
-      subject: `✅ Proposta Recupero Ore Accettata - Gestione personale LABA`,
+      subject: `Proposta Recupero Ore Accettata - Gestione personale LABA`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -578,7 +578,7 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ Proposta Recupero Accettata</h1>
+              <h1>Proposta Recupero Accettata</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
             <div class="content">
@@ -586,7 +586,7 @@ const emailTemplates = {
               <p><strong>${employeeName}</strong> ha accettato la tua proposta di recupero ore.</p>
               
               <div class="info-box">
-                <h2>📋 Dettagli Recupero</h2>
+                <h2>Dettagli Recupero</h2>
                 <div class="info-row">
                   <span class="info-label">Dipendente:</span> ${employeeName}
                 </div>
@@ -603,7 +603,7 @@ const emailTemplates = {
               
               <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
-                  📊 Visualizza Dettagli
+                  Visualizza Dettagli
                 </a>
               </div>
             </div>
@@ -618,8 +618,72 @@ const emailTemplates = {
     };
   },
 
+  // Reset password email
+  resetPassword: (userName, newPassword) => ({
+    subject: `Reset Password - Gestione personale LABA`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Password</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .content { padding: 30px; }
+          .password-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 5px; text-align: center; }
+          .password-box h2 { margin-top: 0; color: #92400E; font-size: 20px; }
+          .password-value { font-size: 24px; font-weight: bold; color: #92400E; letter-spacing: 2px; font-family: monospace; background: white; padding: 15px; border-radius: 5px; margin: 10px 0; border: 2px solid #F59E0B; }
+          .warning-box { background: #FEE2E2; border-left: 4px solid #EF4444; padding: 15px; margin: 20px 0; border-radius: 5px; }
+          .warning-box p { margin: 5px 0; color: #991B1B; font-size: 14px; }
+          .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+          .btn:hover { background: #2563EB; }
+          .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Reset Password</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+          </div>
+          <div class="content">
+            <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+            <p>La tua password è stata resettata da un amministratore. Ecco la tua nuova password temporanea:</p>
+            
+            <div class="password-box">
+              <h2>Nuova Password</h2>
+              <div class="password-value">${newPassword}</div>
+            </div>
+            
+            <div class="warning-box">
+              <p><strong>Importante:</strong></p>
+              <p>• Accedi al sistema con questa password</p>
+              <p>• Ti consigliamo di cambiare la password dopo il primo accesso</p>
+              <p>• Mantieni questa password al sicuro e non condividerla</p>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/login" class="btn">
+                Accedi al Sistema
+              </a>
+            </div>
+          </div>
+          <div class="footer">
+            <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+            <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  }),
+
   welcome: (userName, department) => ({
-    subject: `🎉 Benvenuto in LABA Firenze!`,
+    subject: `Benvenuto in LABA Firenze!`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -648,17 +712,17 @@ const emailTemplates = {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🎉 Benvenuto in LABA!</h1>
+            <h1>Benvenuto in LABA!</h1>
             <p style="margin: 10px 0 0 0; opacity: 0.9;">Ciao ${userName}, il tuo account è stato approvato</p>
           </div>
           <div class="content">
             <div class="welcome-box">
-              <h3>✅ Account Attivato</h3>
+              <h3>Account Attivato</h3>
               <p>Il tuo account è stato approvato e attivato. Ora puoi accedere al sistema di gestione personale di LABA Firenze.</p>
             </div>
             
             <div class="steps-box">
-              <h3>📋 Prossimi Passi</h3>
+              <h3>Prossimi Passi</h3>
               <ul class="steps-list">
                 <li>Accedi al sistema con le tue credenziali</li>
                 <li>Completa il tuo profilo</li>
@@ -668,7 +732,7 @@ const emailTemplates = {
             
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/login" class="btn">
-                🚀 Accedi al Sistema
+                Accedi al Sistema
               </a>
             </div>
           </div>
@@ -696,7 +760,7 @@ const sendEmail = async (to, template, data) => {
     const emailTemplate = emailTemplates[template](...data);
     
     const result = await resend.emails.send({
-      from: 'LABA HR <hr@labafirenze.com>',
+      from: 'LABA - Gestione Personale <hr@labafirenze.com>',
       to: to,
       subject: emailTemplate.subject,
       html: emailTemplate.html
