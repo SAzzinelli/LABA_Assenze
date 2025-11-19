@@ -149,7 +149,7 @@ const Layout = ({ children }) => {
     { name: 'Banca Ore', href: '/banca-ore', icon: DollarSign, showIf: (u) => u?.role !== 'admin' && u?.role !== 'supervisor' },
     { name: 'Recuperi Ore', href: '/recuperi-ore', icon: RefreshCw },
     { name: 'Permessi', href: '/permessi', icon: FileText },
-    { name: 'Permessi 104', href: '/permessi-104', icon: Accessibility, showIf: (u) => u?.has_104 === true || u?.role === 'admin' },
+    { name: 'Permessi 104', href: '/permessi-104', icon: Accessibility, showIf: (u) => (u?.has_104 === true || u?.has104 === true) || u?.role === 'admin' },
     { name: 'Malattia', href: '/malattia', icon: Heart },
     { name: 'Ferie', href: '/ferie', icon: Plane },
     { name: 'Impostazioni', href: '/impostazioni', icon: Settings },

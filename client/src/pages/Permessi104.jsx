@@ -438,16 +438,22 @@ const Permessi104 = () => {
 
       {/* Lista Richieste */}
       <div className="bg-slate-800 rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-4">Storico Assenze 104</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Storico Assenze 104</h2>
+          <span className="text-sm text-slate-400">
+            {requests.filter(r => {
+              const matchesSearch = (r.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+              return matchesSearch;
+            }).length} {requests.length === 1 ? 'richiesta' : 'richieste'} totale
+          </span>
+        </div>
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
           </div>
         ) : requests.filter(r=>{
-              const d=new Date(r.startDate);
-              const matchesMonth=d.getMonth()===currentMonth && d.getFullYear()===currentYear;
               const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
-              return matchesMonth && matchesSearch;
+              return matchesSearch;
             }).length === 0 ? (
           <div className="text-center py-12">
             <Calendar className="h-16 w-16 mx-auto text-slate-600 mb-4" />
@@ -456,11 +462,9 @@ const Permessi104 = () => {
         ) : (
           <div className="space-y-3">
             {requests.filter(r=>{
-                const d=new Date(r.startDate);
-                const matchesMonth=d.getMonth()===currentMonth && d.getFullYear()===currentYear;
                 const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
-                return matchesMonth && matchesSearch;
-              }).map((request) => (
+                return matchesSearch;
+              }).sort((a, b) => new Date(b.startDate || b.submittedAt) - new Date(a.startDate || a.submittedAt)).map((request) => (
               <div key={request.id} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

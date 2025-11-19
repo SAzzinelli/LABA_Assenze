@@ -4643,11 +4643,12 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         });
       }
 
-      // Aggiorna il bilancio assenze 104 con i giorni pending
-      const newPendingDays = pendingDays + daysRequestedFor104;
+      // I permessi 104 sono auto-approvati, quindi aggiorna used_days, non pending_days
+      const newUsedDays = usedDays + daysRequestedFor104;
       await supabase.from('absence_104_balances').update({
-        pending_days: newPendingDays,
-        remaining_days: (balance.total_days || 3) - usedDays - newPendingDays,
+        used_days: newUsedDays,
+        pending_days: pendingDays, // Mantieni i pending esistenti (se ce ne sono altri)
+        remaining_days: (balance.total_days || 3) - newUsedDays - pendingDays,
         updated_at: new Date().toISOString()
       }).eq('id', balance.id);
 
