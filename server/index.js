@@ -1384,7 +1384,7 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
 
     let query = supabase
       .from('attendance')
-      .select('user_id, balance_hours');
+      .select('user_id, balance_hours, date');
 
     if (shouldFilter && userIds && userIds.length > 0) {
       query = query.in('user_id', userIds);
@@ -1397,11 +1397,37 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
       return res.status(500).json({ error: 'Errore nel recupero dei saldi' });
     }
 
+    // Recupera tutti i permessi 104 approvati per escluderli dal calcolo
+    const { data: perm104All } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('type', 'permission_104')
+      .eq('status', 'approved');
+
+    // Crea una mappa user_id -> array di date con permesso 104
+    const perm104Map = {};
+    if (perm104All) {
+      perm104All.forEach(perm => {
+        if (!perm104Map[perm.user_id]) perm104Map[perm.user_id] = [];
+        const start = new Date(perm.start_date);
+        const end = new Date(perm.end_date);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          perm104Map[perm.user_id].push(d.toISOString().split('T')[0]);
+        }
+      });
+    }
+
     // Aggregate in memory (Supabase JS lacks groupBy client side)
+    // Escludi i giorni con permesso 104 dal calcolo del balance
     const totals = {};
     for (const row of data || []) {
       const uid = row.user_id;
-      const bal = row.balance_hours || 0;
+      const dateStr = row.date;
+      
+      // Se questo giorno ha un permesso 104, non includerlo nel balance (o usa 0)
+      const hasPerm104 = perm104Map[uid]?.includes(dateStr);
+      const bal = hasPerm104 ? 0 : (row.balance_hours || 0); // Con permesso 104, balance = 0
+      
       totals[uid] = (totals[uid] || 0) + bal;
     }
 
@@ -2707,6 +2733,26 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
     }
 
+    // Recupera tutti i permessi 104 approvati per escluderli dal calcolo del balance
+    const { data: perm104All } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('user_id', targetUserId)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved');
+
+    // Crea una mappa di date con permesso 104
+    const perm104Dates = new Set();
+    if (perm104All) {
+      perm104All.forEach(perm => {
+        const start = new Date(perm.start_date);
+        const end = new Date(perm.end_date);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          perm104Dates.add(d.toISOString().split('T')[0]);
+        }
+      });
+    }
+
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     
     let todayBalance = 0;
@@ -2803,8 +2849,21 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       todayBalance = todayRecord.balance_hours || 0;
     }
 
-    // Somma tutti i saldi, usando real-time per oggi
+    // Controlla se oggi ha un permesso 104
+    const hasPerm104Today = perm104Dates.has(today);
+    if (hasPerm104Today && schedule) {
+      // Se oggi c'è un permesso 104, il balance è 0 (non influisce sulla banca ore)
+      todayBalance = 0;
+      todayBalanceHours = 0;
+    }
+
+    // Somma tutti i saldi, escludendo i giorni con permesso 104
     const totalBalance = allAttendance.reduce((sum, record) => {
+      // Se questo giorno ha un permesso 104, non includerlo nel balance (o usa 0)
+      if (perm104Dates.has(record.date)) {
+        return sum + 0; // Con permesso 104, balance = 0
+      }
+      
       if (record.date === today && schedule) {
         // Usa il balance real-time per oggi invece del DB
         return sum + todayBalance;

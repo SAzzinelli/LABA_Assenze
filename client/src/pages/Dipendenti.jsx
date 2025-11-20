@@ -1098,9 +1098,17 @@ const Employees = () => {
                     <Activity className="h-5 w-5 mr-2 text-amber-400" />
                     Ultime Fluttuazioni
                   </h4>
-                  {balanceHistory.length > 0 ? (
+                  {balanceHistory.filter(record => {
+                    // Mostra solo le fluttuazioni con balance != 0 (variazioni positive o negative)
+                    const balance = record.balance_hours || 0;
+                    return balance !== 0;
+                  }).length > 0 ? (
                     <div className="space-y-3">
-                      {balanceHistory.map((record, index) => (
+                      {balanceHistory.filter(record => {
+                        // Mostra solo le fluttuazioni con balance != 0 (variazioni positive o negative)
+                        const balance = record.balance_hours || 0;
+                        return balance !== 0;
+                      }).map((record, index) => (
                         <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 text-slate-400 mr-3" />
