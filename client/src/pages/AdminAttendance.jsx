@@ -691,13 +691,31 @@ const AdminAttendance = () => {
       if (has104Today) {
         console.log('🔵 User has 104 permission today:', record.user_id);
         
-        // Calcola ore attese complete dalla giornata lavorativa
-        // Le ore attese devono essere quelle complete (es. 7h), non 0
-        const expectedHours = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+        // Trova l'orario di lavoro per questo dipendente nel giorno corrente
+        const scheduleForDay = workSchedules.find(schedule => 
+          schedule.user_id === record.user_id &&
+          schedule.day_of_week === todayDate.getDay() &&
+          schedule.is_working_day === true
+        );
+
+        let expectedHours104 = record.expected_hours || 0;
+
+        if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+          const startHour = parseInt(scheduleForDay.start_time.split(':')[0], 10);
+          const startMin = parseInt(scheduleForDay.start_time.split(':')[1], 10);
+          const endHour = parseInt(scheduleForDay.end_time.split(':')[0], 10);
+          const endMin = parseInt(scheduleForDay.end_time.split(':')[1], 10);
+
+          const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const hasLunchBreak = totalWorkMinutes > 300; // 5 ore = 300 minuti
+          expectedHours104 = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+        } else {
+          console.warn(`⚠️ Nessun orario configurato per user ${record.user_id} nel giorno ${today}, uso expected_hours dal record (${expectedHours104})`);
+        }
         
         return {
-          expectedHours: expectedHours, // Ore complete della giornata lavorativa
-          actualHours: expectedHours, // Con permesso 104, le ore effettive = ore attese (giornata completa)
+          expectedHours: expectedHours104, // Ore complete della giornata lavorativa
+          actualHours: expectedHours104, // Con permesso 104, le ore effettive = ore attese (giornata completa)
           balanceHours: 0, // Non influenzano la banca ore
           status: 'permission_104',
           isPresent: true // È presente con permesso 104
