@@ -305,10 +305,22 @@ const AdminAttendance = () => {
         const data = await response.json();
         console.log('✅ Work schedules fetched:', data.length, 'total schedules');
         
+        // IMPORTANTE: Normalizza la struttura degli schedule per admin (può avere users annidato)
+        const normalizedSchedules = data.map(schedule => {
+          // Se c'è users annidato, estrai user_id da lì, altrimenti usa user_id diretto
+          const userId = schedule.users?.id || schedule.user_id;
+          return {
+            ...schedule,
+            user_id: userId // Assicura che user_id sia sempre presente al livello superiore
+          };
+        });
+        
+        console.log('✅ Normalized schedules:', normalizedSchedules.length, 'total schedules');
+        
         // Log dettagliato per debug: cerca lo schedule di Ilaria per giovedì (day 4)
         const ilariaId = '4d3535c6-76bd-4027-9b03-39bc7a2b6177';
-        const ilariaSchedules = data.filter(s => s.user_id === ilariaId);
-        const ilariaThursday = ilariaSchedules.find(s => s.day_of_week === 4);
+        const ilariaSchedules = normalizedSchedules.filter(s => s.user_id === ilariaId);
+        const ilariaThursday = ilariaSchedules.find(s => Number(s.day_of_week) === 4);
         console.log('🔍 [DEBUG] Ilaria schedules:', {
           total: ilariaSchedules.length,
           thursday: ilariaThursday ? {
@@ -326,7 +338,7 @@ const AdminAttendance = () => {
           }))
         });
         
-        setWorkSchedules(data || []);
+        setWorkSchedules(normalizedSchedules || []);
       } else {
         console.error('❌ Failed to fetch work schedules:', response.status);
       }
