@@ -303,8 +303,30 @@ const AdminAttendance = () => {
       const response = await apiCall('/api/work-schedules');
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Work schedules fetched:', data);
-        setWorkSchedules(data);
+        console.log('✅ Work schedules fetched:', data.length, 'total schedules');
+        
+        // Log dettagliato per debug: cerca lo schedule di Ilaria per giovedì (day 4)
+        const ilariaId = '4d3535c6-76bd-4027-9b03-39bc7a2b6177';
+        const ilariaSchedules = data.filter(s => s.user_id === ilariaId);
+        const ilariaThursday = ilariaSchedules.find(s => s.day_of_week === 4);
+        console.log('🔍 [DEBUG] Ilaria schedules:', {
+          total: ilariaSchedules.length,
+          thursday: ilariaThursday ? {
+            day_of_week: ilariaThursday.day_of_week,
+            is_working_day: ilariaThursday.is_working_day,
+            start_time: ilariaThursday.start_time,
+            end_time: ilariaThursday.end_time,
+            break_duration: ilariaThursday.break_duration,
+            work_type: ilariaThursday.work_type
+          } : 'NOT FOUND',
+          allDays: ilariaSchedules.map(s => ({
+            day: s.day_of_week,
+            working: s.is_working_day,
+            time: s.start_time && s.end_time ? `${s.start_time}-${s.end_time}` : 'N/A'
+          }))
+        });
+        
+        setWorkSchedules(data || []);
       } else {
         console.error('❌ Failed to fetch work schedules:', response.status);
       }
