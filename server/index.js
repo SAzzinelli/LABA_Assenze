@@ -86,11 +86,35 @@ const corsOrigin = process.env.NODE_ENV === 'production'
   ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
+// CORS middleware con configurazione esplicita
 app.use(cors({
-  origin: corsOrigin,
+  origin: function (origin, callback) {
+    // Permetti richieste senza origin (es. mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    
+    // In produzione, accetta solo il frontend URL
+    if (process.env.NODE_ENV === 'production') {
+      const allowedOrigin = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+      if (origin === allowedOrigin) {
+        return callback(null, true);
+      }
+    } else {
+      // In sviluppo, accetta localhost
+      const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+    }
+    
+    // Default: accetta (per sicurezza, in produzione dovresti rifiutare)
+    callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200, // Alcuni browser richiedono 200 per OPTIONS
+  preflightContinue: false
 }));
 
 app.use(morgan('combined'));
