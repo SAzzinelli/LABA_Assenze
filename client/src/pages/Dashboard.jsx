@@ -426,29 +426,46 @@ const Dashboard = () => {
       const perm104Response = await apiCall(`/api/leave-requests?type=permission_104&status=approved&startDate=${today.toISOString().split('T')[0]}&endDate=${nextMonth.toISOString().split('T')[0]}`);
       if (perm104Response.ok) {
         const perm104Data = await perm104Response.json();
-        // Filtra solo gli approvati che non sono ancora passati e con date valide
+        // Filtra solo gli approvati con date valide (include anche quelli di oggi)
+        const todayStr = today.toISOString().split('T')[0];
         const approvedPerms = perm104Data.filter(perm => {
-          if (!perm.start_date || !perm.status || perm.status !== 'approved') {
+          if (!perm.start_date || !perm.end_date || !perm.status || perm.status !== 'approved') {
             return false;
           }
-          const permDate = new Date(perm.start_date);
-          // Verifica che la data sia valida (non NaN)
-          return !isNaN(permDate.getTime()) && permDate >= today;
+          const startDate = new Date(perm.start_date);
+          const endDate = new Date(perm.end_date);
+          
+          // Verifica che le date siano valide
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return false;
+          }
+          
+          // Include permessi 104 che sono oggi o futuri (confronta solo le date, non le ore)
+          const startDateStr = startDate.toISOString().split('T')[0];
+          const endDateStr = endDate.toISOString().split('T')[0];
+          return endDateStr >= todayStr; // Include anche quelli che finiscono oggi
         });
+        
         approvedPerms.forEach(perm => {
-          // Usa start_date e end_date invece di startDate/endDate
           if (perm.start_date && perm.end_date) {
             const startDate = new Date(perm.start_date);
             const endDate = new Date(perm.end_date);
             
             // Verifica che le date siano valide
             if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              // Recupera il nome utente se disponibile
+              const userName = user?.role === 'admin' 
+                ? (perm.users?.first_name && perm.users?.last_name 
+                    ? `${perm.users.first_name} ${perm.users.last_name}`
+                    : perm.user_name || 'Dipendente')
+                : undefined;
+              
               events.push({
                 date: perm.start_date,
                 endDate: perm.end_date,
                 type: 'permission_104',
                 name: 'Permesso 104',
-                user: user?.role === 'admin' ? perm.user_name : undefined,
+                user: userName,
                 color: 'purple'
               });
             }
