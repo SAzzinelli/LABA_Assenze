@@ -4193,8 +4193,9 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       .eq('month', currentMonth)
       .single();
 
-    if (balanceError && balanceError.code === 'PGRST116') {
-      // Nessun bilancio trovato, creane uno nuovo con 3 giorni
+    if (balanceError) {
+      if (balanceError.code === 'PGRST116') {
+        // Nessun bilancio trovato, creane uno nuovo con 3 giorni
         const { data: newBalance, error: createError } = await supabase
           .from('absence_104_balances')
           .insert([{
@@ -4206,18 +4207,32 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
             pending_days: 0,
             remaining_days: 3
           }])
-        .select()
-        .single();
+          .select()
+          .single();
 
-      if (createError) {
-        console.error('Absence 104 balance creation error:', createError);
-        return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104' });
+        if (createError) {
+          console.error('Absence 104 balance creation error:', createError);
+          console.error('Create error details:', JSON.stringify(createError, null, 2));
+          return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104', details: createError.message });
+        }
+
+        if (!newBalance) {
+          console.error('❌ New balance created but is null/undefined');
+          return res.status(500).json({ error: 'Errore: bilancio creato ma non restituito' });
+        }
+
+        balance = newBalance;
+      } else {
+        console.error('Absence 104 balance fetch error:', balanceError);
+        console.error('Balance error details:', JSON.stringify(balanceError, null, 2));
+        return res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104', details: balanceError.message });
       }
+    }
 
-      balance = newBalance;
-    } else if (balanceError) {
-      console.error('Absence 104 balance fetch error:', balanceError);
-      return res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
+    // Verifica che balance esista
+    if (!balance) {
+      console.error('❌ Balance is null/undefined after fetch/create');
+      return res.status(500).json({ error: 'Errore: bilancio non disponibile' });
     }
 
     // Calcola giorni utilizzati dalle richieste approvate del mese corrente
@@ -4230,8 +4245,13 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
       .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
+    if (approvedError) {
+      console.error('Error fetching approved 104 requests:', approvedError);
+      // Non bloccare, usa il valore del balance
+    }
+
     let usedDays = balance.used_days || 0;
-    if (!approvedError && approvedRequests) {
+    if (!approvedError && approvedRequests && approvedRequests.length > 0) {
       usedDays = approvedRequests.reduce((sum, req) => {
         const days = req.days_requested || 1;
         return sum + Math.ceil(days); // Arrotonda sempre per eccesso
@@ -4248,8 +4268,13 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
       .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
-    let pendingDays = 0;
-    if (!pendingError && pendingRequests) {
+    if (pendingError) {
+      console.error('Error fetching pending 104 requests:', pendingError);
+      // Non bloccare, usa 0 come default
+    }
+
+    let pendingDays = balance.pending_days || 0;
+    if (!pendingError && pendingRequests && pendingRequests.length > 0) {
       pendingDays = pendingRequests.reduce((sum, req) => {
         const days = req.days_requested || 1;
         return sum + Math.ceil(days); // Arrotonda sempre per eccesso
