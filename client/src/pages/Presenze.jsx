@@ -274,23 +274,35 @@ const Attendance = () => {
 
   const fetchWorkSchedules = async () => {
     try {
+      console.log('🔄 [Presenze] Fetching work schedules...');
       const response = await apiCall('/api/work-schedules');
-      if (response.ok) {
+      if (response && response.ok) {
         const data = await response.json();
-        console.log('📅 [Presenze] Work schedules caricati:', data);
+        console.log('📅 [Presenze] Work schedules caricati:', data.length, 'schedule totali');
+        console.log('📅 [Presenze] Work schedules dati:', data);
+        
         // Verifica specificamente lo schedule del giovedì (day_of_week = 4)
-        const thursdaySchedule = data.find(s => s.day_of_week === 4 && s.is_working_day);
+        const thursdaySchedule = data.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
         if (thursdaySchedule) {
-          console.log('📅 [Presenze] Schedule GIOVEDÌ:', {
+          console.log('✅ [Presenze] Schedule GIOVEDÌ trovato:', {
+            day_of_week: thursdaySchedule.day_of_week,
+            is_working_day: thursdaySchedule.is_working_day,
             start_time: thursdaySchedule.start_time,
             end_time: thursdaySchedule.end_time,
             break_duration: thursdaySchedule.break_duration,
             work_type: thursdaySchedule.work_type
           });
+        } else {
+          console.warn('⚠️ [Presenze] Schedule GIOVEDÌ NON trovato!');
+          console.warn('⚠️ [Presenze] Schedule disponibili:', data.map(s => ({
+            day: s.day_of_week,
+            working: s.is_working_day,
+            time: s.start_time && s.end_time ? `${s.start_time}-${s.end_time}` : 'N/A'
+          })));
         }
-        setWorkSchedules(data);
+        setWorkSchedules(data || []);
       } else {
-        console.error('❌ [Presenze] Errore nel caricamento work schedules:', response.status);
+        console.error('❌ [Presenze] Errore nel caricamento work schedules:', response?.status || 'No response');
       }
     } catch (error) {
       console.error('❌ [Presenze] Error fetching work schedules:', error);
