@@ -2411,7 +2411,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           department: user.department || 'Non specificato',
           is_working_day: true,
           status: 'permission_104',
-          actual_hours: expectedHours, // Con permesso 104, le ore effettive = ore attese (giornata completa)
+          actual_hours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
           expected_hours: expectedHours, // Ore complete della giornata lavorativa
           balance_hours: 0, // Non influenzano la banca ore
           permission_end_time: null
@@ -3929,7 +3929,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
             .upsert({
               user_id: perm.user_id,
               date: dateStr,
-              actual_hours: expectedHours, // Con permesso 104, ore effettive = ore attese
+              actual_hours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
               expected_hours: expectedHours, // Ore complete della giornata
               balance_hours: 0, // NON influisce sulla banca ore
               notes: `Corretto: permesso 104 - non influenza la banca ore`,
@@ -6122,7 +6122,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .upsert({
               user_id: updatedRequest.user_id,
               date: dateStr,
-              actual_hours: expectedHours, // Con permesso 104, ore effettive = ore attese
+              actual_hours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
               expected_hours: expectedHours, // Ore complete della giornata
               balance_hours: 0, // NON influisce sulla banca ore
               notes: `Permesso 104 approvato - non influenza la banca ore`,
