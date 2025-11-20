@@ -1396,11 +1396,14 @@ const getStatusText = (record) => {
                             const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                             const workMinutes = Math.max(0, totalMinutes - breakDuration);
                             const expectedHoursFromSchedule = workMinutes / 60;
-                            console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Calcolo ore attese dallo schedule: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
+                            console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Data: ${record.date}, Giorno: ${dayOfWeek} (${dayOfWeek === 1 ? 'LUN' : dayOfWeek === 2 ? 'MAR' : dayOfWeek === 3 ? 'MER' : dayOfWeek === 4 ? 'GIO' : dayOfWeek === 5 ? 'VEN' : dayOfWeek === 6 ? 'SAB' : 'DOM'})`);
+                            console.log(`🔵 [Presenze] Schedule trovato: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min, work_type: ${daySchedule.work_type}`);
+                            console.log(`🔵 [Presenze] Calcolo: (${endHour * 60 + endMin} - ${startHour * 60 + startMin}) - ${breakDuration} = ${workMinutes} min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                             return formatHours(expectedHoursFromSchedule);
                           } else {
                             // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
-                            console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek}`);
+                            console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek} (data: ${record.date})`);
+                            console.warn(`⚠️ [Presenze] Work schedules disponibili:`, workSchedules.map(s => ({ day: s.day_of_week, working: s.is_working_day, start: s.start_time, end: s.end_time })));
                           }
                         }
                         
