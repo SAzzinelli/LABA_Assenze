@@ -4167,14 +4167,19 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    // Verifica che l'utente abbia la 104
+    // Verifica che l'utente abbia la 104 (controlla entrambi has_104 e has104 per compatibilità)
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('has_104')
+      .select('has_104, has104')
       .eq('id', userId)
       .single();
 
-    if (userError || !userData || !userData.has_104) {
+    if (userError) {
+      console.error('Error fetching user data:', userError);
+      return res.status(500).json({ error: 'Errore nel recupero dei dati utente', details: userError.message });
+    }
+
+    if (!userData || (!userData.has_104 && !userData.has104)) {
       return res.json({
         has104: false,
         totalDays: 0,
