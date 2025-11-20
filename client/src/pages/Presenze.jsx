@@ -634,31 +634,48 @@ const Attendance = () => {
       const { start_time, end_time, break_duration } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
-      const breakDuration = break_duration || 60;
+      // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0)
+      const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 0;
       
-      // Calcola ore attese totali
+      // Calcola ore attese totali correttamente
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-      const workMinutes = totalMinutes - breakDuration;
+      const workMinutes = Math.max(0, totalMinutes - breakDuration);
       scheduleExpectedHours = workMinutes / 60;
-      if (expectedHours === null) {
+      
+      // Se il record ha un permesso 104, usa sempre lo schedule per expectedHours (non il DB)
+      // Per permessi 104, usa sempre lo schedule corretto, non il valore salvato nel DB
+      if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)') {
+        expectedHours = scheduleExpectedHours; // Forza il ricalcolo dallo schedule
+      } else if (expectedHours === null) {
         expectedHours = scheduleExpectedHours;
       }
       
-      // Calcola ore effettive real-time
-      if (currentHour >= startHour && currentHour <= endHour) {
-        // Durante l'orario di lavoro
-        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
-        // Sottrai la pausa se siamo dopo le 13:00
-        if (currentHour >= 13) {
-          realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
-        } else {
-          realTimeActualHours = workedMinutes / 60;
-        }
-        realTimeBalanceHours = realTimeActualHours - expectedHours;
-      } else if (currentHour > endHour) {
-        // Dopo l'orario di lavoro
-        realTimeActualHours = expectedHours;
+      // Se c'è un permesso 104, actualHours è sempre 0 (non ha lavorato)
+      if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)') {
+        realTimeActualHours = 0;
         realTimeBalanceHours = 0;
+      } else {
+        // Calcola ore effettive real-time
+        if (currentHour >= startHour && currentHour <= endHour) {
+          // Durante l'orario di lavoro
+          const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+          // Sottrai la pausa se c'è e siamo dopo l'inizio della pausa
+          if (breakDuration > 0 && todaySchedule.break_start_time) {
+            const [breakStartHour, breakStartMin] = todaySchedule.break_start_time.split(':').map(Number);
+            if (currentHour > breakStartHour || (currentHour === breakStartHour && currentMinute >= breakStartMin)) {
+              realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+            } else {
+              realTimeActualHours = workedMinutes / 60;
+            }
+          } else {
+            realTimeActualHours = workedMinutes / 60;
+          }
+          realTimeBalanceHours = realTimeActualHours - expectedHours;
+        } else if (currentHour > endHour) {
+          // Dopo l'orario di lavoro
+          realTimeActualHours = expectedHours;
+          realTimeBalanceHours = 0;
+        }
       }
     }
     
