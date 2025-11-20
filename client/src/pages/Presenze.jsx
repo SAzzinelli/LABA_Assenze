@@ -146,14 +146,17 @@ const Attendance = () => {
       performSync();
     }, 60000); // 60 secondi
     
-    // Aggiorna quando la finestra torna in focus (navigazione)
+    // Aggiorna quando la finestra torna in focus (navigazione o dopo salvataggio orari)
     const handleFocus = () => {
-      console.log('🔄 Window focused - recalculating hours...');
+      console.log('🔄 Window focused - recalculating hours and reloading work schedules...');
+      
+      // Ricarica anche i work schedules (potrebbero essere stati aggiornati dal Profilo)
+      fetchWorkSchedules();
       
       // Ricalcola immediatamente le ore in tempo reale
       performSync();
       
-      console.log('✅ Hours recalculated on focus');
+      console.log('✅ Hours recalculated and work schedules reloaded on focus');
     };
     
     window.addEventListener('focus', handleFocus);
@@ -274,10 +277,23 @@ const Attendance = () => {
       const response = await apiCall('/api/work-schedules');
       if (response.ok) {
         const data = await response.json();
+        console.log('📅 [Presenze] Work schedules caricati:', data);
+        // Verifica specificamente lo schedule del giovedì (day_of_week = 4)
+        const thursdaySchedule = data.find(s => s.day_of_week === 4 && s.is_working_day);
+        if (thursdaySchedule) {
+          console.log('📅 [Presenze] Schedule GIOVEDÌ:', {
+            start_time: thursdaySchedule.start_time,
+            end_time: thursdaySchedule.end_time,
+            break_duration: thursdaySchedule.break_duration,
+            work_type: thursdaySchedule.work_type
+          });
+        }
         setWorkSchedules(data);
+      } else {
+        console.error('❌ [Presenze] Errore nel caricamento work schedules:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching work schedules:', error);
+      console.error('❌ [Presenze] Error fetching work schedules:', error);
     }
   };
 
@@ -1232,11 +1248,12 @@ const getStatusText = (record) => {
                               const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                               const workMinutes = Math.max(0, totalMinutes - breakDuration);
                               const expectedHoursFromSchedule = workMinutes / 60;
-                              console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Calcolo ore attese dallo schedule: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
+                              console.log(`🔵 [Presenze MOBILE] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Data: ${record.date}, Giorno: ${dayOfWeek}`);
+                              console.log(`🔵 [Presenze MOBILE] Schedule: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                               return formatHours(expectedHoursFromSchedule);
                             } else {
                               // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
-                              console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek}`);
+                              console.warn(`⚠️ [Presenze MOBILE] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek} (data: ${record.date})`);
                             }
                           }
                           
@@ -1559,6 +1576,4 @@ const getStatusText = (record) => {
   );
 };
 
-export default Attendance;
-export default Attendance;
 export default Attendance;
