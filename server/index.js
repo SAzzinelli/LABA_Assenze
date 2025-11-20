@@ -393,8 +393,8 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
     }
     
-    // Validazione campi obbligatori
-    if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !position || !hireDate || !workplace || !contractType) {
+    // Validazione campi obbligatori (hireDate è opzionale, useremo data corrente se non fornita)
+    if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !position || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
@@ -414,6 +414,9 @@ app.post('/api/auth/register', async (req, res) => {
     // Ruolo employee per tutti (admin si crea manualmente)
     const role = 'employee';
     
+    // Se hireDate non è fornita, usa la data corrente
+    const finalHireDate = hireDate || new Date().toISOString().split('T')[0];
+    
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([
@@ -427,7 +430,7 @@ app.post('/api/auth/register', async (req, res) => {
           has_104: has104,
           phone: phone,
           position: position,
-          hire_date: hireDate,
+          hire_date: finalHireDate,
           workplace: workplace,
           contract_type: contractType,
           department: department,
@@ -452,7 +455,7 @@ app.post('/api/auth/register', async (req, res) => {
           employee_number: employeeNumber,
           department: department,
           position: 'Dipendente',
-          hire_date: new Date().toISOString(),
+          hire_date: finalHireDate,
           status: 'active',
           has_104: has104,
           personal_info: {
@@ -968,6 +971,9 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
     const tempPassword = 'temp123';
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
+    // Se hireDate non è fornita, usa la data corrente
+    const finalHireDate = hireDate || new Date().toISOString().split('T')[0];
+    
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([
@@ -978,7 +984,14 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
           first_name: firstName,
           last_name: lastName,
           is_active: true,
-          has_104: has104
+          has_104: has104,
+          hire_date: finalHireDate,
+          department: department,
+          position: position || 'Dipendente',
+          workplace: workplace,
+          contract_type: contractType,
+          phone: phone,
+          birth_date: birthDate
         }
       ])
       .select()
@@ -999,7 +1012,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
           employee_number: employeeNumber,
           department: department,
           position: position || 'Dipendente',
-          hire_date: new Date().toISOString(),
+          hire_date: finalHireDate,
           status: 'active',
           has_104: has104,
           personal_info: {

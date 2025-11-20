@@ -18,7 +18,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
     // Step 2: Informazioni Lavorative
     department: '',
     position: '',
-    hireDate: '',
     workplace: '',
     contractType: '',
     role: 'employee', // Nuovo campo per il ruolo
@@ -94,7 +93,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
       case 2:
         return formData.department && 
                formData.position && 
-               formData.hireDate && 
                formData.workplace && 
                formData.contractType &&
                formData.role;
@@ -144,7 +142,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
       has104: false,
       department: '',
       position: '',
-      hireDate: '',
       workplace: '',
       contractType: '',
       role: 'employee'
@@ -339,18 +336,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Data Assunzione *</label>
-          <input
-            type="date"
-            name="hireDate"
-            value={formData.hireDate}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-
-        <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Sede di Lavoro *</label>
           <div className="relative">
             <select
@@ -533,7 +518,6 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             <div className="space-y-2 text-sm">
               <p><span className="text-slate-400">Dipartimento:</span> <span className="text-white">{formData.department}</span></p>
               <p><span className="text-slate-400">Posizione:</span> <span className="text-white">{formData.position}</span></p>
-              <p><span className="text-slate-400">Data Assunzione:</span> <span className="text-white">{formData.hireDate}</span></p>
               <p><span className="text-slate-400">Sede:</span> <span className="text-white">{workplaces.find(w => w.value === formData.workplace)?.label}</span></p>
               <p><span className="text-slate-400">Contratto:</span> <span className="text-white">{formData.contractType}</span></p>
               <p><span className="text-slate-400">Ruolo:</span> <span className={`font-semibold ${
