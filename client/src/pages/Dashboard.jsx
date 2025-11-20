@@ -510,21 +510,21 @@ const Dashboard = () => {
   const updateKPIsWithBalance = async (balanceData) => {
     if (user?.role === 'employee') {
       // Usa SOLO l'endpoint /api/attendance/current-hours per coerenza con Presenze
-      try {
-        // Fetch expected monthly presences from user-stats endpoint
-        let expectedMonthlyPresences = 20; // Fallback default
         try {
-          const statsResponse = await apiCall('/api/attendance/user-stats');
-          if (statsResponse.ok) {
-            const statsData = await statsResponse.json();
-            expectedMonthlyPresences = statsData.expectedMonthlyPresences || 20;
+          // Fetch expected monthly presences from user-stats endpoint
+          let expectedMonthlyPresences = 20; // Fallback default
+          try {
+            const statsResponse = await apiCall('/api/attendance/user-stats');
+            if (statsResponse && statsResponse.ok) {
+              const statsData = await statsResponse.json();
+              expectedMonthlyPresences = statsData.expectedMonthlyPresences || 20;
+            }
+          } catch (statsError) {
+            console.error('❌ Error fetching user stats:', statsError);
           }
-        } catch (statsError) {
-          console.error('❌ Error fetching user stats:', statsError);
-        }
 
-        const response = await apiCall('/api/attendance/current-hours');
-        if (response.ok) {
+          const response = await apiCall('/api/attendance/current-hours');
+          if (response && response.ok) {
           const currentHoursData = await response.json();
           
           if (currentHoursData.isWorkingDay) {

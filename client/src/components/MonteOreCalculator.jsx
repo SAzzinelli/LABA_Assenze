@@ -35,7 +35,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
 
           // prova prima l'endpoint con la logica real-time (vale per employee e admin)
           const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${user.id}`);
-          if (singleBalanceResponse.ok) {
+          if (singleBalanceResponse && singleBalanceResponse.ok) {
             const singleBalance = await singleBalanceResponse.json();
           const totalBalance = typeof singleBalance.totalBalanceHours === 'number'
             ? singleBalance.totalBalanceHours
@@ -54,7 +54,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           // fallback per admin (ricerca multipla) se necessario
           if (balanceValue === null) {
             const balanceResponse = await apiCall(`/api/attendance/total-balances?userIds=${user.id}`);
-            if (balanceResponse.ok) {
+            if (balanceResponse && balanceResponse.ok) {
               const balanceData = await balanceResponse.json();
               balanceValue = balanceData.balances[user.id] ?? 0;
             }
@@ -66,7 +66,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           
           // Carica history recente (ultimi 10 record)
           const historyResponse = await apiCall(`/api/attendance?userId=${user.id}&limit=10`);
-          if (historyResponse.ok) {
+          if (historyResponse && historyResponse.ok) {
             const historyData = await historyResponse.json();
             setBalanceHistory(historyData || []);
           }
@@ -74,7 +74,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         
         // Carica saldi ferie
         const response = await apiCall('/api/leave-balances?year=2025');
-        if (response.ok) {
+        if (response && response.ok) {
           const data = await response.json();
           // Converti oggetto in array per compatibilità
           const balancesArray = [

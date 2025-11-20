@@ -259,11 +259,23 @@ export const useAuthStore = create(
           headers.Authorization = `Bearer ${token}`;
         }
 
-        let response = await fetch(url, {
-          ...options,
-          headers,
-          credentials: 'include',
-        });
+        let response;
+        try {
+          response = await fetch(url, {
+            ...options,
+            headers,
+            credentials: 'include',
+          });
+        } catch (networkError) {
+          // Gestisce errori di rete (TypeError: Load failed, CORS errors, ecc.)
+          console.error('❌ Network error in apiCall:', url, networkError);
+          // Restituisce una risposta fittizia per permettere al chiamante di gestire l'errore
+          return new Response(null, {
+            status: 0, // Status 0 indica errore di rete
+            statusText: networkError.message || 'Network Error',
+            ok: false
+          });
+        }
         
         // Non loggare errori 403 per endpoint admin-only (attesi per dipendenti)
         // Questi endpoint hanno controlli lato backend e non dovrebbero essere chiamati da dipendenti
