@@ -2825,8 +2825,9 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
           end_time: schedule.end_time,
           break_duration: schedule.break_duration || 60
         });
-        realTimeActualHours = contractHours;
-        realTimeContractHours = contractHours;
+        // Con permesso 104, NON ha lavorato (actualHours = 0), ma la giornata è considerata completa (contractHours = ore schedule)
+        realTimeActualHours = 0; // NON ha lavorato (è assente giustificata)
+        realTimeContractHours = contractHours; // Ore complete dello schedule per il calcolo
         realTimeEffectiveHours = contractHours;
         realTimeRemainingHours = 0;
         hasRealTimeCalculation = true;
@@ -3471,11 +3472,11 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         currentTime,
         expectedHours: contractHours,
         contractHours: contractHours,
-        actualHours: contractHours, // Con permesso 104, le ore effettive = ore contratto complete
-        balanceHours: 0, // Non influisce la banca ore
+        actualHours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
+        balanceHours: 0, // Non influisce la banca ore (balance = 0)
         remainingHours: 0,
         status: 'permission_104',
-        progress: 100 // Giornata completa
+        progress: 100 // Giornata completa considerata come lavorata per il permesso 104
       });
     }
 

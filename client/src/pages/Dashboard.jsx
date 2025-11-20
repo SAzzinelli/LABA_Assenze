@@ -532,11 +532,19 @@ const Dashboard = () => {
             const todayContractHours = currentHoursData.contractHours ?? currentHoursData.expectedHours ?? 0;
             const remainingTodayHours = currentHoursData.remainingHours ?? Math.max(0, (currentHoursData.expectedHours || 0) - todayHours);
             
+            // Se c'è un permesso 104, mostra "Permesso 104" invece delle ore
+            const workedTodayDisplay = currentHoursData.status === 'permission_104' 
+              ? 'Permesso 104' 
+              : formatHours(todayHours);
+            const remainingTodayDisplay = currentHoursData.status === 'permission_104' 
+              ? '0h 0m' 
+              : formatHours(remainingTodayHours);
+            
             // Update KPIs with today's hours from the same endpoint
             setUserKPIs(prevKPIs => ({
               ...prevKPIs,
-              workedToday: formatHours(todayHours),
-              remainingToday: formatHours(remainingTodayHours),
+              workedToday: workedTodayDisplay,
+              remainingToday: remainingTodayDisplay,
               monthlyPresences: `${balanceData.working_days}/${expectedMonthlyPresences}`
             }));
             

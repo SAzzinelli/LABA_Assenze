@@ -864,7 +864,9 @@ const getStatusText = (record) => {
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Ore Lavorate</p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-400">
-                  {formatHours(currentHours?.actualHours || 0)}
+                  {currentHours?.status === 'permission_104' 
+                    ? 'Permesso 104' 
+                    : formatHours(currentHours?.actualHours || 0)}
                 </p>
               </div>
               <div className="hidden sm:block p-3 rounded-full text-blue-400">
