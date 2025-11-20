@@ -68,7 +68,66 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           const historyResponse = await apiCall(`/api/attendance?userId=${user.id}&limit=10`);
           if (historyResponse && historyResponse.ok) {
             const historyData = await historyResponse.json();
-            setBalanceHistory(historyData || []);
+            
+            // Carica permessi 104 approvati per correggere i dati della history
+            const perm104Response = await apiCall(`/api/leave-requests?type=permission_104&status=approved&userId=${user.id}`);
+            let perm104Dates = new Set();
+            
+            if (perm104Response && perm104Response.ok) {
+              const perm104Data = await perm104Response.json();
+              if (Array.isArray(perm104Data)) {
+                perm104Data.forEach(perm => {
+                  const start = new Date(perm.start_date);
+                  const end = new Date(perm.end_date);
+                  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    perm104Dates.add(d.toISOString().split('T')[0]);
+                  }
+                });
+              }
+            }
+            
+            // Carica work schedules per ricalcolare le ore attese per permessi 104
+            const schedulesResponse = await apiCall('/api/work-schedules');
+            let workSchedules = [];
+            if (schedulesResponse && (schedulesResponse.ok || Array.isArray(schedulesResponse))) {
+              workSchedules = Array.isArray(schedulesResponse) ? schedulesResponse : await schedulesResponse.json();
+            }
+            
+            // Correggi i dati della history per permessi 104
+            const correctedHistory = (historyData || []).map(record => {
+              const recordDate = record.date?.split('T')[0] || record.date;
+              if (perm104Dates.has(recordDate)) {
+                // Ricalcola le ore attese dallo schedule
+                const recordDateObj = new Date(recordDate);
+                const dayOfWeek = recordDateObj.getDay();
+                const daySchedule = workSchedules.find(schedule => 
+                  schedule.user_id === user.id && 
+                  schedule.day_of_week === dayOfWeek && 
+                  schedule.is_working_day
+                );
+                
+                let expectedHours = record.expected_hours || 0;
+                if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
+                  const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
+                  const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                  const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
+                  const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                  const workMinutes = Math.max(0, totalMinutes - breakDuration);
+                  expectedHours = workMinutes / 60;
+                }
+                
+                return {
+                  ...record,
+                  actual_hours: 0, // Con permesso 104, NON ha lavorato
+                  expected_hours: expectedHours, // Ore corrette dallo schedule
+                  balance_hours: 0, // Balance sempre 0 per permessi 104
+                  status: 'permission_104'
+                };
+              }
+              return record;
+            });
+            
+            setBalanceHistory(correctedHistory);
           }
         }
         
