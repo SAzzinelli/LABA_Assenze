@@ -663,8 +663,9 @@ const Attendance = () => {
     const dayOfWeek = now.getDay();
     
     // Trova l'orario di lavoro per oggi
+    // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
     const todaySchedule = workSchedules.find(schedule => 
-      schedule.day_of_week === dayOfWeek && schedule.is_working_day
+      Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
     );
     
     let realTimeActualHours = 0;
@@ -895,7 +896,8 @@ const getStatusText = (record) => {
 
   const getTodaySchedule = () => {
     const today = new Date().getDay();
-    return workSchedules.find(schedule => schedule.day_of_week === today);
+    // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
+    return workSchedules.find(schedule => Number(schedule.day_of_week) === Number(today));
   };
 
   const todaySchedule = getTodaySchedule();
@@ -1236,8 +1238,9 @@ const getStatusText = (record) => {
                           if (isPermission104) {
                             const recordDate = new Date(record.date);
                             const dayOfWeek = recordDate.getDay();
+                            // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
                             const daySchedule = workSchedules.find(schedule => 
-                              schedule.day_of_week === dayOfWeek && schedule.is_working_day
+                              Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
                             );
                             
                             if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
@@ -1384,8 +1387,9 @@ const getStatusText = (record) => {
                         if (isPermission104) {
                           const recordDate = new Date(record.date);
                           const dayOfWeek = recordDate.getDay();
+                          // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
                           const daySchedule = workSchedules.find(schedule => 
-                            schedule.day_of_week === dayOfWeek && schedule.is_working_day
+                            Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
                           );
                           
                           if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
