@@ -3450,33 +3450,16 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       .single();
 
     if (perm104Today && !perm104Error) {
-      // L'utente ha un permesso 104 oggi - restituisci le ore complete del contratto
-      // IMPORTANTE: Per permesso 104, usa sempre lo schedule standard (lun-ven 9-18) non quello modificato di oggi
-      // Cerca lo schedule standard per un giorno lavorativo normale (lunedì come riferimento)
-      let standardSchedule = schedule;
-      if (schedule.end_time === '13:00' || schedule.end_time === '12:00' || schedule.end_time === '14:00') {
-        // Se lo schedule di oggi è ridotto, cerca quello standard del lunedì
-        const { data: standardScheduleData } = await supabase
-          .from('work_schedules')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('day_of_week', 1) // Lunedì come riferimento standard
-          .eq('is_working_day', true)
-          .single();
-        
-        if (standardScheduleData && standardScheduleData.start_time && standardScheduleData.end_time) {
-          standardSchedule = standardScheduleData;
-          console.log(`🔵 [current-hours] Using standard schedule (Monday) instead of today's modified schedule for 104 permission`);
-        }
-      }
-      
+      // L'utente ha un permesso 104 oggi - restituisci le ore complete dello schedule di OGGI
+      // IMPORTANTE: Per permesso 104, usa lo schedule del giorno stesso, non quello di altri giorni
+      // Se oggi lavora 9-13, il permesso 104 conta 4h (9-13), non cerca altri orari
       const contractHours = calculateExpectedHoursForSchedule({
-        start_time: standardSchedule.start_time,
-        end_time: standardSchedule.end_time,
-        break_duration: standardSchedule.break_duration || 60
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        break_duration: schedule.break_duration || 60
       });
 
-      console.log(`🔵 [current-hours] User has 104 permission today - returning full contract hours: ${contractHours}h (from schedule ${standardSchedule.start_time}-${standardSchedule.end_time})`);
+      console.log(`🔵 [current-hours] User has 104 permission today - returning today's schedule hours: ${contractHours}h (from schedule ${schedule.start_time}-${schedule.end_time})`);
 
       return res.json({
         isWorkingDay: true,
