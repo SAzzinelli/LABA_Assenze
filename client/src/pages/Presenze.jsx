@@ -1176,6 +1176,26 @@ const getStatusText = (record) => {
                           if (record.date === today && currentHours?.contractHours !== undefined) {
                             return formatHours(currentHours.contractHours);
                           }
+                          
+                          // Se c'è un permesso 104 (status Assente Giustificato), ricalcola dallo schedule
+                          if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                            const recordDate = new Date(record.date);
+                            const dayOfWeek = recordDate.getDay();
+                            const daySchedule = workSchedules.find(schedule => 
+                              schedule.day_of_week === dayOfWeek && schedule.is_working_day
+                            );
+                            
+                            if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
+                              const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
+                              const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                              const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
+                              const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                              const workMinutes = Math.max(0, totalMinutes - breakDuration);
+                              const expectedHoursFromSchedule = workMinutes / 60;
+                              return formatHours(expectedHoursFromSchedule);
+                            }
+                          }
+                          
                           // Altrimenti usa i dati dal database
                           return formatHours(record.expected_hours || 0);
                         })()}
@@ -1295,6 +1315,26 @@ const getStatusText = (record) => {
                         if (record.date === today && currentHours?.contractHours !== undefined) {
                           return formatHours(currentHours.contractHours);
                         }
+                        
+                        // Se c'è un permesso 104 (status Assente Giustificato), ricalcola dallo schedule
+                        if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                          const recordDate = new Date(record.date);
+                          const dayOfWeek = recordDate.getDay();
+                          const daySchedule = workSchedules.find(schedule => 
+                            schedule.day_of_week === dayOfWeek && schedule.is_working_day
+                          );
+                          
+                          if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
+                            const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
+                            const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                            const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
+                            const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                            const workMinutes = Math.max(0, totalMinutes - breakDuration);
+                            const expectedHoursFromSchedule = workMinutes / 60;
+                            return formatHours(expectedHoursFromSchedule);
+                          }
+                        }
+                        
                         // Altrimenti usa i dati dal database
                         return formatHours(record.expected_hours || 0);
                       })()}
