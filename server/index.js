@@ -4347,26 +4347,44 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
     }
 
     // Calcola giorni utilizzati dalle richieste approvate del mese corrente
+    const startDate = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+    const endDate = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+    
+    console.log(`🔍 Fetching approved 104 requests for user ${userId}, month ${currentMonth}/${currentYear}`);
+    console.log(`   Date range: ${startDate} to ${endDate}`);
+    
     const { data: approvedRequests, error: approvedError } = await supabase
       .from('leave_requests')
-      .select('days_requested')
+      .select('days_requested, start_date, end_date')
       .eq('user_id', userId)
       .eq('type', 'permission_104')
       .eq('status', 'approved')
-      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lt('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
+      .gte('start_date', startDate)
+      .lt('start_date', endDate);
 
     if (approvedError) {
-      console.error('Error fetching approved 104 requests:', approvedError);
+      console.error('❌ Error fetching approved 104 requests:', approvedError);
+      console.error('   Error details:', JSON.stringify(approvedError, null, 2));
       // Non bloccare, usa il valore del balance
+    } else {
+      console.log(`✅ Found ${approvedRequests?.length || 0} approved 104 requests`);
+      if (approvedRequests && approvedRequests.length > 0) {
+        approvedRequests.forEach(req => {
+          console.log(`   - Request: ${req.start_date} to ${req.end_date}, days: ${req.days_requested || 1}`);
+        });
+      }
     }
 
     let usedDays = balance.used_days || 0;
     if (!approvedError && approvedRequests && approvedRequests.length > 0) {
       usedDays = approvedRequests.reduce((sum, req) => {
         const days = req.days_requested || 1;
+        console.log(`   Adding ${Math.ceil(days)} days from request ${req.start_date} (total: ${sum + Math.ceil(days)})`);
         return sum + Math.ceil(days); // Arrotonda sempre per eccesso
       }, 0);
+      console.log(`📊 Total used days calculated: ${usedDays}`);
+    } else {
+      console.log(`📊 Using balance.used_days: ${usedDays}`);
     }
 
     // Calcola pending_days dalle richieste in attesa del mese corrente
@@ -4404,8 +4422,14 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
 
     const remainingDays = (balance.total_days || 3) - usedDays - pendingDays;
 
+    console.log(`📊 Balance calculation for ${userId}, month ${currentMonth}/${currentYear}:`);
+    console.log(`   total_days: ${balance.total_days || 3}`);
+    console.log(`   used_days: ${usedDays} (calculated from ${approvedRequests?.length || 0} requests)`);
+    console.log(`   pending_days: ${pendingDays}`);
+    console.log(`   remaining_days: ${remainingDays}`);
+
     // Aggiorna il balance con i valori calcolati
-    await supabase
+    const { error: updateBalanceError } = await supabase
       .from('absence_104_balances')
       .update({
         used_days: usedDays,
@@ -4415,7 +4439,15 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       })
       .eq('id', balance.id);
 
-    res.json({
+    if (updateBalanceError) {
+      console.error('❌ Error updating balance:', updateBalanceError);
+      console.error('   Error details:', JSON.stringify(updateBalanceError, null, 2));
+      // Non bloccare, restituisci comunque i valori calcolati
+    } else {
+      console.log(`✅ Balance updated successfully`);
+    }
+
+    const response = {
       has104: true,
       totalDays: balance.total_days || 3,
       usedDays,
@@ -4423,7 +4455,10 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       remainingDays,
       month: currentMonth,
       year: currentYear
-    });
+    };
+
+    console.log(`📤 Response:`, JSON.stringify(response, null, 2));
+    res.json(response);
   } catch (error) {
     console.error('Absence 104 balance error:', error);
     res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
