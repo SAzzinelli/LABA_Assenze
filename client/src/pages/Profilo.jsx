@@ -210,15 +210,70 @@ const Profile = () => {
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             const dayName = dayNames[schedule.day_of_week];
             
-            if (dayName && formattedSchedule[dayName]) {
+            if (dayName && formattedSchedule[dayName] && schedule.is_working_day) {
+              let morning = '';
+              let afternoon = '';
+              let lunchBreak = '';
+              let workType = 'none';
+              
+              if (schedule.work_type === 'morning') {
+                // Solo mattina
+                morning = schedule.start_time && schedule.end_time ? `${schedule.start_time}-${schedule.end_time}` : '';
+                workType = 'morning';
+              } else if (schedule.work_type === 'afternoon') {
+                // Solo pomeriggio
+                afternoon = schedule.start_time && schedule.end_time ? `${schedule.start_time}-${schedule.end_time}` : '';
+                workType = 'afternoon';
+              } else if (schedule.work_type === 'full_day') {
+                // Giornata completa: usa break_start_time per separare mattina e pomeriggio
+                if (schedule.break_start_time && schedule.break_duration) {
+                  // Calcola orario pomeriggio: inizio pausa + durata pausa
+                  const [breakHour, breakMin] = schedule.break_start_time.split(':').map(Number);
+                  const breakDurationMinutes = schedule.break_duration;
+                  const afternoonStartMinutes = breakHour * 60 + breakMin + breakDurationMinutes;
+                  const afternoonStartHour = Math.floor(afternoonStartMinutes / 60);
+                  const afternoonStartMin = afternoonStartMinutes % 60;
+                  const afternoonStart = `${afternoonStartHour.toString().padStart(2, '0')}:${afternoonStartMin.toString().padStart(2, '0')}`;
+                  
+                  morning = schedule.start_time && schedule.break_start_time ? `${schedule.start_time}-${schedule.break_start_time}` : '';
+                  afternoon = schedule.end_time && afternoonStart ? `${afternoonStart}-${schedule.end_time}` : '';
+                  lunchBreak = schedule.break_start_time && afternoonStart ? `${schedule.break_start_time}-${afternoonStart}` : '';
+                } else {
+                  // Se non c'è break_start_time, usa valori di default o calcola da start/end
+                  if (schedule.start_time && schedule.end_time) {
+                    // Stima: se orario è 9-18, assume mattina 9-13, pausa 13-14, pomeriggio 14-18
+                    const [startHour] = schedule.start_time.split(':').map(Number);
+                    const [endHour] = schedule.end_time.split(':').map(Number);
+                    
+                    if (endHour > 14) {
+                      // Probabilmente giornata completa
+                      morning = `${schedule.start_time}-13:00`;
+                      afternoon = `14:00-${schedule.end_time}`;
+                      lunchBreak = '13:00-14:00';
+                    } else {
+                      // Probabilmente solo mattina (es. 9-13)
+                      morning = `${schedule.start_time}-${schedule.end_time}`;
+                    }
+                  }
+                }
+                workType = 'full';
+              }
+              
               formattedSchedule[dayName] = {
                 active: schedule.is_working_day,
-                morning: schedule.work_type === 'morning' ? `${schedule.start_time}-${schedule.end_time}` : 
-                         schedule.work_type === 'full_day' ? `${schedule.start_time}-${schedule.end_time}` : '',
-                afternoon: schedule.work_type === 'afternoon' ? `${schedule.start_time}-${schedule.end_time}` : 
-                          schedule.work_type === 'full_day' ? `${schedule.start_time}-${schedule.end_time}` : '',
-                lunchBreak: schedule.work_type === 'full_day' ? '13:00-14:00' : '',
-                workType: schedule.work_type === 'full_day' ? 'full' : schedule.work_type
+                morning,
+                afternoon,
+                lunchBreak,
+                workType
+              };
+            } else if (dayName && formattedSchedule[dayName]) {
+              // Giorno non lavorativo
+              formattedSchedule[dayName] = {
+                active: false,
+                morning: '',
+                afternoon: '',
+                lunchBreak: '',
+                workType: 'none'
               };
             }
           });
