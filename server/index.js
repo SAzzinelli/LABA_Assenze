@@ -3833,8 +3833,14 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
       errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
-    console.error('Fix 104 attendance error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    console.error('❌ Fix 104 attendance error:', error);
+    console.error('   Error stack:', error.stack);
+    console.error('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    res.status(500).json({ 
+      error: 'Errore interno del server',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
