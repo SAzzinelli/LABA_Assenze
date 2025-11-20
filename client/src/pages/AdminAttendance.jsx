@@ -721,15 +721,34 @@ const AdminAttendance = () => {
         new Date(perm104.end_date) >= new Date(today)
       );
 
+      console.log(`🔍 [DEBUG] Checking 104 permission for user ${record.user_id}:`, {
+        has104Today,
+        permissions104TodayCount: permissions104Today.length,
+        todayDate: today,
+        dayOfWeek: todayDate.getDay()
+      });
+
       if (has104Today) {
         console.log('🔵 User has 104 permission today:', record.user_id);
         
         // Trova l'orario di lavoro per questo dipendente nel giorno corrente
+        const dayOfWeek = todayDate.getDay();
+        console.log(`🔍 [DEBUG] Looking for schedule: user_id=${record.user_id}, day_of_week=${dayOfWeek}`);
+        console.log(`🔍 [DEBUG] Available schedules count:`, workSchedules.length);
+        console.log(`🔍 [DEBUG] Schedules for this user:`, workSchedules.filter(s => s.user_id === record.user_id));
+        
         const scheduleForDay = workSchedules.find(schedule => 
           schedule.user_id === record.user_id &&
-          schedule.day_of_week === todayDate.getDay() &&
+          schedule.day_of_week === dayOfWeek &&
           schedule.is_working_day === true
         );
+
+        console.log(`🔍 [DEBUG] Schedule found for 104:`, scheduleForDay ? {
+          start_time: scheduleForDay.start_time,
+          end_time: scheduleForDay.end_time,
+          break_duration: scheduleForDay.break_duration,
+          work_type: scheduleForDay.work_type
+        } : 'NOT FOUND');
 
         let expectedHours104 = record.expected_hours || 0;
 
@@ -740,10 +759,14 @@ const AdminAttendance = () => {
           const endMin = parseInt(scheduleForDay.end_time.split(':')[1], 10);
 
           const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
+          const breakDuration = scheduleForDay.break_duration !== null && scheduleForDay.break_duration !== undefined ? scheduleForDay.break_duration : 0;
           const hasLunchBreak = totalWorkMinutes > 300; // 5 ore = 300 minuti
-          expectedHours104 = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+          expectedHours104 = hasLunchBreak ? (totalWorkMinutes - breakDuration) / 60 : totalWorkMinutes / 60;
+          
+          console.log(`🔵 [DEBUG] 104 Expected hours calculated: ${scheduleForDay.start_time}-${scheduleForDay.end_time}, break: ${breakDuration}min = ${expectedHours104.toFixed(2)}h`);
         } else {
-          console.warn(`⚠️ Nessun orario configurato per user ${record.user_id} nel giorno ${today}, uso expected_hours dal record (${expectedHours104})`);
+          console.warn(`⚠️ Nessun orario configurato per user ${record.user_id} nel giorno ${dayOfWeek} (${today}), uso expected_hours dal record (${expectedHours104})`);
         }
         
         return {
