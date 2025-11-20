@@ -981,7 +981,7 @@ const getStatusText = (record) => {
                     <div className="flex justify-between border-t border-slate-700 pt-2">
                       <span className="text-slate-400">Ore Attese:</span>
                       <span className="font-bold text-green-400">
-                        {formatHours(todaySchedule.expected_hours || 8)}
+                        {formatHours(currentHours?.contractHours || currentHours?.expectedHours || todaySchedule.expected_hours || 8)}
                       </span>
                     </div>
                   </div>
@@ -1102,17 +1102,33 @@ const getStatusText = (record) => {
               
               let combined = [...filteredAttendance];
               
-              // Aggiungi oggi solo se siamo nel mese/anno corrente
-              if (isCurrentMonth && !todayExists) {
-                combined = [{
-                  id: 'today-realtime',
-                  date: today,
-                  actual_hours: currentHours.actualHours,
-                  expected_hours: currentHours.expectedHours,
-                  balance_hours: currentHours.balanceHours,
-                  status: currentHours.status
-                }, ...combined];
-              }
+                  // Aggiungi oggi solo se siamo nel mese/anno corrente
+                  if (isCurrentMonth && !todayExists) {
+                    combined = [{
+                      id: 'today-realtime',
+                      date: today,
+                      actual_hours: currentHours.actualHours,
+                      expected_hours: currentHours.contractHours || currentHours.expectedHours,
+                      balance_hours: currentHours.balanceHours,
+                      status: currentHours.status
+                    }, ...combined];
+                  }
+                  
+                  // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
+                  if (isCurrentMonth && todayExists) {
+                    combined = combined.map(record => {
+                      if (record.date === today && currentHours?.contractHours !== undefined) {
+                        return {
+                          ...record,
+                          expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
+                          actual_hours: currentHours.actualHours,
+                          balance_hours: currentHours.balanceHours,
+                          status: currentHours.status
+                        };
+                      }
+                      return record;
+                    });
+                  }
               
               if (combined.length === 0) {
                 return (
@@ -1134,7 +1150,17 @@ const getStatusText = (record) => {
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
-                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.expected_hours)}</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">
+                        {(() => {
+                          // Se è oggi, usa i dati real-time (contractHours per permesso 104)
+                          const today = new Date().toISOString().split('T')[0];
+                          if (record.date === today && currentHours?.contractHours !== undefined) {
+                            return formatHours(currentHours.contractHours);
+                          }
+                          // Altrimenti usa i dati dal database
+                          return formatHours(record.expected_hours || 0);
+                        })()}
+                      </div>
                     </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
@@ -1199,11 +1225,27 @@ const getStatusText = (record) => {
                       id: 'today-realtime',
                       date: today,
                       actual_hours: currentHours.actualHours,
-                      expected_hours: currentHours.expectedHours,
+                      expected_hours: currentHours.contractHours || currentHours.expectedHours,
                       balance_hours: currentHours.balanceHours,
                       status: currentHours.status
                     };
                     combinedAttendance = [todayRecord, ...combinedAttendance];
+                  }
+                  
+                  // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
+                  if (isCurrentMonth && todayExists) {
+                    combinedAttendance = combinedAttendance.map(record => {
+                      if (record.date === today && currentHours?.contractHours !== undefined) {
+                        return {
+                          ...record,
+                          expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
+                          actual_hours: currentHours.actualHours,
+                          balance_hours: currentHours.balanceHours,
+                          status: currentHours.status
+                        };
+                      }
+                      return record;
+                    });
                   }
                   
                   if (combinedAttendance.length === 0) {
@@ -1228,7 +1270,15 @@ const getStatusText = (record) => {
                       </span>
                     </td>
                     <td className="py-3 px-4 font-mono">
-                      {formatHours(record.expected_hours)}
+                      {(() => {
+                        // Se è oggi, usa i dati real-time (contractHours per permesso 104)
+                        const today = new Date().toISOString().split('T')[0];
+                        if (record.date === today && currentHours?.contractHours !== undefined) {
+                          return formatHours(currentHours.contractHours);
+                        }
+                        // Altrimenti usa i dati dal database
+                        return formatHours(record.expected_hours || 0);
+                      })()}
                     </td>
                     <td className="py-3 px-4 font-mono">
                       {(() => {
