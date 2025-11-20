@@ -2911,8 +2911,12 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         hasRealTimeCalculation = true;
       
       console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
+        }
       }
-    } else if (todayRecord) {
+    }
+    
+    // Se non c'è schedule ma c'è un record nel DB, usa quello
+    if (!hasPerm104Today && !hasRealTimeCalculation && todayRecord) {
       // Non è un giorno lavorativo, usa il balance dal DB
       // MA se c'è un permesso 104, il balance è sempre 0
       if (hasPerm104Today) {
