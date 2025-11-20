@@ -790,7 +790,7 @@ const Vacation = () => {
                   className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
                 >
                   <Calendar className="h-5 w-5 mr-2" />
-                  Periodi Ferie
+                  Periodi di Ferie
                 </button>
               <button
                 onClick={() => setShowAdminCreateModal(true)}

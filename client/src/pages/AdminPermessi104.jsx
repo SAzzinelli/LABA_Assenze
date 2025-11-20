@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import AdminCreate104PermissionModal from '../components/AdminCreate104PermissionModal';
+import Edit104PermissionModal from '../components/Edit104PermissionModal';
 import { 
   Accessibility, 
   Plus, 
   Calendar, 
   Users,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Edit,
+  Trash2,
+  X
 } from 'lucide-react';
 
 const AdminPermessi104 = () => {
@@ -16,6 +20,9 @@ const AdminPermessi104 = () => {
   const [employees104, setEmployees104] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -47,6 +54,75 @@ const AdminPermessi104 = () => {
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
+    }
+  };
+
+  const handleEdit = (request) => {
+    setSelectedRequest(request);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (request) => {
+    setSelectedRequest(request);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedRequest) return;
+
+    try {
+      const response = await apiCall(`/api/leave-requests/${selectedRequest.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Ricarica le richieste
+        await fetchRequests();
+        await fetchEmployees104();
+        setShowDeleteDialog(false);
+        setSelectedRequest(null);
+        alert('Permesso 104 eliminato con successo');
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error || 'Errore nell\'eliminazione del permesso'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting 104 request:', error);
+      alert('Errore nell\'eliminazione del permesso');
+    }
+  };
+
+  const handleEditSubmit = async (updatedData) => {
+    if (!selectedRequest) return;
+
+    try {
+      const response = await apiCall(`/api/leave-requests/${selectedRequest.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          start_date: updatedData.startDate,
+          end_date: updatedData.endDate,
+          notes: updatedData.notes,
+          days_requested: updatedData.daysRequested
+        })
+      });
+
+      if (response.ok) {
+        // Ricarica le richieste
+        await fetchRequests();
+        await fetchEmployees104();
+        setShowEditModal(false);
+        setSelectedRequest(null);
+        alert('Permesso 104 modificato con successo');
+      } else {
+        const error = await response.json();
+        alert(`Errore: ${error.error || 'Errore nella modifica del permesso'}`);
+      }
+    } catch (error) {
+      console.error('Error updating 104 request:', error);
+      alert('Errore nella modifica del permesso');
     }
   };
 
@@ -328,6 +404,24 @@ const AdminPermessi104 = () => {
                         : 'Data non disponibile'}
                     </p>
                   </div>
+                  
+                  {/* Pulsanti Azione */}
+                  <div className="flex items-center space-x-2 ml-4">
+                    <button
+                      onClick={() => handleEdit(request)}
+                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      title="Modifica permesso"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(request)}
+                      className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                      title="Elimina permesso"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
                 );
@@ -336,7 +430,7 @@ const AdminPermessi104 = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal Creazione */}
       <AdminCreate104PermissionModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -345,6 +439,80 @@ const AdminPermessi104 = () => {
           fetchEmployees104();
         }}
       />
+
+      {/* Modal Modifica */}
+      {showEditModal && selectedRequest && (
+        <Edit104PermissionModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedRequest(null);
+          }}
+          request={selectedRequest}
+          onSubmit={handleEditSubmit}
+        />
+      )}
+
+      {/* Dialog Eliminazione */}
+      {showDeleteDialog && selectedRequest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border-2 border-red-500/30">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-400 mr-2" />
+              <h3 className="text-xl font-bold text-white">Conferma Eliminazione</h3>
+            </div>
+            
+            <p className="text-slate-300 mb-4">
+              Sei sicuro di voler eliminare questo permesso 104?
+            </p>
+            
+            <div className="bg-slate-700 rounded p-3 mb-4">
+              <p className="text-sm text-slate-400 mb-1">Dipendente:</p>
+              <p className="text-white font-semibold">
+                {selectedRequest.users?.first_name && selectedRequest.users?.last_name
+                  ? `${selectedRequest.users.first_name} ${selectedRequest.users.last_name}`
+                  : 'Dipendente'}
+              </p>
+              <p className="text-sm text-slate-400 mb-1 mt-2">Periodo:</p>
+              <p className="text-white">
+                {selectedRequest.start_date && selectedRequest.end_date && selectedRequest.start_date === selectedRequest.end_date
+                  ? new Date(selectedRequest.start_date).toLocaleDateString('it-IT')
+                  : selectedRequest.start_date && selectedRequest.end_date
+                    ? `dal ${new Date(selectedRequest.start_date).toLocaleDateString('it-IT')} al ${new Date(selectedRequest.end_date).toLocaleDateString('it-IT')}`
+                    : 'Data non disponibile'}
+                {selectedRequest.days_requested && (
+                  <span className="ml-2 text-blue-300">
+                    ({selectedRequest.days_requested} {selectedRequest.days_requested === 1 ? 'giorno' : 'giorni'})
+                  </span>
+                )}
+              </p>
+            </div>
+            
+            <p className="text-sm text-yellow-400 mb-4">
+              ⚠️ L'eliminazione aggiornerà automaticamente il bilancio 104 del dipendente.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setSelectedRequest(null);
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

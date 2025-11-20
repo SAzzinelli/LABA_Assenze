@@ -5737,7 +5737,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
 app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, notes, entryTime, exitTime, hours } = req.body;
+    const { status, notes, entryTime, exitTime, hours, start_date, end_date, days_requested } = req.body;
 
     // Verifica se la richiesta esiste
     const { data: existingRequest, error: fetchError } = await supabase
@@ -5752,6 +5752,19 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Prepara i dati da aggiornare
     const updateData = {};
+    
+    // Gestione modifica permessi 104 (date e giorni)
+    if (existingRequest.type === 'permission_104') {
+      if (start_date !== undefined) {
+        updateData.start_date = start_date;
+      }
+      if (end_date !== undefined) {
+        updateData.end_date = end_date;
+      }
+      if (days_requested !== undefined) {
+        updateData.days_requested = days_requested;
+      }
+    }
     
     // Se viene fornito status, aggiorna lo status
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
@@ -5901,10 +5914,68 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       console.log(`❌ Richiesta ferie rifiutata: ${updatedRequest.days_requested} giorni non utilizzati`);
     }
 
+    // Gestione permessi 104: modifica/eliminazione/approvazione
+    if (updatedRequest.type === 'permission_104') {
+      const oldStatus = existingRequest.status;
+      const newStatus = status || oldStatus;
+      const datesChanged = (start_date !== undefined && start_date !== existingRequest.start_date) ||
+                          (end_date !== undefined && end_date !== existingRequest.end_date);
+      const daysChanged = days_requested !== undefined && days_requested !== existingRequest.days_requested;
+      
+      // Se un permesso 104 già approvato viene modificato (date o giorni), rimuovi i vecchi giorni
+      if (oldStatus === 'approved' && (datesChanged || daysChanged || newStatus === 'rejected' || newStatus === 'cancelled')) {
+        const oldMonth = new Date(existingRequest.start_date).getMonth() + 1;
+        const oldYear = new Date(existingRequest.start_date).getFullYear();
+        const oldDays = Math.ceil(existingRequest.days_requested || 1);
+        
+        // Rimuovi i vecchi giorni dal bilancio
+        let { data: oldBalance } = await supabase
+          .from('absence_104_balances')
+          .select('*')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('year', oldYear)
+          .eq('month', oldMonth)
+          .single();
+        
+        if (oldBalance) {
+          const newUsedDays = Math.max(0, (oldBalance.used_days || 0) - oldDays);
+          const remainingDays = (oldBalance.total_days || 3) - newUsedDays - (oldBalance.pending_days || 0);
+          
+          await supabase
+            .from('absence_104_balances')
+            .update({
+              used_days: newUsedDays,
+              remaining_days: remainingDays,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', oldBalance.id);
+          
+          console.log(`📊 Bilancio 104 aggiornato per rimozione vecchi giorni: -${oldDays} giorni (rimasti: ${newUsedDays}/3)`);
+        }
+        
+        // Elimina vecchie attendance records
+        for (let d = new Date(existingRequest.start_date); d <= new Date(existingRequest.end_date); d.setDate(d.getDate() + 1)) {
+          await supabase
+            .from('attendance')
+            .delete()
+            .eq('user_id', updatedRequest.user_id)
+            .eq('date', d.toISOString().split('T')[0]);
+        }
+        
+        console.log(`🔄 Attendance records eliminati per modifica permesso 104`);
+      }
+      
+      // Se viene rifiutato o cancellato, non fare altro (già gestito sopra)
+      if (newStatus === 'rejected' || newStatus === 'cancelled') {
+        console.log(`❌ Permesso 104 rifiutato/cancellato: ${updatedRequest.days_requested || 1} giorni non utilizzati`);
+      }
+    }
+    
     // Se è una richiesta ASSENZA 104 approvata, aggiorna il bilancio assenze 104 (giorni, non ore)
     // IMPORTANTE: Le assenze 104 NON influenzano la banca ore (balance_hours)
     // Le assenze 104 sono normalmente auto-approvate, ma gestiamo anche l'approvazione manuale
-    if (updatedRequest.type === 'permission_104' && status === 'approved') {
+    const finalStatus = status || updatedRequest.status || existingRequest.status;
+    if (updatedRequest.type === 'permission_104' && finalStatus === 'approved') {
       // Aggiorna tutti i record di attendance per le date del permesso 104
       // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
       const startDate = new Date(updatedRequest.start_date);
@@ -6905,6 +6976,62 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
       return res.status(404).json({ error: 'Richiesta non trovata' });
     }
     
+    const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
+    
+    // Se è un permesso 104 approvato, aggiorna il bilancio e le attendance records
+    if (request.type === 'permission_104' && request.status === 'approved') {
+      const requestMonth = new Date(request.start_date).getMonth() + 1; // 1-12
+      const requestYear = new Date(request.start_date).getFullYear();
+      const daysToRemove = request.days_requested || 1;
+      
+      // Recupera o crea bilancio assenze 104
+      let { data: balance, error: balanceError } = await supabase
+        .from('absence_104_balances')
+        .select('*')
+        .eq('user_id', request.user_id)
+        .eq('year', requestYear)
+        .eq('month', requestMonth)
+        .single();
+      
+      if (!balanceError && balance) {
+        // Decrementa i giorni utilizzati
+        const newUsedDays = Math.max(0, (balance.used_days || 0) - Math.ceil(daysToRemove));
+        const remainingDays = (balance.total_days || 3) - newUsedDays - (balance.pending_days || 0);
+        
+        await supabase
+          .from('absence_104_balances')
+          .update({
+            used_days: newUsedDays,
+            remaining_days: remainingDays,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', balance.id);
+        
+        console.log(`📊 Bilancio 104 aggiornato per eliminazione: -${Math.ceil(daysToRemove)} giorni (rimasti: ${newUsedDays}/3)`);
+      }
+      
+      // Ripristina le attendance records per le date del permesso 104 eliminato
+      // Le attendance records verranno ricalcolate automaticamente al prossimo accesso
+      // Oppure possiamo eliminarle/aggiornarle qui
+      const startDate = new Date(request.start_date);
+      const endDate = new Date(request.end_date);
+      const dates = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      
+      // Elimina i record di attendance per quelle date (verranno ricalcolati automaticamente)
+      for (const dateStr of dates) {
+        await supabase
+          .from('attendance')
+          .delete()
+          .eq('user_id', request.user_id)
+          .eq('date', dateStr);
+      }
+      
+      console.log(`🔄 Attendance records eliminati per permesso 104 rimosso (${dates.length} date)`);
+    }
+    
     // Elimina la richiesta
     const { error: deleteError } = await supabase
       .from('leave_requests')
@@ -6916,7 +7043,6 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
       return res.status(500).json({ error: 'Errore nell\'eliminazione della richiesta' });
     }
     
-    const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
     console.log(`✅ Leave request ${id} eliminata per ${userName}`);
     
     res.json({ 
