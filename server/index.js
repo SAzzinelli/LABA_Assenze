@@ -2794,55 +2794,55 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         }
       } else {
         // Siamo durante o dopo il turno, usa calcolo real-time
-        // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
-        const { data: permissionsToday } = await supabase
-          .from('leave_requests')
-          .select('hours, permission_type, exit_time, entry_time')
-          .eq('user_id', targetUserId)
-          .eq('type', 'permission')
-          .eq('status', 'approved')
-          .lte('start_date', today)
-          .gte('end_date', today);
+      // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
+      const { data: permissionsToday } = await supabase
+        .from('leave_requests')
+        .select('hours, permission_type, exit_time, entry_time')
+        .eq('user_id', targetUserId)
+        .eq('type', 'permission')
+        .eq('status', 'approved')
+        .lte('start_date', today)
+        .gte('end_date', today);
+      
+      let permissionData = null;
+      if (permissionsToday && permissionsToday.length > 0) {
+        let totalHours = 0;
+        let exitTime = null;
+        let entryTime = null;
+        const permissionTypes = new Set();
         
-        let permissionData = null;
-        if (permissionsToday && permissionsToday.length > 0) {
-          let totalHours = 0;
-          let exitTime = null;
-          let entryTime = null;
-          const permissionTypes = new Set();
-          
-          permissionsToday.forEach(perm => {
-            totalHours += parseFloat(perm.hours || 0);
-            if (perm.permission_type === 'early_exit' && perm.exit_time) {
-              permissionTypes.add('early_exit');
-              if (!exitTime || perm.exit_time < exitTime) {
-                exitTime = perm.exit_time;
-              }
+        permissionsToday.forEach(perm => {
+          totalHours += parseFloat(perm.hours || 0);
+          if (perm.permission_type === 'early_exit' && perm.exit_time) {
+            permissionTypes.add('early_exit');
+            if (!exitTime || perm.exit_time < exitTime) {
+              exitTime = perm.exit_time;
             }
-            if (perm.permission_type === 'late_entry' && perm.entry_time) {
-              permissionTypes.add('late_entry');
-              if (!entryTime || perm.entry_time > entryTime) {
-                entryTime = perm.entry_time;
-              }
-            }
-          });
-          
-          if (exitTime || entryTime) {
-            permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
           }
-        }
+          if (perm.permission_type === 'late_entry' && perm.entry_time) {
+            permissionTypes.add('late_entry');
+            if (!entryTime || perm.entry_time > entryTime) {
+              entryTime = perm.entry_time;
+            }
+          }
+        });
         
-        // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
-        const result = calculateRealTimeHours(schedule, currentTime, permissionData);
-        todayBalance = result.balanceHours;
+        if (exitTime || entryTime) {
+          permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
+        }
+      }
+      
+      // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
+      const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+      todayBalance = result.balanceHours;
         todayBalanceHours = result.balanceHours;
         realTimeActualHours = result.actualHours;
         realTimeEffectiveHours = result.expectedHours;
         realTimeContractHours = result.contractHours;
         realTimeRemainingHours = result.remainingHours;
         hasRealTimeCalculation = true;
-        
-        console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
+      
+      console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
       }
     } else if (todayRecord) {
       // Non è un giorno lavorativo, usa il balance dal DB
@@ -3735,6 +3735,10 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
  */
 app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async (req, res) => {
   try {
+    console.log('🔧 Fix 104 attendance request received');
+    console.log('   Body:', JSON.stringify(req.body, null, 2));
+    console.log('   Content-Type:', req.get('Content-Type'));
+    
     const { userId } = req.body || {};
 
     // Recupera tutti i permessi 104 approvati
@@ -4098,9 +4102,9 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       console.error('❌ Error fetching attendance records:', monthlyError);
       // In caso di errore, prova a contare comunque usando una query più semplice
       const { count: fallbackCount } = await supabase
-        .from('attendance')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
+      .from('attendance')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
         .gte('date', monthStart)
         .lt('date', monthEnd);
       console.log(`🔧 Fallback count: ${fallbackCount || 0} records`);
@@ -4460,8 +4464,14 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
     console.log(`📤 Response:`, JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
-    console.error('Absence 104 balance error:', error);
-    res.status(500).json({ error: 'Errore nel recupero del bilancio assenze 104' });
+    console.error('❌ Absence 104 balance error:', error);
+    console.error('   Error stack:', error.stack);
+    console.error('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    res.status(500).json({ 
+      error: 'Errore nel recupero del bilancio assenze 104',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -4851,7 +4861,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       // Verifica limite mensile (3 GIORNI al mese, non permessi)
       const currentMonth = new Date(startDate).getMonth() + 1;
       const currentYear = new Date(startDate).getFullYear();
-
+      
       // Recupera o crea bilancio assenze 104 per il mese corrente
       let { data: balance, error: balanceError } = await supabase
         .from('absence_104_balances')
@@ -4958,8 +4968,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       daysRequested = daysRequestedFor104;
     } else {
       // Calcola i giorni richiesti per gli altri tipi
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
       daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     }
 
@@ -5043,8 +5053,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
     if (type !== 'vacation' && type !== 'permission_104') {
-      const normalizedHours = normalizeHours(calculatedHours);
-      if (normalizedHours !== null) {
+    const normalizedHours = normalizeHours(calculatedHours);
+    if (normalizedHours !== null) {
         insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
@@ -5276,7 +5286,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     const start = new Date(startDate);
     const end = new Date(endDate);
     let daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    
+
     // Per permessi 104, minimo 1 giorno intero
     if (type === 'permission_104') {
       daysRequested = Math.max(1, daysRequested);
@@ -5419,8 +5429,8 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
     if (type !== 'vacation' && type !== 'permission_104') {
-      const normalizedHours = normalizeHours(calculatedHours);
-      if (normalizedHours !== null) {
+    const normalizedHours = normalizeHours(calculatedHours);
+    if (normalizedHours !== null) {
         insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
@@ -6091,21 +6101,21 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Crea notifica per il dipendente (solo se lo status è stato cambiato)
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
-      try {
-        const typeLabels = {
-          'permission': 'Permesso',
+    try {
+      const typeLabels = {
+        'permission': 'Permesso',
           'sick_leave': 'Malattia',
-          'sick': 'Malattia', 
+        'sick': 'Malattia', 
           'vacation': 'Ferie',
           'permission_104': 'Permesso Legge 104',
           'business_trip': 'Trasferta'
-        };
+      };
 
-        const statusLabels = {
-          'approved': 'approvata',
+      const statusLabels = {
+        'approved': 'approvata',
           'rejected': 'rifiutata',
           'cancelled': 'annullata'
-        };
+      };
 
         // Parse date as local time to avoid UTC timezone issues
         const parseLocalDate = (dateStr) => {
@@ -6199,14 +6209,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   updatedRequest.permission_type || null
                 ]);
               } else {
-                await sendEmail(user.email, 'requestResponse', [
-                  requestType, 
-                  status, 
-                  updatedRequest.start_date, 
-                  updatedRequest.end_date, 
-                  notes || '', 
-                  requestId
-                ]);
+              await sendEmail(user.email, 'requestResponse', [
+                requestType, 
+                status, 
+                updatedRequest.start_date, 
+                updatedRequest.end_date, 
+                notes || '', 
+                requestId
+              ]);
               }
               console.log(`Email inviata a ${user.email} per risposta richiesta`);
             } else {
@@ -6217,10 +6227,10 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           console.error('Errore invio email dipendente:', emailError);
           // Non bloccare la risposta se l'email fallisce
         }
-      } catch (notificationError) {
-        console.error('Notification creation error:', notificationError);
-        // Non bloccare l'aggiornamento se le notifiche falliscono
-      }
+    } catch (notificationError) {
+      console.error('Notification creation error:', notificationError);
+      // Non bloccare l'aggiornamento se le notifiche falliscono
+    }
     }
 
     const statusMessages = {
@@ -6228,7 +6238,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       'rejected': 'rifiutata',
       'cancelled': 'annullata'
     };
-    
+
     res.json({
       success: true,
       message: `Richiesta ${statusMessages[status] || 'aggiornata'} con successo`,
