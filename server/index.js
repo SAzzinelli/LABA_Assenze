@@ -4316,7 +4316,18 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
       .single();
 
     if (balanceError) {
-      if (balanceError.code === 'PGRST116') {
+      if (balanceError.code === 'PGRST205') {
+        // La tabella non esiste nel database - restituisci valori di default
+        console.warn('⚠️ Tabella absence_104_balances non esiste nel database. Restituisco valori di default.');
+        console.warn('   Per risolvere definitivamente, esegui lo script SQL: scripts/add-absence-104-table.sql');
+        return res.json({
+          has104: true,
+          totalDays: 3,
+          usedDays: 0,
+          pendingDays: 0,
+          remainingDays: 3
+        });
+      } else if (balanceError.code === 'PGRST116') {
         // Nessun bilancio trovato, creane uno nuovo con 3 giorni
         const { data: newBalance, error: createError } = await supabase
           .from('absence_104_balances')
@@ -4335,6 +4346,19 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
         if (createError) {
           console.error('Absence 104 balance creation error:', createError);
           console.error('Create error details:', JSON.stringify(createError, null, 2));
+          
+          // Se anche la creazione fallisce per PGRST205 (tabella non esiste), restituisci default
+          if (createError.code === 'PGRST205') {
+            console.warn('⚠️ Tabella absence_104_balances non esiste nel database. Restituisco valori di default.');
+            return res.json({
+              has104: true,
+              totalDays: 3,
+              usedDays: 0,
+              pendingDays: 0,
+              remainingDays: 3
+            });
+          }
+          
           return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104', details: createError.message });
         }
 
