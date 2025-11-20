@@ -850,8 +850,21 @@ const getStatusText = (record) => {
     const todayISO = new Date().toISOString().split('T')[0];
     const recordISO = normalizeDateToISO(record.date);
     const isToday = recordISO === todayISO;
+    
+    // Se c'è un permesso 104, le ore mancanti sono SEMPRE 0 (è un'assenza giustificata)
+    const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
+    if (isPermission104) {
+      return 0; // Permesso 104: assenza giustificata, nessuna ora mancante
+    }
 
-    const expected = record.expected_hours ?? (isToday ? currentHours.expectedHours ?? 0 : 0);
+    // Calcola expected usando la stessa logica delle "Ore Attese"
+    let expected = record.expected_hours ?? 0;
+    if (isToday && currentHours?.contractHours !== undefined) {
+      expected = currentHours.contractHours;
+    } else if (isToday && currentHours?.expectedHours !== undefined) {
+      expected = currentHours.expectedHours;
+    }
+    
     const actual = isToday ? (currentHours.actualHours ?? 0) : (record.actual_hours ?? 0);
 
     let deficit = Math.max(0, expected - actual);
@@ -1199,14 +1212,12 @@ const getStatusText = (record) => {
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
                       <div className="font-mono text-white text-xs sm:text-sm font-semibold">
                         {(() => {
-                          // Se è oggi, usa i dati real-time (contractHours per permesso 104)
                           const today = new Date().toISOString().split('T')[0];
-                          if (record.date === today && currentHours?.contractHours !== undefined) {
-                            return formatHours(currentHours.contractHours);
-                          }
+                          const isToday = record.date === today;
+                          const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
                           
-                          // Se c'è un permesso 104, ricalcola SEMPRE dallo schedule (non usare DB)
-                          if (hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                          // PRIORITÀ 1: Se c'è un permesso 104 (oggi o passato), ricalcola SEMPRE dallo schedule (non usare DB o real-time)
+                          if (isPermission104) {
                             const recordDate = new Date(record.date);
                             const dayOfWeek = recordDate.getDay();
                             const daySchedule = workSchedules.find(schedule => 
@@ -1221,12 +1232,20 @@ const getStatusText = (record) => {
                               const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                               const workMinutes = Math.max(0, totalMinutes - breakDuration);
                               const expectedHoursFromSchedule = workMinutes / 60;
-                              console.log(`🔵 [Presenze] Permesso 104 - Calcolo ore attese: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
+                              console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Calcolo ore attese dallo schedule: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                               return formatHours(expectedHoursFromSchedule);
+                            } else {
+                              // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
+                              console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek}`);
                             }
                           }
                           
-                          // Altrimenti usa i dati dal database
+                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
+                          if (isToday && currentHours?.contractHours !== undefined) {
+                            return formatHours(currentHours.contractHours);
+                          }
+                          
+                          // PRIORITÀ 3: Altrimenti usa i dati dal database
                           return formatHours(record.expected_hours || 0);
                         })()}
                       </div>
@@ -1340,14 +1359,12 @@ const getStatusText = (record) => {
                     </td>
                     <td className="py-3 px-4 font-mono">
                       {(() => {
-                        // Se è oggi, usa i dati real-time (contractHours per permesso 104)
                         const today = new Date().toISOString().split('T')[0];
-                        if (record.date === today && currentHours?.contractHours !== undefined) {
-                          return formatHours(currentHours.contractHours);
-                        }
+                        const isToday = record.date === today;
+                        const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
                         
-                        // Se c'è un permesso 104, ricalcola SEMPRE dallo schedule (non usare DB)
-                        if (hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                        // PRIORITÀ 1: Se c'è un permesso 104 (oggi o passato), ricalcola SEMPRE dallo schedule (non usare DB o real-time)
+                        if (isPermission104) {
                           const recordDate = new Date(record.date);
                           const dayOfWeek = recordDate.getDay();
                           const daySchedule = workSchedules.find(schedule => 
@@ -1362,12 +1379,20 @@ const getStatusText = (record) => {
                             const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                             const workMinutes = Math.max(0, totalMinutes - breakDuration);
                             const expectedHoursFromSchedule = workMinutes / 60;
-                            console.log(`🔵 [Presenze] Permesso 104 - Calcolo ore attese: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
+                            console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Calcolo ore attese dallo schedule: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                             return formatHours(expectedHoursFromSchedule);
+                          } else {
+                            // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
+                            console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek}`);
                           }
                         }
                         
-                        // Altrimenti usa i dati dal database
+                        // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
+                        if (isToday && currentHours?.contractHours !== undefined) {
+                          return formatHours(currentHours.contractHours);
+                        }
+                        
+                        // PRIORITÀ 3: Altrimenti usa i dati dal database
                         return formatHours(record.expected_hours || 0);
                       })()}
                     </td>
@@ -1534,4 +1559,6 @@ const getStatusText = (record) => {
   );
 };
 
+export default Attendance;
+export default Attendance;
 export default Attendance;
