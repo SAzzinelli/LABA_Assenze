@@ -815,16 +815,38 @@ const AdminAttendance = () => {
     const dayOfWeek = now.getDay();
     
     // Trova l'orario di lavoro per questo dipendente
+    // IMPORTANTE: confronta usando Number() per assicurarsi che sia un numero
     const workSchedule = workSchedules.find(schedule => 
       schedule.user_id === record.user_id && 
-      schedule.day_of_week === dayOfWeek && 
+      Number(schedule.day_of_week) === Number(dayOfWeek) && 
       schedule.is_working_day
     );
+    
+    console.log('📋 [DEBUG] Looking for schedule:', {
+      user_id: record.user_id,
+      dayOfWeek: dayOfWeek,
+      dayOfWeekType: typeof dayOfWeek,
+      totalSchedules: workSchedules.length,
+      userSchedules: workSchedules.filter(s => s.user_id === record.user_id).map(s => ({
+        day_of_week: s.day_of_week,
+        day_of_week_type: typeof s.day_of_week,
+        is_working_day: s.is_working_day,
+        start_time: s.start_time,
+        end_time: s.end_time
+      }))
+    });
     
     console.log('📋 Found work schedule for today:', workSchedule);
     
     if (!workSchedule) {
       console.log('❌ No work schedule found for user', record.user_id, 'day', dayOfWeek);
+      // Log dettagliato per debug
+      const userSchedules = workSchedules.filter(s => s.user_id === record.user_id);
+      console.log(`   🔍 User schedules available: ${userSchedules.length}`);
+      userSchedules.forEach(s => {
+        console.log(`      - Day ${s.day_of_week} (type: ${typeof s.day_of_week}): is_working_day=${s.is_working_day}, start=${s.start_time}, end=${s.end_time}`);
+        console.log(`        Match with dayOfWeek ${dayOfWeek} (type: ${typeof dayOfWeek}): ${Number(s.day_of_week) === Number(dayOfWeek)}`);
+      });
       return {
         expectedHours: record.expected_hours || 0,
         actualHours: record.actual_hours || 0,

@@ -1943,6 +1943,17 @@ app.get('/api/work-schedules', authenticateToken, async (req, res) => {
         return res.status(500).json({ error: 'Errore nel recupero degli orari' });
       }
       
+      // Log dettagliato per debug
+      console.log(`📅 [work-schedules GET] Returning ${schedules?.length || 0} schedules for admin`);
+      if (schedules && schedules.length > 0) {
+        const thursdaySchedules = schedules.filter(s => s.day_of_week === 4);
+        console.log(`   📅 Giovedì (day 4): ${thursdaySchedules.length} schedules trovati`);
+        thursdaySchedules.forEach(s => {
+          const userName = s.users ? `${s.users.first_name} ${s.users.last_name}` : s.user_id;
+          console.log(`      - ${userName}: is_working_day=${s.is_working_day}, start=${s.start_time || 'null'}, end=${s.end_time || 'null'}`);
+        });
+      }
+      
       return res.json(schedules);
     }
     
