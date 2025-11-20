@@ -200,9 +200,20 @@ const AdminAttendance = () => {
       const monthString = String(selectedMonth).padStart(2, '0');
       link.href = url;
       link.download = `report-presenze-${selectedYear}-${monthString}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Controllo sicurezza: assicurati che document.body esista
+      if (document.body) {
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Fallback: usa il root element
+        const root = document.getElementById('root');
+        if (root) {
+          root.appendChild(link);
+          link.click();
+          root.removeChild(link);
+        }
+      }
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Errore nel download del report mensile:', error);
