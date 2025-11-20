@@ -4284,9 +4284,30 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
         const days = req.days_requested || 1;
         return sum + Math.ceil(days); // Arrotonda sempre per eccesso
       }, 0);
+      
+      // Aggiorna il balance con i pending_days calcolati
+      await supabase
+        .from('absence_104_balances')
+        .update({
+          pending_days: pendingDays,
+          remaining_days: (balance.total_days || 3) - usedDays - pendingDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', balance.id);
     }
 
     const remainingDays = (balance.total_days || 3) - usedDays - pendingDays;
+
+    // Aggiorna il balance con i valori calcolati
+    await supabase
+      .from('absence_104_balances')
+      .update({
+        used_days: usedDays,
+        pending_days: pendingDays,
+        remaining_days: remainingDays,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', balance.id);
 
     res.json({
       has104: true,
@@ -5338,6 +5359,53 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           }).eq('id', balance.id);
           console.log(`✅ Bilancio assenze 104 aggiornato per admin: ${newUsedDays} giorni utilizzati`);
         }
+
+        // Aggiorna tutti i record di attendance per le date del permesso 104
+        // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const dates = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          dates.push(d.toISOString().split('T')[0]);
+        }
+
+        // Per ogni data, aggiorna o crea il record di attendance
+        for (const dateStr of dates) {
+          const dayOfWeek = new Date(dateStr).getDay();
+          const { data: schedule } = await supabase
+            .from('work_schedules')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('day_of_week', dayOfWeek)
+            .eq('is_working_day', true)
+            .single();
+
+          if (schedule) {
+            // Calcola le ore attese complete dalla giornata lavorativa
+            const expectedHours = calculateExpectedHoursForSchedule({
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              break_duration: schedule.break_duration || 60
+            });
+
+            // Aggiorna o crea il record di attendance con balance_hours = 0
+            await supabase
+              .from('attendance')
+              .upsert({
+                user_id: userId,
+                date: dateStr,
+                actual_hours: expectedHours, // Con permesso 104, ore effettive = ore attese
+                expected_hours: expectedHours, // Ore complete della giornata
+                balance_hours: 0, // NON influisce sulla banca ore
+                notes: `Permesso 104 creato dall'admin - non influenza la banca ore`,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id,date'
+              });
+
+            console.log(`✅ Attendance aggiornata per permesso 104 creato da admin: ${dateStr} - balance_hours = 0`);
+          }
+        }
       }, 100);
     }
 
@@ -5642,6 +5710,55 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     // IMPORTANTE: Le assenze 104 NON influenzano la banca ore (balance_hours)
     // Le assenze 104 sono normalmente auto-approvate, ma gestiamo anche l'approvazione manuale
     if (updatedRequest.type === 'permission_104' && status === 'approved') {
+      // Aggiorna tutti i record di attendance per le date del permesso 104
+      // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
+      const startDate = new Date(updatedRequest.start_date);
+      const endDate = new Date(updatedRequest.end_date);
+      
+      // Genera array di date
+      const dates = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      
+      // Per ogni data, aggiorna o crea il record di attendance
+      for (const dateStr of dates) {
+        const dayOfWeek = new Date(dateStr).getDay();
+        const { data: schedule } = await supabase
+          .from('work_schedules')
+          .select('*')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (schedule) {
+          // Calcola le ore attese complete dalla giornata lavorativa
+          const expectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+          
+          // Aggiorna o crea il record di attendance con balance_hours = 0
+          await supabase
+            .from('attendance')
+            .upsert({
+              user_id: updatedRequest.user_id,
+              date: dateStr,
+              actual_hours: expectedHours, // Con permesso 104, ore effettive = ore attese
+              expected_hours: expectedHours, // Ore complete della giornata
+              balance_hours: 0, // NON influisce sulla banca ore
+              notes: `Permesso 104 approvato - non influenza la banca ore`,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,date'
+            });
+          
+          console.log(`✅ Attendance aggiornata per permesso 104: ${dateStr} - balance_hours = 0`);
+        }
+      }
+      
       const requestMonth = new Date(updatedRequest.start_date).getMonth() + 1;
       const requestYear = new Date(updatedRequest.start_date).getFullYear();
       const daysRequested = Math.max(1, updatedRequest.days_requested || 1); // Minimo 1 giorno intero
