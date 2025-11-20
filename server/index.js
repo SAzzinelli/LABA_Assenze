@@ -1658,6 +1658,7 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
       .from('attendance')
       .update({
         actual_hours,
+        expected_hours: expected_hours, // Aggiorna anche expected_hours se c'è permesso 104
         balance_hours,
         notes
       })
@@ -3566,14 +3567,35 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
 
     const { date: today, time: currentTime } = await getCurrentDateTime();
     
+    // Controlla se c'è un permesso 104 per questa data
+    const { data: perm104Today } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('user_id', targetUserId)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .lte('start_date', date)
+      .gte('end_date', date)
+      .single();
+    
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
     let contractHours = attendance.expected_hours || 8;
     let remainingHours = Math.max(0, expectedHours - actualHours);
     let balanceHours = attendance.balance_hours || 0;
     
-    // Se è oggi (o data simulata), calcola le ore real-time usando la logica corretta
-    if (date === today && schedule) {
+    // Se c'è un permesso 104, calcola le ore attese complete dalla giornata lavorativa
+    if (perm104Today && schedule) {
+      expectedHours = calculateExpectedHoursForSchedule({
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        break_duration: schedule.break_duration || 60
+      });
+      contractHours = expectedHours;
+      actualHours = expectedHours; // Con permesso 104, le ore effettive = ore attese (giornata completa)
+      remainingHours = 0;
+      balanceHours = 0; // Non influisce sulla banca ore
+    } else if (date === today && schedule) {
       // Recupera permessi per oggi
       const { data: permissionsToday } = await supabase
         .from('leave_requests')
@@ -3636,7 +3658,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
           actualHours: Math.round(actualHours * 10) / 10,
           remainingHours: Math.round((remainingHours ?? Math.max(0, contractHours - actualHours)) * 10) / 10,
           balanceHours: Math.round(balanceHours * 10) / 10,
-          status: actualHours > 0 ? 'Presente' : 'Assente',
+          status: perm104Today ? 'Presente (Permesso 104)' : (actualHours > 0 ? 'Presente' : 'Assente'),
           notes: attendance.notes || 'Nessuna nota'
         }
       }
