@@ -2864,24 +2864,30 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
 
     // Controlla se oggi ha un permesso 104
     const hasPerm104Today = perm104Dates.has(today);
-    if (hasPerm104Today && schedule) {
-      // Se oggi c'è un permesso 104, il balance è 0 (non influisce sulla banca ore)
+    if (hasPerm104Today) {
+      // Se oggi c'è un permesso 104, il balance è SEMPRE 0 (non influisce sulla banca ore)
       todayBalance = 0;
       todayBalanceHours = 0;
+      console.log(`🔵 [total-balance] Today has 104 permission - setting balance to 0`);
     }
 
     // Somma tutti i saldi, escludendo i giorni con permesso 104
     const totalBalance = allAttendance.reduce((sum, record) => {
-      // Se questo giorno ha un permesso 104, non includerlo nel balance (o usa 0)
+      // Se questo giorno ha un permesso 104, NON includerlo nel balance (balance = 0)
       if (perm104Dates.has(record.date)) {
+        console.log(`🔵 [total-balance] Excluding day ${record.date} from balance (has 104 permission)`);
         return sum + 0; // Con permesso 104, balance = 0
       }
       
-      if (record.date === today && schedule) {
+      if (record.date === today && hasRealTimeCalculation) {
         // Usa il balance real-time per oggi invece del DB
+        console.log(`🔄 [total-balance] Using real-time balance for today: ${todayBalance.toFixed(2)}h`);
         return sum + todayBalance;
       }
-      return sum + (record.balance_hours || 0);
+      
+      // Per giorni passati senza permesso 104, usa il balance dal DB
+      const recordBalance = record.balance_hours || 0;
+      return sum + recordBalance;
     }, 0);
 
     console.log(`💰 Total balance for user ${targetUserId}: ${totalBalance.toFixed(2)}h (using real-time for today: ${todayBalance.toFixed(2)}h)`);
