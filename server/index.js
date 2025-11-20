@@ -2792,6 +2792,9 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
 
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
     
+    // CONTROLLA PRIMA se oggi ha un permesso 104 - se sì, salta il calcolo real-time
+    const hasPerm104Today = perm104Dates.has(today);
+    
     let todayBalance = 0;
     let todayRecord = allAttendance.find(r => r.date === today);
     let hasRealTimeCalculation = false;
@@ -2801,20 +2804,48 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     let realTimeRemainingHours = 0;
     let todayBalanceHours = 0;
     
-    // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
-    // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
-    const dayOfWeek = now.getDay();
-    const { data: schedule } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .eq('day_of_week', dayOfWeek)
-      .eq('is_working_day', true)
-      .single();
-    
-    // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
-    // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
-    if (schedule && schedule.start_time) {
+    // Se oggi c'è un permesso 104, il balance è SEMPRE 0 (non calcolare real-time)
+    if (hasPerm104Today) {
+      console.log(`🔵 [total-balance] Today has 104 permission - skipping real-time calculation, balance = 0`);
+      todayBalance = 0;
+      todayBalanceHours = 0;
+      // Per i dati real-time, usa le ore complete del contratto
+      const dayOfWeek = now.getDay();
+      const { data: schedule } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      
+      if (schedule && schedule.start_time) {
+        const contractHours = calculateExpectedHoursForSchedule({
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+          break_duration: schedule.break_duration || 60
+        });
+        realTimeActualHours = contractHours;
+        realTimeContractHours = contractHours;
+        realTimeEffectiveHours = contractHours;
+        realTimeRemainingHours = 0;
+        hasRealTimeCalculation = true;
+      }
+    } else {
+      // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
+      // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
+      const dayOfWeek = now.getDay();
+      const { data: schedule } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      
+      // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
+      // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
+      if (schedule && schedule.start_time) {
       const [startHour, startMin] = schedule.start_time.split(':').map(Number);
       const currentHour = now.getHours();
       const currentMin = now.getMinutes();
@@ -2883,16 +2914,19 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       }
     } else if (todayRecord) {
       // Non è un giorno lavorativo, usa il balance dal DB
-      todayBalance = todayRecord.balance_hours || 0;
+      // MA se c'è un permesso 104, il balance è sempre 0
+      if (hasPerm104Today) {
+        todayBalance = 0;
+      } else {
+        todayBalance = todayRecord.balance_hours || 0;
+      }
     }
-
-    // Controlla se oggi ha un permesso 104
-    const hasPerm104Today = perm104Dates.has(today);
+    
+    // Verifica finale: se oggi ha un permesso 104, il balance è SEMPRE 0
     if (hasPerm104Today) {
-      // Se oggi c'è un permesso 104, il balance è SEMPRE 0 (non influisce sulla banca ore)
       todayBalance = 0;
       todayBalanceHours = 0;
-      console.log(`🔵 [total-balance] Today has 104 permission - setting balance to 0`);
+      console.log(`🔵 [total-balance] Final check: Today has 104 permission - forcing balance to 0`);
     }
 
     // Somma tutti i saldi, escludendo i giorni con permesso 104
