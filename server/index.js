@@ -3370,7 +3370,46 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     
     console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
 
-    // Recupera permessi approvati per oggi per questo utente
+    // Controlla se l'utente ha un permesso 104 approvato per oggi
+    const { data: perm104Today, error: perm104Error } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date')
+      .eq('user_id', userId)
+      .eq('type', 'permission_104')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single();
+
+    if (perm104Today && !perm104Error) {
+      // L'utente ha un permesso 104 oggi - restituisci le ore complete del contratto
+      const contractHours = calculateExpectedHoursForSchedule({
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        break_duration: schedule.break_duration || 60
+      });
+
+      console.log(`🔵 [current-hours] User has 104 permission today - returning full contract hours: ${contractHours}h`);
+
+      return res.json({
+        isWorkingDay: true,
+        schedule: {
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+          break_duration: schedule.break_duration || 60
+        },
+        currentTime,
+        expectedHours: contractHours,
+        contractHours: contractHours,
+        actualHours: contractHours, // Con permesso 104, le ore effettive = ore contratto complete
+        balanceHours: 0, // Non influisce la banca ore
+        remainingHours: 0,
+        status: 'permission_104',
+        progress: 100 // Giornata completa
+      });
+    }
+
+    // Recupera permessi approvati per oggi per questo utente (permessi normali, non 104)
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
       .select('hours, permission_type, exit_time, entry_time')
