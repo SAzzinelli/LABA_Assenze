@@ -3729,6 +3729,112 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Admin utility endpoint to fix attendance records with permission 104
+ * Sets balance_hours = 0 for all attendance records that have an approved permission 104
+ * Body: { userId?: string } - if userId provided, fixes only that user, otherwise fixes all users
+ */
+app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body || {};
+
+    // Recupera tutti i permessi 104 approvati
+    let perm104Query = supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('type', 'permission_104')
+      .eq('status', 'approved');
+
+    if (userId) {
+      perm104Query = perm104Query.eq('user_id', userId);
+    }
+
+    const { data: perm104All, error: perm104Error } = await perm104Query;
+
+    if (perm104Error) {
+      console.error('Error fetching permission 104 requests:', perm104Error);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi 104' });
+    }
+
+    if (!perm104All || perm104All.length === 0) {
+      return res.json({
+        success: true,
+        message: 'Nessun permesso 104 approvato trovato',
+        fixed: 0
+      });
+    }
+
+    let fixedCount = 0;
+    const errors = [];
+
+    // Per ogni permesso 104, aggiorna i record di attendance
+    for (const perm of perm104All) {
+      const start = new Date(perm.start_date);
+      const end = new Date(perm.end_date);
+      const dates = [];
+      
+      // Genera array di date
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split('T')[0]);
+      }
+
+      // Per ogni data, aggiorna il record di attendance
+      for (const dateStr of dates) {
+        const dayOfWeek = new Date(dateStr).getDay();
+        const { data: schedule } = await supabase
+          .from('work_schedules')
+          .select('*')
+          .eq('user_id', perm.user_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+
+        if (schedule) {
+          // Calcola le ore attese complete dalla giornata lavorativa
+          const expectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+
+          // Aggiorna il record di attendance con balance_hours = 0
+          const { error: updateError } = await supabase
+            .from('attendance')
+            .upsert({
+              user_id: perm.user_id,
+              date: dateStr,
+              actual_hours: expectedHours, // Con permesso 104, ore effettive = ore attese
+              expected_hours: expectedHours, // Ore complete della giornata
+              balance_hours: 0, // NON influisce sulla banca ore
+              notes: `Corretto: permesso 104 - non influenza la banca ore`,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id,date'
+            });
+
+          if (updateError) {
+            console.error(`Error fixing attendance for ${perm.user_id} on ${dateStr}:`, updateError);
+            errors.push({ user_id: perm.user_id, date: dateStr, error: updateError.message });
+          } else {
+            fixedCount++;
+            console.log(`✅ Fixed attendance for ${perm.user_id} on ${dateStr} - balance_hours = 0`);
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Corretti ${fixedCount} record di attendance con permesso 104`,
+      fixed: fixedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Fix 104 attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+/**
  * Admin utility endpoint to recalculate attendance for a specific user/date.
  * Body: { userId: string, date?: 'YYYY-MM-DD', time?: 'HH:MM' }
  */
