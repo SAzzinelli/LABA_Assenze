@@ -299,14 +299,17 @@ const AdminAttendance = () => {
 
   const fetchWorkSchedules = async () => {
     try {
-      console.log('🔄 Fetching work schedules...');
+      console.log('🔄 [AdminAttendance] Fetching work schedules...');
       const response = await apiCall('/api/work-schedules');
-      if (response.ok) {
+      console.log('🔄 [AdminAttendance] Response status:', response?.status, 'ok:', response?.ok);
+      
+      if (response && response.ok) {
         const data = await response.json();
-        console.log('✅ Work schedules fetched:', data.length, 'total schedules');
+        console.log('✅ [AdminAttendance] Work schedules fetched:', data?.length || 0, 'total schedules');
+        console.log('✅ [AdminAttendance] Raw data:', data);
         
         // IMPORTANTE: Normalizza la struttura degli schedule per admin (può avere users annidato)
-        const normalizedSchedules = data.map(schedule => {
+        const normalizedSchedules = (data || []).map(schedule => {
           // Se c'è users annidato, estrai user_id da lì, altrimenti usa user_id diretto
           const userId = schedule.users?.id || schedule.user_id;
           return {
@@ -315,13 +318,14 @@ const AdminAttendance = () => {
           };
         });
         
-        console.log('✅ Normalized schedules:', normalizedSchedules.length, 'total schedules');
+        console.log('✅ [AdminAttendance] Normalized schedules:', normalizedSchedules.length, 'total schedules');
+        console.log('✅ [AdminAttendance] Normalized data (first 3):', normalizedSchedules.slice(0, 3));
         
         // Log dettagliato per debug: cerca lo schedule di Ilaria per giovedì (day 4)
         const ilariaId = '4d3535c6-76bd-4027-9b03-39bc7a2b6177';
         const ilariaSchedules = normalizedSchedules.filter(s => s.user_id === ilariaId);
         const ilariaThursday = ilariaSchedules.find(s => Number(s.day_of_week) === 4);
-        console.log('🔍 [DEBUG] Ilaria schedules:', {
+        console.log('🔍 [AdminAttendance] Ilaria schedules:', {
           total: ilariaSchedules.length,
           thursday: ilariaThursday ? {
             day_of_week: ilariaThursday.day_of_week,
@@ -339,11 +343,12 @@ const AdminAttendance = () => {
         });
         
         setWorkSchedules(normalizedSchedules || []);
+        console.log('✅ [AdminAttendance] Work schedules state updated:', normalizedSchedules.length, 'schedules');
       } else {
-        console.error('❌ Failed to fetch work schedules:', response.status);
+        console.error('❌ [AdminAttendance] Failed to fetch work schedules:', response?.status || 'No response');
       }
     } catch (error) {
-      console.error('❌ Error fetching work schedules:', error);
+      console.error('❌ [AdminAttendance] Error fetching work schedules:', error);
     }
   };
 
@@ -466,7 +471,8 @@ const AdminAttendance = () => {
       const { start_time, end_time, break_duration } = schedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
-      const breakDuration = break_duration || 60;
+      // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
+      const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 60;
       
       // Calcola ore attese totali
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
@@ -749,9 +755,10 @@ const AdminAttendance = () => {
         console.log(`🔍 [DEBUG] Available schedules count:`, workSchedules.length);
         console.log(`🔍 [DEBUG] Schedules for this user:`, workSchedules.filter(s => s.user_id === record.user_id));
         
+        // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
         const scheduleForDay = workSchedules.find(schedule => 
           schedule.user_id === record.user_id &&
-          schedule.day_of_week === dayOfWeek &&
+          Number(schedule.day_of_week) === Number(dayOfWeek) &&
           schedule.is_working_day === true
         );
 
@@ -783,10 +790,10 @@ const AdminAttendance = () => {
         
         return {
           expectedHours: expectedHours104, // Ore complete della giornata lavorativa
-          actualHours: expectedHours104, // Con permesso 104, le ore effettive = ore attese (giornata completa)
+          actualHours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
           balanceHours: 0, // Non influenzano la banca ore
           status: 'permission_104',
-          isPresent: true // È presente con permesso 104
+          isPresent: false // Non è fisicamente presente
         };
       }
     }
