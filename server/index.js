@@ -2323,6 +2323,22 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       );
       if (userPerm104) {
         console.log(`🔵 ${user.first_name} ha permesso 104 oggi`);
+        
+        // Trova lo schedule per calcolare le ore attese complete
+        let todaySchedule = user.work_schedules?.find(schedule => 
+          schedule.day_of_week === userDayOfWeek && schedule.is_working_day
+        );
+        
+        // Calcola ore attese complete dalla giornata lavorativa
+        let expectedHours = 0;
+        if (todaySchedule && todaySchedule.start_time && todaySchedule.end_time) {
+          expectedHours = calculateExpectedHoursForSchedule({
+            start_time: todaySchedule.start_time,
+            end_time: todaySchedule.end_time,
+            break_duration: todaySchedule.break_duration || 60
+          });
+        }
+        
         return {
           user_id: user.id,
           first_name: user.first_name,
@@ -2331,9 +2347,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           department: user.department || 'Non specificato',
           is_working_day: true,
           status: 'permission_104',
-          actual_hours: 0,
-          expected_hours: 0,
-          balance_hours: 0,
+          actual_hours: expectedHours, // Con permesso 104, le ore effettive = ore attese (giornata completa)
+          expected_hours: expectedHours, // Ore complete della giornata lavorativa
+          balance_hours: 0, // Non influenzano la banca ore
           permission_end_time: null
         };
       }
@@ -4098,16 +4114,17 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
 
     if (balanceError && balanceError.code === 'PGRST116') {
       // Nessun bilancio trovato, creane uno nuovo con 3 giorni
-      const { data: newBalance, error: createError } = await supabase
-        .from('absence_104_balances')
-        .insert([{
-          user_id: userId,
-          year: currentYear,
-          month: currentMonth,
-          total_days: 3,
-          used_days: 0,
-          remaining_days: 3
-        }])
+        const { data: newBalance, error: createError } = await supabase
+          .from('absence_104_balances')
+          .insert([{
+            user_id: userId,
+            year: currentYear,
+            month: currentMonth,
+            total_days: 3,
+            used_days: 0,
+            pending_days: 0,
+            remaining_days: 3
+          }])
         .select()
         .single();
 
@@ -5537,6 +5554,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             month: requestMonth,
             total_days: 3,
             used_days: daysRequested,
+            pending_days: 0,
             remaining_days: 3 - daysRequested
           }])
           .select()

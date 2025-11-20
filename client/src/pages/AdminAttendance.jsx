@@ -690,12 +690,17 @@ const AdminAttendance = () => {
 
       if (has104Today) {
         console.log('🔵 User has 104 permission today:', record.user_id);
+        
+        // Calcola ore attese complete dalla giornata lavorativa
+        // Le ore attese devono essere quelle complete (es. 7h), non 0
+        const expectedHours = hasLunchBreak ? (totalWorkMinutes - 60) / 60 : totalWorkMinutes / 60;
+        
         return {
-          expectedHours: 0,
-          actualHours: 0,
-          balanceHours: 0,
+          expectedHours: expectedHours, // Ore complete della giornata lavorativa
+          actualHours: expectedHours, // Con permesso 104, le ore effettive = ore attese (giornata completa)
+          balanceHours: 0, // Non influenzano la banca ore
           status: 'permission_104',
-          isPresent: false
+          isPresent: true // È presente con permesso 104
         };
       }
     }
