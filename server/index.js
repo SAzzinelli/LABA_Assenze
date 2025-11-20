@@ -1987,6 +1987,13 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Orari non validi' });
     }
 
+    // Log dettagliato di cosa viene salvato
+    console.log(`📅 [work-schedules] Saving schedules for user ${targetUserId}:`, schedules.length, 'days');
+    schedules.forEach(s => {
+      const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+      console.log(`   ${dayNames[s.day_of_week]}: is_working_day=${s.is_working_day}, start=${s.start_time || 'null'}, end=${s.end_time || 'null'}, break=${s.break_duration || 0}`);
+    });
+
     // Elimina orari esistenti per questo utente
     await supabase
       .from('work_schedules')
@@ -2003,6 +2010,17 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
       .from('work_schedules')
       .insert(schedulesWithUserId)
       .select();
+    
+    // Log cosa è stato effettivamente salvato
+    if (!error && newSchedules) {
+      console.log(`✅ [work-schedules] Successfully saved ${newSchedules.length} schedules for user ${targetUserId}`);
+      const thursday = newSchedules.find(s => s.day_of_week === 4);
+      if (thursday) {
+        console.log(`   ✅ Giovedì salvato: is_working_day=${thursday.is_working_day}, start=${thursday.start_time}, end=${thursday.end_time}`);
+      } else {
+        console.warn(`   ⚠️ Giovedì NON salvato per user ${targetUserId}!`);
+      }
+    }
 
     if (error) {
       console.error('Work schedules create error:', error);
