@@ -263,7 +263,7 @@ const Permessi104 = () => {
               Assenze Legge 104
             </h1>
             <p className="text-slate-400 mt-2">
-              3 giorni interi al mese per assistenza a familiare con handicap grave (non influenzano la banca ore)
+              3 giorni interi al mese per assistenza familiare (non influenzano la banca ore)
             </p>
           </div>
           

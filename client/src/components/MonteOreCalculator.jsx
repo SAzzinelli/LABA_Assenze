@@ -248,7 +248,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     return {
       monthlyHours: 3, // Ore mensili per assistenza
       annualHours: 36, // Ore annuali totali
-      description: 'Permessi per assistenza familiare con handicap grave'
+      description: 'Permessi per assistenza familiare'
     };
   };
 

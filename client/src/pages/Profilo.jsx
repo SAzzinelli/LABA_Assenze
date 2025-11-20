@@ -738,7 +738,7 @@ const Profile = () => {
           </div>
           <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
             <p className="text-amber-200 text-sm">
-              <strong>Nota:</strong> I permessi Legge 104 sono limitati a 3 al mese per assistenza familiare con handicap grave.
+              <strong>Nota:</strong> I permessi Legge 104 sono limitati a 3 al mese per assistenza familiare.
             </p>
           </div>
         </div>
