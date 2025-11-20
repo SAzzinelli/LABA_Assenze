@@ -3774,7 +3774,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
         break_duration: schedule.break_duration || 60
       });
       contractHours = expectedHours;
-      actualHours = expectedHours; // Con permesso 104, le ore effettive = ore attese (giornata completa)
+      actualHours = 0; // Con permesso 104, NON ha lavorato (è assente giustificata)
       remainingHours = 0;
       balanceHours = 0; // Non influisce sulla banca ore
     } else if (date === today && schedule) {
