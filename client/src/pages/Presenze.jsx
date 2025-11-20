@@ -13,6 +13,7 @@ const Attendance = () => {
   });
   const [remainingDays, setRemainingDays] = useState(0);
   const [workSchedules, setWorkSchedules] = useState([]);
+  const [permissions104, setPermissions104] = useState([]); // Permessi 104 approvati
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
@@ -65,7 +66,8 @@ const Attendance = () => {
           fetchHoursBalance(),
           fetchTotalBalance(),
           fetchWorkSchedules(),
-          fetchUserStats()
+          fetchUserStats(),
+          fetchPermissions104()
         ]);
         
         // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
@@ -277,6 +279,32 @@ const Attendance = () => {
     } catch (error) {
       console.error('Error fetching work schedules:', error);
     }
+  };
+
+  const fetchPermissions104 = async () => {
+    try {
+      if (user?.has104 || user?.has_104) {
+        const response = await apiCall('/api/leave-requests?type=permission_104&status=approved');
+        if (response.ok) {
+          const data = await response.json();
+          setPermissions104(data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching permissions 104:', error);
+    }
+  };
+
+  // Helper per verificare se una data ha un permesso 104 approvato
+  const hasPermission104 = (date) => {
+    if (!permissions104 || permissions104.length === 0) return false;
+    const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+    return permissions104.some(perm => {
+      const start = new Date(perm.start_date);
+      const end = new Date(perm.end_date);
+      const checkDate = new Date(dateStr);
+      return checkDate >= start && checkDate <= end;
+    });
   };
 
   const calculateKPIs = (attendanceData = attendance) => {
@@ -1177,8 +1205,8 @@ const getStatusText = (record) => {
                             return formatHours(currentHours.contractHours);
                           }
                           
-                          // Se c'è un permesso 104 (status Assente Giustificato), ricalcola dallo schedule
-                          if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                          // Se c'è un permesso 104, ricalcola SEMPRE dallo schedule (non usare DB)
+                          if (hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
                             const recordDate = new Date(record.date);
                             const dayOfWeek = recordDate.getDay();
                             const daySchedule = workSchedules.find(schedule => 
@@ -1188,10 +1216,12 @@ const getStatusText = (record) => {
                             if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
                               const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
                               const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                              // IMPORTANTE: usa break_duration dal database, non default (0 se è 0!)
                               const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
                               const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                               const workMinutes = Math.max(0, totalMinutes - breakDuration);
                               const expectedHoursFromSchedule = workMinutes / 60;
+                              console.log(`🔵 [Presenze] Permesso 104 - Calcolo ore attese: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                               return formatHours(expectedHoursFromSchedule);
                             }
                           }
@@ -1316,8 +1346,8 @@ const getStatusText = (record) => {
                           return formatHours(currentHours.contractHours);
                         }
                         
-                        // Se c'è un permesso 104 (status Assente Giustificato), ricalcola dallo schedule
-                        if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
+                        // Se c'è un permesso 104, ricalcola SEMPRE dallo schedule (non usare DB)
+                        if (hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104')) {
                           const recordDate = new Date(record.date);
                           const dayOfWeek = recordDate.getDay();
                           const daySchedule = workSchedules.find(schedule => 
@@ -1327,10 +1357,12 @@ const getStatusText = (record) => {
                           if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
                             const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
                             const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                            // IMPORTANTE: usa break_duration dal database, non default (0 se è 0!)
                             const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
                             const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
                             const workMinutes = Math.max(0, totalMinutes - breakDuration);
                             const expectedHoursFromSchedule = workMinutes / 60;
+                            console.log(`🔵 [Presenze] Permesso 104 - Calcolo ore attese: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h`);
                             return formatHours(expectedHoursFromSchedule);
                           }
                         }
