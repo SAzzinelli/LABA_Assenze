@@ -903,11 +903,12 @@ const AdminAttendance = () => {
     const { start_time, end_time, break_duration, break_start_time } = workSchedule;
     const [startHour, startMin] = start_time.split(':').map(Number);
     const [endHour, endMin] = end_time.split(':').map(Number);
-    const breakDuration = break_duration || 60;
+    // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
+    const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 0;
     
     // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
     const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-    const workMinutes = totalMinutes - breakDuration;
+    const workMinutes = Math.max(0, totalMinutes - breakDuration);
     const expectedHours = workMinutes / 60; // NON ridurre per permessi early_exit/late_entry!
     
     // Trova permessi per questo dipendente
