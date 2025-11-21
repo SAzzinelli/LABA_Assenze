@@ -599,33 +599,6 @@ const LeaveRequests = () => {
     setShowNewRequest(false);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    
-    setFormData(prev => {
-      const updated = {
-        ...prev,
-        [name]: newValue
-      };
-      
-      // Se cambia fullDay, resetta i campi tempo e type
-      if (name === 'fullDay') {
-        if (checked) {
-          updated.exitTime = '';
-          updated.entryTime = '';
-        }
-      }
-      
-      // Se cambia type, resetta fullDay
-      if (name === 'type' && value !== 'full_day') {
-        updated.fullDay = false;
-      }
-      
-      return updated;
-    });
-  };
-
   // Funzioni per filtri temporali
   const monthNames = [
     'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
