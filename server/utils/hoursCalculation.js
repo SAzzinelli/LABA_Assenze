@@ -32,7 +32,8 @@ function calculateExpectedHoursForSchedule(schedule) {
   if (!schedule || !schedule.start_time || !schedule.end_time) return 0;
   const [startHour, startMin] = schedule.start_time.split(':').map(Number);
   const [endHour, endMin] = schedule.end_time.split(':').map(Number);
-  const breakDuration = schedule.break_duration || 60; // minutes
+  // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
+  const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
   const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
   const workMinutes = Math.max(totalMinutes - breakDuration, 0);
   return workMinutes / 60;

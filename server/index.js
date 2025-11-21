@@ -3799,12 +3799,26 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
     let remainingHours = Math.max(0, expectedHours - actualHours);
     let balanceHours = attendance.balance_hours || 0;
     
-    // Se c'è un permesso 104, calcola le ore attese complete dalla giornata lavorativa
+    // IMPORTANTE: Per date passate, ricalcola SEMPRE le ore attese dallo schedule (non usare DB)
+    // Perché il DB potrebbe avere valori errati salvati in passato
+    if (schedule && schedule.start_time && schedule.end_time) {
+      // Ricalcola sempre le ore attese dallo schedule per garantire correttezza
+      const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
+      contractHours = calculateExpectedHoursForSchedule({
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        break_duration: breakDuration
+      });
+      console.log(`📅 [attendance/details] Ricalcolato ore attese da schedule: ${schedule.start_time}-${schedule.end_time}, break: ${breakDuration}min = ${contractHours.toFixed(2)}h`);
+    }
+    
+      // Se c'è un permesso 104, calcola le ore attese complete dalla giornata lavorativa
     if (perm104Today && schedule) {
+      const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
       expectedHours = calculateExpectedHoursForSchedule({
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        break_duration: schedule.break_duration || 60
+        break_duration: breakDuration
       });
       contractHours = expectedHours;
       actualHours = 0; // Con permesso 104, NON ha lavorato (è assente giustificata)
@@ -3858,6 +3872,12 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       balanceHours = result.balanceHours;
       
       console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), balance=${balanceHours.toFixed(2)}h`);
+    } else {
+      // Per date passate: usa contractHours ricalcolato dallo schedule (sopra), non dal DB
+      expectedHours = contractHours;
+      remainingHours = Math.max(0, contractHours - actualHours);
+      balanceHours = actualHours - contractHours;
+      console.log(`📅 Attendance details for past date: using recalculated contractHours=${contractHours.toFixed(2)}h, actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
     }
 
     res.json({
