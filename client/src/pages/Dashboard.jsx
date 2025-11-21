@@ -865,10 +865,10 @@ const Dashboard = () => {
           {/* Richieste Recenti */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <FileText className="h-6 w-6 mr-3 text-yellow-400" />
+              <FileText className="h-6 w-6 mr-3 text-purple-400" />
               Richieste Recenti
               <div className="ml-auto flex items-center text-sm text-slate-400">
-                <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse"></div>
+                <div className="w-2 h-2 bg-purple-400 rounded-full mr-2 animate-pulse"></div>
                 In attesa
               </div>
             </h3>
@@ -921,7 +921,22 @@ const Dashboard = () => {
                       </div>
                       <div className="text-right">
                         <div className={`${colors.textBold} font-semibold`}>
-                          {new Date(request.submittedAt).toLocaleDateString('it-IT')}
+                          {request.start_date ? (
+                            request.end_date && request.end_date !== request.start_date ? (
+                              // Range di date: mostra da X a Y
+                              <>
+                                {new Date(request.start_date).toLocaleDateString('it-IT')}
+                                {' - '}
+                                {new Date(request.end_date).toLocaleDateString('it-IT')}
+                              </>
+                            ) : (
+                              // Singola data: mostra solo la data
+                              new Date(request.start_date).toLocaleDateString('it-IT')
+                            )
+                          ) : (
+                            // Fallback: mostra data richiesta se start_date non disponibile
+                            request.submittedAt ? new Date(request.submittedAt).toLocaleDateString('it-IT') : 'N/A'
+                          )}
                         </div>
                         <div className={`${colors.textLight} text-sm`}>
                           {request.reason || request.notes || 'Nessun motivo'}
@@ -943,7 +958,7 @@ const Dashboard = () => {
           {/* In programma oggi */}
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-          <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
+          <Calendar className="h-6 w-6 mr-3 text-orange-400" />
           In programma oggi
         </h3>
         {eventsToday.length > 0 ? (
