@@ -781,30 +781,20 @@ const LeaveRequests = () => {
             return dateA - dateB;
           });
       } else {
+        // Tab "Cronologia": filtra per mese/anno selezionato (tutti gli status)
         filtered = filtered.filter(request => {
           const requestDate = parseRequestDate(request);
           if (!requestDate) return false;
-          const isInCurrentMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
-          const requestMoment = parseRequestDate(request, true);
-          const isUpcomingApproved = request.status === 'approved' && requestMoment && requestMoment > now;
-          const isPending = request.status === 'pending';
-          return isInCurrentMonth && !isPending && !isUpcomingApproved;
+          // Filtra per mese/anno - include tutti gli status (pending, approved, rejected)
+          return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
         });
       }
     } else {
-      // Per dipendenti: mostra tutti i permessi (approvati, pending, rifiutati)
-      // Filtra per mese/anno opzionale, ma mostra comunque i permessi approvati anche se fuori dal mese corrente
+      // Per dipendenti: filtra per mese/anno selezionato (tutti gli status)
       filtered = filtered.filter(request => {
         const requestDate = parseRequestDate(request);
         if (!requestDate) return false;
-        
-        // Mostra sempre i permessi approvati (anche se fuori dal mese corrente)
-        // e i permessi pending/rifiutati del mese/anno corrente
-        if (request.status === 'approved') {
-          return true; // Mostra tutti i permessi approvati
-        }
-        
-        // Per pending/rejected, filtra per mese/anno
+        // Filtra per mese/anno - include tutti gli status (pending, approved, rejected)
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
