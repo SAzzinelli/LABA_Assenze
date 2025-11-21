@@ -1573,9 +1573,13 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
                 entryTime = perm.entry_time;
               }
             }
+            if (perm.permission_type === 'full_day') {
+              permissionTypes.add('full_day');
+            }
           });
           
-          if (exitTime || entryTime) {
+          // Crea permissionData se ci sono permessi (anche solo full_day senza exitTime/entryTime)
+          if (exitTime || entryTime || permissionTypes.has('full_day')) {
             permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
           }
         }
