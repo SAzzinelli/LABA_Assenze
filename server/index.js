@@ -2983,8 +2983,8 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
           console.log(`🔄 [total-balance] Using real-time balance for today: ${todayBalance.toFixed(2)}h`);
           return sum + todayBalance;
         } else {
-          // Se non c'è calcolo real-time, usa il balance dal DB (ma escludi se è permesso 104)
-          const recordBalance = todayRecord?.balance_hours || 0;
+          // Se non c'è calcolo real-time, usa il balance dal DB per oggi
+          const recordBalance = record.balance_hours || 0;
           console.log(`📊 [total-balance] Using DB balance for today: ${recordBalance.toFixed(2)}h`);
           return sum + recordBalance;
         }
