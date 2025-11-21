@@ -137,32 +137,13 @@ const Notifiche = () => {
   };
 
   const getNotificationBg = (notification, isRead) => {
-    // Mantieni sempre i colori, ma opacità leggermente inferiore se letta
-    const opacity = isRead ? '20' : '30';
-    const borderOpacity = isRead ? '30' : '50';
-    
-    // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
-    const title = (notification.title || '').toLowerCase();
-    const message = (notification.message || '').toLowerCase();
-    const type = notification.type || '';
-    
-    // Verifica se è approvata (nel type o nel testo)
-    if (type === 'leave_approved' || title.includes('approvata') || message.includes('approvata')) {
-      return `bg-green-900/${opacity} border-green-500/${borderOpacity}`;
+    // Non lette: fondo blu + pallino blu
+    // Lette: no fondo, meno opache, no pallino
+    if (isRead) {
+      return 'opacity-60 bg-transparent border border-slate-700';
     }
-    
-    // Verifica se è rifiutata (nel type o nel testo)
-    if (type === 'leave_rejected' || title.includes('rifiutata') || message.includes('rifiutata')) {
-      return `bg-red-900/${opacity} border-red-500/${borderOpacity}`;
-    }
-    
-    // Verifica se è in attesa
-    if (type === 'leave_pending' || title.includes('pending') || message.includes('in attesa')) {
-      return `bg-yellow-900/${opacity} border-yellow-500/${borderOpacity}`;
-    }
-    
-    // Default: blu
-    return `bg-blue-900/${opacity} border-blue-500/${borderOpacity}`;
+    // Non lette: fondo blu
+    return 'bg-blue-900/30 border border-blue-500/50';
   };
 
   const filteredNotifications = filterUnread 
@@ -250,14 +231,14 @@ const Notifiche = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-white">
-                          {notification.title}
-                        </h3>
-                        {!notification.is_read && (
-                          <span className="ml-2 px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">
-                            Nuovo
-                          </span>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                          )}
+                          <h3 className={`font-semibold ${notification.is_read ? 'text-slate-300' : 'text-white'}`}>
+                            {notification.title}
+                          </h3>
+                        </div>
                       </div>
                       <p className="mt-1 text-slate-300" dangerouslySetInnerHTML={{
                         __html: (() => {
