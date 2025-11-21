@@ -1153,13 +1153,14 @@ const Employees = () => {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-slate-400">
-                      <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Nessuna fluttuazione registrata</p>
-                    </div>
-                  )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-slate-400">
+                        <DollarSign className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>Nessuna fluttuazione registrata</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}

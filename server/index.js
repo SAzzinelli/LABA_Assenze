@@ -2967,7 +2967,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       console.log(`🔵 [total-balance] Final check: Today has 104 permission - forcing balance to 0`);
     }
 
-    // Somma tutti i saldi, escludendo i giorni con permesso 104
+    // Somma tutti i saldi, escludendo i giorni con permesso 104 E oggi (se la giornata non è conclusa)
     const totalBalance = allAttendance.reduce((sum, record) => {
       // Se questo giorno ha un permesso 104, NON includerlo nel balance (balance = 0)
       if (perm104Dates.has(record.date)) {
@@ -2975,10 +2975,11 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         return sum + 0; // Con permesso 104, balance = 0
       }
       
-      if (record.date === today && hasRealTimeCalculation) {
-        // Usa il balance real-time per oggi invece del DB
-        console.log(`🔄 [total-balance] Using real-time balance for today: ${todayBalance.toFixed(2)}h`);
-        return sum + todayBalance;
+      // IMPORTANTE: escludi OGGI dal totale se la giornata non è conclusa
+      // Il balance di oggi è parziale e non dovrebbe influenzare il totale della banca ore
+      if (record.date === today) {
+        console.log(`⏰ [total-balance] Excluding today (${today}) from balance - day not completed yet`);
+        return sum + 0; // Escludi oggi: la giornata non è conclusa, il balance è parziale
       }
       
       // Per giorni passati senza permesso 104, usa il balance dal DB
