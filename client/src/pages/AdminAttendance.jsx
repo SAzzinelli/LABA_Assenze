@@ -1604,6 +1604,7 @@ const AdminAttendance = () => {
                     const hasActualData = (record.actual_hours || 0) > 0;
                     
                     // IMPORTANTE: Usa sempre realTimeData.status perché include il controllo malattie
+                    // IMPORTANTE: realTimeData per giorni passati ricalcola già le ore attese dallo schedule
                     if (isToday) {
                       // Oggi: usa sempre real-time (include controllo malattie)
                       finalStatus = realTimeData.status;
@@ -1611,10 +1612,10 @@ const AdminAttendance = () => {
                       finalExpectedHours = realTimeData.expectedHours;
                       finalBalanceHours = realTimeData.balanceHours;
                     } else if (hasActualData || isPast) {
-                      // Giorno passato con dati: usa DB
+                      // Giorno passato: usa actual_hours dal DB (sono già salvati), ma expectedHours ricalcolato dallo schedule
                       finalActualHours = record.actual_hours || 0;
-                      finalExpectedHours = record.expected_hours || 0;
-                      finalBalanceHours = record.balance_hours || 0;
+                      finalExpectedHours = realTimeData.expectedHours; // Usa il valore ricalcolato dallo schedule (non DB)
+                      finalBalanceHours = finalActualHours - finalExpectedHours; // Ricalcola il balance
                       finalStatus = finalActualHours > 0 ? 'present' : 'absent';
                     } else {
                       // Fallback
