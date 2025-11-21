@@ -331,8 +331,8 @@ const Employees = () => {
           ? singleBalance.realTime.remainingHours
           : 0;
 
-        const baseBalance = totalBalance ?? realTimeBalance ?? 0;
-        balanceValue = baseBalance + remainingToday;
+        // Usa direttamente il balance totale dal backend (che include già oggi se necessario)
+        balanceValue = totalBalance ?? realTimeBalance ?? 0;
       }
 
       // Fallback all'endpoint aggregato
