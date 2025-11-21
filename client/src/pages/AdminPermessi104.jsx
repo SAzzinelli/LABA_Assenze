@@ -286,18 +286,18 @@ const AdminPermessi104 = () => {
                       {allRequests.slice(0, 3).map(req => {
                         const startDate = req.start_date || req.startDate;
                         return (
-                          <div key={req.id} className="flex items-center justify-between text-xs">
-                            <span className="text-slate-300">
+                        <div key={req.id} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-300">
                               {startDate ? new Date(startDate).toLocaleDateString('it-IT') : 'N/A'}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full ${
-                              req.status === 'approved' 
-                                ? 'bg-green-900/30 text-green-400' 
-                                : 'bg-yellow-900/30 text-yellow-400'
-                            }`}>
-                              {req.status === 'approved' ? '✓' : '⏳'}
-                            </span>
-                          </div>
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            req.status === 'approved' 
+                              ? 'bg-green-900/30 text-green-400' 
+                              : 'bg-yellow-900/30 text-yellow-400'
+                          }`}>
+                            {req.status === 'approved' ? '✓' : '⏳'}
+                          </span>
+                        </div>
                         );
                       })}
                     </div>

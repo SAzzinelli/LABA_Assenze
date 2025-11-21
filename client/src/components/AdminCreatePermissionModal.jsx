@@ -118,7 +118,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     
     setFormData(prev => {
       const updated = {
-        ...prev,
+      ...prev,
         [name]: newValue
       };
       
@@ -323,17 +323,17 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     </div>
                     
                     {!formData.fullDay && (
-                      <select
-                        name="permissionType"
-                        value={formData.permissionType}
-                        onChange={handleInputChange}
+                  <select
+                    name="permissionType"
+                    value={formData.permissionType}
+                    onChange={handleInputChange}
                         required={!formData.fullDay}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      >
-                        <option value="">-- Seleziona tipo permesso --</option>
-                        <option value="late_entry">Entrata Posticipata</option>
-                        <option value="early_exit">Uscita Anticipata</option>
-                      </select>
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">-- Seleziona tipo permesso --</option>
+                    <option value="late_entry">Entrata Posticipata</option>
+                    <option value="early_exit">Uscita Anticipata</option>
+                  </select>
                     )}
                   </div>
                   

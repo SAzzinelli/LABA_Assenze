@@ -313,8 +313,8 @@ const Attendance = () => {
     try {
       if (user?.has104 || user?.has_104) {
         const response = await apiCall('/api/leave-requests?type=permission_104&status=approved');
-        if (response.ok) {
-          const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
           setPermissions104(data || []);
         }
       }
@@ -712,28 +712,28 @@ const Attendance = () => {
         realTimeActualHours = 0;
         realTimeBalanceHours = 0;
       } else {
-        // Calcola ore effettive real-time
-        if (currentHour >= startHour && currentHour <= endHour) {
-          // Durante l'orario di lavoro
-          const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+      // Calcola ore effettive real-time
+      if (currentHour >= startHour && currentHour <= endHour) {
+        // Durante l'orario di lavoro
+        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
           // Sottrai la pausa se c'è e siamo dopo l'inizio della pausa
           if (breakDuration > 0 && todaySchedule.break_start_time) {
             const [breakStartHour, breakStartMin] = todaySchedule.break_start_time.split(':').map(Number);
             if (currentHour > breakStartHour || (currentHour === breakStartHour && currentMinute >= breakStartMin)) {
-              realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+          realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
             } else {
               realTimeActualHours = workedMinutes / 60;
             }
-          } else {
-            realTimeActualHours = workedMinutes / 60;
-          }
-          realTimeBalanceHours = realTimeActualHours - expectedHours;
-        } else if (currentHour > endHour) {
-          // Dopo l'orario di lavoro
-          realTimeActualHours = expectedHours;
-          realTimeBalanceHours = 0;
+        } else {
+          realTimeActualHours = workedMinutes / 60;
         }
+        realTimeBalanceHours = realTimeActualHours - expectedHours;
+      } else if (currentHour > endHour) {
+        // Dopo l'orario di lavoro
+        realTimeActualHours = expectedHours;
+        realTimeBalanceHours = 0;
       }
+    }
     }
     
     const actualHoursForSummary = dbActualHours ?? realTimeActualHours;
@@ -1194,13 +1194,13 @@ const getStatusText = (record) => {
               
                   // Aggiungi oggi solo se siamo nel mese/anno corrente
                   if (isCurrentMonth && !todayExists) {
-                    combined = [{
-                      id: 'today-realtime',
-                      date: today,
-                      actual_hours: currentHours.actualHours,
+                combined = [{
+                  id: 'today-realtime',
+                  date: today,
+                  actual_hours: currentHours.actualHours,
                       expected_hours: currentHours.contractHours || currentHours.expectedHours,
-                      balance_hours: currentHours.balanceHours,
-                      status: currentHours.status
+                  balance_hours: currentHours.balanceHours,
+                  status: currentHours.status
                     }, ...combined];
                   }
                   
@@ -1215,7 +1215,7 @@ const getStatusText = (record) => {
                           balance_hours: currentHours.balanceHours,
                           status: currentHours.status
                         };
-                      }
+              }
                       return record;
                     });
                   }
@@ -1280,12 +1280,12 @@ const getStatusText = (record) => {
                           // PRIORITÀ 3: Altrimenti usa i dati dal database
                           return formatHours(record.expected_hours || 0);
                         })()}
-                      </div>
+                    </div>
                     </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
                       <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
-                    </div>
+                      </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Mancanti</div>
                       {(() => {
@@ -1293,10 +1293,10 @@ const getStatusText = (record) => {
                         return (
                           <div className={`font-bold text-xs sm:text-sm ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                             {deficit > 0 ? formatHours(deficit) : '0h 0m'}
-                      </div>
+                    </div>
                         );
                       })()}
-                    </div>
+                  </div>
                   </div>
                   <div className="mt-3">
                     <button 

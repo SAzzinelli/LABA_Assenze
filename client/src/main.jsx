@@ -36,9 +36,9 @@ if (import.meta.env.PROD && import.meta.env.VITE_VERBOSE_LOGS !== 'true') {
 const rootElement = document.getElementById('root');
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
   );
 } else {
   console.error('❌ Root element not found. Make sure the HTML has a <div id="root"></div> element.');

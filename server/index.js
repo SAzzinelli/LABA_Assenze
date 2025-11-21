@@ -997,7 +997,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
 
     // Se hireDate non è fornita, usa la data corrente
     const finalHireDate = hireDate || new Date().toISOString().split('T')[0];
-    
+
     const { data: newUser, error: userError } = await supabase
       .from('users')
       .insert([
@@ -2866,17 +2866,17 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         hasRealTimeCalculation = true;
       }
     } else {
-      // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
+    // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
       // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
-      const dayOfWeek = now.getDay();
-      const { data: schedule } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .eq('day_of_week', dayOfWeek)
-        .eq('is_working_day', true)
-        .single();
-      
+    const dayOfWeek = now.getDay();
+    const { data: schedule } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_working_day', true)
+      .single();
+    
       // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
       // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
       if (schedule && schedule.start_time) {
@@ -2956,8 +2956,8 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       if (hasPerm104Today) {
         todayBalance = 0;
       } else {
-        todayBalance = todayRecord.balance_hours || 0;
-      }
+      todayBalance = todayRecord.balance_hours || 0;
+    }
     }
     
     // Verifica finale: se oggi ha un permesso 104, il balance è SEMPRE 0

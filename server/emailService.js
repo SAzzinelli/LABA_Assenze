@@ -152,14 +152,14 @@ const emailTemplates = {
     
     return {
       subject: `Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Nuova Richiesta</title>
-          <style>
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nuova Richiesta</title>
+        <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
             .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
             .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
@@ -172,11 +172,11 @@ const emailTemplates = {
             .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
             .btn:hover { background: #2563EB; }
             .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
               <h1>Nuova Richiesta di ${typeLabel}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
@@ -195,14 +195,14 @@ const emailTemplates = {
                   <span class="info-label">Periodo:</span> ${dateRange}
                 </div>
                 ${permissionDetails}
-              </div>
-              
-              <div style="text-align: center;">
+            </div>
+            
+            <div style="text-align: center;">
                 <a href="${baseUrl}${requestPage}" class="btn">
                   Visualizza Dettagli
-                </a>
-              </div>
-              
+              </a>
+            </div>
+            
               <p style="margin-top: 30px; font-size: 14px; color: #6B7280;">
                 Accedi al sistema per visualizzare i dettagli completi e gestire la richiesta.
               </p>
@@ -210,11 +210,11 @@ const emailTemplates = {
             <div class="footer">
               <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
               <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
-            </div>
           </div>
-        </body>
-        </html>
-      `
+        </div>
+      </body>
+      </html>
+    `
     };
   },
 
@@ -304,14 +304,14 @@ const emailTemplates = {
     
     return {
       subject: `Richiesta di ${typeLabel} - Gestione personale LABA`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Aggiornamento Richiesta</title>
-          <style>
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Aggiornamento Richiesta</title>
+        <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
             .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
             .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; }
@@ -325,15 +325,15 @@ const emailTemplates = {
             .btn:hover { opacity: 0.9; }
             .notes-box { background: #F9FAFB; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #E5E7EB; }
             .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
               <h1>Richiesta di ${typeLabel}</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
-            </div>
-            <div class="content">
+          </div>
+          <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">La tua richiesta è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
               
               <div class="status-box">
@@ -447,22 +447,22 @@ const emailTemplates = {
                   <span class="stat-label">Saldo Ore:</span>
                   <span class="stat-value ${balanceHours >= 0 ? 'positive' : 'negative'}">${formatHours(balanceHours)}</span>
                 </div>
-              </div>
-              
-              <div style="text-align: center;">
+            </div>
+            
+            <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/presenze" class="btn">
                   Visualizza Dettagli Completi
-                </a>
+              </a>
               </div>
             </div>
             <div class="footer">
               <p style="margin: 5px 0;">© LABA Firenze 2025 - Gestione personale LABA</p>
               <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente</p>
-            </div>
           </div>
-        </body>
-        </html>
-      `
+        </div>
+      </body>
+      </html>
+    `
     };
   },
 
@@ -478,14 +478,14 @@ const emailTemplates = {
     
     return {
       subject: `Proposta Recupero Ore - Gestione personale LABA`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Proposta Recupero Ore</title>
-          <style>
+        <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
             .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
             .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
@@ -498,11 +498,11 @@ const emailTemplates = {
             .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
             .btn:hover { background: #2563EB; }
             .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
               <h1>Proposta Recupero Ore</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
             </div>
@@ -598,8 +598,8 @@ const emailTemplates = {
             <div class="header">
               <h1>Recupero Ore</h1>
               <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
-            </div>
-            <div class="content">
+          </div>
+          <div class="content">
               <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
               <p>La tua richiesta di recupero ore è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
               
@@ -701,22 +701,22 @@ const emailTemplates = {
                 <div class="info-row">
                   <span class="info-label">Ore:</span> ${hoursFormatted}
                 </div>
-              </div>
-              
-              <div style="text-align: center;">
+            </div>
+            
+            <div style="text-align: center;">
                 <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
                   Visualizza Dettagli
-                </a>
+              </a>
               </div>
             </div>
             <div class="footer">
               <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
               <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
-            </div>
           </div>
-        </body>
-        </html>
-      `
+        </div>
+      </body>
+      </html>
+    `
     };
   },
 
@@ -759,7 +759,7 @@ const emailTemplates = {
             <div class="password-box">
               <h2>Nuova Password</h2>
               <div class="password-value">${newPassword}</div>
-            </div>
+              </div>
             
             <div class="warning-box">
               <p><strong>Importante:</strong></p>
@@ -774,7 +774,7 @@ const emailTemplates = {
               </a>
             </div>
           </div>
-          <div class="footer">
+            <div class="footer">
             <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
             <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
           </div>
@@ -838,7 +838,7 @@ const emailTemplates = {
               </a>
             </div>
           </div>
-          <div class="footer">
+            <div class="footer">
             <p style="margin: 5px 0;">© LABA Firenze 2025 - Gestione personale LABA</p>
             <p style="margin: 5px 0;">Dipartimento: ${department || 'Ufficio'}</p>
           </div>
@@ -911,7 +911,7 @@ const sendEmailToAdmins = async (template, data) => {
       if (admin.email) {
         const result = await sendEmail(admin.email, template, data);
         results.push({ email: admin.email, name: `${admin.first_name} ${admin.last_name}`, ...result });
-      }
+    }
     }
     
     console.log(`✅ Email inviate a ${results.filter(r => r.success).length}/${results.length} admin`);

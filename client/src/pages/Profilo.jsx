@@ -921,11 +921,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].morning).start || '09:00'}
                       onChange={(e) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].morning);
+                      const { end } = parseTimeRange(workSchedule[selectedDay].morning);
                         handleWorkScheduleChange('morning', formatTimeRange(e.target.value, end));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Fine</label>
@@ -933,11 +933,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].morning).end || '13:00'}
                       onChange={(e) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].morning);
+                      const { start } = parseTimeRange(workSchedule[selectedDay].morning);
                         handleWorkScheduleChange('morning', formatTimeRange(start, e.target.value));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                 </div>
                 </div>
@@ -956,11 +956,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].lunchBreak).start || '13:00'}
                       onChange={(e) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                      const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
                         handleWorkScheduleChange('lunchBreak', formatTimeRange(e.target.value, end));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Fine</label>
@@ -968,11 +968,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].lunchBreak).end || '14:00'}
                       onChange={(e) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
+                      const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
                         handleWorkScheduleChange('lunchBreak', formatTimeRange(start, e.target.value));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                 </div>
                 </div>
@@ -991,11 +991,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].afternoon).start || '14:00'}
                       onChange={(e) => {
-                        const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                      const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
                         handleWorkScheduleChange('afternoon', formatTimeRange(e.target.value, end));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-400 mb-1">Fine</label>
@@ -1003,11 +1003,11 @@ const Profile = () => {
                       type="time"
                       value={parseTimeRange(workSchedule[selectedDay].afternoon).end || '18:00'}
                       onChange={(e) => {
-                        const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
+                      const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
                         handleWorkScheduleChange('afternoon', formatTimeRange(start, e.target.value));
-                      }}
+                    }}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  />
                   </div>
                 </div>
                 </div>
@@ -1113,7 +1113,7 @@ const Profile = () => {
           <p className="text-slate-400 mt-2 text-sm">
             Cambia la tua password per mantenere il tuo account sicuro
           </p>
-        </div>
+      </div>
       </div>
 
       {/* Messaggio di successo */}

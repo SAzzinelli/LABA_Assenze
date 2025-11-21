@@ -262,10 +262,10 @@ export const useAuthStore = create(
         let response;
         try {
           response = await fetch(url, {
-            ...options,
-            headers,
-            credentials: 'include',
-          });
+          ...options,
+          headers,
+          credentials: 'include',
+        });
         } catch (networkError) {
           // Gestisce errori di rete (TypeError: Load failed, CORS errors, ecc.)
           console.error('❌ Network error in apiCall:', url, networkError);

@@ -46,7 +46,7 @@ const Dashboard = () => {
   
   // Dati per admin dashboard real-time
   const [adminRealTimeData, setAdminRealTimeData] = useState([]);
-  
+
   // Dati per recuperi imminenti (admin) - solo per alert
   const [upcomingRecoveries, setUpcomingRecoveries] = useState([]);
 
@@ -340,11 +340,11 @@ const Dashboard = () => {
         return;
       }
       
-      const response = await apiCall('/api/attendance/sick-today');
-      if (response.ok) {
-        const data = await response.json();
-        setSickToday(data);
-        console.log('🤒 Employees sick today:', data.length);
+        const response = await apiCall('/api/attendance/sick-today');
+        if (response.ok) {
+          const data = await response.json();
+          setSickToday(data);
+          console.log('🤒 Employees sick today:', data.length);
       } else if (response.status === 403) {
         // 403 è atteso per non-admin, ignora silenziosamente
         console.log('⚠️ Access denied to sick-today (expected for non-admin)');
@@ -510,7 +510,7 @@ const Dashboard = () => {
   const updateKPIsWithBalance = async (balanceData) => {
     if (user?.role === 'employee') {
       // Usa SOLO l'endpoint /api/attendance/current-hours per coerenza con Presenze
-        try {
+      try {
           // Fetch expected monthly presences from user-stats endpoint
           let expectedMonthlyPresences = 20; // Fallback default
           try {
@@ -523,7 +523,7 @@ const Dashboard = () => {
             console.error('❌ Error fetching user stats:', statsError);
           }
 
-          const response = await apiCall('/api/attendance/current-hours');
+        const response = await apiCall('/api/attendance/current-hours');
           if (response && response.ok) {
           const currentHoursData = await response.json();
           
@@ -956,7 +956,7 @@ const Dashboard = () => {
           </div>
 
           {/* In programma oggi */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-orange-400" />
           In programma oggi
@@ -1036,8 +1036,8 @@ const Dashboard = () => {
           </div>
           {/* Fine grid per Richieste Recenti e In programma oggi */}
 
-          {/* Giorni Festivi */}
-          <HolidaysCalendar year={new Date().getFullYear()} />
+      {/* Giorni Festivi */}
+      <HolidaysCalendar year={new Date().getFullYear()} />
         </>
       )}
 

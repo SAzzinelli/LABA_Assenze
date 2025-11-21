@@ -441,7 +441,7 @@ const Layout = ({ children }) => {
                                 >
                                   <div className="flex items-start space-x-3">
                                     {!notification.is_read && (
-                                      <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+                                    <div className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
                                         (() => {
                                           // Determina il colore basandosi sul type o sul contenuto del titolo/messaggio
                                           const title = (notification.title || '').toLowerCase();
@@ -461,7 +461,7 @@ const Layout = ({ children }) => {
                                           // Default: blu
                                           return 'bg-blue-400';
                                         })()
-                                      }`} />
+                                    }`} />
                                     )}
                                     <div className="flex-1 min-w-0">
                                       <p className="text-sm font-semibold text-white mb-1">

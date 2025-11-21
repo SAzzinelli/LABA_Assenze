@@ -473,7 +473,7 @@ const Permessi104 = () => {
                       <span className="font-semibold text-white">
                         {request.startDate === request.endDate ? (
                           new Date(request.startDate).toLocaleDateString('it-IT', { 
-                            weekday: 'long', 
+                          weekday: 'long', 
                             day: 'numeric', 
                             month: 'long', 
                             year: 'numeric' 
@@ -485,10 +485,10 @@ const Permessi104 = () => {
                               month: 'long', 
                               year: 'numeric' 
                             })} al {new Date(request.endDate).toLocaleDateString('it-IT', { 
-                              day: 'numeric', 
-                              month: 'long', 
-                              year: 'numeric' 
-                            })}
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric' 
+                        })}
                           </>
                         )}
                       </span>
