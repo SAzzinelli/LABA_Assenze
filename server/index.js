@@ -2967,8 +2967,23 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       console.log(`🔵 [total-balance] Final check: Today has 104 permission - forcing balance to 0`);
     }
 
-    // Somma tutti i saldi, escludendo solo i giorni con permesso 104
-    // INCLUDI oggi nel totale: usa real-time se disponibile, altrimenti usa DB
+    // Verifica se la giornata di oggi è conclusa (siamo dopo l'ora di fine lavoro)
+    let isTodayCompleted = false;
+    if (todayRecord && schedule) {
+      // Se c'è un record nel DB e c'è uno schedule, verifica se siamo dopo la fine
+      const [endHour, endMin] = schedule.end_time.split(':').map(Number);
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      const currentTimeInMinutes = currentHour * 60 + currentMin;
+      const endTimeInMinutes = endHour * 60 + endMin;
+      
+      // Se siamo almeno 30 minuti dopo la fine del lavoro, considera la giornata conclusa
+      // Altrimenti usa il balance del DB (se disponibile) che indica una giornata già salvata
+      isTodayCompleted = (currentTimeInMinutes >= endTimeInMinutes + 30) || (todayRecord.balance_hours !== null && !hasRealTimeCalculation);
+      console.log(`⏰ Today completion check: current=${currentHour}:${currentMin < 10 ? '0' + currentMin : currentMin}, end=${schedule.end_time}, completed=${isTodayCompleted}`);
+    }
+    
+    // Somma tutti i saldi, escludendo i giorni con permesso 104 E oggi se la giornata non è conclusa
     const totalBalance = allAttendance.reduce((sum, record) => {
       // Se questo giorno ha un permesso 104, NON includerlo nel balance (balance = 0)
       if (perm104Dates.has(record.date)) {
@@ -2976,17 +2991,17 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         return sum + 0; // Con permesso 104, balance = 0
       }
       
-      // Per OGGI, usa il balance real-time calcolato sopra (se disponibile) invece del DB
+      // Per OGGI: includi solo se la giornata è conclusa (usando DB), altrimenti escludi (balance parziale)
       if (record.date === today) {
-        if (hasRealTimeCalculation) {
-          // Usa il balance real-time per oggi invece del DB
-          console.log(`🔄 [total-balance] Using real-time balance for today: ${todayBalance.toFixed(2)}h`);
-          return sum + todayBalance;
-        } else {
-          // Se non c'è calcolo real-time, usa il balance dal DB per oggi
+        if (isTodayCompleted && !hasRealTimeCalculation) {
+          // Giornata conclusa, usa il balance dal DB
           const recordBalance = record.balance_hours || 0;
-          console.log(`📊 [total-balance] Using DB balance for today: ${recordBalance.toFixed(2)}h`);
+          console.log(`✅ [total-balance] Today completed, using DB balance: ${recordBalance.toFixed(2)}h`);
           return sum + recordBalance;
+        } else {
+          // Giornata non conclusa, escludi dal totale (balance parziale)
+          console.log(`⏰ [total-balance] Excluding today (${today}) from balance - day not completed yet (real-time: ${todayBalance.toFixed(2)}h)`);
+          return sum + 0;
         }
       }
       
