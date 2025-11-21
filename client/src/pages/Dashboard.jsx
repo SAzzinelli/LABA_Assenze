@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../utils/store';
 import { formatHours } from '../utils/hoursCalculation';
 import {
@@ -20,6 +20,7 @@ import HolidaysCalendar from '../components/HolidaysCalendar';
 const Dashboard = () => {
   const { user, apiCall } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     presentToday: 0,
     pendingRequests: 0,
@@ -578,6 +579,12 @@ const Dashboard = () => {
   const weeklyAttendanceData = weeklyAttendance;
   const departmentData = departments;
 
+  // Funzione per gestire il click sui KPI
+  const handleKPIClick = (key) => {
+    // Tutti i KPI portano alla pagina Presenze
+    navigate('/presenze');
+  };
+
   // Statistiche diverse per admin e utenti
   const statCards = user?.role === 'admin' ? [] : [
     {
@@ -587,7 +594,8 @@ const Dashboard = () => {
       value: userKPIs.workedToday,
       icon: Clock,
       color: 'blue',
-      subLabel: 'OGGI'
+      subLabel: 'OGGI',
+      onClick: () => handleKPIClick('worked-today')
     },
     {
       key: 'remaining-today',
@@ -596,7 +604,8 @@ const Dashboard = () => {
       value: userKPIs.remainingToday,
       icon: Activity,
       color: 'green',
-      subLabel: 'OGGI'
+      subLabel: 'OGGI',
+      onClick: () => handleKPIClick('remaining-today')
     },
     {
       key: 'monthly-presence',
@@ -605,7 +614,8 @@ const Dashboard = () => {
       value: userKPIs.monthlyPresences,
       icon: Target,
       color: 'yellow',
-      subLabel: null
+      subLabel: null,
+      onClick: () => handleKPIClick('monthly-presence')
     }
   ];
 
@@ -657,7 +667,11 @@ const Dashboard = () => {
               purple: 'bg-purple-500'
             };
             return (
-              <div key={stat.key} className="bg-slate-800 rounded-lg p-4 sm:p-6 hover:bg-slate-700 transition-colors">
+              <div 
+                key={stat.key} 
+                onClick={stat.onClick}
+                className="bg-slate-800 rounded-lg p-4 sm:p-6 cursor-pointer active:bg-slate-700 transition-colors"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-400 text-xs sm:text-sm font-medium">{stat.title}</p>

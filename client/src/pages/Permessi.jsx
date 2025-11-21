@@ -120,6 +120,7 @@ const LeaveRequests = () => {
     const fetchWorkSchedule = async () => {
       if (!formData.permissionDate) {
         setWorkSchedule(null);
+        setFullDayHours(null);
         return;
       }
       
@@ -144,16 +145,40 @@ const LeaveRequests = () => {
             });
           } else {
             setWorkSchedule(null);
+            setFullDayHours(null);
           }
         }
       } catch (error) {
         console.error('Error fetching work schedule:', error);
         setWorkSchedule(null);
+        setFullDayHours(null);
       }
     };
     
     fetchWorkSchedule();
   }, [formData.permissionDate, apiCall]);
+
+  // Calcola le ore per permesso giornata completa quando cambiano fullDay, permissionDate o workSchedule
+  useEffect(() => {
+    if (formData.type === 'full_day' && formData.permissionDate && workSchedule) {
+      try {
+        const [startHour, startMin] = workSchedule.start_time.split(':').map(Number);
+        const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
+        const breakDuration = workSchedule.break_duration || 0;
+        
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = Math.max(0, totalMinutes - breakDuration);
+        const hours = workMinutes / 60;
+        
+        setFullDayHours(parseFloat(hours.toFixed(2)));
+      } catch (error) {
+        console.error('Error calculating full day hours:', error);
+        setFullDayHours(null);
+      }
+    } else if (formData.type !== 'full_day') {
+      setFullDayHours(null);
+    }
+  }, [formData.type, formData.permissionDate, workSchedule]);
 
   const fetchPermissions104 = async () => {
     try {
@@ -458,17 +483,15 @@ const LeaveRequests = () => {
         [name]: newValue
       };
       
-      // Se cambia fullDay, resetta i campi tempo
-      if (name === 'fullDay') {
-        if (checked) {
+      // Se cambia type a full_day, resetta i campi tempo e imposta fullDay
+      if (name === 'type') {
+        if (value === 'full_day') {
+          updated.fullDay = true;
           updated.exitTime = '';
           updated.entryTime = '';
+        } else {
+          updated.fullDay = false;
         }
-      }
-      
-      // Se cambia type, resetta fullDay
-      if (name === 'type' && value !== 'full_day') {
-        updated.fullDay = false;
       }
       
       return updated;
@@ -580,33 +603,33 @@ const LeaveRequests = () => {
     e.preventDefault();
     
     if (!formData.permissionDate) {
-      alert('Seleziona una data per il permesso');
+      showError('Seleziona una data per il permesso');
       return;
     }
 
     // Se è permesso tutta la giornata, verifica che le ore siano state calcolate
-    if (formData.fullDay && !fullDayHours) {
-      alert('Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.');
-      return;
-    }
-
-    // Valida campi per permessi parziali
-    if (!formData.fullDay) {
+    if (formData.type === 'full_day') {
+      if (!fullDayHours || fullDayHours <= 0) {
+        showError('Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.');
+        return;
+      }
+    } else {
+      // Valida campi per permessi parziali
       if (formData.type === 'uscita_anticipata' && !formData.exitTime) {
-        alert('Inserisci l\'orario di uscita');
+        showError('Inserisci l\'orario di uscita');
         return;
       }
       if (formData.type === 'entrata_posticipata' && !formData.entryTime) {
-        alert('Inserisci l\'orario di entrata');
+        showError('Inserisci l\'orario di entrata');
         return;
       }
     }
 
     // Calcola automaticamente le ore di permesso
-    const calculatedHours = formData.fullDay ? fullDayHours : calculatePermissionHours();
+    const calculatedHours = formData.type === 'full_day' ? fullDayHours : calculatePermissionHours();
     
-    if (calculatedHours <= 0) {
-      alert('Impossibile calcolare le ore di permesso');
+    if (!calculatedHours || calculatedHours <= 0) {
+      showError('Impossibile calcolare le ore di permesso. Verifica di avere un orario configurato per questo giorno.');
       return;
     }
     
@@ -620,12 +643,12 @@ const LeaveRequests = () => {
           type: 'permission',
           startDate: formData.permissionDate,
           endDate: formData.permissionDate,
-          reason: formData.fullDay ? 'Permesso - Tutta la giornata' : (formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata'),
+          reason: formData.type === 'full_day' ? 'Permesso - Tutta la giornata' : (formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata'),
           notes: formData.notes,
-          permissionType: formData.fullDay ? 'full_day' : (formData.type === 'uscita_anticipata' ? 'early_exit' : 'late_entry'),
+          permissionType: formData.type === 'full_day' ? 'full_day' : (formData.type === 'uscita_anticipata' ? 'early_exit' : 'late_entry'),
           hours: calculatedHours,
-          exitTime: formData.fullDay ? null : formData.exitTime,
-          entryTime: formData.fullDay ? null : formData.entryTime
+          exitTime: formData.type === 'full_day' ? null : formData.exitTime,
+          entryTime: formData.type === 'full_day' ? null : formData.entryTime
         })
       });
       
@@ -641,14 +664,15 @@ const LeaveRequests = () => {
           fullDay: false
         });
         setShowNewRequest(false);
-        alert('Richiesta inviata con successo!');
+        setFullDayHours(null);
+        showSuccess('Richiesta inviata con successo!');
       } else {
-        const error = await response.json();
-        alert(`Errore: ${error.error || 'Errore nel salvataggio'}`);
+        const errorData = await response.json().catch(() => ({ error: 'Errore nel salvataggio' }));
+        showError(`Errore: ${errorData.error || 'Errore nel salvataggio'}`);
       }
     } catch (error) {
       console.error('Errore:', error);
-      alert('Errore nel salvataggio della richiesta');
+      showError('Errore nel salvataggio della richiesta. Verifica la connessione e riprova.');
     }
   };
 
@@ -661,6 +685,7 @@ const LeaveRequests = () => {
       notes: '',
       fullDay: false
     });
+    setFullDayHours(null);
     setShowNewRequest(false);
   };
 
@@ -1109,43 +1134,22 @@ const LeaveRequests = () => {
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Tipo di Permesso *
                 </label>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="fullDay"
-                      checked={formData.fullDay}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
-                    />
-                    <label className="ml-2 text-sm text-slate-300">
-                      Tutta la giornata
-                    </label>
-                    {formData.fullDay && fullDayHours !== null && (
-                      <span className="ml-2 text-sm text-indigo-400 font-medium">
-                        ({fullDayHours.toFixed(2)}h)
-                      </span>
-                    )}
-                  </div>
-                  
-                  {!formData.fullDay && (
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      required={!formData.fullDay}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="uscita_anticipata">Uscita Anticipata</option>
-                      <option value="entrata_posticipata">Entrata Posticipata</option>
-                      {user?.has104 && (
-                        <option value="permission_104">Permesso 104</option>
-                      )}
-                    </select>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="uscita_anticipata">Uscita Anticipata</option>
+                  <option value="entrata_posticipata">Entrata Posticipata</option>
+                  <option value="full_day">Giornata completa</option>
+                  {user?.has104 && (
+                    <option value="permission_104">Permesso 104</option>
                   )}
-                </div>
+                </select>
                 
-                {formData.fullDay && fullDayHours === null && (
+                {formData.type === 'full_day' && fullDayHours === null && formData.permissionDate && (
                   <p className="text-xs text-amber-400 mt-1">
                     ⚠️ Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.
                   </p>
@@ -1166,7 +1170,7 @@ const LeaveRequests = () => {
                 />
               </div>
 
-              {formData.type === 'uscita_anticipata' && !formData.fullDay && (
+              {formData.type === 'uscita_anticipata' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Orario di Uscita *
@@ -1187,7 +1191,7 @@ const LeaveRequests = () => {
                 </div>
               )}
 
-              {formData.type === 'entrata_posticipata' && !formData.fullDay && (
+              {formData.type === 'entrata_posticipata' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Orario di Entrata *
@@ -1209,12 +1213,12 @@ const LeaveRequests = () => {
               )}
 
               {/* Mostra ore calcolate automaticamente */}
-              {(formData.fullDay && fullDayHours !== null) || (!formData.fullDay && calculatePermissionHours() > 0) ? (
+              {(formData.type === 'full_day' && fullDayHours !== null) || (formData.type !== 'full_day' && calculatePermissionHours() > 0) ? (
                 <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 text-indigo-400 mr-2" />
                     <span className="text-indigo-300 font-medium">
-                      Ore di permesso calcolate: {formatHoursReadable(formData.fullDay ? fullDayHours : calculatePermissionHours())}
+                      Ore di permesso calcolate: {formatHoursReadable(formData.type === 'full_day' ? fullDayHours : calculatePermissionHours())}
                     </span>
                   </div>
                 </div>
