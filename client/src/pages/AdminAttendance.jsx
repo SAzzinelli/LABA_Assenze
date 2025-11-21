@@ -799,20 +799,45 @@ const AdminAttendance = () => {
     }
     
     
-    // PER GIORNI PASSATI: usa i dati del database
+    // PER GIORNI PASSATI: ricalcola le ore attese dallo schedule (non usa DB che può essere errato)
     if (isPast) {
-      console.log('📅 Giorno passato - uso dati DB:', {
-        actualHours: record.actual_hours,
-        expectedHours: record.expected_hours,
-        balanceHours: record.balance_hours
-      });
+      // Trova lo schedule per il giorno del record
+      const recordDateObj = new Date(recordDate);
+      const recordDayOfWeek = recordDateObj.getDay();
+      
+      const scheduleForDay = workSchedules.find(schedule => 
+        schedule.user_id === record.user_id &&
+        Number(schedule.day_of_week) === Number(recordDayOfWeek) &&
+        schedule.is_working_day === true
+      );
+      
+      let expectedHoursFromSchedule = record.expected_hours || 0;
+      
+      // IMPORTANTE: Ricalcola sempre le ore attese dallo schedule per date passate
+      if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+        const [startHour, startMin] = scheduleForDay.start_time.split(':').map(Number);
+        const [endHour, endMin] = scheduleForDay.end_time.split(':').map(Number);
+        const breakDuration = scheduleForDay.break_duration !== null && scheduleForDay.break_duration !== undefined ? scheduleForDay.break_duration : 0;
+        
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = Math.max(0, totalMinutes - breakDuration);
+        expectedHoursFromSchedule = workMinutes / 60;
+        
+        console.log(`📅 [AdminAttendance] Giorno passato - ricalcolato ore attese da schedule: ${scheduleForDay.start_time}-${scheduleForDay.end_time}, break: ${breakDuration}min = ${expectedHoursFromSchedule.toFixed(2)}h (DB aveva ${record.expected_hours || 0}h)`);
+      } else {
+        console.log(`📅 [AdminAttendance] Giorno passato - schedule non trovato, uso DB: ${expectedHoursFromSchedule}h`);
+      }
+      
+      // Usa actual_hours dal DB (sono già salvati), ma ricalcola expectedHours dallo schedule
+      const actualHours = record.actual_hours || 0;
+      const balanceHours = actualHours - expectedHoursFromSchedule;
       
       return {
-        expectedHours: record.expected_hours || 0,
-        actualHours: record.actual_hours || 0,
-        balanceHours: record.balance_hours || 0,
-        status: record.actual_hours > 0 ? 'present' : 'absent',
-        isPresent: (record.actual_hours || 0) > 0
+        expectedHours: expectedHoursFromSchedule,
+        actualHours: actualHours,
+        balanceHours: balanceHours,
+        status: actualHours > 0 ? 'present' : 'absent',
+        isPresent: actualHours > 0
       };
     }
     
