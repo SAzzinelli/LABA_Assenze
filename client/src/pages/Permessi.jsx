@@ -138,7 +138,9 @@ const LeaveRequests = () => {
           if (schedule) {
             setWorkSchedule({
               start_time: schedule.start_time,
-              end_time: schedule.end_time
+              end_time: schedule.end_time,
+              break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0,
+              break_start_time: schedule.break_start_time || null
             });
           } else {
             setWorkSchedule(null);
@@ -486,17 +488,80 @@ const LeaveRequests = () => {
       };
       
       if (formData.type === 'uscita_anticipata' && formData.exitTime) {
-        // Uscita anticipata: calcola da exitTime alla fine standard
+        // Uscita anticipata: calcola le ore di lavoro perse da exitTime alla fine
+        // IMPORTANTE: considera la pausa pranzo se l'uscita è prima o durante la pausa
         const exitMinutes = timeToMinutes(formData.exitTime);
         const standardEndMinutes = timeToMinutes(workSchedule.end_time);
-        const minutesDiff = standardEndMinutes - exitMinutes;
-        return Math.max(0, parseFloat((minutesDiff / 60).toFixed(2)));
+        const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
+        
+        // Calcola l'inizio e fine della pausa pranzo
+        let breakStartMinutes = null;
+        let breakEndMinutes = null;
+        
+        if (breakDuration > 0 && workSchedule.break_start_time) {
+          breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
+          breakEndMinutes = breakStartMinutes + breakDuration;
+        } else if (breakDuration > 0) {
+          // Se non c'è break_start_time, calcola la pausa a metà giornata
+          const startMinutes = timeToMinutes(workSchedule.start_time);
+          const totalMinutes = standardEndMinutes - startMinutes;
+          breakStartMinutes = startMinutes + (totalMinutes / 2) - (breakDuration / 2);
+          breakEndMinutes = breakStartMinutes + breakDuration;
+        }
+        
+        // Calcola le ore di permesso
+        let permissionMinutes = 0;
+        
+        if (exitMinutes <= breakStartMinutes) {
+          // Esce prima della pausa: perde tutto il pomeriggio + pausa
+          // Ore perse = (end - exit) - break_duration (perché la pausa non conta come lavoro)
+          permissionMinutes = (standardEndMinutes - exitMinutes) - breakDuration;
+        } else if (exitMinutes >= breakEndMinutes) {
+          // Esce dopo la pausa: perde solo il pomeriggio rimanente
+          permissionMinutes = standardEndMinutes - exitMinutes;
+        } else {
+          // Esce durante la pausa: perde la parte rimanente della pausa + tutto il pomeriggio
+          // Ore perse = (end - break_start) - (exit - break_start) = end - exit
+          permissionMinutes = standardEndMinutes - exitMinutes;
+        }
+        
+        return Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
       } else if (formData.type === 'entrata_posticipata' && formData.entryTime) {
-        // Entrata posticipata: calcola dall'inizio standard a entryTime
+        // Entrata posticipata: calcola le ore di lavoro perse dall'inizio a entryTime
+        // IMPORTANTE: considera la pausa pranzo se l'entrata è dopo la pausa
         const entryMinutes = timeToMinutes(formData.entryTime);
         const standardStartMinutes = timeToMinutes(workSchedule.start_time);
-        const minutesDiff = entryMinutes - standardStartMinutes;
-        return Math.max(0, parseFloat((minutesDiff / 60).toFixed(2)));
+        const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
+        
+        // Calcola l'inizio e fine della pausa pranzo
+        let breakStartMinutes = null;
+        let breakEndMinutes = null;
+        
+        if (breakDuration > 0 && workSchedule.break_start_time) {
+          breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
+          breakEndMinutes = breakStartMinutes + breakDuration;
+        } else if (breakDuration > 0) {
+          const endMinutes = timeToMinutes(workSchedule.end_time);
+          const totalMinutes = endMinutes - standardStartMinutes;
+          breakStartMinutes = standardStartMinutes + (totalMinutes / 2) - (breakDuration / 2);
+          breakEndMinutes = breakStartMinutes + breakDuration;
+        }
+        
+        // Calcola le ore di permesso
+        let permissionMinutes = 0;
+        
+        if (entryMinutes >= breakEndMinutes) {
+          // Entra dopo la pausa: perde solo la mattina
+          permissionMinutes = entryMinutes - standardStartMinutes - breakDuration;
+        } else if (entryMinutes <= breakStartMinutes) {
+          // Entra prima della pausa: perde solo la mattina fino all'entrata
+          permissionMinutes = entryMinutes - standardStartMinutes;
+        } else {
+          // Entra durante la pausa: perde la mattina + parte della pausa
+          permissionMinutes = entryMinutes - standardStartMinutes;
+        }
+        
+        return Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
       }
     }
     

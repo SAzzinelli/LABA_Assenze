@@ -5194,7 +5194,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
         const { data: workSchedule, error: scheduleError } = await supabase
           .from('work_schedules')
-          .select('start_time, end_time, is_working_day')
+          .select('start_time, end_time, is_working_day, break_duration, break_start_time')
           .eq('user_id', req.user.id)
           .eq('day_of_week', dayOfWeek)
           .single();
@@ -5202,25 +5202,76 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         if (!scheduleError && workSchedule && workSchedule.is_working_day) {
           // Funzione helper per convertire HH:MM in minuti
           const timeToMinutes = (timeStr) => {
+            if (!timeStr) return 0;
             const [hours, minutes] = timeStr.split(':').map(Number);
             return hours * 60 + minutes;
           };
 
           const standardStartMinutes = timeToMinutes(workSchedule.start_time);
           const standardEndMinutes = timeToMinutes(workSchedule.end_time);
+          const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
+          
+          // Calcola inizio e fine pausa pranzo
+          let breakStartMinutes = null;
+          let breakEndMinutes = null;
+          
+          if (breakDuration > 0) {
+            if (workSchedule.break_start_time) {
+              breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
+              breakEndMinutes = breakStartMinutes + breakDuration;
+            } else {
+              // Se non c'è break_start_time, calcola la pausa a metà giornata
+              const totalMinutes = standardEndMinutes - standardStartMinutes;
+              breakStartMinutes = standardStartMinutes + (totalMinutes / 2) - (breakDuration / 2);
+              breakEndMinutes = breakStartMinutes + breakDuration;
+            }
+          }
 
           if (permissionType === 'early_exit' && exitTime) {
-            // Uscita anticipata: calcola da exitTime alla fine standard
+            // Uscita anticipata: calcola le ore di lavoro perse da exitTime alla fine
+            // IMPORTANTE: considera la pausa pranzo se l'uscita è prima o durante la pausa
             const exitMinutes = timeToMinutes(exitTime);
-            const minutesDiff = standardEndMinutes - exitMinutes;
-            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
-            console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} = ${calculatedHours} ore`);
+            let permissionMinutes = 0;
+            
+            if (breakDuration === 0 || !breakStartMinutes) {
+              // Nessuna pausa: calcolo semplice
+              permissionMinutes = standardEndMinutes - exitMinutes;
+            } else if (exitMinutes <= breakStartMinutes) {
+              // Esce prima della pausa: perde tutto il pomeriggio + pausa
+              // Ore perse = (end - exit) - break_duration (perché la pausa non conta come lavoro)
+              permissionMinutes = (standardEndMinutes - exitMinutes) - breakDuration;
+            } else if (exitMinutes >= breakEndMinutes) {
+              // Esce dopo la pausa: perde solo il pomeriggio rimanente
+              permissionMinutes = standardEndMinutes - exitMinutes;
+            } else {
+              // Esce durante la pausa: perde la parte rimanente della pausa + tutto il pomeriggio
+              permissionMinutes = standardEndMinutes - exitMinutes;
+            }
+            
+            calculatedHours = Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
+            console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} (break: ${breakDuration}min) = ${calculatedHours} ore`);
           } else if (permissionType === 'late_entry' && entryTime) {
-            // Entrata posticipata: calcola dall'inizio standard a entryTime
+            // Entrata posticipata: calcola le ore di lavoro perse dall'inizio a entryTime
+            // IMPORTANTE: considera la pausa pranzo se l'entrata è dopo la pausa
             const entryMinutes = timeToMinutes(entryTime);
-            const minutesDiff = entryMinutes - standardStartMinutes;
-            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
-            console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} = ${calculatedHours} ore`);
+            let permissionMinutes = 0;
+            
+            if (breakDuration === 0 || !breakStartMinutes) {
+              // Nessuna pausa: calcolo semplice
+              permissionMinutes = entryMinutes - standardStartMinutes;
+            } else if (entryMinutes >= breakEndMinutes) {
+              // Entra dopo la pausa: perde solo la mattina
+              permissionMinutes = entryMinutes - standardStartMinutes - breakDuration;
+            } else if (entryMinutes <= breakStartMinutes) {
+              // Entra prima della pausa: perde solo la mattina fino all'entrata
+              permissionMinutes = entryMinutes - standardStartMinutes;
+            } else {
+              // Entra durante la pausa: perde la mattina + parte della pausa
+              permissionMinutes = entryMinutes - standardStartMinutes;
+            }
+            
+            calculatedHours = Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
+            console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} (break: ${breakDuration}min) = ${calculatedHours} ore`);
           }
         } else {
           console.warn('⚠️ Orario di lavoro non trovato per questo giorno, usando 0 ore');
