@@ -164,15 +164,17 @@ const LeaveRequests = () => {
       try {
         const [startHour, startMin] = workSchedule.start_time.split(':').map(Number);
         const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
-        const breakDuration = workSchedule.break_duration || 0;
+        // IMPORTANTE: usa break_duration dal database, non default 0 (se è 0, è 0!)
+        const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
         
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = Math.max(0, totalMinutes - breakDuration);
         const hours = workMinutes / 60;
         
         setFullDayHours(parseFloat(hours.toFixed(2)));
+        console.log(`✅ Full day hours calculated: ${workSchedule.start_time}-${workSchedule.end_time}, break: ${breakDuration}min = ${hours.toFixed(2)}h`);
       } catch (error) {
-        console.error('Error calculating full day hours:', error);
+        console.error('❌ Error calculating full day hours:', error);
         setFullDayHours(null);
       }
     } else if (formData.type !== 'full_day') {
