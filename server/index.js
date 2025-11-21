@@ -2869,44 +2869,12 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         hasRealTimeCalculation = true;
       }
     } else {
-    // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
+      // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
       // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
-    if (schedule && schedule.start_time) {
-        .from('work_schedules')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .eq('day_of_week', dayOfWeek)
-        .eq('is_working_day', true)
-        .single();
-      
       if (schedule && schedule.start_time) {
-        const contractHours = calculateExpectedHoursForSchedule({
-          start_time: schedule.start_time,
-          end_time: schedule.end_time,
-          break_duration: schedule.break_duration || 60
-        });
-        // Con permesso 104, NON ha lavorato (actualHours = 0), ma la giornata è considerata completa (contractHours = ore schedule)
-        realTimeActualHours = 0; // NON ha lavorato (è assente giustificata)
-        realTimeContractHours = contractHours; // Ore complete dello schedule per il calcolo
-        realTimeEffectiveHours = contractHours;
-        realTimeRemainingHours = 0;
-        hasRealTimeCalculation = true;
-      }
-    } else {
-    // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
-      // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
-    const dayOfWeek = now.getDay();
-    const { data: schedule } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .eq('day_of_week', dayOfWeek)
-      .eq('is_working_day', true)
-      .single();
-    
-      // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
-      // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
-      const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+        // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
+        // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
+        const [startHour, startMin] = schedule.start_time.split(':').map(Number);
       const currentHour = now.getHours();
       const currentMin = now.getMinutes();
       const currentTimeInMinutes = currentHour * 60 + currentMin;
