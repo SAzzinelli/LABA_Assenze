@@ -34,11 +34,13 @@ const LeaveRequests = () => {
     permissionDate: '',
     exitTime: '', // Orario di uscita per uscita anticipata
     entryTime: '', // Orario di entrata per entrata posticipata
-    notes: ''
+    notes: '',
+    fullDay: false // Permesso per tutta la giornata
   });
   
   // Orario di lavoro reale per il calcolo corretto
   const [workSchedule, setWorkSchedule] = useState(null);
+  const [fullDayHours, setFullDayHours] = useState(null);
 
   // Filtri temporali per admin
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -445,11 +447,30 @@ const LeaveRequests = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: newValue
+      };
+      
+      // Se cambia fullDay, resetta i campi tempo
+      if (name === 'fullDay') {
+        if (checked) {
+          updated.exitTime = '';
+          updated.entryTime = '';
+        }
+      }
+      
+      // Se cambia type, resetta fullDay
+      if (name === 'type' && value !== 'full_day') {
+        updated.fullDay = false;
+      }
+      
+      return updated;
+    });
   };
 
   // Calcola automaticamente le ore di permesso usando l'orario reale
@@ -493,11 +514,34 @@ const LeaveRequests = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.permissionDate) {
+      alert('Seleziona una data per il permesso');
+      return;
+    }
+
+    // Se è permesso tutta la giornata, verifica che le ore siano state calcolate
+    if (formData.fullDay && !fullDayHours) {
+      alert('Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.');
+      return;
+    }
+
+    // Valida campi per permessi parziali
+    if (!formData.fullDay) {
+      if (formData.type === 'uscita_anticipata' && !formData.exitTime) {
+        alert('Inserisci l\'orario di uscita');
+        return;
+      }
+      if (formData.type === 'entrata_posticipata' && !formData.entryTime) {
+        alert('Inserisci l\'orario di entrata');
+        return;
+      }
+    }
+
     // Calcola automaticamente le ore di permesso
-    const calculatedHours = calculatePermissionHours();
+    const calculatedHours = formData.fullDay ? fullDayHours : calculatePermissionHours();
     
     if (calculatedHours <= 0) {
-      alert('Inserisci un orario valido per calcolare le ore di permesso');
+      alert('Impossibile calcolare le ore di permesso');
       return;
     }
     
@@ -511,12 +555,12 @@ const LeaveRequests = () => {
           type: 'permission',
           startDate: formData.permissionDate,
           endDate: formData.permissionDate,
-          reason: formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata',
+          reason: formData.fullDay ? 'Permesso - Tutta la giornata' : (formData.type === 'uscita_anticipata' ? 'Uscita Anticipata' : 'Entrata Posticipata'),
           notes: formData.notes,
-          permissionType: formData.type === 'uscita_anticipata' ? 'early_exit' : 'late_entry',
+          permissionType: formData.fullDay ? 'full_day' : (formData.type === 'uscita_anticipata' ? 'early_exit' : 'late_entry'),
           hours: calculatedHours,
-          exitTime: formData.exitTime,
-          entryTime: formData.entryTime
+          exitTime: formData.fullDay ? null : formData.exitTime,
+          entryTime: formData.fullDay ? null : formData.entryTime
         })
       });
       
@@ -528,7 +572,8 @@ const LeaveRequests = () => {
           permissionDate: '',
           exitTime: '',
           entryTime: '',
-          notes: ''
+          notes: '',
+          fullDay: false
         });
         setShowNewRequest(false);
         alert('Richiesta inviata con successo!');
@@ -548,9 +593,37 @@ const LeaveRequests = () => {
       permissionDate: '',
       exitTime: '',
       entryTime: '',
-      notes: ''
+      notes: '',
+      fullDay: false
     });
     setShowNewRequest(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: newValue
+      };
+      
+      // Se cambia fullDay, resetta i campi tempo e type
+      if (name === 'fullDay') {
+        if (checked) {
+          updated.exitTime = '';
+          updated.entryTime = '';
+        }
+      }
+      
+      // Se cambia type, resetta fullDay
+      if (name === 'type' && value !== 'full_day') {
+        updated.fullDay = false;
+      }
+      
+      return updated;
+    });
   };
 
   // Funzioni per filtri temporali
@@ -998,19 +1071,47 @@ const LeaveRequests = () => {
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Tipo di Permesso *
                 </label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="uscita_anticipata">Uscita Anticipata</option>
-                  <option value="entrata_posticipata">Entrata Posticipata</option>
-                  {user?.has104 && (
-                    <option value="permission_104">Permesso 104</option>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="fullDay"
+                      checked={formData.fullDay}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+                    />
+                    <label className="ml-2 text-sm text-slate-300">
+                      Tutta la giornata
+                    </label>
+                    {formData.fullDay && fullDayHours !== null && (
+                      <span className="ml-2 text-sm text-indigo-400 font-medium">
+                        ({fullDayHours.toFixed(2)}h)
+                      </span>
+                    )}
+                  </div>
+                  
+                  {!formData.fullDay && (
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleInputChange}
+                      required={!formData.fullDay}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="uscita_anticipata">Uscita Anticipata</option>
+                      <option value="entrata_posticipata">Entrata Posticipata</option>
+                      {user?.has104 && (
+                        <option value="permission_104">Permesso 104</option>
+                      )}
+                    </select>
                   )}
-                </select>
+                </div>
+                
+                {formData.fullDay && fullDayHours === null && (
+                  <p className="text-xs text-amber-400 mt-1">
+                    ⚠️ Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1027,7 +1128,7 @@ const LeaveRequests = () => {
                 />
               </div>
 
-              {formData.type === 'uscita_anticipata' && (
+              {formData.type === 'uscita_anticipata' && !formData.fullDay && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Orario di Uscita *
@@ -1048,7 +1149,7 @@ const LeaveRequests = () => {
                 </div>
               )}
 
-              {formData.type === 'entrata_posticipata' && (
+              {formData.type === 'entrata_posticipata' && !formData.fullDay && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Orario di Entrata *
@@ -1070,16 +1171,16 @@ const LeaveRequests = () => {
               )}
 
               {/* Mostra ore calcolate automaticamente */}
-              {calculatePermissionHours() > 0 && (
+              {(formData.fullDay && fullDayHours !== null) || (!formData.fullDay && calculatePermissionHours() > 0) ? (
                 <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 text-indigo-400 mr-2" />
                     <span className="text-indigo-300 font-medium">
-                      Ore di permesso calcolate: {formatHoursReadable(calculatePermissionHours())}
+                      Ore di permesso calcolate: {formatHoursReadable(formData.fullDay ? fullDayHours : calculatePermissionHours())}
                     </span>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Avviso permessi 104 */}
               {formData.type === 'permission_104' && user?.has104 && (

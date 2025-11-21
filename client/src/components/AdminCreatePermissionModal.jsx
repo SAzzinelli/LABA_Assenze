@@ -16,12 +16,17 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     notes: '',
     permissionType: '',
     exitTime: '',
-    entryTime: ''
+    entryTime: '',
+    fullDay: false // Permesso per tutta la giornata
   });
+  
+  const [workSchedules, setWorkSchedules] = useState([]);
+  const [calculatedHours, setCalculatedHours] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
+      fetchWorkSchedules();
       // Reset form e imposta data di oggi
       const today = new Date().toISOString().split('T')[0];
       setFormData({
@@ -31,8 +36,10 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
         notes: '',
         permissionType: '',
         exitTime: '',
-        entryTime: ''
+        entryTime: '',
+        fullDay: false
       });
+      setCalculatedHours(null);
     }
   }, [isOpen]);
 
@@ -48,12 +55,91 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
+  const fetchWorkSchedules = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response && response.ok) {
+        const data = await response.json();
+        // Normalizza struttura per admin
+        const normalized = data.map(schedule => ({
+          ...schedule,
+          user_id: schedule.users?.id || schedule.user_id
+        }));
+        setWorkSchedules(normalized || []);
+      }
+    } catch (error) {
+      console.error('Error fetching work schedules:', error);
+    }
+  };
+
+  // Calcola ore per permesso tutta la giornata
+  const calculateFullDayHours = (userId, date) => {
+    if (!userId || !date) return null;
+
+    const dateObj = new Date(date);
+    const dayOfWeek = dateObj.getDay();
+
+    // Trova lo schedule per questo utente e questo giorno
+    const schedule = workSchedules.find(s => 
+      s.user_id === userId &&
+      Number(s.day_of_week) === Number(dayOfWeek) &&
+      s.is_working_day === true
+    );
+
+    if (!schedule || !schedule.start_time || !schedule.end_time) {
+      return null;
+    }
+
+    // Calcola ore totali
+    const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+    const [endHour, endMin] = schedule.end_time.split(':').map(Number);
+    const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
+
+    const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+    const workMinutes = Math.max(0, totalMinutes - breakDuration);
+    const hours = workMinutes / 60;
+
+    return parseFloat(hours.toFixed(2));
+  };
+
+  // Aggiorna ore calcolate quando cambiano userId, date o fullDay
+  useEffect(() => {
+    if (formData.fullDay && formData.userId && formData.date) {
+      const hours = calculateFullDayHours(formData.userId, formData.date);
+      setCalculatedHours(hours);
+    } else {
+      setCalculatedHours(null);
+    }
+  }, [formData.userId, formData.date, formData.fullDay, workSchedules]);
+
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: newValue
+      };
+      
+      // Se cambia fullDay, resetta i campi tempo
+      if (name === 'fullDay') {
+        if (checked) {
+          updated.exitTime = '';
+          updated.entryTime = '';
+          updated.permissionType = 'full_day';
+        } else {
+          updated.permissionType = '';
+        }
+      }
+      
+      // Se cambia permissionType, resetta fullDay
+      if (name === 'permissionType' && value !== 'full_day') {
+        updated.fullDay = false;
+      }
+      
+      return updated;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -69,12 +155,22 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
 
-    if (!formData.permissionType) {
+    if (!formData.permissionType && !formData.fullDay) {
+      setAlert({
+        isOpen: true,
+        type: 'error',
+        message: 'Seleziona il tipo di permesso'
+      });
+      return;
+    }
+
+    // Se è permesso tutta la giornata, verifica che le ore siano state calcolate
+    if (formData.fullDay && !calculatedHours) {
       setAlert({
         isOpen: true,
         type: 'error',
         title: 'Errore',
-        message: 'Seleziona il tipo di permesso (entrata o uscita)'
+        message: 'Impossibile calcolare le ore. Verifica che il dipendente abbia un orario configurato per questo giorno.'
       });
       return;
     }
@@ -88,11 +184,12 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
         startDate: formData.date,
         endDate: formData.date,
         type: 'permission',
-        reason: formData.reason || 'Permesso',
+        reason: formData.reason || (formData.fullDay ? 'Permesso - Tutta la giornata' : 'Permesso'),
         notes: formData.notes || '',
-        permissionType: formData.permissionType,
-        exitTime: formData.exitTime || null,
-        entryTime: formData.entryTime || null
+        permissionType: formData.fullDay ? 'full_day' : formData.permissionType,
+        exitTime: formData.fullDay ? null : (formData.exitTime || null),
+        entryTime: formData.fullDay ? null : (formData.entryTime || null),
+        hours: formData.fullDay ? calculatedHours : null // Per tutta la giornata, usa ore calcolate
       };
 
       const response = await apiCall('/api/admin/leave-requests', {
@@ -206,20 +303,48 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     <Clock className="h-4 w-4 inline mr-1" />
                     Tipo Permesso *
                   </label>
-                  <select
-                    name="permissionType"
-                    value={formData.permissionType}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  >
-                    <option value="">-- Seleziona tipo permesso --</option>
-                    <option value="late_entry">Entrata Posticipata</option>
-                    <option value="early_exit">Uscita Anticipata</option>
-                  </select>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="fullDay"
+                        checked={formData.fullDay}
+                        onChange={handleInputChange}
+                        className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+                      />
+                      <label className="ml-2 text-sm text-slate-300">
+                        Tutta la giornata
+                      </label>
+                      {formData.fullDay && calculatedHours !== null && (
+                        <span className="ml-2 text-sm text-indigo-400 font-medium">
+                          ({calculatedHours.toFixed(2)}h)
+                        </span>
+                      )}
+                    </div>
+                    
+                    {!formData.fullDay && (
+                      <select
+                        name="permissionType"
+                        value={formData.permissionType}
+                        onChange={handleInputChange}
+                        required={!formData.fullDay}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      >
+                        <option value="">-- Seleziona tipo permesso --</option>
+                        <option value="late_entry">Entrata Posticipata</option>
+                        <option value="early_exit">Uscita Anticipata</option>
+                      </select>
+                    )}
+                  </div>
+                  
+                  {formData.fullDay && calculatedHours === null && (
+                    <p className="text-xs text-amber-400 mt-1">
+                      ⚠️ Impossibile calcolare le ore. Verifica che il dipendente abbia un orario configurato per questo giorno.
+                    </p>
+                  )}
                 </div>
 
-                {formData.permissionType === 'late_entry' && (
+                {formData.permissionType === 'late_entry' && !formData.fullDay && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Orario Entrata
@@ -234,7 +359,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 )}
 
-                {formData.permissionType === 'early_exit' && (
+                {formData.permissionType === 'early_exit' && !formData.fullDay && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Orario Uscita
