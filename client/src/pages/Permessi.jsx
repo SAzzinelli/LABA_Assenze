@@ -792,10 +792,19 @@ const LeaveRequests = () => {
         });
       }
     } else {
-      // Per dipendenti: filtra per mese/anno
+      // Per dipendenti: mostra tutti i permessi (approvati, pending, rifiutati)
+      // Filtra per mese/anno opzionale, ma mostra comunque i permessi approvati anche se fuori dal mese corrente
       filtered = filtered.filter(request => {
         const requestDate = parseRequestDate(request);
         if (!requestDate) return false;
+        
+        // Mostra sempre i permessi approvati (anche se fuori dal mese corrente)
+        // e i permessi pending/rifiutati del mese/anno corrente
+        if (request.status === 'approved') {
+          return true; // Mostra tutti i permessi approvati
+        }
+        
+        // Per pending/rejected, filtra per mese/anno
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
