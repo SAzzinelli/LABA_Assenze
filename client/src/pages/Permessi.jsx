@@ -21,7 +21,8 @@ import {
   Filter,
   User,
   Search,
-  UserPlus
+  UserPlus,
+  MessageSquare
 } from 'lucide-react';
 
 const LeaveRequests = () => {
@@ -64,11 +65,16 @@ const LeaveRequests = () => {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showRequestModificationDialog, setShowRequestModificationDialog] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [approvalNotes, setApprovalNotes] = useState('');
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [cancellationReason, setCancellationReason] = useState('');
+  const [modificationRequest, setModificationRequest] = useState({
+    reason: '',
+    requestedChanges: ''
+  });
   const [editFormData, setEditFormData] = useState({
     entryTime: '',
     exitTime: '',
@@ -439,6 +445,44 @@ const LeaveRequests = () => {
   };
 
   // Funzione per annullare richieste approvate (solo admin, solo permessi)
+  // Richiedi modifica permesso approvato (dipendente)
+  const handleRequestModification = async () => {
+    try {
+      if (!selectedRequest) return;
+
+      if (!modificationRequest.reason || !modificationRequest.reason.trim()) {
+        showError('Inserisci il motivo della richiesta di modifica');
+        return;
+      }
+
+      const response = await apiCall('/api/leave-requests/request-modification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          leaveRequestId: selectedRequest.id,
+          reason: modificationRequest.reason,
+          requestedChanges: modificationRequest.requestedChanges || ''
+        })
+      });
+
+      if (response.ok) {
+        showSuccess('Richiesta inviata!', 'La tua richiesta di modifica è stata inviata all\'amministratore. Riceverai una notifica quando verrà gestita.');
+        setShowRequestModificationDialog(false);
+        setSelectedRequest(null);
+        setModificationRequest({ reason: '', requestedChanges: '' });
+        fetchRequests(); // Ricarica le richieste
+      } else {
+        const errorData = await response.json();
+        showError(errorData.error || 'Errore durante l\'invio della richiesta di modifica');
+      }
+    } catch (error) {
+      console.error('Error requesting modification:', error);
+      showError('Errore durante l\'invio della richiesta di modifica');
+    }
+  };
+
   const handleCancelRequest = async (requestId, reason = '') => {
     try {
       const { token } = useAuthStore.getState();
@@ -1481,6 +1525,23 @@ const LeaveRequests = () => {
                         )}
                       </div>
                     )}
+
+                    {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate */}
+                    {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setModificationRequest({ reason: '', requestedChanges: '' });
+                            setShowRequestModificationDialog(true);
+                          }}
+                          className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Richiedi Modifica
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1736,6 +1797,89 @@ const LeaveRequests = () => {
           showSuccess('Permesso registrato!', 'Il permesso è stato registrato e il dipendente è stato notificato.');
         }}
       />
+
+      {/* Modal Richiesta Modifica (Dipendente) */}
+      {showRequestModificationDialog && selectedRequest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+              <MessageSquare className="h-5 w-5 mr-2 text-amber-400" />
+              Richiedi Modifica Permesso
+            </h3>
+            <p className="text-slate-300 text-sm mb-4">
+              Stai richiedendo una modifica al permesso approvato per il <strong>
+                {selectedRequest.permissionDate ? formatDate(selectedRequest.permissionDate) : 
+                 selectedRequest.startDate ? formatDate(selectedRequest.startDate) : 'Data non disponibile'}
+              </strong>.
+              L'amministratore riceverà una notifica e potrà modificare il permesso.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Motivo della richiesta *
+                </label>
+                <textarea
+                  value={modificationRequest.reason}
+                  onChange={(e) => setModificationRequest({ ...modificationRequest, reason: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Spiega perché vuoi modificare questo permesso..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Modifiche richieste (opzionale)
+                </label>
+                <textarea
+                  value={modificationRequest.requestedChanges}
+                  onChange={(e) => setModificationRequest({ ...modificationRequest, requestedChanges: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Descrivi le modifiche che vorresti (es. cambiare orario di uscita, modificare le ore...)"
+                />
+              </div>
+
+              {selectedRequest && (
+                <div className="bg-slate-700/50 rounded-lg p-3 text-sm">
+                  <p className="text-slate-400 mb-1">Permesso attuale:</p>
+                  <p className="text-white">
+                    {selectedRequest.permissionType === 'uscita_anticipata' || selectedRequest.permissionType === 'early_exit' || selectedRequest.exitTime ? (
+                      <>Uscita Anticipata {selectedRequest.exitTime && `alle ${formatTimeWithoutSeconds(selectedRequest.exitTime)}`}</>
+                    ) : selectedRequest.permissionType === 'entrata_posticipata' || selectedRequest.permissionType === 'late_entry' || selectedRequest.entryTime ? (
+                      <>Entrata Posticipata {selectedRequest.entryTime && `alle ${formatTimeWithoutSeconds(selectedRequest.entryTime)}`}</>
+                    ) : (
+                      <>Permesso per {selectedRequest.hours ? formatHoursReadable(selectedRequest.hours) : 'giornata intera'}</>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowRequestModificationDialog(false);
+                  setSelectedRequest(null);
+                  setModificationRequest({ reason: '', requestedChanges: '' });
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleRequestModification}
+                disabled={!modificationRequest.reason || !modificationRequest.reason.trim()}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors min-h-[44px] flex items-center"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Invia Richiesta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1098,12 +1098,22 @@ const Employees = () => {
                   </h4>
                   {(() => {
                     const today = new Date().toISOString().split('T')[0];
-                    // Filtra: mostra solo giornate CONCLUSE con balance != 0 (escludi oggi)
+                    // Filtra: mostra giornate con balance != 0
+                    // Include anche oggi se c'è un permesso approvato (balance già definitivo)
                     const completedRecords = balanceHistory.filter(record => {
                       const balance = record.balance_hours || 0;
                       const isToday = record.date === today;
-                      // Escludi oggi (la giornata non è ancora conclusa, il balance è parziale)
-                      return balance !== 0 && !isToday;
+                      // Include oggi solo se c'è un permesso (balance già definitivo per permessi)
+                      // Altrimenti escludi oggi (la giornata non è ancora conclusa, il balance è parziale)
+                      if (isToday) {
+                        // Controlla se ci sono note che indicano un permesso approvato
+                        const hasPermission = record.notes && (
+                          record.notes.includes('Permesso approvato') || 
+                          record.notes.includes('Permesso creato dall\'admin')
+                        );
+                        return balance !== 0 && hasPermission;
+                      }
+                      return balance !== 0;
                     });
                     return completedRecords.length > 0 ? (
                       <div className="space-y-3">

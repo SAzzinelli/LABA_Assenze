@@ -1719,7 +1719,25 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Record di presenza non trovato' });
     }
 
-    const balance_hours = actual_hours - attendance.expected_hours;
+    // Controlla se ci sono permessi APPROVATI per questa data
+    const { data: approvedPermissions, error: permError } = await supabase
+      .from('leave_requests')
+      .select('hours')
+      .eq('user_id', attendance.user_id)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', attendance.date)
+      .gte('end_date', attendance.date);
+    
+    let balance_hours;
+    if (!permError && approvedPermissions && approvedPermissions.length > 0) {
+      // IMPORTANTE: Se c'è un permesso approvato, balance = -permesso_hours
+      const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+      balance_hours = -totalPermissionHours;
+    } else {
+      // Nessun permesso: calcola normalmente
+      balance_hours = actual_hours - attendance.expected_hours;
+    }
 
     const { data: updatedAttendance, error } = await supabase
       .from('attendance')
@@ -3676,7 +3694,18 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       permissionData
     );
     
-    console.log(`📊 Calculated (centralized): expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h, status=${status}`);
+    // Se ci sono permessi approvati, usa expectedHours (già ridotte) e balance = -permesso_hours
+    let finalExpectedHours = expectedHours;
+    let finalBalanceHours = balanceHours;
+    
+    if (permissionsToday && permissionsToday.length > 0) {
+      const totalPermissionHours = permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+      finalExpectedHours = contractHours - totalPermissionHours; // Expected = contract - permesso
+      finalBalanceHours = -totalPermissionHours; // Balance = -permesso_hours (sempre)
+      console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
+    }
+    
+    console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -3692,9 +3721,11 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .from('attendance')
         .update({
           actual_hours: actualHours,
-          expected_hours: contractHours,
-          balance_hours: balanceHours,
-          notes: `Aggiornato alle ${currentTime} - ${status}`
+          expected_hours: finalExpectedHours,
+          balance_hours: finalBalanceHours,
+          notes: permissionsToday && permissionsToday.length > 0
+            ? `Aggiornato alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
+            : `Aggiornato alle ${currentTime} - ${status}`
         })
         .eq('id', existingAttendance.id);
 
@@ -3710,10 +3741,12 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .insert({
           user_id: userId,
           date: today,
-          expected_hours: contractHours,
+          expected_hours: finalExpectedHours,
           actual_hours: actualHours,
-          balance_hours: balanceHours,
-          notes: `Presenza aggiornata alle ${currentTime} - ${status}`
+          balance_hours: finalBalanceHours,
+          notes: permissionsToday && permissionsToday.length > 0
+            ? `Presenza aggiornata alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
+            : `Presenza aggiornata alle ${currentTime} - ${status}`
         });
 
       if (insertError) {
@@ -5865,6 +5898,104 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       }, 100);
     }
 
+    // Se admin crea permesso normale approvato direttamente, aggiorna attendance
+    if (type === 'permission' && insertData.status === 'approved' && calculatedHours && calculatedHours > 0) {
+      const permissionDate = startDate;
+      const permissionHours = parseFloat(calculatedHours);
+      
+      setTimeout(async () => {
+        const dayOfWeek = new Date(permissionDate).getDay();
+        
+        // Recupera l'orario di lavoro per quel giorno
+        const { data: schedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, break_duration')
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (!scheduleError && schedule) {
+          // Calcola le ore attese originali (senza permessi)
+          const originalExpectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+          
+          // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
+          const { data: approvedPermissions, error: permError } = await supabase
+            .from('leave_requests')
+            .select('hours')
+            .eq('user_id', userId)
+            .eq('type', 'permission')
+            .eq('status', 'approved')
+            .lte('start_date', permissionDate)
+            .gte('end_date', permissionDate);
+          
+          let totalPermissionHours = 0;
+          if (!permError && approvedPermissions) {
+            totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+          }
+          
+          // Ore attese finali = ore originali - ore permessi approvati
+          const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
+          
+          // Recupera o crea la presenza per questa data
+          const { data: attendanceRecord, error: attError } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('date', permissionDate)
+            .single();
+          
+          if (!attError && attendanceRecord) {
+            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
+            const newBalanceHours = -permissionHours;
+            
+            const { error: updateAttError } = await supabase
+              .from('attendance')
+              .update({
+                expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                balance_hours: Math.round(newBalanceHours * 100) / 100,
+                notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso creato dall'admin: -${permissionHours}h]` : `[Permesso creato dall'admin: -${permissionHours}h]`
+              })
+              .eq('user_id', userId)
+              .eq('date', permissionDate);
+            
+            if (updateAttError) {
+              console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+            } else {
+              console.log(`✅ Attendance ${permissionDate} aggiornata da admin: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${newBalanceHours.toFixed(2)}h`);
+            }
+          } else if (attError && attError.code === 'PGRST116') {
+            // Nessun record di attendance, creane uno nuovo
+            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
+            const { error: createAttError } = await supabase
+              .from('attendance')
+              .insert({
+                user_id: userId,
+                date: permissionDate,
+                actual_hours: 0, // Non ha ancora lavorato
+                expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                balance_hours: Math.round(-permissionHours * 100) / 100,
+                notes: `[Permesso creato dall'admin: -${permissionHours}h]`
+              });
+            
+            if (createAttError) {
+              console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
+            } else {
+              console.log(`✅ Attendance ${permissionDate} creata da admin: ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${-permissionHours.toFixed(2)}h`);
+            }
+          } else if (attError) {
+            console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
+          }
+        } else {
+          console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
+        }
+      }, 100);
+    }
+
     const normalizedExitTime = normalizeTime(exitTime);
     const normalizedEntryTime = normalizeTime(entryTime);
 
@@ -6475,6 +6606,109 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       console.log(`✅ Ricalcolo presenze completato per permesso cancellato`);
     }
 
+    // Se un PERMESSO viene APPROVATO, aggiorna l'attendance per ridurre le expected_hours
+    if (updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved') {
+      console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
+      
+      const permissionDate = updatedRequest.start_date;
+      const permissionHours = parseFloat(updatedRequest.hours || 0);
+      
+      if (permissionHours > 0) {
+        const dayOfWeek = new Date(permissionDate).getDay();
+        
+        // Recupera l'orario di lavoro per quel giorno
+        const { data: schedule, error: scheduleError } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, break_duration')
+          .eq('user_id', updatedRequest.user_id)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (!scheduleError && schedule) {
+          // Calcola le ore attese originali (senza permessi)
+          const originalExpectedHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration || 60
+          });
+          
+          // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
+          const { data: approvedPermissions, error: permError } = await supabase
+            .from('leave_requests')
+            .select('hours')
+            .eq('user_id', updatedRequest.user_id)
+            .eq('type', 'permission')
+            .eq('status', 'approved')
+            .lte('start_date', permissionDate)
+            .gte('end_date', permissionDate);
+          
+          let totalPermissionHours = 0;
+          if (!permError && approvedPermissions) {
+            totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+          }
+          
+          // Ore attese finali = ore originali - ore permessi approvati
+          const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
+          
+          // Recupera o crea la presenza per questa data
+          const { data: attendanceRecord, error: attError } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('user_id', updatedRequest.user_id)
+            .eq('date', permissionDate)
+            .single();
+          
+          if (!attError && attendanceRecord) {
+            // Aggiorna la presenza con le nuove ore attese
+            // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
+            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
+            // perché il permesso aggiunge sempre quel debito, indipendentemente dalle ore effettive lavorate
+            const newBalanceHours = -permissionHours;
+            
+            const { error: updateAttError } = await supabase
+              .from('attendance')
+              .update({
+                expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                balance_hours: Math.round(newBalanceHours * 100) / 100,
+                notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h]` : `[Permesso approvato: -${permissionHours}h]`
+              })
+              .eq('user_id', updatedRequest.user_id)
+              .eq('date', permissionDate);
+            
+            if (updateAttError) {
+              console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+            } else {
+              console.log(`✅ Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${newBalanceHours.toFixed(2)}h`);
+            }
+          } else if (attError && attError.code === 'PGRST116') {
+            // Nessun record di attendance, creane uno nuovo
+            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
+            const { error: createAttError } = await supabase
+              .from('attendance')
+              .insert({
+                user_id: updatedRequest.user_id,
+                date: permissionDate,
+                actual_hours: 0, // Non ha ancora lavorato
+                expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                balance_hours: Math.round(-permissionHours * 100) / 100,
+                notes: `[Permesso approvato: -${permissionHours}h]`
+              });
+            
+            if (createAttError) {
+              console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
+            } else {
+              console.log(`✅ Attendance ${permissionDate} creata: ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${-permissionHours.toFixed(2)}h`);
+            }
+          } else if (attError) {
+            console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
+          }
+        } else {
+          console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
+        }
+      }
+    }
+
     // Crea notifica per il dipendente (solo se lo status è stato cambiato)
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
     try {
@@ -6622,6 +6856,131 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     });
   } catch (error) {
     console.error('Leave request update error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Richiedi modifica permesso approvato (dipendente)
+app.post('/api/leave-requests/request-modification', authenticateToken, async (req, res) => {
+  try {
+    const { leaveRequestId, reason, requestedChanges } = req.body;
+
+    // Validazione
+    if (!leaveRequestId || !reason || !reason.trim()) {
+      return res.status(400).json({ error: 'ID richiesta e motivo sono obbligatori' });
+    }
+
+    // Verifica che la richiesta esista
+    const { data: leaveRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select('*, users!leave_requests_user_id_fkey(id, first_name, last_name, email)')
+      .eq('id', leaveRequestId)
+      .single();
+
+    if (fetchError || !leaveRequest) {
+      return res.status(404).json({ error: 'Richiesta di permesso non trovata' });
+    }
+
+    // Verifica che la richiesta sia approvata
+    if (leaveRequest.status !== 'approved') {
+      return res.status(400).json({ error: 'Puoi richiedere modifiche solo per permessi già approvati' });
+    }
+
+    // Verifica che l'utente sia il proprietario della richiesta (solo dipendenti)
+    if (req.user.role !== 'admin' && leaveRequest.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato. Puoi richiedere modifiche solo per i tuoi permessi.' });
+    }
+
+    // Verifica che sia un permesso (non ferie/malattia)
+    if (leaveRequest.type !== 'permission') {
+      return res.status(400).json({ error: 'Puoi richiedere modifiche solo per permessi orari' });
+    }
+
+    // Recupera tutti gli admin
+    const { data: admins, error: adminsError } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name')
+      .eq('role', 'admin')
+      .eq('is_active', true);
+
+    if (adminsError || !admins || admins.length === 0) {
+      return res.status(500).json({ error: 'Errore nel recupero degli amministratori' });
+    }
+
+    // Formatta la data del permesso
+    const permissionDate = leaveRequest.start_date || leaveRequest.permission_date;
+    const formattedDate = new Date(permissionDate).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Europe/Rome'
+    });
+
+    // Formatta le ore
+    const hours = leaveRequest.hours || 0;
+    const hoursFormatted = hours > 0 
+      ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+      : '0h';
+
+    // Costruisci il messaggio della notifica
+    const employeeName = leaveRequest.users ? `${leaveRequest.users.first_name} ${leaveRequest.users.last_name}` : 'Dipendente';
+    let messageText = `${employeeName} ha richiesto una modifica al permesso approvato per il ${formattedDate} (${hoursFormatted}).\n\n`;
+    messageText += `Motivo: ${reason}`;
+    if (requestedChanges && requestedChanges.trim()) {
+      messageText += `\n\nModifiche richieste: ${requestedChanges}`;
+    }
+
+    // Crea notifiche per tutti gli admin
+    const notificationPromises = admins.map(admin =>
+      supabase
+        .from('notifications')
+        .insert([{
+          user_id: admin.id,
+          title: 'Richiesta Modifica Permesso',
+          message: messageText,
+          type: 'permission_modification_request',
+          is_read: false,
+          request_id: leaveRequestId,
+          request_type: 'permission',
+          created_at: new Date().toISOString()
+        }])
+    );
+
+    await Promise.all(notificationPromises);
+    console.log(`✅ Notifiche di richiesta modifica create per ${admins.length} admin`);
+
+    // Invia email agli admin (opzionale)
+    try {
+      for (const admin of admins) {
+        if (isRealEmail(admin.email)) {
+          await sendEmail(admin.email, 'permissionModificationRequest', [
+            employeeName,
+            formattedDate,
+            hoursFormatted,
+            reason,
+            requestedChanges || '',
+            leaveRequestId
+          ]);
+          console.log(`✅ Email inviata a ${admin.email} per richiesta modifica permesso`);
+        }
+      }
+    } catch (emailError) {
+      console.error('Errore invio email admin:', emailError);
+      // Non bloccare la risposta se l'email fallisce
+    }
+
+    res.json({
+      success: true,
+      message: 'Richiesta di modifica inviata con successo agli amministratori',
+      notification: {
+        leaveRequestId,
+        employeeName,
+        date: formattedDate,
+        reason
+      }
+    });
+  } catch (error) {
+    console.error('Request modification error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
@@ -10301,30 +10660,53 @@ async function saveHourlyAttendance() {
           }
         }
         
+        // Controlla se ci sono permessi APPROVATI per oggi
+        const { data: approvedPermissions, error: approvedPermError } = await supabase
+          .from('leave_requests')
+          .select('hours')
+          .eq('user_id', user.id)
+          .eq('type', 'permission')
+          .eq('status', 'approved')
+          .lte('start_date', today)
+          .gte('end_date', today);
+        
+        let finalExpectedHours = expectedHours;
+        let finalBalanceHours = actualHours - expectedHours;
+        
+        if (!approvedPermError && approvedPermissions && approvedPermissions.length > 0) {
+          // Ci sono permessi approvati: riduci expected_hours e imposta balance = -permesso_hours
+          const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+          finalExpectedHours = Math.max(0, expectedHours - totalPermissionHours);
+          // IMPORTANTE: Il balance per un permesso è sempre -permesso_hours, non actual - expected
+          finalBalanceHours = -totalPermissionHours;
+          console.log(`🔐 ${user.first_name} ha permesso approvato: expected ${expectedHours}h → ${finalExpectedHours}h, balance = ${finalBalanceHours}h`);
+        }
+        
         // DEBUG: Log risultato finale
-        const balanceHours = actualHours - expectedHours;
         console.log(`📊 Risultato calcolo ${user.first_name}:`, {
           actualHours: actualHours.toFixed(2),
-          expectedHours: expectedHours.toFixed(2),
-          balanceHours: balanceHours.toFixed(2),
+          expectedHours: finalExpectedHours.toFixed(2),
+          balanceHours: finalBalanceHours.toFixed(2),
           status,
-          hasPermissions: permissions && permissions.length > 0
+          hasPermissions: permissions && permissions.length > 0,
+          hasApprovedPermissions: approvedPermissions && approvedPermissions.length > 0
         });
         
         // FIX GENERALE: Se dipendente senza permessi dopo la fine dell'orario, deve avere expectedHours
         const isAfterWorkEnd = currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin);
         
-        if (isAfterWorkEnd && (!permissions || permissions.length === 0)) {
+        if (isAfterWorkEnd && (!permissions || permissions.length === 0) && (!approvedPermissions || approvedPermissions.length === 0)) {
           // Dipendente senza permessi dopo la fine dell'orario = ha lavorato le ore attese
-          if (Math.abs(actualHours - expectedHours) > 0.01) {
-            console.log(`🔧 FIX ${user.first_name}: Correggo actualHours da ${actualHours.toFixed(2)} a ${expectedHours.toFixed(2)} (no permissions, after work end, status=${status})`);
-            actualHours = expectedHours;
+          if (Math.abs(actualHours - finalExpectedHours) > 0.01) {
+            console.log(`🔧 FIX ${user.first_name}: Correggo actualHours da ${actualHours.toFixed(2)} a ${finalExpectedHours.toFixed(2)} (no permissions, after work end, status=${status})`);
+            actualHours = finalExpectedHours;
+            finalBalanceHours = 0; // Se ha lavorato le ore attese, balance = 0
             status = 'completed'; // Forza anche lo status
           }
         }
         
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
-        console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${expectedHours}h - Status: ${status}`);
+        console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${finalExpectedHours.toFixed(2)}h - Balance: ${finalBalanceHours.toFixed(2)}h - Status: ${status}`);
         
         const { error: saveError } = await supabase
           .from('attendance')
@@ -10332,9 +10714,11 @@ async function saveHourlyAttendance() {
             user_id: user.id,
             date: today,
             actual_hours: Math.round(actualHours * 100) / 100,
-            expected_hours: Math.round(expectedHours * 100) / 100,
-            balance_hours: Math.round((actualHours - expectedHours) * 100) / 100,
-            notes: 'Salvataggio automatico orario'
+            expected_hours: Math.round(finalExpectedHours * 100) / 100,
+            balance_hours: Math.round(finalBalanceHours * 100) / 100,
+            notes: approvedPermissions && approvedPermissions.length > 0 
+              ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
+              : 'Salvataggio automatico orario'
           }, {
             onConflict: 'user_id,date'
           });
