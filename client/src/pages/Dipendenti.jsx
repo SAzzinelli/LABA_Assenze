@@ -556,7 +556,6 @@ const Employees = () => {
                   </div>
                   <div className="ml-3">
                     <div className="text-white font-semibold leading-5">{employee.name}</div>
-                    <div className="text-slate-400 text-xs">{employee.email}</div>
                   </div>
                 </div>
                 {employee.has104 && (
@@ -570,32 +569,31 @@ const Employees = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
-                  className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 text-xs font-medium"
+                  className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 flex items-center justify-center"
                   title="Modifica"
                 >
-                  Modifica
+                  <Edit className="h-4 w-4" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleViewDetails(employee); }}
-                  className="flex-1 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 text-xs font-medium"
+                  className="flex-1 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 flex items-center justify-center"
                   title="Dettagli"
                 >
-                  Dettagli
+                  <Eye className="h-4 w-4" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleResetPassword(employee); }}
-                  className="flex-1 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 text-xs font-medium"
+                  className="flex-1 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 flex items-center justify-center"
                   title="Reset Password"
                 >
-                  <Key className="h-3 w-3 inline mr-1" />
-                  Reset
+                  <Key className="h-4 w-4" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(employee.id); }}
-                  className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 text-xs font-medium"
+                  className="flex-1 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 flex items-center justify-center"
                   title="Elimina"
                 >
-                  Elimina
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
