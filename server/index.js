@@ -5106,6 +5106,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             month: currentMonth,
             total_days: 3,
             used_days: 0,
+            pending_days: 0,
             remaining_days: 3
           }])
           .select()
@@ -5113,6 +5114,11 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
         if (createError) {
           console.error('Absence 104 balance creation error:', createError);
+          return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104' });
+        }
+
+        if (!newBalance || !newBalance.id) {
+          console.error('Absence 104 balance creation failed: no balance returned');
           return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104' });
         }
 
@@ -5182,12 +5188,26 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       // I permessi 104 sono auto-approvati, quindi aggiorna used_days, non pending_days
       const newUsedDays = usedDays + daysRequestedFor104;
-      await supabase.from('absence_104_balances').update({
-        used_days: newUsedDays,
-        pending_days: pendingDays, // Mantieni i pending esistenti (se ce ne sono altri)
-        remaining_days: (balance.total_days || 3) - newUsedDays - pendingDays,
-        updated_at: new Date().toISOString()
-      }).eq('id', balance.id);
+      
+      if (!balance || !balance.id) {
+        console.error('Balance ID missing, cannot update absence 104 balance');
+        return res.status(500).json({ error: 'Errore nell\'aggiornamento del bilancio assenze 104' });
+      }
+
+      const { error: updateError } = await supabase
+        .from('absence_104_balances')
+        .update({
+          used_days: newUsedDays,
+          pending_days: pendingDays, // Mantieni i pending esistenti (se ce ne sono altri)
+          remaining_days: (balance.total_days || 3) - newUsedDays - pendingDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', balance.id);
+
+      if (updateError) {
+        console.error('Absence 104 balance update error:', updateError);
+        return res.status(500).json({ error: 'Errore nell\'aggiornamento del bilancio assenze 104' });
+      }
 
       // Usa daysRequestedFor104 come giorni richiesti (almeno 1)
       daysRequested = daysRequestedFor104;
