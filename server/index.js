@@ -4952,6 +4952,9 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
     }
 
+    // Dichiarazione variabile daysRequested (verrà calcolata in base al tipo)
+    let daysRequested = 0;
+
     // Validazione specifica per FERIE (separata dalla banca ore)
     if (type === 'vacation') {
       // Verifica che ci sia un periodo aperto per le date richieste
@@ -5000,7 +5003,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       // Verifica bilancio ferie (giorni, non ore)
       const currentYear = new Date(startDate).getFullYear();
-      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
       // Recupera o crea bilancio ferie
       let { data: balance, error: balanceError } = await supabase
@@ -5081,7 +5084,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       // Calcola giorni richiesti (1 giorno = 1 giorno intero, anche se mezza giornata)
       const start = new Date(startDate);
       const end = new Date(endDate);
-      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
 
       // Verifica limite mensile (3 GIORNI al mese, non permessi)
       const currentMonth = new Date(startDate).getMonth() + 1;
@@ -5320,6 +5323,12 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         // Se c'è un errore, mantieni il valore passato o usa 0
         calculatedHours = hours || 0;
       }
+    }
+
+    // Verifica che daysRequested sia stato calcolato correttamente
+    if (!daysRequested || daysRequested <= 0) {
+      console.error('daysRequested non valido:', daysRequested);
+      return res.status(500).json({ error: 'Errore nel calcolo dei giorni richiesti' });
     }
 
     // Prepara i dati per l'inserimento, escludendo i campi che potrebbero non esistere
