@@ -3003,15 +3003,25 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         return sum + 0; // Con permesso 104, balance = 0
       }
       
-      // Per OGGI: includi solo se la giornata è conclusa (usando DB), altrimenti escludi (balance parziale)
+      // Per OGGI: includi se:
+      // 1. La giornata è conclusa (usando DB), OPPURE
+      // 2. C'è un permesso approvato (balance già definitivo)
       if (record.date === today) {
-        if (isTodayCompleted && !hasRealTimeCalculation) {
-          // Giornata conclusa, usa il balance dal DB
+        // Controlla se c'è un permesso approvato per oggi
+        const hasApprovedPermission = todayRecord && (
+          (todayRecord.notes && (
+            todayRecord.notes.includes('Permesso approvato') || 
+            todayRecord.notes.includes('Permesso creato dall\'admin')
+          ))
+        );
+        
+        if ((isTodayCompleted && !hasRealTimeCalculation) || hasApprovedPermission) {
+          // Giornata conclusa OPPURE permesso approvato, usa il balance dal DB
           const recordBalance = record.balance_hours || 0;
-          console.log(`✅ [total-balance] Today completed, using DB balance: ${recordBalance.toFixed(2)}h`);
+          console.log(`✅ [total-balance] Today ${hasApprovedPermission ? 'has approved permission' : 'completed'}, using DB balance: ${recordBalance.toFixed(2)}h`);
           return sum + recordBalance;
         } else {
-          // Giornata non conclusa, escludi dal totale (balance parziale)
+          // Giornata non conclusa e senza permesso, escludi dal totale (balance parziale)
           console.log(`⏰ [total-balance] Excluding today (${today}) from balance - day not completed yet (real-time: ${todayBalance.toFixed(2)}h)`);
           return sum + 0;
         }
