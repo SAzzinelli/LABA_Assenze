@@ -2833,7 +2833,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     // Calcola il saldo totale da TUTTE le presenze
     const { data: allAttendance, error } = await supabase
       .from('attendance')
-      .select('balance_hours, date, actual_hours, expected_hours')
+      .select('balance_hours, date, actual_hours, expected_hours, notes')
       .eq('user_id', targetUserId);
     
     if (error) {
@@ -3027,12 +3027,11 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       // 1. La giornata è conclusa (usando DB), OPPURE
       // 2. C'è un permesso approvato (balance già definitivo)
       if (record.date === today) {
-        // Controlla se c'è un permesso approvato per oggi
-        const hasApprovedPermission = todayRecord && (
-          (todayRecord.notes && (
-            todayRecord.notes.includes('Permesso approvato') || 
-            todayRecord.notes.includes('Permesso creato dall\'admin')
-          ))
+        // Controlla se c'è un permesso approvato per oggi (controlla sia record.notes che todayRecord.notes)
+        const recordNotes = record.notes || todayRecord?.notes || '';
+        const hasApprovedPermission = recordNotes && (
+          recordNotes.includes('Permesso approvato') || 
+          recordNotes.includes('Permesso creato dall\'admin')
         );
         
         if ((isTodayCompleted && !hasRealTimeCalculation) || hasApprovedPermission) {
