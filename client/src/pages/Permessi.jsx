@@ -900,11 +900,31 @@ const LeaveRequests = () => {
     return new Date(dateString).toLocaleString('it-IT');
   };
 
+  // Formatta orario senza secondi (HH:mm invece di HH:mm:ss)
+  const formatTimeWithoutSeconds = (timeString) => {
+    if (!timeString) return '';
+    // Se contiene già solo HH:mm, restituiscilo così
+    if (timeString.match(/^\d{2}:\d{2}$/)) {
+      return timeString;
+    }
+    // Se contiene HH:mm:ss, rimuovi i secondi
+    if (timeString.match(/^\d{2}:\d{2}:\d{2}$/)) {
+      return timeString.substring(0, 5);
+    }
+    // Prova a parsare come Date e formattare
+    try {
+      const [hours, minutes] = timeString.split(':');
+      return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+    } catch {
+      return timeString;
+    }
+  };
+
   // Formatta ore con orario (es. "45 min | 10:45")
   const formatHoursWithTime = (hours, time) => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
-    const timeStr = time ? ` | ${time}` : '';
+    const timeStr = time ? ` | ${formatTimeWithoutSeconds(time)}` : '';
     
     if (h > 0) {
       return `${h}h ${m}m${timeStr}`;
@@ -1357,10 +1377,10 @@ const LeaveRequests = () => {
                             `${calculateDays(request.startDate, request.endDate)} giorni`
                           }
                           {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
-                            <span className="ml-2 text-indigo-400">• Uscita alle {request.exitTime}</span>
+                            <span className="ml-2 text-indigo-400">• Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}</span>
                           )}
                           {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
-                            <span className="ml-2 text-indigo-400">• Entrata alle {request.entryTime}</span>
+                            <span className="ml-2 text-indigo-400">• Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}</span>
                           )}
                         </span>
                       </div>
@@ -1370,15 +1390,15 @@ const LeaveRequests = () => {
                           {request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime ? (
                             <span className="text-orange-400 font-medium">
                               Uscita Anticipata
-                              {request.exitTime && (
-                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {request.exitTime})</span>
+                              {(request.exitTime || request.exit_time) && (
+                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)})</span>
                               )}
                             </span>
                           ) : request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime ? (
                             <span className="text-blue-400 font-medium">
                               Entrata Posticipata
-                              {request.entryTime && (
-                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {request.entryTime})</span>
+                              {(request.entryTime || request.entry_time) && (
+                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)})</span>
                               )}
                             </span>
                           ) : (
@@ -1441,17 +1461,15 @@ const LeaveRequests = () => {
                     )}
 
                     {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
-                    {user?.role === 'admin' && request.status === 'approved' && (
+                    {user?.role === 'admin' && request.status === 'approved' && request.type === 'permission' && (
                       <div className="mt-4 flex gap-3 flex-wrap">
-                        {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && (
-                          <button
-                            onClick={() => openEditDialog(request)}
-                            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
-                          >
-                            <Save className="h-4 w-4 mr-2" />
-                            Modifica Orari
-                          </button>
-                        )}
+                        <button
+                          onClick={() => openEditDialog(request)}
+                          className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          Modifica
+                        </button>
                         {canCancelRequest(request) && (
                         <button
                           onClick={() => openCancelDialog(request.id)}
@@ -1602,7 +1620,7 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    Orario attuale: {selectedRequest.entryTime || selectedRequest.entry_time || 'Non impostato'}
+                    Orario attuale: {formatTimeWithoutSeconds(selectedRequest.entryTime || selectedRequest.entry_time) || 'Non impostato'}
                     {editWorkSchedule && (
                       <span className="block mt-1">
                         Orario normale di entrata: {editWorkSchedule.start_time}
@@ -1635,7 +1653,7 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    Orario attuale: {selectedRequest.exitTime || selectedRequest.exit_time || 'Non impostato'}
+                    Orario attuale: {formatTimeWithoutSeconds(selectedRequest.exitTime || selectedRequest.exit_time) || 'Non impostato'}
                     {editWorkSchedule && (
                       <span className="block mt-1">
                         Orario normale di uscita: {editWorkSchedule.end_time}

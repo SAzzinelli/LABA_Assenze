@@ -37,7 +37,7 @@ const RecuperiOre = () => {
   const [suggestedTimeSlots, setSuggestedTimeSlots] = useState([]); // Slot orari suggeriti
   
   // Dati per admin gestione recuperi
-  const [activeTab, setActiveTab] = useState('debt'); // 'debt' o 'proposals'
+  const [activeTab, setActiveTab] = useState('debt'); // 'debt', 'proposals' o 'add-hours'
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
   const [employeesWithDebt, setEmployeesWithDebt] = useState([]); // Dipendenti con debito (admin)
   const [allEmployees, setAllEmployees] = useState([]); // Tutti i dipendenti per la tab "Proposte"
@@ -45,8 +45,10 @@ const RecuperiOre = () => {
   const [showApproveRecoveryModal, setShowApproveRecoveryModal] = useState(false);
   const [showRejectRecoveryModal, setShowRejectRecoveryModal] = useState(false);
   const [showProposeRecoveryModal, setShowProposeRecoveryModal] = useState(false);
+  const [showAddHoursModal, setShowAddHoursModal] = useState(false); // Modal per aggiungere ore a credito
   const [selectedRecoveryId, setSelectedRecoveryId] = useState(null);
   const [selectedEmployeeForProposal, setSelectedEmployeeForProposal] = useState(null);
+  const [selectedEmployeeForAddHours, setSelectedEmployeeForAddHours] = useState(null); // Dipendente selezionato per aggiungere ore
   const [rejectionReason, setRejectionReason] = useState('');
   const [proposalStep, setProposalStep] = useState(1); // Step corrente del wizard admin (1: Data, 2: Ore, 3: Orario)
   const [proposalFormData, setProposalFormData] = useState({
@@ -58,6 +60,12 @@ const RecuperiOre = () => {
     notes: ''
   });
   const [proposalSuggestedTimeSlots, setProposalSuggestedTimeSlots] = useState([]); // Slot orari suggeriti per admin
+  const [addHoursFormData, setAddHoursFormData] = useState({
+    hours: '', // Ore da aggiungere (sempre positive)
+    date: new Date().toISOString().split('T')[0], // Data di riferimento
+    reason: '', // Motivo dell'aggiunta
+    notes: '' // Note aggiuntive
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -302,6 +310,67 @@ const RecuperiOre = () => {
   };
 
   // Rifiuta richiesta recupero (admin)
+  // Aggiungi ore a credito direttamente (admin)
+  const handleAddHours = async () => {
+    try {
+      if (!selectedEmployeeForAddHours) return;
+      const { hours, date, reason, notes } = addHoursFormData;
+
+      // Validazione
+      if (!hours || parseFloat(hours) <= 0) {
+        alert('Inserisci un numero di ore valido (maggiore di 0)');
+        return;
+      }
+
+      if (!date) {
+        alert('Seleziona una data');
+        return;
+      }
+
+      const response = await apiCall('/api/recovery-requests/add-credit-hours', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: selectedEmployeeForAddHours.id,
+          hours: parseFloat(hours),
+          date: date,
+          reason: reason || 'Ore aggiunte manualmente dall\'amministratore',
+          notes: notes || ''
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ ${formatHours(parseFloat(hours))} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}`);
+        
+        // Ricarica i dati
+        await fetchAllEmployees();
+        await fetchDebtSummary();
+        if (selectedEmployeeForAddHours.id === user?.id) {
+          refetchBalance();
+        }
+        
+        // Chiudi modal e resetta form
+        setShowAddHoursModal(false);
+        setSelectedEmployeeForAddHours(null);
+        setAddHoursFormData({
+          hours: '',
+          date: new Date().toISOString().split('T')[0],
+          reason: '',
+          notes: ''
+        });
+      } else {
+        const errorData = await response.json();
+        alert(`Errore: ${errorData.error || 'Errore durante l\'aggiunta delle ore'}`);
+      }
+    } catch (error) {
+      console.error('Error adding credit hours:', error);
+      alert('Errore durante l\'aggiunta delle ore');
+    }
+  };
+
   const handleRejectRecovery = async () => {
     try {
       if (!selectedRecoveryId) return;
@@ -1058,6 +1127,17 @@ const RecuperiOre = () => {
             <Plus className="h-4 w-4 inline mr-2" />
             Proposte Straordinari
           </button>
+          <button
+            onClick={() => setActiveTab('add-hours')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
+              activeTab === 'add-hours'
+                ? 'text-green-400 border-green-400'
+                : 'text-slate-400 border-transparent hover:text-slate-300'
+            }`}
+          >
+            <CheckCircle className="h-4 w-4 inline mr-2" />
+            Aggiungi Ore
+          </button>
         </div>
 
         {/* Tab Content: Debiti */}
@@ -1226,6 +1306,104 @@ const RecuperiOre = () => {
                       >
                         <Plus className="h-4 w-4 inline mr-2" />
                         Proponi Straordinario
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p>Nessun dipendente disponibile</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab Content: Aggiungi Ore */}
+        {activeTab === 'add-hours' && (
+          <div>
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Aggiungi Ore a Credito</h4>
+              <p className="text-sm text-slate-400">
+                Aggiungi direttamente ore a credito alla banca ore di qualsiasi dipendente. 
+                Queste ore influenzano positivamente il saldo e vengono aggiunte immediatamente.
+              </p>
+            </div>
+
+            {loadingEmployees ? (
+              <div className="text-center py-8">
+                <div className="text-slate-400">Caricamento dipendenti...</div>
+              </div>
+            ) : allEmployees.length > 0 ? (
+              <div className="space-y-3">
+                {allEmployees.map((employee) => (
+                  <div 
+                    key={employee.id} 
+                    className={`rounded-lg p-4 border ${
+                      employee.balance < 0
+                        ? 'bg-red-500/10 border-red-500/20'
+                        : employee.balance > 0
+                          ? 'bg-green-500/10 border-green-500/20'
+                          : 'bg-slate-700/50 border-slate-600'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                            employee.balance < 0
+                              ? 'bg-red-500'
+                              : employee.balance > 0
+                                ? 'bg-green-500'
+                                : 'bg-slate-500'
+                          }`}>
+                            <span className="text-white font-semibold text-sm">
+                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}{employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                            </h4>
+                            <p className="text-slate-300 text-sm">{employee.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div className={`font-semibold ${
+                            employee.balance < 0
+                              ? 'text-red-400'
+                              : employee.balance > 0
+                                ? 'text-green-400'
+                                : 'text-slate-400'
+                          }`}>
+                            Saldo attuale: {formatHours(employee.balance)}
+                            {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
+                            {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
+                            {employee.balance === 0 && ' (In pari)'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployeeForAddHours({
+                            id: employee.id,
+                            first_name: employee.firstName || employee.first_name,
+                            last_name: employee.lastName || employee.last_name,
+                            department: employee.department,
+                            balance: employee.balance
+                          });
+                          setAddHoursFormData({
+                            hours: '',
+                            date: new Date().toISOString().split('T')[0],
+                            reason: '',
+                            notes: ''
+                          });
+                          setShowAddHoursModal(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                      >
+                        <CheckCircle className="h-4 w-4 inline mr-2" />
+                        Aggiungi Ore
                       </button>
                     </div>
                   </div>
@@ -1633,6 +1811,125 @@ const RecuperiOre = () => {
                   Invia Proposta
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Aggiungi Ore */}
+      {showAddHoursModal && selectedEmployeeForAddHours && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-4">
+              Aggiungi Ore a Credito
+            </h3>
+            <p className="text-slate-300 text-sm mb-4">
+              Aggiungi ore direttamente al saldo di <strong>{selectedEmployeeForAddHours.first_name} {selectedEmployeeForAddHours.last_name}</strong>.
+              Le ore verranno aggiunte immediatamente come credito nella banca ore.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ore da aggiungere *
+                </label>
+                <input
+                  type="number"
+                  step="0.25"
+                  min="0.25"
+                  value={addHoursFormData.hours}
+                  onChange={(e) => setAddHoursFormData({ ...addHoursFormData, hours: e.target.value })}
+                  placeholder="es. 2.5"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Saldo attuale: <span className={`font-semibold ${
+                    (selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
+                    (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                  }`}>
+                    {formatHours(selectedEmployeeForAddHours.balance || 0)}
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Data di riferimento *
+                </label>
+                <input
+                  type="date"
+                  value={addHoursFormData.date}
+                  onChange={(e) => setAddHoursFormData({ ...addHoursFormData, date: e.target.value })}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Motivo *
+                </label>
+                <textarea
+                  value={addHoursFormData.reason}
+                  onChange={(e) => setAddHoursFormData({ ...addHoursFormData, reason: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Motivo dell'aggiunta delle ore..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Note (opzionale)
+                </label>
+                <textarea
+                  value={addHoursFormData.notes}
+                  onChange={(e) => setAddHoursFormData({ ...addHoursFormData, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Note aggiuntive..."
+                />
+              </div>
+
+              {addHoursFormData.hours && parseFloat(addHoursFormData.hours) > 0 && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-sm text-green-400 font-medium">
+                    ✅ Verranno aggiunte <strong>{formatHoursFromDecimal(addHoursFormData.hours)}</strong> a credito
+                    {addHoursFormData.date && (
+                      <span> per il <strong>{new Date(addHoursFormData.date).toLocaleDateString('it-IT')}</strong></span>
+                    )}
+                  </p>
+                  <p className="text-xs text-green-300 mt-1">
+                    Nuovo saldo stimato: {formatHours((selectedEmployeeForAddHours.balance || 0) + parseFloat(addHoursFormData.hours))}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowAddHoursModal(false);
+                  setSelectedEmployeeForAddHours(null);
+                  setAddHoursFormData({
+                    hours: '',
+                    date: new Date().toISOString().split('T')[0],
+                    reason: '',
+                    notes: ''
+                  });
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleAddHours}
+                disabled={!addHoursFormData.hours || parseFloat(addHoursFormData.hours) <= 0 || !addHoursFormData.date || !addHoursFormData.reason}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors min-h-[44px]"
+              >
+                <CheckCircle className="h-4 w-4 inline mr-2" />
+                Aggiungi Ore
+              </button>
             </div>
           </div>
         </div>

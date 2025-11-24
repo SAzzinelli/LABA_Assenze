@@ -9709,6 +9709,147 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint per aggiungere ore a credito direttamente (admin)
+app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono aggiungere ore a credito.' });
+    }
+
+    const { userId, hours, date, reason, notes } = req.body;
+
+    // Validazione
+    if (!userId) {
+      return res.status(400).json({ error: 'userId è obbligatorio' });
+    }
+
+    if (!hours || parseFloat(hours) <= 0) {
+      return res.status(400).json({ error: 'Le ore devono essere un numero positivo maggiore di 0' });
+    }
+
+    if (!date) {
+      return res.status(400).json({ error: 'La data è obbligatoria' });
+    }
+
+    // Verifica che l'utente esista
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email')
+      .eq('id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Dipendente non trovato o non attivo' });
+    }
+
+    const creditHours = parseFloat(hours);
+
+    // Verifica se esiste già un record di presenza per quella data
+    const { data: existingAttendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
+
+    if (attendanceError && attendanceError.code !== 'PGRST116') {
+      // PGRST116 = nessun record trovato (normale se non esiste)
+      console.error('Error checking existing attendance:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel controllo presenza esistente' });
+    }
+
+    if (existingAttendance) {
+      // Aggiorna il record esistente aggiungendo le ore a credito
+      const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + creditHours;
+      const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + creditHours;
+
+      const { error: updateError } = await supabase
+        .from('attendance')
+        .update({
+          actual_hours: newActualHours,
+          balance_hours: newBalanceHours,
+          notes: (existingAttendance.notes || '') + `\n[Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}]`
+        })
+        .eq('id', existingAttendance.id);
+
+      if (updateError) {
+        console.error('Error updating attendance:', updateError);
+        return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
+      }
+
+      console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date}`);
+    } else {
+      // Crea un nuovo record di presenza con solo le ore a credito
+      // expected_hours = 0 perché non è una giornata lavorativa normale
+      const { error: insertError } = await supabase
+        .from('attendance')
+        .insert({
+          user_id: userId,
+          date: date,
+          expected_hours: 0,
+          actual_hours: creditHours,
+          balance_hours: creditHours,
+          notes: `Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}${notes ? ` - ${notes}` : ''}`
+        });
+
+      if (insertError) {
+        console.error('Error inserting attendance:', insertError);
+        return res.status(500).json({ error: 'Errore nella creazione del record di presenza' });
+      }
+
+      console.log(`✅ Credit hours added as new attendance record: +${creditHours}h for user ${userId} on ${date}`);
+    }
+
+    // Crea una notifica per il dipendente
+    try {
+      const formattedDate = new Date(date).toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
+      });
+
+      const hoursFormatted = (() => {
+        const h = Math.floor(creditHours);
+        const m = Math.round((creditHours - h) * 60);
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}min`;
+      })();
+
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: userId,
+          title: 'Ore a Credito Aggiunte',
+          message: `L'amministratore ti ha aggiunto ${hoursFormatted} a credito nella tua banca ore per il ${formattedDate}. ${reason ? `Motivo: ${reason}` : ''}`,
+          type: 'credit_hours',
+          is_read: false,
+          created_at: new Date().toISOString()
+        }]);
+
+      console.log(`✅ Notifica creata per dipendente ${user.first_name} ${user.last_name}`);
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+      // Non bloccare l'operazione se la notifica fallisce
+    }
+
+    res.json({
+      success: true,
+      message: `${creditHours} ore a credito aggiunte con successo`,
+      hours: creditHours,
+      date: date,
+      employee: {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`
+      }
+    });
+  } catch (error) {
+    console.error('Add credit hours error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint per processare manualmente i recuperi completati (admin)
 app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
   try {
