@@ -763,7 +763,20 @@ const Dashboard = () => {
                           {recovery.users?.first_name} {recovery.users?.last_name}
                         </div>
                         <div className="text-amber-300 text-xs sm:text-sm">
-                          📅 {new Date(recovery.recovery_date).toLocaleDateString('it-IT')} • ⏰ {recovery.start_time} - {recovery.end_time} ({formatHours(recovery.hours)})
+                          📅 {new Date(recovery.recovery_date).toLocaleDateString('it-IT')} • ⏰ {(() => {
+                            const formatTimeWithoutSeconds = (timeString) => {
+                              if (!timeString) return '';
+                              if (timeString.match(/^\d{2}:\d{2}$/)) return timeString;
+                              if (timeString.match(/^\d{2}:\d{2}:\d{2}$/)) return timeString.substring(0, 5);
+                              try {
+                                const [hours, minutes] = timeString.split(':');
+                                return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                              } catch {
+                                return timeString;
+                              }
+                            };
+                            return `${formatTimeWithoutSeconds(recovery.start_time)} - ${formatTimeWithoutSeconds(recovery.end_time)}`;
+                          })()} ({formatHours(recovery.hours)})
                         </div>
                       </div>
                     </div>

@@ -61,7 +61,8 @@ const RecuperiOre = () => {
   });
   const [proposalSuggestedTimeSlots, setProposalSuggestedTimeSlots] = useState([]); // Slot orari suggeriti per admin
   const [addHoursFormData, setAddHoursFormData] = useState({
-    hours: '', // Ore da aggiungere (sempre positive)
+    hours: '', // Ore (numero intero)
+    minutes: '', // Minuti (0-59)
     date: new Date().toISOString().split('T')[0], // Data di riferimento
     reason: '', // Motivo dell'aggiunta
     notes: '' // Note aggiuntive
@@ -314,11 +315,19 @@ const RecuperiOre = () => {
   const handleAddHours = async () => {
     try {
       if (!selectedEmployeeForAddHours) return;
-      const { hours, date, reason, notes } = addHoursFormData;
+      const { hours, minutes, date, reason, notes } = addHoursFormData;
 
       // Validazione
-      if (!hours || parseFloat(hours) <= 0) {
-        alert('Inserisci un numero di ore valido (maggiore di 0)');
+      const hoursNum = parseInt(hours) || 0;
+      const minutesNum = parseInt(minutes) || 0;
+
+      if (hoursNum < 0 || minutesNum < 0 || minutesNum >= 60) {
+        alert('Inserisci valori validi: ore >= 0, minuti tra 0 e 59');
+        return;
+      }
+
+      if (hoursNum === 0 && minutesNum === 0) {
+        alert('Inserisci almeno 1 minuto da aggiungere');
         return;
       }
 
@@ -327,6 +336,9 @@ const RecuperiOre = () => {
         return;
       }
 
+      // Converti ore + minuti in formato decimale (es. 2h 30min = 2.5)
+      const totalHoursDecimal = hoursNum + (minutesNum / 60);
+
       const response = await apiCall('/api/recovery-requests/add-credit-hours', {
         method: 'POST',
         headers: {
@@ -334,7 +346,7 @@ const RecuperiOre = () => {
         },
         body: JSON.stringify({
           userId: selectedEmployeeForAddHours.id,
-          hours: parseFloat(hours),
+          hours: totalHoursDecimal,
           date: date,
           reason: reason || 'Ore aggiunte manualmente dall\'amministratore',
           notes: notes || ''
@@ -343,7 +355,10 @@ const RecuperiOre = () => {
 
       if (response.ok) {
         const data = await response.json();
-        alert(`✅ ${formatHours(parseFloat(hours))} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}`);
+        const hoursText = hoursNum > 0 ? `${hoursNum}h` : '';
+        const minutesText = minutesNum > 0 ? `${minutesNum}min` : '';
+        const totalText = [hoursText, minutesText].filter(Boolean).join(' ');
+        alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}`);
         
         // Ricarica i dati
         await fetchAllEmployees();
@@ -357,6 +372,7 @@ const RecuperiOre = () => {
         setSelectedEmployeeForAddHours(null);
         setAddHoursFormData({
           hours: '',
+          minutes: '',
           date: new Date().toISOString().split('T')[0],
           reason: '',
           notes: ''
@@ -1394,6 +1410,7 @@ const RecuperiOre = () => {
                           });
                           setAddHoursFormData({
                             hours: '',
+                            minutes: '',
                             date: new Date().toISOString().split('T')[0],
                             reason: '',
                             notes: ''
@@ -1831,17 +1848,41 @@ const RecuperiOre = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ore da aggiungere *
+                  Ore e Minuti da aggiungere *
                 </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  min="0.25"
-                  value={addHoursFormData.hours}
-                  onChange={(e) => setAddHoursFormData({ ...addHoursFormData, hours: e.target.value })}
-                  placeholder="es. 2.5"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Ore</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={addHoursFormData.hours}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                        setAddHoursFormData({ ...addHoursFormData, hours: val.toString() });
+                      }}
+                      placeholder="0"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Minuti</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      step="1"
+                      value={addHoursFormData.minutes}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                        setAddHoursFormData({ ...addHoursFormData, minutes: val.toString() });
+                      }}
+                      placeholder="0"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-slate-400 mt-1">
                   Saldo attuale: <span className={`font-semibold ${
                     (selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
@@ -1891,16 +1932,22 @@ const RecuperiOre = () => {
                 />
               </div>
 
-              {addHoursFormData.hours && parseFloat(addHoursFormData.hours) > 0 && (
+              {((addHoursFormData.hours && parseInt(addHoursFormData.hours) > 0) || (addHoursFormData.minutes && parseInt(addHoursFormData.minutes) > 0)) && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
                   <p className="text-sm text-green-400 font-medium">
-                    ✅ Verranno aggiunte <strong>{formatHoursFromDecimal(addHoursFormData.hours)}</strong> a credito
+                    ✅ Verranno aggiunte <strong>{(() => {
+                      const h = parseInt(addHoursFormData.hours) || 0;
+                      const m = parseInt(addHoursFormData.minutes) || 0;
+                      const hoursText = h > 0 ? `${h}h` : '';
+                      const minutesText = m > 0 ? `${m}min` : '';
+                      return [hoursText, minutesText].filter(Boolean).join(' ') || '0h 0min';
+                    })()}</strong> a credito
                     {addHoursFormData.date && (
                       <span> per il <strong>{new Date(addHoursFormData.date).toLocaleDateString('it-IT')}</strong></span>
                     )}
                   </p>
                   <p className="text-xs text-green-300 mt-1">
-                    Nuovo saldo stimato: {formatHours((selectedEmployeeForAddHours.balance || 0) + parseFloat(addHoursFormData.hours))}
+                    Nuovo saldo stimato: {formatHours((selectedEmployeeForAddHours.balance || 0) + ((parseInt(addHoursFormData.hours) || 0) + ((parseInt(addHoursFormData.minutes) || 0) / 60)))}
                   </p>
                 </div>
               )}
@@ -1924,7 +1971,7 @@ const RecuperiOre = () => {
               </button>
               <button
                 onClick={handleAddHours}
-                disabled={!addHoursFormData.hours || parseFloat(addHoursFormData.hours) <= 0 || !addHoursFormData.date || !addHoursFormData.reason}
+                disabled={((!addHoursFormData.hours || parseInt(addHoursFormData.hours) === 0) && (!addHoursFormData.minutes || parseInt(addHoursFormData.minutes) === 0)) || !addHoursFormData.date || !addHoursFormData.reason}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors min-h-[44px]"
               >
                 <CheckCircle className="h-4 w-4 inline mr-2" />

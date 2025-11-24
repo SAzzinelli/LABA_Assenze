@@ -9850,6 +9850,78 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
   }
 });
 
+// Elimina richiesta recupero ore (admin only)
+app.delete('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono eliminare richieste di recupero ore.' });
+    }
+
+    const { id } = req.params;
+
+    // Verifica che la richiesta esista
+    const { data: existingRequest, error: fetchError } = await supabase
+      .from('recovery_requests')
+      .select('*, users!recovery_requests_user_id_fkey(id, first_name, last_name, email)')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !existingRequest) {
+      return res.status(404).json({ error: 'Richiesta di recupero ore non trovata' });
+    }
+
+    // Verifica che la richiesta non sia già completata (se balance_added = true, non eliminare)
+    if (existingRequest.balance_added) {
+      return res.status(400).json({ error: 'Non è possibile eliminare una richiesta già completata e processata' });
+    }
+
+    // Elimina la richiesta
+    const { error: deleteError } = await supabase
+      .from('recovery_requests')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Recovery request delete error:', deleteError);
+      return res.status(500).json({ error: 'Errore nell\'eliminazione della richiesta' });
+    }
+
+    // Se era una proposta (status = 'proposed'), rimuovi la notifica al dipendente se esiste
+    if (existingRequest.status === 'proposed') {
+      try {
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('related_id', id)
+          .eq('type', 'recovery_proposal');
+      } catch (notifError) {
+        console.error('Error deleting notification:', notifError);
+        // Non bloccare l'operazione se la notifica non viene eliminata
+      }
+    }
+
+    const employeeName = existingRequest.users 
+      ? `${existingRequest.users.first_name} ${existingRequest.users.last_name}`
+      : 'Dipendente';
+
+    console.log(`✅ Recovery request ${id} deleted by admin ${req.user.id} for employee ${employeeName}`);
+
+    res.json({
+      success: true,
+      message: `Richiesta di recupero ore eliminata con successo`,
+      deletedRequest: {
+        id: existingRequest.id,
+        employee: employeeName,
+        date: existingRequest.recovery_date,
+        hours: existingRequest.hours
+      }
+    });
+  } catch (error) {
+    console.error('Delete recovery request error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint per processare manualmente i recuperi completati (admin)
 app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
   try {
