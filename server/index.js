@@ -1421,13 +1421,16 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
 
     let query = supabase
       .from('attendance')
-      .select('user_id, balance_hours, date');
+      .select('user_id, balance_hours, date, notes');
 
     if (shouldFilter && userIds && userIds.length > 0) {
       query = query.in('user_id', userIds);
     }
 
     const { data, error } = await query;
+    
+    // Ottieni la data di oggi per il controllo permessi approvati
+    const today = new Date().toISOString().split('T')[0];
 
     if (error) {
       console.error('Total balances fetch error:', error);
@@ -1456,6 +1459,7 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
 
     // Aggregate in memory (Supabase JS lacks groupBy client side)
     // Escludi i giorni con permesso 104 dal calcolo del balance
+    // Include "oggi" solo se c'è un permesso approvato (balance già definitivo)
     const totals = {};
     for (const row of data || []) {
       const uid = row.user_id;
@@ -1463,8 +1467,24 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
       
       // Se questo giorno ha un permesso 104, non includerlo nel balance (o usa 0)
       const hasPerm104 = perm104Map[uid]?.includes(dateStr);
-      const bal = hasPerm104 ? 0 : (row.balance_hours || 0); // Con permesso 104, balance = 0
+      if (hasPerm104) {
+        // Con permesso 104, balance = 0
+        continue;
+      }
       
+      // Per OGGI: includi solo se c'è un permesso approvato (balance già definitivo)
+      if (dateStr === today) {
+        const hasApprovedPermission = row.notes && (
+          row.notes.includes('Permesso approvato') || 
+          row.notes.includes('Permesso creato dall\'admin')
+        );
+        if (!hasApprovedPermission) {
+          // Giornata non conclusa e senza permesso, escludi dal totale (balance parziale)
+          continue;
+        }
+      }
+      
+      const bal = row.balance_hours || 0;
       totals[uid] = (totals[uid] || 0) + bal;
     }
 
