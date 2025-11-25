@@ -6,6 +6,8 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://gojhljczpwbjxbbrtrlq.su
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_s7Vzh0AtPEaEv3f3VmkIEg_3ZqBhGsS';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const { calculateExpectedHoursForSchedule, calculateRealTimeHours } = require('./utils/hoursCalculation');
+
 class AttendanceScheduler {
   constructor() {
     this.tasks = new Map();
@@ -97,7 +99,8 @@ class AttendanceScheduler {
             work_type,
             start_time,
             end_time,
-            break_duration
+            break_duration,
+            break_start_time
           )
         `)
         .eq('is_active', true)
@@ -172,12 +175,10 @@ class AttendanceScheduler {
         return;
       }
 
-      // Calcola ore di lavoro basate sull'orario specifico
-      // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
-      const actualBreakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 0;
-      const workHours = this.calculateWorkHours(start_time, end_time, actualBreakDuration);
+      // Calcola ore di lavoro usando la utility condivisa
+      const workHours = calculateExpectedHoursForSchedule(schedule);
 
-      console.log(`   📊 Ore calcolate: ${workHours}h per ${employee.first_name} (schedule: ${start_time}-${end_time}, break: ${actualBreakDuration}min)`);
+      console.log(`   📊 Ore calcolate (utility): ${workHours}h per ${employee.first_name} (schedule: ${start_time}-${end_time}, break: ${break_duration || 0}min)`);
 
       // Crea la presenza automatica con expected_hours calcolate correttamente dallo schedule
       const { data: newAttendance, error: attendanceError } = await supabase
@@ -211,7 +212,7 @@ class AttendanceScheduler {
   // Crea i dettagli della presenza basati sull'orario specifico del dipendente
   async createAttendanceDetails(attendanceId, userId, date, schedule) {
     try {
-      const { start_time, end_time, work_type, break_duration } = schedule;
+      const { start_time, end_time, work_type, break_duration, break_start_time } = schedule;
       const breakMinutes = break_duration !== null && break_duration !== undefined ? break_duration : 60;
 
       let details = [];
@@ -221,14 +222,21 @@ class AttendanceScheduler {
         const startTime = new Date(`2000-01-01T${start_time}`);
         const endTime = new Date(`2000-01-01T${end_time}`);
 
-        // Calcola la pausa pranzo (metà giornata)
-        const totalMinutes = (endTime - startTime) / (1000 * 60);
-        const workMinutes = totalMinutes - breakMinutes;
-        const morningMinutes = Math.floor(workMinutes / 2);
-        const afternoonMinutes = workMinutes - morningMinutes;
+        let breakStart, breakEnd;
 
-        const breakStart = new Date(startTime.getTime() + (morningMinutes * 60 * 1000));
-        const breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
+        if (break_start_time) {
+          // Usa l'orario di inizio pausa specificato
+          breakStart = new Date(`2000-01-01T${break_start_time}`);
+          breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
+        } else {
+          // Calcola la pausa pranzo (metà giornata) come fallback
+          const totalMinutes = (endTime - startTime) / (1000 * 60);
+          const workMinutes = totalMinutes - breakMinutes;
+          const morningMinutes = Math.floor(workMinutes / 2);
+
+          breakStart = new Date(startTime.getTime() + (morningMinutes * 60 * 1000));
+          breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
+        }
 
         details = [
           {
@@ -310,33 +318,7 @@ class AttendanceScheduler {
     }
   }
 
-  // Calcola le ore di lavoro basate sull'orario specifico
-  // IMPORTANTE: breakDuration deve essere il valore effettivo dal database (può essere 0!)
-  calculateWorkHours(startTime, endTime, breakDuration = 0) {
-    try {
-      if (!startTime || !endTime) {
-        console.error('⚠️ calculateWorkHours: startTime o endTime mancanti');
-        return 0;
-      }
 
-      const start = new Date(`2000-01-01T${startTime}`);
-      const end = new Date(`2000-01-01T${endTime}`);
-      const totalMinutes = (end - start) / (1000 * 60);
-
-      // IMPORTANTE: usa breakDuration dal database, non default 60
-      // Se breakDuration è 0, non sottrarre nulla!
-      const actualBreakDuration = breakDuration !== null && breakDuration !== undefined ? breakDuration : 0;
-      const workMinutes = Math.max(0, totalMinutes - actualBreakDuration);
-      const workHours = workMinutes / 60;
-
-      console.log(`   🔢 Calcolo ore: ${startTime}-${endTime} = ${totalMinutes}min totali, break: ${actualBreakDuration}min → ${workMinutes}min lavoro = ${workHours.toFixed(2)}h`);
-
-      return workHours;
-    } catch (error) {
-      console.error('❌ Errore calcolo ore:', error);
-      return 0; // Return 0 instead of 8 to avoid incorrect default
-    }
-  }
 
   // Aggiorna i dettagli delle presenze durante la giornata
   async updateAttendanceDetails() {
