@@ -1716,6 +1716,6 @@ const AdminAttendance = () => {
           </div>
         </div>
       );
-    };
+};
 
-    export default AdminAttendance;
+export default AdminAttendance;
