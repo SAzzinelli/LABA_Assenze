@@ -18,7 +18,7 @@ const Employees = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
+
   // Stati per alert custom
   const [alert, setAlert] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, employeeId: null, employeeName: '' });
@@ -162,7 +162,7 @@ const Employees = () => {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Emetti aggiornamento real-time
         emitUpdate('employee_updated', {
           type: 'created',
@@ -171,11 +171,11 @@ const Employees = () => {
           department: employeeData.department,
           message: `Nuovo dipendente aggiunto: ${employeeData.firstName} ${employeeData.lastName}`
         });
-        
+
         // Ricarica la lista dipendenti
         fetchEmployees();
         setShowAddModal(false);
-        
+
         showAlert('success', 'Successo!', `Dipendente ${employeeData.firstName} ${employeeData.lastName} aggiunto con successo!`);
       } else {
         const error = await response.json();
@@ -221,7 +221,7 @@ const Employees = () => {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Emetti aggiornamento real-time
         emitUpdate('employee_updated', {
           type: 'updated',
@@ -229,13 +229,13 @@ const Employees = () => {
           employeeName: `${formData.firstName} ${formData.lastName}`,
           department: formData.department
         });
-        
+
         // Ricarica la lista dipendenti per assicurarsi che i dati siano aggiornati
         await fetchEmployees();
         setShowEditModal(false);
         setSelectedEmployee(null);
         resetForm();
-        
+
         showAlert('success', 'Successo!', `Dipendente ${formData.firstName} ${formData.lastName} aggiornato con successo!`);
       } else {
         const error = await response.json();
@@ -250,7 +250,7 @@ const Employees = () => {
   const handleDeleteEmployee = (employeeId) => {
     const employee = employees.find(emp => emp.id === employeeId);
     const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'questo dipendente';
-    
+
     setConfirmModal({
       isOpen: true,
       employeeId,
@@ -260,7 +260,7 @@ const Employees = () => {
 
   const confirmDeleteEmployee = async () => {
     const { employeeId, employeeName } = confirmModal;
-    
+
     try {
       const response = await apiCall(`/api/employees/${employeeId}`, {
         method: 'DELETE'
@@ -307,7 +307,7 @@ const Employees = () => {
     console.log('Opening details for:', employee);
     setSelectedEmployee(employee);
     setShowDetailsModal(true);
-    
+
     // Fetch balance data quando si aprono i dettagli
     if (employee.id) {
       await fetchEmployeeBalance(employee.id);
@@ -347,7 +347,7 @@ const Employees = () => {
       if (balanceValue !== null) {
         setCurrentBalance(balanceValue);
       }
-      
+
       // Fetch history recente (ultimi 10 record)
       const historyResponse = await apiCall(`/api/attendance?userId=${employeeId}&limit=10`);
       if (historyResponse.ok) {
@@ -414,7 +414,7 @@ const Employees = () => {
               Gestisci i dipendenti e le loro informazioni
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
           >
@@ -441,22 +441,20 @@ const Employees = () => {
           <div className="hidden md:flex items-center gap-2 bg-slate-700 rounded-lg p-1">
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                viewMode === 'list'
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list'
                   ? 'bg-indigo-600 text-white'
                   : 'text-slate-300 hover:text-white'
-              }`}
+                }`}
               title="Vista Lista"
             >
               <List className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode('card')}
-              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
-                viewMode === 'card'
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'card'
                   ? 'bg-indigo-600 text-white'
                   : 'text-slate-300 hover:text-white'
-              }`}
+                }`}
               title="Vista Card"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -471,10 +469,10 @@ const Employees = () => {
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm text-slate-300 mb-1">Reparto</label>
-              <input value={departmentFilter} onChange={e=>setDepartmentFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Es. Amministrazione" />
+              <input value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Es. Amministrazione" />
             </div>
             <label className="flex items-center gap-2 mt-2 sm:mt-7">
-              <input type="checkbox" checked={only104} onChange={e=>setOnly104(e.target.checked)} className="h-4 w-4" />
+              <input type="checkbox" checked={only104} onChange={e => setOnly104(e.target.checked)} className="h-4 w-4" />
               <span className="text-slate-300 text-sm">Solo beneficiari 104</span>
             </label>
           </div>
@@ -603,134 +601,133 @@ const Employees = () => {
 
       {/* Desktop Table - Visibile quando viewMode === 'list' */}
       {viewMode === 'list' && (
-      <div className="bg-slate-800 rounded-lg overflow-hidden hidden md:block">
-        <div className="overflow-x-auto hover:overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-700">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Nome
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Dipartimento
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Posizione
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-auto">
-                  Azioni
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {filteredEmployees.map((employee) => (
-                <tr 
-                  key={employee.id} 
-                  className="hover:bg-slate-700/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
-                  onClick={() => handleViewDetails(employee)}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 bg-indigo-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">
-                          {employee.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="flex items-center space-x-2">
-                          <div className="text-sm font-medium text-white">
-                            {employee.name}
+        <div className="bg-slate-800 rounded-lg overflow-hidden hidden md:block">
+          <div className="overflow-x-auto hover:overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-700">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                    Nome
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                    Dipartimento
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                    Posizione
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-auto">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700">
+                {filteredEmployees.map((employee) => (
+                  <tr
+                    key={employee.id}
+                    className="hover:bg-slate-700/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
+                    onClick={() => handleViewDetails(employee)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">
+                            {employee.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-medium text-white">
+                              {employee.name}
+                            </div>
+                            {employee.has104 && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
+                                104
+                              </span>
+                            )}
                           </div>
-                          {employee.has104 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
-                              104
-                            </span>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${
-                      employee.department === 'Amministrazione' 
-                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30' 
-                        : employee.department === 'Segreteria'
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
-                        : employee.department === 'Orientamento'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                        : employee.department === 'Reparto IT'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                        : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
-                    }`}>
-                      {employee.department}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col space-y-1">
-                      <span className="inline-block px-3 py-1.5 rounded-full text-xs font-medium bg-slate-500/20 text-slate-300 border border-slate-400/30 shadow-sm w-fit">
-                        {employee.position}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${employee.department === 'Amministrazione'
+                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                          : employee.department === 'Segreteria'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                            : employee.department === 'Orientamento'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                              : employee.department === 'Reparto IT'
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                                : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                        }`}>
+                        {employee.department}
                       </span>
-                      {employee.role === 'supervisor' && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
-                          SUPERVISORE
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col space-y-1">
+                        <span className="inline-block px-3 py-1.5 rounded-full text-xs font-medium bg-slate-500/20 text-slate-300 border border-slate-400/30 shadow-sm w-fit">
+                          {employee.position}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditEmployee(employee);
-                        }}
-                        className="flex items-center space-x-2 px-3 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 hover:scale-105"
-                        title="Modifica"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="text-xs font-medium">Modifica</span>
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDetails(employee);
-                        }}
-                        className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-200 hover:scale-105"
-                        title="Visualizza dettagli"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="text-xs font-medium">Dettagli</span>
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleResetPassword(employee);
-                        }}
-                        className="flex items-center space-x-2 px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 hover:border-yellow-400/50 transition-all duration-200 hover:scale-105"
-                        title="Reset Password"
-                      >
-                        <Key className="h-4 w-4" />
-                        <span className="text-xs font-medium">Reset</span>
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteEmployee(employee.id);
-                        }}
-                        className="flex items-center space-x-2 px-3 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 hover:border-red-400/50 transition-all duration-200 hover:scale-105"
-                        title="Elimina"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="text-xs font-medium">Elimina</span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        {employee.role === 'supervisor' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
+                            SUPERVISORE
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditEmployee(employee);
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 hover:scale-105"
+                          title="Modifica"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="text-xs font-medium">Modifica</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(employee);
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-200 hover:scale-105"
+                          title="Visualizza dettagli"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="text-xs font-medium">Dettagli</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResetPassword(employee);
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 hover:border-yellow-400/50 transition-all duration-200 hover:scale-105"
+                          title="Reset Password"
+                        >
+                          <Key className="h-4 w-4" />
+                          <span className="text-xs font-medium">Reset</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEmployee(employee.id);
+                          }}
+                          className="flex items-center space-x-2 px-3 py-2 bg-red-500/20 text-red-300 border border-red-400/30 rounded-lg hover:bg-red-500/30 hover:border-red-400/50 transition-all duration-200 hover:scale-105"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="text-xs font-medium">Elimina</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Modal Aggiungi Dipendente */}
@@ -744,21 +741,21 @@ const Employees = () => {
 
       {/* Modal Modifica Dipendente */}
       {showEditModal && selectedEmployee && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => e.target === e.currentTarget && setShowEditModal(false)}
         >
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Modifica Dipendente</h3>
-              <button 
+              <button
                 onClick={() => setShowEditModal(false)}
                 className="text-slate-400 hover:text-white"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -782,7 +779,7 @@ const Employees = () => {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
                 <input
@@ -793,7 +790,7 @@ const Employees = () => {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Telefono</label>
                 <input
@@ -804,7 +801,7 @@ const Employees = () => {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Data di Nascita</label>
                 <input
@@ -815,7 +812,7 @@ const Employees = () => {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Dipartimento</label>
                 <div className="relative">
@@ -834,12 +831,12 @@ const Employees = () => {
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                     </svg>
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Posizione</label>
                 <input
@@ -850,7 +847,7 @@ const Employees = () => {
                   className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -862,7 +859,7 @@ const Employees = () => {
                 <label className="ml-2 text-sm text-slate-300">Beneficiario Legge 104</label>
               </div>
             </div>
-            
+
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowEditModal(false)}
@@ -884,7 +881,7 @@ const Employees = () => {
 
       {/* Modal Dettagli Dipendente */}
       {showDetailsModal && selectedEmployee && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => e.target === e.currentTarget && setShowDetailsModal(false)}
         >
@@ -898,7 +895,7 @@ const Employees = () => {
                   </span>
                 )}
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowDetailsModal(false);
                   setDetailActiveTab('details');
@@ -913,33 +910,30 @@ const Employees = () => {
             <div className="flex space-x-1 bg-slate-700 p-1 rounded-lg mb-6">
               <button
                 onClick={() => setDetailActiveTab('details')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  detailActiveTab === 'details'
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
                     ? 'bg-indigo-600 text-white'
                     : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 <User className="h-4 w-4 inline mr-2" />
                 Dettagli
               </button>
               <button
                 onClick={() => setDetailActiveTab('balance')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  detailActiveTab === 'balance'
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
                     ? 'bg-indigo-600 text-white'
                     : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 <DollarSign className="h-4 w-4 inline mr-2" />
                 Banca Ore
               </button>
               <button
                 onClick={() => setDetailActiveTab('schedule')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  detailActiveTab === 'schedule'
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
                     ? 'bg-indigo-600 text-white'
                     : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                }`}
+                  }`}
               >
                 <Clock className="h-4 w-4 inline mr-2" />
                 Orario di Lavoro
@@ -971,8 +965,8 @@ const Employees = () => {
                     <div>
                       <span className="text-slate-400 text-sm">Data di Nascita:</span>
                       <p className="text-white font-bold">
-                        {selectedEmployee.birthDate ? 
-                          new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT') : 
+                        {selectedEmployee.birthDate ?
+                          new Date(selectedEmployee.birthDate).toLocaleDateString('it-IT') :
                           'Non specificata'
                         }
                       </p>
@@ -1059,13 +1053,12 @@ const Employees = () => {
                     {(() => {
                       const formatted = formatHoursValue(currentBalance);
                       return (
-                        <div className={`text-6xl font-bold ${
-                          currentBalance > 0 
-                            ? 'text-green-400' 
-                            : currentBalance < 0 
-                              ? 'text-red-400' 
+                        <div className={`text-6xl font-bold ${currentBalance > 0
+                            ? 'text-green-400'
+                            : currentBalance < 0
+                              ? 'text-red-400'
                               : 'text-slate-400'
-                        }`}>
+                          }`}>
                           {formatted.sign}
                           {formatted.hours}
                           <span className="text-4xl">h</span>
@@ -1076,13 +1069,12 @@ const Employees = () => {
                     })()}
                   </div>
                   <div className="text-center mt-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      currentBalance > 0 
-                        ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
-                        : currentBalance < 0 
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentBalance > 0
+                        ? 'bg-green-500/20 text-green-300 border border-green-400/30'
+                        : currentBalance < 0
                           ? 'bg-red-500/20 text-red-300 border border-red-400/30'
                           : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
-                    }`}>
+                      }`}>
                       {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
                       {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
                       {currentBalance === 0 ? 'In pari' : currentBalance > 0 ? 'In credito' : 'In debito'}
@@ -1108,7 +1100,7 @@ const Employees = () => {
                       if (isToday) {
                         // Controlla se ci sono note che indicano un permesso approvato
                         const hasPermission = record.notes && (
-                          record.notes.includes('Permesso approvato') || 
+                          record.notes.includes('Permesso approvato') ||
                           record.notes.includes('Permesso creato dall\'admin')
                         );
                         return balance !== 0 && hasPermission;
@@ -1118,49 +1110,48 @@ const Employees = () => {
                     return completedRecords.length > 0 ? (
                       <div className="space-y-3">
                         {completedRecords.map((record, index) => (
-                        <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 text-slate-400 mr-3" />
-                            <div>
-                              <p className="text-white font-medium">
-                                {new Date(record.date).toLocaleDateString('it-IT', { 
-                                  day: 'numeric', 
-                                  month: 'long', 
-                                  year: 'numeric' 
-                                })}
-                              </p>
-                              <p className="text-slate-400 text-sm">
-                                {(() => {
-                                  const expectedFormatted = formatHoursValue(record.expected_hours || 0);
-                                  return `Ore attese: ${expectedFormatted.hours}h ${expectedFormatted.minutes}m`;
-                                })()}
-                              </p>
+                          <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 text-slate-400 mr-3" />
+                              <div>
+                                <p className="text-white font-medium">
+                                  {new Date(record.date).toLocaleDateString('it-IT', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                                <p className="text-slate-400 text-sm">
+                                  {(() => {
+                                    const expectedFormatted = formatHoursValue(record.expected_hours || 0);
+                                    return `Ore attese: ${expectedFormatted.hours}h ${expectedFormatted.minutes}m`;
+                                  })()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {(() => {
+                                const balanceFormatted = formatHoursValue(record.balance_hours || 0);
+                                const actualFormatted = formatHoursValue(record.actual_hours || 0);
+                                return (
+                                  <>
+                                    <p className={`text-lg font-bold ${record.balance_hours > 0
+                                        ? 'text-green-400'
+                                        : record.balance_hours < 0
+                                          ? 'text-red-400'
+                                          : 'text-slate-400'
+                                      }`}>
+                                      {balanceFormatted.full}
+                                    </p>
+                                    <p className="text-slate-400 text-xs mt-1">
+                                      Effettive: {actualFormatted.full}
+                                    </p>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
-                          <div className="text-right">
-                            {(() => {
-                              const balanceFormatted = formatHoursValue(record.balance_hours || 0);
-                              const actualFormatted = formatHoursValue(record.actual_hours || 0);
-                              return (
-                                <>
-                                  <p className={`text-lg font-bold ${
-                                    record.balance_hours > 0 
-                                      ? 'text-green-400' 
-                                      : record.balance_hours < 0 
-                                        ? 'text-red-400' 
-                                        : 'text-slate-400'
-                                  }`}>
-                                    {balanceFormatted.full}
-                                  </p>
-                                  <p className="text-slate-400 text-xs mt-1">
-                                    Effettive: {actualFormatted.full}
-                                  </p>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-slate-400">
@@ -1175,140 +1166,140 @@ const Employees = () => {
 
             {detailActiveTab === 'schedule' && (
               selectedEmployee.workSchedule ? (
-              <div className="space-y-6">
-                {/* Orario Settimanale */}
-                <div className="bg-slate-700 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <Clock className="h-5 w-5 mr-2 text-blue-400" />
-                    Orario Settimanale
-                  </h4>
-                  
-                  {/* Giorni Lavorativi */}
-                  <div className="mb-6">
-                    <h5 className="text-md font-medium text-white mb-3 flex items-center">
-                      <CheckSquare className="h-4 w-4 mr-2 text-green-400" />
-                      Giorni Lavorativi
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {dayOrder.map((dayKey) => {
-                        const daySchedule = selectedEmployee.workSchedule[dayKey];
-                        if (!daySchedule || !daySchedule.active) return null;
-                        
-                        return (
-                          <div key={dayKey} className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <h6 className="font-medium text-white text-sm">{dayNames[dayKey]}</h6>
-                              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                            </div>
-                            
-                            <div className="space-y-1">
-                              {(() => {
-                                // Usa gli orari dinamici dal workSchedule
-                                const startTime = daySchedule.startTime || daySchedule.start_time || '09:00';
-                                const endTime = daySchedule.endTime || daySchedule.end_time || '18:00';
-                                const breakDuration = daySchedule.breakDuration || daySchedule.break_duration || 60;
-                                const totalHours = daySchedule.totalHours || 0;
-                                
-                                // Calcola orario pausa (default 13:00-14:00, ma potrebbe essere diverso)
-                                const breakStart = daySchedule.breakStartTime || daySchedule.break_start_time || '13:00';
-                                // Calcola correttamente la fine della pausa aggiungendo i minuti
-                                const calculateBreakEnd = (start, durationMinutes) => {
-                                  if (!start || !durationMinutes) return '14:00';
-                                  const [hours, minutes] = start.split(':').map(Number);
-                                  const totalMinutes = hours * 60 + minutes + durationMinutes;
-                                  const endHours = Math.floor(totalMinutes / 60);
-                                  const endMins = totalMinutes % 60;
-                                  return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
-                                };
-                                const breakEnd = calculateBreakEnd(breakStart, breakDuration);
-                                
-                                // Formatta orari rimuovendo i secondi se presenti
-                                const formatTime = (timeStr) => {
-                                  if (!timeStr) return '';
-                                  return timeStr.substring(0, 5); // Prende solo HH:MM
-                                };
-                                
-                                if (daySchedule.workType === 'full_day' || daySchedule.work_type === 'full_day') {
-                                  // Calcola fine mattina (inizio pausa) e inizio pomeriggio (fine pausa)
-                                  const morningEnd = formatTime(breakStart);
-                                  const afternoonStart = formatTime(breakEnd);
-                                  
-                                  return (
-                                    <>
-                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {morningEnd} (Mattina)</div>
-                                      {breakDuration > 0 && (
-                                        <div className="text-xs text-slate-400">{morningEnd} - {afternoonStart} (Pausa)</div>
-                                      )}
-                                      <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
-                                      <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(7)}
-                                      </div>
-                                    </>
-                                  );
-                                } else if (daySchedule.workType === 'morning' || daySchedule.work_type === 'morning') {
-                                  return (
-                                    <>
-                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Mattina)</div>
-                                      <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
-                                      </div>
-                                    </>
-                                  );
-                                } else if (daySchedule.workType === 'afternoon' || daySchedule.work_type === 'afternoon') {
-                                  return (
-                                    <>
-                                      <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Pomeriggio)</div>
-                                      <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
-                                      </div>
-                                    </>
-                                  );
-                                } else {
-                                  return (
-                                    <>
-                                      <div className="text-xs text-slate-300">
-                                        {formatTime(startTime)} - {formatTime(endTime)}
-                                        {breakDuration > 0 && ` (pausa: ${breakDuration}min)`}
-                                      </div>
-                                      <div className="text-xs font-semibold text-green-400 mt-1">
-                                        Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(daySchedule.hours || 8)}
-                                      </div>
-                                    </>
-                                  );
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                <div className="space-y-6">
+                  {/* Orario Settimanale */}
+                  <div className="bg-slate-700 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-blue-400" />
+                      Orario Settimanale
+                    </h4>
 
-                  {/* Giorni Non Lavorativi */}
-                  <div>
-                    <h5 className="text-md font-medium text-white mb-3 flex items-center">
-                      <X className="h-4 w-4 mr-2 text-slate-400" />
-                      Giorni Non Lavorativi
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {dayOrder.map((dayKey) => {
-                        const daySchedule = selectedEmployee.workSchedule[dayKey];
-                        if (!daySchedule || daySchedule.active) return null;
-                        
-                        return (
-                          <div key={dayKey} className="bg-slate-800 border border-slate-600 rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <h6 className="font-medium text-slate-400 text-sm">{dayNames[dayKey]}</h6>
-                              <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                    {/* Giorni Lavorativi */}
+                    <div className="mb-6">
+                      <h5 className="text-md font-medium text-white mb-3 flex items-center">
+                        <CheckSquare className="h-4 w-4 mr-2 text-green-400" />
+                        Giorni Lavorativi
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {dayOrder.map((dayKey) => {
+                          const daySchedule = selectedEmployee.workSchedule[dayKey];
+                          if (!daySchedule || !daySchedule.active) return null;
+
+                          return (
+                            <div key={dayKey} className="bg-green-900/20 border border-green-500/30 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h6 className="font-medium text-white text-sm">{dayNames[dayKey]}</h6>
+                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                              </div>
+
+                              <div className="space-y-1">
+                                {(() => {
+                                  // Usa gli orari dinamici dal workSchedule
+                                  const startTime = daySchedule.startTime || daySchedule.start_time || '09:00';
+                                  const endTime = daySchedule.endTime || daySchedule.end_time || '18:00';
+                                  const breakDuration = (daySchedule.breakDuration !== null && daySchedule.breakDuration !== undefined ? daySchedule.breakDuration : (daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 60));
+                                  const totalHours = daySchedule.totalHours || 0;
+
+                                  // Calcola orario pausa (default 13:00-14:00, ma potrebbe essere diverso)
+                                  const breakStart = daySchedule.breakStartTime || daySchedule.break_start_time || '13:00';
+                                  // Calcola correttamente la fine della pausa aggiungendo i minuti
+                                  const calculateBreakEnd = (start, durationMinutes) => {
+                                    if (!start || !durationMinutes) return '14:00';
+                                    const [hours, minutes] = start.split(':').map(Number);
+                                    const totalMinutes = hours * 60 + minutes + durationMinutes;
+                                    const endHours = Math.floor(totalMinutes / 60);
+                                    const endMins = totalMinutes % 60;
+                                    return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+                                  };
+                                  const breakEnd = calculateBreakEnd(breakStart, breakDuration);
+
+                                  // Formatta orari rimuovendo i secondi se presenti
+                                  const formatTime = (timeStr) => {
+                                    if (!timeStr) return '';
+                                    return timeStr.substring(0, 5); // Prende solo HH:MM
+                                  };
+
+                                  if (daySchedule.workType === 'full_day' || daySchedule.work_type === 'full_day') {
+                                    // Calcola fine mattina (inizio pausa) e inizio pomeriggio (fine pausa)
+                                    const morningEnd = formatTime(breakStart);
+                                    const afternoonStart = formatTime(breakEnd);
+
+                                    return (
+                                      <>
+                                        <div className="text-xs text-slate-300">{formatTime(startTime)} - {morningEnd} (Mattina)</div>
+                                        {breakDuration > 0 && (
+                                          <div className="text-xs text-slate-400">{morningEnd} - {afternoonStart} (Pausa)</div>
+                                        )}
+                                        <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
+                                        <div className="text-xs font-semibold text-green-400 mt-1">
+                                          Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(7)}
+                                        </div>
+                                      </>
+                                    );
+                                  } else if (daySchedule.workType === 'morning' || daySchedule.work_type === 'morning') {
+                                    return (
+                                      <>
+                                        <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Mattina)</div>
+                                        <div className="text-xs font-semibold text-green-400 mt-1">
+                                          Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
+                                        </div>
+                                      </>
+                                    );
+                                  } else if (daySchedule.workType === 'afternoon' || daySchedule.work_type === 'afternoon') {
+                                    return (
+                                      <>
+                                        <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Pomeriggio)</div>
+                                        <div className="text-xs font-semibold text-green-400 mt-1">
+                                          Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(4)}
+                                        </div>
+                                      </>
+                                    );
+                                  } else {
+                                    return (
+                                      <>
+                                        <div className="text-xs text-slate-300">
+                                          {formatTime(startTime)} - {formatTime(endTime)}
+                                          {breakDuration > 0 && ` (pausa: ${breakDuration}min)`}
+                                        </div>
+                                        <div className="text-xs font-semibold text-green-400 mt-1">
+                                          Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(daySchedule.hours || 8)}
+                                        </div>
+                                      </>
+                                    );
+                                  }
+                                })()}
+                              </div>
                             </div>
-                            <div className="text-xs text-slate-500">Non lavorativo</div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Giorni Non Lavorativi */}
+                    <div>
+                      <h5 className="text-md font-medium text-white mb-3 flex items-center">
+                        <X className="h-4 w-4 mr-2 text-slate-400" />
+                        Giorni Non Lavorativi
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {dayOrder.map((dayKey) => {
+                          const daySchedule = selectedEmployee.workSchedule[dayKey];
+                          if (!daySchedule || daySchedule.active) return null;
+
+                          return (
+                            <div key={dayKey} className="bg-slate-800 border border-slate-600 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h6 className="font-medium text-slate-400 text-sm">{dayNames[dayKey]}</h6>
+                                <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                              </div>
+                              <div className="text-xs text-slate-500">Non lavorativo</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
               ) : (
                 <div className="bg-slate-700 rounded-lg p-6">
                   <div className="text-center">

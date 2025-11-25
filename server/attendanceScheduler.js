@@ -153,7 +153,7 @@ class AttendanceScheduler {
   async generateEmployeeAttendance(employee, schedule, date) {
     try {
       const { start_time, end_time, work_type, break_duration } = schedule;
-      
+
       if (!start_time || !end_time) {
         console.log(`   ⚠️  Orario non definito per ${employee.first_name} ${employee.last_name}`);
         return;
@@ -176,22 +176,22 @@ class AttendanceScheduler {
       // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
       const actualBreakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 0;
       const workHours = this.calculateWorkHours(start_time, end_time, actualBreakDuration);
-      
+
       console.log(`   📊 Ore calcolate: ${workHours}h per ${employee.first_name} (schedule: ${start_time}-${end_time}, break: ${actualBreakDuration}min)`);
 
-        // Crea la presenza automatica con expected_hours calcolate correttamente dallo schedule
-        const { data: newAttendance, error: attendanceError } = await supabase
-          .from('attendance')
-          .insert({
-            user_id: employee.id,
-            date: date,
-            expected_hours: Math.round(workHours * 10) / 10, // Salva le ore attese calcolate dallo schedule
-            actual_hours: 0, // Inizialmente 0, verrà aggiornato durante la giornata
-            balance_hours: 0, // Inizialmente 0
-            notes: `Presenza automatica per orario ${start_time}-${end_time} (${work_type})`
-          })
-          .select()
-          .single();
+      // Crea la presenza automatica con expected_hours calcolate correttamente dallo schedule
+      const { data: newAttendance, error: attendanceError } = await supabase
+        .from('attendance')
+        .insert({
+          user_id: employee.id,
+          date: date,
+          expected_hours: Math.round(workHours * 10) / 10, // Salva le ore attese calcolate dallo schedule
+          actual_hours: 0, // Inizialmente 0, verrà aggiornato durante la giornata
+          balance_hours: 0, // Inizialmente 0
+          notes: `Presenza automatica per orario ${start_time}-${end_time} (${work_type})`
+        })
+        .select()
+        .single();
 
       if (attendanceError) {
         console.error(`❌ Errore creazione presenza per ${employee.first_name}:`, attendanceError);
@@ -212,24 +212,24 @@ class AttendanceScheduler {
   async createAttendanceDetails(attendanceId, userId, date, schedule) {
     try {
       const { start_time, end_time, work_type, break_duration } = schedule;
-      const breakMinutes = break_duration || 60;
-      
+      const breakMinutes = break_duration !== null && break_duration !== undefined ? break_duration : 60;
+
       let details = [];
 
       if (work_type === 'full_day') {
         // Giornata completa con pausa pranzo
         const startTime = new Date(`2000-01-01T${start_time}`);
         const endTime = new Date(`2000-01-01T${end_time}`);
-        
+
         // Calcola la pausa pranzo (metà giornata)
         const totalMinutes = (endTime - startTime) / (1000 * 60);
         const workMinutes = totalMinutes - breakMinutes;
         const morningMinutes = Math.floor(workMinutes / 2);
         const afternoonMinutes = workMinutes - morningMinutes;
-        
+
         const breakStart = new Date(startTime.getTime() + (morningMinutes * 60 * 1000));
         const breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
-        
+
         details = [
           {
             attendance_id: attendanceId,
@@ -318,19 +318,19 @@ class AttendanceScheduler {
         console.error('⚠️ calculateWorkHours: startTime o endTime mancanti');
         return 0;
       }
-      
+
       const start = new Date(`2000-01-01T${startTime}`);
       const end = new Date(`2000-01-01T${endTime}`);
       const totalMinutes = (end - start) / (1000 * 60);
-      
+
       // IMPORTANTE: usa breakDuration dal database, non default 60
       // Se breakDuration è 0, non sottrarre nulla!
       const actualBreakDuration = breakDuration !== null && breakDuration !== undefined ? breakDuration : 0;
       const workMinutes = Math.max(0, totalMinutes - actualBreakDuration);
       const workHours = workMinutes / 60;
-      
+
       console.log(`   🔢 Calcolo ore: ${startTime}-${endTime} = ${totalMinutes}min totali, break: ${actualBreakDuration}min → ${workMinutes}min lavoro = ${workHours.toFixed(2)}h`);
-      
+
       return workHours;
     } catch (error) {
       console.error('❌ Errore calcolo ore:', error);
@@ -409,7 +409,7 @@ class AttendanceScheduler {
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
         const dayOfWeek = d.getDay();
-        
+
         // Solo giorni lavorativi (lunedì-venerdì)
         if (dayOfWeek >= 1 && dayOfWeek <= 5) {
           dates.push(dateStr);

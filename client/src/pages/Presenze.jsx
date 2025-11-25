@@ -31,7 +31,7 @@ const Attendance = () => {
     status: 'not_started',
     progress: 0
   });
-  
+
   // Cache locale per sistema ibrido
   const [localCache, setLocalCache] = useState({
     lastHourlySave: null,
@@ -45,20 +45,20 @@ const Attendance = () => {
     deficit: 0,
     workingDays: 0
   });
-  
-    const [totalBalance, setTotalBalance] = useState(0);
+
+  const [totalBalance, setTotalBalance] = useState(0);
   const [refreshing, setRefreshing] = useState(true);
-  
+
   // Filtri per mese/anno
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  
+
   useEffect(() => {
     // Carica i dati e calcola le ore in tempo reale
     const initializeData = async () => {
       setRefreshing(true);
       console.log('🔄 Initializing with real-time calculation...');
-      
+
       try {
         // 1. Carica i dati di base
         await Promise.all([
@@ -69,62 +69,62 @@ const Attendance = () => {
           fetchUserStats(),
           fetchPermissions104()
         ]);
-        
+
         // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
         console.log('🔄 Forcing immediate real-time calculation...');
         await calculateRealTimeHours();
-        
+
         // 3. Ricalcola anche dopo un breve delay per sicurezza
         setTimeout(() => {
           console.log('🔄 Secondary real-time calculation...');
           calculateRealTimeHours();
         }, 500);
-        
+
         console.log('✅ Data loaded with real-time calculation');
       } finally {
         setRefreshing(false);
         setLoading(false);
       }
     };
-    
+
     initializeData();
-    
+
     // Timer per calcoli real-time ogni minuto
     const realTimeTimer = setInterval(() => {
       setCurrentTime(new Date());
       calculateRealTimeHours();
     }, 60000); // Ogni minuto
-    
+
     // Timer per salvataggio orario ogni ora
     const hourlySaveTimer = setInterval(() => {
       if (currentHours.actualHours > 0) {
         saveHourlyAttendance();
       }
     }, 3600000); // Ogni ora (3600000 ms)
-    
+
     // Timer per salvataggio giornaliero alla fine della giornata
     const dailySaveTimer = setInterval(() => {
-      const todaySchedule = workSchedules.find(schedule => 
-        schedule.day_of_week === new Date().getDay() && 
+      const todaySchedule = workSchedules.find(schedule =>
+        schedule.day_of_week === new Date().getDay() &&
         schedule.is_working_day
       );
-      
+
       if (todaySchedule && todaySchedule.is_working_day) {
         const now = new Date();
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
         const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
-        
+
         // Salva 5 minuti dopo la fine dell'orario di lavoro
         if (currentHour === endHour && currentMinute >= endMin + 5) {
           saveDailyAttendance();
         }
       }
     }, 60000); // Controlla ogni minuto
-    
+
     // RIMOSSO: Aggiornamento database automatico (causa errori 403)
     // Il calcolo è ora completamente lato frontend
-    
+
     // Polling ogni 60s per sincronizzazione con admin (ridotto carico)
     const performSync = async () => {
       console.log('🔄 Employee sync polling...');
@@ -145,22 +145,22 @@ const Attendance = () => {
     const syncInterval = setInterval(() => {
       performSync();
     }, 60000); // 60 secondi
-    
+
     // Aggiorna quando la finestra torna in focus (navigazione o dopo salvataggio orari)
     const handleFocus = () => {
       console.log('🔄 Window focused - recalculating hours and reloading work schedules...');
-      
+
       // Ricarica anche i work schedules (potrebbero essere stati aggiornati dal Profilo)
       fetchWorkSchedules();
-      
+
       // Ricalcola immediatamente le ore in tempo reale
       performSync();
-      
+
       console.log('✅ Hours recalculated and work schedules reloaded on focus');
     };
-    
+
     window.addEventListener('focus', handleFocus);
-    
+
     return () => {
       clearInterval(realTimeTimer);
       clearInterval(hourlySaveTimer);
@@ -231,16 +231,16 @@ const Attendance = () => {
         const calculatedRemaining = Math.max(0, (data.expectedMonthlyPresences || 0) - (data.monthlyPresences || 0));
         console.log(`✅ Verifica calcolo: ${data.expectedMonthlyPresences} (totale) - ${data.monthlyPresences} (lavorati) = ${calculatedRemaining} (rimanenti)`);
         console.log(`✅ Valore da backend: remainingDays=${data.remainingDays}, calcolato=${calculatedRemaining}`);
-        
+
         // FORZA il calcolo: usa sempre TOTALE - LAVORATI, mai il totale!
         // Se remainingDays dal backend non è definito o è uguale al totale (BUG), usa il calcolo
         const backendRemaining = data.remainingDays !== undefined ? data.remainingDays : calculatedRemaining;
-        const finalRemainingDays = (backendRemaining === data.expectedMonthlyPresences) 
+        const finalRemainingDays = (backendRemaining === data.expectedMonthlyPresences)
           ? calculatedRemaining  // Se per caso backend ha restituito il totale, usa il calcolo
           : backendRemaining;
-        
+
         console.log(`✅ Imposto remainingDays=${finalRemainingDays} (NON ${data.expectedMonthlyPresences} che è il TOTALE)`);
-        
+
         // VERIFICA FINALE: deve essere < expectedMonthlyPresences
         if (finalRemainingDays >= data.expectedMonthlyPresences) {
           console.error(`❌ ERRORE: remainingDays (${finalRemainingDays}) >= expectedMonthlyPresences (${data.expectedMonthlyPresences}). Usando calcolo corretto.`);
@@ -280,7 +280,7 @@ const Attendance = () => {
         const data = await response.json();
         console.log('📅 [Presenze] Work schedules caricati:', data.length, 'schedule totali');
         console.log('📅 [Presenze] Work schedules dati:', data);
-        
+
         // Verifica specificamente lo schedule del giovedì (day_of_week = 4)
         const thursdaySchedule = data.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
         if (thursdaySchedule) {
@@ -313,8 +313,8 @@ const Attendance = () => {
     try {
       if (user?.has104 || user?.has_104) {
         const response = await apiCall('/api/leave-requests?type=permission_104&status=approved');
-      if (response.ok) {
-        const data = await response.json();
+        if (response.ok) {
+          const data = await response.json();
           setPermissions104(data || []);
         }
       }
@@ -339,9 +339,9 @@ const Attendance = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     console.log('🔄 Calculating KPIs with data:', attendanceData?.length || 0, 'records');
-    
+
     // Filtra i record del mese corrente
     const monthlyRecords = (attendanceData || []).filter(record => {
       const recordDate = new Date(record.date);
@@ -350,19 +350,19 @@ const Attendance = () => {
 
     // Calcola ore totali del mese
     const totalMonthlyHours = monthlyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
-    
+
     // Calcola straordinari (ore positive)
     const overtime = monthlyRecords.reduce((sum, record) => {
       const balance = record.balance_hours || 0;
       return balance > 0 ? sum + balance : sum;
     }, 0);
-    
+
     // Calcola deficit (ore negative)
     const deficit = monthlyRecords.reduce((sum, record) => {
       const balance = record.balance_hours || 0;
       return balance < 0 ? sum + Math.abs(balance) : sum;
     }, 0);
-    
+
     // Calcola giorni lavorativi (giorni con ore effettive > 0)
     const workingDays = monthlyRecords.filter(record => (record.actual_hours || 0) > 0).length;
 
@@ -384,13 +384,13 @@ const Attendance = () => {
   // Calcolo DINAMICO delle ore in tempo reale usando l'endpoint backend
   const calculateRealTimeHours = async () => {
     console.log('🔄 calculateRealTimeHours called (using API endpoint)');
-    
+
     try {
       const response = await apiCall('/api/attendance/current-hours');
-      
+
       if (response.ok) {
         const data = await response.json();
-        
+
         if (!data.isWorkingDay) {
           setCurrentHours({
             isWorkingDay: false,
@@ -406,14 +406,14 @@ const Attendance = () => {
           });
           return;
         }
-        
+
         // Calcola ore rimanenti
         const contractHours = data.contractHours ?? data.expectedHours ?? 0;
         const effectiveExpectedHours = data.expectedHours ?? contractHours;
         const remainingHoursValue = data.remainingHours ?? Math.max(0, effectiveExpectedHours - (data.actualHours || 0));
-        
+
         console.log(`📊 API calculation: ${data.actualHours.toFixed(2)}h lavorate, ${remainingHoursValue.toFixed(2)}h rimanenti (contract ${contractHours}h), status: ${data.status}`);
-        
+
         // Calcola i dati finali
         const finalActualHours = Math.round((data.actualHours || 0) * 10) / 10;
         const finalExpectedHours = Math.round(effectiveExpectedHours * 10) / 10;
@@ -422,7 +422,7 @@ const Attendance = () => {
         const finalBalanceHours = Math.round((data.balanceHours || 0) * 10) / 10;
 
         const now = new Date();
-        
+
         // Aggiorna la cache locale
         setLocalCache(prev => ({
           ...prev,
@@ -436,7 +436,7 @@ const Attendance = () => {
           schedule: {
             start_time: data.schedule?.start_time || '09:00',
             end_time: data.schedule?.end_time || '18:00',
-            break_duration: data.schedule?.break_duration || 60
+            break_duration: (data.schedule?.break_duration !== null && data.schedule?.break_duration !== undefined) ? data.schedule.break_duration : 60
           },
           currentTime: data.currentTime || now.toTimeString().substring(0, 5),
           expectedHours: finalExpectedHours,
@@ -456,35 +456,35 @@ const Attendance = () => {
           if (prevAttendance.length > 0) {
             updatedAttendance = prevAttendance.some(record => record.date === today)
               ? prevAttendance.map(record =>
-                  record.date === today
-                    ? {
-                        ...record,
-                        actual_hours: finalActualHours,
-                        balance_hours: finalBalanceHours
-                      }
-                    : record
-                )
-              : [
-                  {
-                    id: `virtual-${today}`,
-                    user_id: user?.id,
-                    date: today,
-                    expected_hours: finalContractHours,
+                record.date === today
+                  ? {
+                    ...record,
                     actual_hours: finalActualHours,
-                    balance_hours: finalBalanceHours,
-                    notes: 'Presenza automatica per orario',
-                    created_at: now.toISOString(),
-                    updated_at: now.toISOString()
-                  },
-                  ...prevAttendance
-                ];
+                    balance_hours: finalBalanceHours
+                  }
+                  : record
+              )
+              : [
+                {
+                  id: `virtual-${today}`,
+                  user_id: user?.id,
+                  date: today,
+                  expected_hours: finalContractHours,
+                  actual_hours: finalActualHours,
+                  balance_hours: finalBalanceHours,
+                  notes: 'Presenza automatica per orario',
+                  created_at: now.toISOString(),
+                  updated_at: now.toISOString()
+                },
+                ...prevAttendance
+              ];
           } else {
             updatedAttendance = [
               {
                 id: `virtual-${today}`,
                 user_id: user?.id,
                 date: today,
-              expected_hours: finalContractHours,
+                expected_hours: finalContractHours,
                 actual_hours: finalActualHours,
                 balance_hours: finalBalanceHours,
                 notes: 'Presenza automatica per orario',
@@ -496,7 +496,7 @@ const Attendance = () => {
           latestAttendance = updatedAttendance;
           return updatedAttendance;
         });
-        
+
         if (latestAttendance.length > 0) {
           // Ricalcola i KPI dopo aver aggiornato le ore
           console.log('🔄 Recalculating KPIs after hour update...');
@@ -543,19 +543,19 @@ const Attendance = () => {
       const response = await apiCall('/api/attendance/update-current', {
         method: 'PUT'
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Attendance updated:', data);
         setCurrentHours(data.hours);
-        
+
         // Aggiorna tutti i dati in parallelo
         await Promise.all([
           fetchAttendance(),
           fetchHoursBalance(),
           fetchCurrentHours()
         ]);
-        
+
         console.log('✅ All data refreshed after update');
         return true;
       } else {
@@ -574,18 +574,18 @@ const Attendance = () => {
   // Salvataggio orario ogni ora (sistema ibrido)
   const saveHourlyAttendance = async () => {
     try {
-      const todaySchedule = workSchedules.find(schedule => 
-        schedule.day_of_week === new Date().getDay() && 
+      const todaySchedule = workSchedules.find(schedule =>
+        schedule.day_of_week === new Date().getDay() &&
         schedule.is_working_day
       );
-      
+
       if (!todaySchedule || !currentHours.actualHours || currentHours.actualHours <= 0) {
         return;
       }
 
       const now = new Date();
       const lastSave = localCache.lastHourlySave;
-      
+
       // Evita salvataggi duplicati nella stessa ora
       if (lastSave && (now.getTime() - lastSave.getTime()) < 3600000) {
         console.log('⏰ Hourly save skipped - already saved this hour');
@@ -626,17 +626,17 @@ const Attendance = () => {
   // Salvataggio giornaliero finale
   const saveDailyAttendance = async () => {
     try {
-      const todaySchedule = workSchedules.find(schedule => 
-        schedule.day_of_week === new Date().getDay() && 
+      const todaySchedule = workSchedules.find(schedule =>
+        schedule.day_of_week === new Date().getDay() &&
         schedule.is_working_day
       );
-      
+
       if (!todaySchedule) {
         return;
       }
 
       const now = new Date();
-      
+
       console.log('💾 Saving final daily attendance:', currentHours.actualHours, 'hours');
 
       const response = await apiCall('/api/attendance/save-daily', {
@@ -673,32 +673,32 @@ const Attendance = () => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
-    
+
     // Trova l'orario di lavoro per oggi
     // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
-    const todaySchedule = workSchedules.find(schedule => 
+    const todaySchedule = workSchedules.find(schedule =>
       Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
     );
-    
+
     let realTimeActualHours = 0;
     let realTimeBalanceHours = 0;
     let scheduleExpectedHours = null;
     let expectedHours = typeof record.expected_hours === 'number' ? record.expected_hours : null;
     const dbActualHours = typeof record.actual_hours === 'number' ? record.actual_hours : null;
     const dbBalanceHours = typeof record.balance_hours === 'number' ? record.balance_hours : null;
-    
+
     if (todaySchedule) {
       const { start_time, end_time, break_duration } = todaySchedule;
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
       // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0)
       const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 0;
-      
+
       // Calcola ore attese totali correttamente
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = Math.max(0, totalMinutes - breakDuration);
       scheduleExpectedHours = workMinutes / 60;
-      
+
       // Se il record ha un permesso 104, usa sempre lo schedule per expectedHours (non il DB)
       // Per permessi 104, usa sempre lo schedule corretto, non il valore salvato nel DB
       if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)') {
@@ -706,53 +706,53 @@ const Attendance = () => {
       } else if (expectedHours === null) {
         expectedHours = scheduleExpectedHours;
       }
-      
+
       // Se c'è un permesso 104, actualHours è sempre 0 (non ha lavorato)
       if (record.status === 'permission_104' || record.status === 'Assente (Giustificato)') {
         realTimeActualHours = 0;
         realTimeBalanceHours = 0;
       } else {
-      // Calcola ore effettive real-time
-      if (currentHour >= startHour && currentHour <= endHour) {
-        // Durante l'orario di lavoro
-        const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
+        // Calcola ore effettive real-time
+        if (currentHour >= startHour && currentHour <= endHour) {
+          // Durante l'orario di lavoro
+          const workedMinutes = (currentHour * 60 + currentMinute) - (startHour * 60 + startMin);
           // Sottrai la pausa se c'è e siamo dopo l'inizio della pausa
           if (breakDuration > 0 && todaySchedule.break_start_time) {
             const [breakStartHour, breakStartMin] = todaySchedule.break_start_time.split(':').map(Number);
             if (currentHour > breakStartHour || (currentHour === breakStartHour && currentMinute >= breakStartMin)) {
-          realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
+              realTimeActualHours = Math.max(0, (workedMinutes - breakDuration) / 60);
             } else {
               realTimeActualHours = workedMinutes / 60;
             }
-        } else {
-          realTimeActualHours = workedMinutes / 60;
+          } else {
+            realTimeActualHours = workedMinutes / 60;
+          }
+          realTimeBalanceHours = realTimeActualHours - expectedHours;
+        } else if (currentHour > endHour) {
+          // Dopo l'orario di lavoro
+          realTimeActualHours = expectedHours;
+          realTimeBalanceHours = 0;
         }
-        realTimeBalanceHours = realTimeActualHours - expectedHours;
-      } else if (currentHour > endHour) {
-        // Dopo l'orario di lavoro
-        realTimeActualHours = expectedHours;
-        realTimeBalanceHours = 0;
       }
     }
-    }
-    
+
     const actualHoursForSummary = dbActualHours ?? realTimeActualHours;
     const expectedHoursForSummary = expectedHours ?? scheduleExpectedHours ?? 0;
     const balanceHoursForSummary = dbBalanceHours ?? (actualHoursForSummary - expectedHoursForSummary);
-    
+
     const statusInfo = computeStatusInfo({
       ...record,
       actual_hours: actualHoursForSummary,
       expected_hours: expectedHoursForSummary
     });
-    
+
     const realTimeData = {
       attendance: record,
       schedule: todaySchedule,
       summary: {
         date: record.date,
-        employee: user && user.first_name && user.last_name ? 
-          `${user.first_name} ${user.last_name}` : 
+        employee: user && user.first_name && user.last_name ?
+          `${user.first_name} ${user.last_name}` :
           (user && user.email ? user.email.split('@')[0] : 'Dipendente'),
         expectedHours: expectedHoursForSummary,
         actualHours: actualHoursForSummary,
@@ -762,104 +762,104 @@ const Attendance = () => {
         notes: ''
       }
     };
-    
+
     setSelectedAttendanceDetails(realTimeData);
     setShowAttendanceDetails(true);
   };
 
   const formatTime = (time) => {
-    return time ? new Date(time).toLocaleTimeString('it-IT', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return time ? new Date(time).toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
     }) : '--:--';
   };
 
   const formatHours = (hours) => {
     if (hours === null || hours === undefined) return '0h 0m';
     const h = Math.floor(Math.abs(hours));
-  const m = Math.floor((Math.abs(hours) - h) * 60);
+    const m = Math.floor((Math.abs(hours) - h) * 60);
     return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
   };
 
-const formatHoursWithSign = (hours) => {
-  if (hours === null || hours === undefined) return '0h 0m';
-  const sign = hours < 0 ? '-' : hours > 0 ? '+' : '';
-  const absValue = Math.abs(hours);
-  const h = Math.floor(absValue);
-  const m = Math.floor((absValue - h) * 60);
-  return `${sign}${h}h ${m}m`;
-};
-
-const normalizeDateToISO = (date) => {
-  if (!date) return '';
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized.toISOString().split('T')[0];
-};
-
-
-function computeStatusInfo(record = {}) {
-  const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0 } = record;
-  const hasWorked = actual_hours > 0;
-
-  const badgeClasses = {
-    green: 'bg-green-500/20 text-green-300 border border-green-400/30',
-    yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
-    red: 'bg-red-500/20 text-red-300 border border-red-400/30',
-    gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+  const formatHoursWithSign = (hours) => {
+    if (hours === null || hours === undefined) return '0h 0m';
+    const sign = hours < 0 ? '-' : hours > 0 ? '+' : '';
+    const absValue = Math.abs(hours);
+    const h = Math.floor(absValue);
+    const m = Math.floor((absValue - h) * 60);
+    return `${sign}${h}h ${m}m`;
   };
 
-  if (is_justified_absence && leave_type === 'permission' && hasWorked) {
+  const normalizeDateToISO = (date) => {
+    if (!date) return '';
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized.toISOString().split('T')[0];
+  };
+
+
+  function computeStatusInfo(record = {}) {
+    const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0 } = record;
+    const hasWorked = actual_hours > 0;
+
+    const badgeClasses = {
+      green: 'bg-green-500/20 text-green-300 border border-green-400/30',
+      yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
+      red: 'bg-red-500/20 text-red-300 border border-red-400/30',
+      gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+    };
+
+    if (is_justified_absence && leave_type === 'permission' && hasWorked) {
+      return {
+        text: 'Presente (con permesso)',
+        colorClass: 'text-green-400',
+        badgeClass: badgeClasses.green
+      };
+    }
+
+    if (is_justified_absence) {
+      const leaveTypeText = {
+        sick_leave: 'Malattia',
+        vacation: 'Ferie',
+        permission: 'Permesso'
+      }[leave_type] || 'Giustificato';
+
+      return {
+        text: `Assente (${leaveTypeText})`,
+        colorClass: 'text-yellow-400',
+        badgeClass: badgeClasses.yellow
+      };
+    }
+
+    if (is_absent) {
+      return {
+        text: 'Assente',
+        colorClass: 'text-red-400',
+        badgeClass: badgeClasses.red
+      };
+    }
+
+    if (expected_hours === 0) {
+      return {
+        text: 'Non lavorativo',
+        colorClass: 'text-gray-400',
+        badgeClass: badgeClasses.gray
+      };
+    }
+
     return {
-      text: 'Presente (con permesso)',
+      text: 'Presente',
       colorClass: 'text-green-400',
       badgeClass: badgeClasses.green
     };
   }
 
-  if (is_justified_absence) {
-      const leaveTypeText = {
-      sick_leave: 'Malattia',
-      vacation: 'Ferie',
-      permission: 'Permesso'
-    }[leave_type] || 'Giustificato';
-    
-    return {
-      text: `Assente (${leaveTypeText})`,
-      colorClass: 'text-yellow-400',
-      badgeClass: badgeClasses.yellow
-    };
-  }
-
-  if (is_absent) {
-    return {
-      text: 'Assente',
-      colorClass: 'text-red-400',
-      badgeClass: badgeClasses.red
-    };
-  }
-
-  if (expected_hours === 0) {
-    return {
-      text: 'Non lavorativo',
-      colorClass: 'text-gray-400',
-      badgeClass: badgeClasses.gray
-    };
-  }
-
-  return {
-    text: 'Presente',
-    colorClass: 'text-green-400',
-    badgeClass: badgeClasses.green
+  const getStatusColor = (record) => {
+    return computeStatusInfo(record).colorClass;
   };
-}
 
-const getStatusColor = (record) => {
-  return computeStatusInfo(record).colorClass;
-};
-
-const getStatusText = (record) => {
-  return computeStatusInfo(record).text;
+  const getStatusText = (record) => {
+    return computeStatusInfo(record).text;
   };
 
   const getBalanceColor = (balance) => {
@@ -879,7 +879,7 @@ const getStatusText = (record) => {
     const todayISO = new Date().toISOString().split('T')[0];
     const recordISO = normalizeDateToISO(record.date);
     const isToday = recordISO === todayISO;
-    
+
     // Se c'è un permesso 104, le ore mancanti sono SEMPRE 0 (è un'assenza giustificata)
     const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
     if (isPermission104) {
@@ -893,7 +893,7 @@ const getStatusText = (record) => {
     } else if (isToday && currentHours?.expectedHours !== undefined) {
       expected = currentHours.expectedHours;
     }
-    
+
     const actual = isToday ? (currentHours.actualHours ?? 0) : (record.actual_hours ?? 0);
 
     let deficit = Math.max(0, expected - actual);
@@ -913,7 +913,7 @@ const getStatusText = (record) => {
   };
 
   const todaySchedule = getTodaySchedule();
-  const todayAttendance = attendance.find(record => 
+  const todayAttendance = attendance.find(record =>
     new Date(record.date).toDateString() === new Date().toDateString()
   );
 
@@ -952,8 +952,8 @@ const getStatusText = (record) => {
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Ore Lavorate</p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-400">
-                  {currentHours?.status === 'permission_104' 
-                    ? 'Permesso 104' 
+                  {currentHours?.status === 'permission_104'
+                    ? 'Permesso 104'
                     : formatHours(currentHours?.actualHours || 0)}
                 </p>
               </div>
@@ -1015,13 +1015,13 @@ const getStatusText = (record) => {
             <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Stato Oggi
           </h2>
-          
+
           {(() => {
             const now = new Date();
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
             const isWorkingDay = todaySchedule && todaySchedule.is_working_day;
-            
+
             if (!isWorkingDay) {
               return (
                 <div className="text-center py-8">
@@ -1031,11 +1031,11 @@ const getStatusText = (record) => {
                 </div>
               );
             }
-            
+
             // Check if workday is concluded
             const [endHour, endMin] = todaySchedule.end_time.split(':').map(Number);
             const isWorkdayConcluded = currentHour > endHour || (currentHour === endHour && currentMinute >= endMin);
-            
+
             if (isWorkdayConcluded) {
               return (
                 <div className="text-center py-8">
@@ -1048,7 +1048,7 @@ const getStatusText = (record) => {
                 </div>
               );
             }
-            
+
             // Active workday - show current status
             return (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1124,10 +1124,10 @@ const getStatusText = (record) => {
         <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <h2 className="text-xl font-bold flex items-center">
-            <Calendar className="h-5 w-5 mr-2" />
-            Cronologia Presenze
-          </h2>
-            
+              <Calendar className="h-5 w-5 mr-2" />
+              Cronologia Presenze
+            </h2>
+
             {/* Filtri Mese/Anno */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2">
@@ -1145,7 +1145,7 @@ const getStatusText = (record) => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <label className="text-sm text-slate-400 whitespace-nowrap">Anno:</label>
                 <select
@@ -1158,24 +1158,23 @@ const getStatusText = (record) => {
                   ))}
                 </select>
               </div>
-              
+
               <button
                 onClick={() => {
                   setSelectedMonth(new Date().getMonth() + 1);
                   setSelectedYear(new Date().getFullYear());
                 }}
                 disabled={selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
                     ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50'
                     : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
-                }`}
+                  }`}
               >
                 Oggi
               </button>
             </div>
           </div>
-          
+
           {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:hidden">
             {(() => {
@@ -1184,42 +1183,42 @@ const getStatusText = (record) => {
                 const recordDate = new Date(record.date);
                 return recordDate.getMonth() + 1 === selectedMonth && recordDate.getFullYear() === selectedYear;
               });
-              
+
               const today = new Date().toISOString().split('T')[0];
               const todayDate = new Date();
               const isCurrentMonth = selectedMonth === todayDate.getMonth() + 1 && selectedYear === todayDate.getFullYear();
               const todayExists = filteredAttendance.some(record => record.date === today);
-              
+
               let combined = [...filteredAttendance];
-              
-                  // Aggiungi oggi solo se siamo nel mese/anno corrente
-                  if (isCurrentMonth && !todayExists) {
+
+              // Aggiungi oggi solo se siamo nel mese/anno corrente
+              if (isCurrentMonth && !todayExists) {
                 combined = [{
                   id: 'today-realtime',
                   date: today,
                   actual_hours: currentHours.actualHours,
-                      expected_hours: currentHours.contractHours || currentHours.expectedHours,
+                  expected_hours: currentHours.contractHours || currentHours.expectedHours,
                   balance_hours: currentHours.balanceHours,
                   status: currentHours.status
-                    }, ...combined];
-                  }
-                  
-                  // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
-                  if (isCurrentMonth && todayExists) {
-                    combined = combined.map(record => {
-                      if (record.date === today && currentHours?.contractHours !== undefined) {
-                        return {
-                          ...record,
-                          expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
-                          actual_hours: currentHours.actualHours,
-                          balance_hours: currentHours.balanceHours,
-                          status: currentHours.status
-                        };
+                }, ...combined];
               }
-                      return record;
-                    });
+
+              // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
+              if (isCurrentMonth && todayExists) {
+                combined = combined.map(record => {
+                  if (record.date === today && currentHours?.contractHours !== undefined) {
+                    return {
+                      ...record,
+                      expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
+                      actual_hours: currentHours.actualHours,
+                      balance_hours: currentHours.balanceHours,
+                      status: currentHours.status
+                    };
                   }
-              
+                  return record;
+                });
+              }
+
               if (combined.length === 0) {
                 return (
                   <div className="col-span-2 text-center py-8 text-slate-400">
@@ -1228,7 +1227,7 @@ const getStatusText = (record) => {
                   </div>
                 );
               }
-              
+
               return combined.map((record) => (
                 <div key={record.id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 hover:border-slate-500 transition-all">
                   <div className="flex items-center justify-between mb-2 gap-2">
@@ -1245,16 +1244,16 @@ const getStatusText = (record) => {
                           const today = new Date().toISOString().split('T')[0];
                           const isToday = record.date === today;
                           const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
-                          
+
                           // PRIORITÀ 1: Se c'è un permesso 104 (oggi o passato), ricalcola SEMPRE dallo schedule (non usare DB o real-time)
                           if (isPermission104) {
                             const recordDate = new Date(record.date);
                             const dayOfWeek = recordDate.getDay();
                             // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
-                            const daySchedule = workSchedules.find(schedule => 
+                            const daySchedule = workSchedules.find(schedule =>
                               Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
                             );
-                            
+
                             if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
                               const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
                               const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
@@ -1271,21 +1270,21 @@ const getStatusText = (record) => {
                               console.warn(`⚠️ [Presenze MOBILE] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek} (data: ${record.date})`);
                             }
                           }
-                          
+
                           // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
                           if (isToday && currentHours?.contractHours !== undefined) {
                             return formatHours(currentHours.contractHours);
                           }
-                          
+
                           // PRIORITÀ 3: Altrimenti usa i dati dal database
                           return formatHours(record.expected_hours || 0);
                         })()}
-                    </div>
+                      </div>
                     </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
                       <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
-                      </div>
+                    </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Mancanti</div>
                       {(() => {
@@ -1293,14 +1292,14 @@ const getStatusText = (record) => {
                         return (
                           <div className={`font-bold text-xs sm:text-sm ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                             {deficit > 0 ? formatHours(deficit) : '0h 0m'}
-                    </div>
+                          </div>
                         );
                       })()}
-                  </div>
+                    </div>
                   </div>
                   <div className="mt-3">
-                    <button 
-                      onClick={() => handleViewAttendanceDetails(record)} 
+                    <button
+                      onClick={() => handleViewAttendanceDetails(record)}
                       className="w-full py-2 px-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 text-xs sm:text-sm rounded-lg transition-colors border border-green-500/30 touch-manipulation min-h-[44px] flex items-center justify-center"
                     >
                       Dettagli
@@ -1331,14 +1330,14 @@ const getStatusText = (record) => {
                     const recordDate = new Date(record.date);
                     return recordDate.getMonth() + 1 === selectedMonth && recordDate.getFullYear() === selectedYear;
                   });
-                  
+
                   const today = new Date().toISOString().split('T')[0];
                   const todayDate = new Date();
                   const isCurrentMonth = selectedMonth === todayDate.getMonth() + 1 && selectedYear === todayDate.getFullYear();
                   const todayExists = filteredAttendance.some(record => record.date === today);
-                  
+
                   let combinedAttendance = [...filteredAttendance];
-                  
+
                   // Aggiungi oggi solo se siamo nel mese/anno corrente
                   if (isCurrentMonth && !todayExists) {
                     const todayRecord = {
@@ -1351,7 +1350,7 @@ const getStatusText = (record) => {
                     };
                     combinedAttendance = [todayRecord, ...combinedAttendance];
                   }
-                  
+
                   // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
                   if (isCurrentMonth && todayExists) {
                     combinedAttendance = combinedAttendance.map(record => {
@@ -1367,7 +1366,7 @@ const getStatusText = (record) => {
                       return record;
                     });
                   }
-                  
+
                   if (combinedAttendance.length === 0) {
                     return (
                       <tr>
@@ -1378,91 +1377,91 @@ const getStatusText = (record) => {
                       </tr>
                     );
                   }
-                  
+
                   return combinedAttendance.map((record) => (
-                  <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                    <td className="py-3 px-4">
-                      {new Date(record.date).toLocaleDateString('it-IT')}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`font-semibold ${getStatusColor(record)}`}>
-                        {getStatusText(record)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      {(() => {
-                        const today = new Date().toISOString().split('T')[0];
-                        const isToday = record.date === today;
-                        const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
-                        
-                        // PRIORITÀ 1: Se c'è un permesso 104 (oggi o passato), ricalcola SEMPRE dallo schedule (non usare DB o real-time)
-                        if (isPermission104) {
-                          const recordDate = new Date(record.date);
-                          const dayOfWeek = recordDate.getDay();
-                          // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
-                          const daySchedule = workSchedules.find(schedule => 
-                            Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
-                          );
-                          
-                          if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
-                            const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
-                            const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
-                            // IMPORTANTE: usa break_duration dal database, non default (0 se è 0!)
-                            const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
-                            const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
-                            const workMinutes = Math.max(0, totalMinutes - breakDuration);
-                            const expectedHoursFromSchedule = workMinutes / 60;
-                            console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Data: ${record.date}, Giorno: ${dayOfWeek} (${dayOfWeek === 1 ? 'LUN' : dayOfWeek === 2 ? 'MAR' : dayOfWeek === 3 ? 'MER' : dayOfWeek === 4 ? 'GIO' : dayOfWeek === 5 ? 'VEN' : dayOfWeek === 6 ? 'SAB' : 'DOM'})`);
-                            console.log(`🔵 [Presenze] Schedule trovato: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min, work_type: ${daySchedule.work_type}`);
-                            console.log(`🔵 [Presenze] Calcolo: (${endHour * 60 + endMin} - ${startHour * 60 + startMin}) - ${breakDuration} = ${workMinutes} min = ${expectedHoursFromSchedule.toFixed(2)}h`);
-                            return formatHours(expectedHoursFromSchedule);
-                          } else {
-                            // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
-                            console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek} (data: ${record.date})`);
-                            console.warn(`⚠️ [Presenze] Work schedules disponibili:`, workSchedules.map(s => ({ day: s.day_of_week, working: s.is_working_day, start: s.start_time, end: s.end_time })));
-                          }
-                        }
-                        
-                        // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
-                        if (isToday && currentHours?.contractHours !== undefined) {
-                          return formatHours(currentHours.contractHours);
-                        }
-                        
-                        // PRIORITÀ 3: Altrimenti usa i dati dal database
-                        return formatHours(record.expected_hours || 0);
-                      })()}
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      {(() => {
-                        // Se è oggi, usa i dati real-time
-                        const today = new Date().toISOString().split('T')[0];
-                        if (record.date === today && currentHours?.actualHours !== undefined) {
-                          return formatHours(currentHours.actualHours);
-                        }
-                        // Altrimenti usa i dati dal database
-                        return formatHours(record.actual_hours || 0);
-                      })()}
-                    </td>
-                    <td className="py-3 px-4">
+                    <tr key={record.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                      <td className="py-3 px-4">
+                        {new Date(record.date).toLocaleDateString('it-IT')}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold ${getStatusColor(record)}`}>
+                          {getStatusText(record)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono">
                         {(() => {
-                        const deficit = getDisplayedDeficit(record);
-                        return (
-                          <span className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
-                            {deficit > 0 ? formatHours(deficit) : '0h 0m'}
-                      </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-3 px-4">
-                      <button
-                        onClick={() => handleViewAttendanceDetails(record)}
-                        className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
-                        title="Visualizza dettagli presenze"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                          const today = new Date().toISOString().split('T')[0];
+                          const isToday = record.date === today;
+                          const isPermission104 = hasPermission104(record.date) || record.status === 'permission_104' || record.status === 'Assente (Giustificato)' || getStatusText(record).includes('104');
+
+                          // PRIORITÀ 1: Se c'è un permesso 104 (oggi o passato), ricalcola SEMPRE dallo schedule (non usare DB o real-time)
+                          if (isPermission104) {
+                            const recordDate = new Date(record.date);
+                            const dayOfWeek = recordDate.getDay();
+                            // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
+                            const daySchedule = workSchedules.find(schedule =>
+                              Number(schedule.day_of_week) === Number(dayOfWeek) && schedule.is_working_day
+                            );
+
+                            if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
+                              const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
+                              const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
+                              // IMPORTANTE: usa break_duration dal database, non default (0 se è 0!)
+                              const breakDuration = daySchedule.break_duration !== null && daySchedule.break_duration !== undefined ? daySchedule.break_duration : 0;
+                              const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                              const workMinutes = Math.max(0, totalMinutes - breakDuration);
+                              const expectedHoursFromSchedule = workMinutes / 60;
+                              console.log(`🔵 [Presenze] Permesso 104 ${isToday ? '(OGGI)' : '(PASSATO)'} - Data: ${record.date}, Giorno: ${dayOfWeek} (${dayOfWeek === 1 ? 'LUN' : dayOfWeek === 2 ? 'MAR' : dayOfWeek === 3 ? 'MER' : dayOfWeek === 4 ? 'GIO' : dayOfWeek === 5 ? 'VEN' : dayOfWeek === 6 ? 'SAB' : 'DOM'})`);
+                              console.log(`🔵 [Presenze] Schedule trovato: ${daySchedule.start_time}-${daySchedule.end_time}, break: ${breakDuration}min, work_type: ${daySchedule.work_type}`);
+                              console.log(`🔵 [Presenze] Calcolo: (${endHour * 60 + endMin} - ${startHour * 60 + startMin}) - ${breakDuration} = ${workMinutes} min = ${expectedHoursFromSchedule.toFixed(2)}h`);
+                              return formatHours(expectedHoursFromSchedule);
+                            } else {
+                              // Se non trovi lo schedule, usa i dati real-time o dal database come fallback
+                              console.warn(`⚠️ [Presenze] Permesso 104 ma schedule non trovato per giorno ${dayOfWeek} (data: ${record.date})`);
+                              console.warn(`⚠️ [Presenze] Work schedules disponibili:`, workSchedules.map(s => ({ day: s.day_of_week, working: s.is_working_day, start: s.start_time, end: s.end_time })));
+                            }
+                          }
+
+                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
+                          if (isToday && currentHours?.contractHours !== undefined) {
+                            return formatHours(currentHours.contractHours);
+                          }
+
+                          // PRIORITÀ 3: Altrimenti usa i dati dal database
+                          return formatHours(record.expected_hours || 0);
+                        })()}
+                      </td>
+                      <td className="py-3 px-4 font-mono">
+                        {(() => {
+                          // Se è oggi, usa i dati real-time
+                          const today = new Date().toISOString().split('T')[0];
+                          if (record.date === today && currentHours?.actualHours !== undefined) {
+                            return formatHours(currentHours.actualHours);
+                          }
+                          // Altrimenti usa i dati dal database
+                          return formatHours(record.actual_hours || 0);
+                        })()}
+                      </td>
+                      <td className="py-3 px-4">
+                        {(() => {
+                          const deficit = getDisplayedDeficit(record);
+                          return (
+                            <span className={`font-bold ${deficit > 0 ? 'text-red-400' : 'text-slate-400'}`}>
+                              {deficit > 0 ? formatHours(deficit) : '0h 0m'}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => handleViewAttendanceDetails(record)}
+                          className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                          title="Visualizza dettagli presenze"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
                   ));
                 })()}
               </tbody>
@@ -1502,7 +1501,7 @@ const getStatusText = (record) => {
                   <XCircle className="h-6 w-6" />
                 </button>
               </div>
-              
+
               {selectedAttendanceDetails.summary ? (
                 <div className="space-y-4">
                   {/* Riepilogo principale */}
@@ -1534,15 +1533,14 @@ const getStatusText = (record) => {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="border-t border-slate-600 pt-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <span className="text-sm text-slate-400">Stato:</span>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            selectedAttendanceDetails.summary.statusBadgeClass 
-                              || computeStatusInfo(selectedAttendanceDetails.attendance).badgeClass
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedAttendanceDetails.summary.statusBadgeClass
+                            || computeStatusInfo(selectedAttendanceDetails.attendance).badgeClass
+                            }`}>
                             {selectedAttendanceDetails.summary.status}
                           </span>
                         </div>
@@ -1550,7 +1548,7 @@ const getStatusText = (record) => {
                           Data: {new Date(selectedAttendanceDetails.summary.date).toLocaleDateString('it-IT')}
                         </div>
                       </div>
-                      
+
                     </div>
                   </div>
 

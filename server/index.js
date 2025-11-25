@@ -1940,7 +1940,7 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: todaySchedule.start_time,
             end_time: todaySchedule.end_time,
-            break_duration: todaySchedule.break_duration || 60
+            break_duration: todaySchedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           if (!expectedHours || expectedHours <= 0) {
@@ -2503,7 +2503,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           expectedHours = calculateExpectedHoursForSchedule({
             start_time: todaySchedule.start_time,
             end_time: todaySchedule.end_time,
-            break_duration: todaySchedule.break_duration || 60
+            break_duration: todaySchedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
         }
 
@@ -2626,7 +2626,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       // (questo è importante per la modalità test, dove potresti non aver ancora salvato presenze)
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
-      const breakDuration = break_duration || 60;
+      const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 60;
 
       // Calculate expected hours (ORE CONTRATTUALI - sempre fisse)
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
@@ -2930,7 +2930,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         const contractHours = calculateExpectedHoursForSchedule({
           start_time: schedule.start_time,
           end_time: schedule.end_time,
-          break_duration: schedule.break_duration || 60
+          break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
         });
         // Con permesso 104, NON ha lavorato (actualHours = 0), ma la giornata è considerata completa (contractHours = ore schedule)
         realTimeActualHours = 0; // NON ha lavorato (è assente giustificata)
@@ -3294,7 +3294,7 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
     const start = new Date(`2000-01-01T${start_time}`);
     const end = new Date(`2000-01-01T${end_time}`);
     const totalMinutes = (end - start) / (1000 * 60);
-    const workMinutes = totalMinutes - (break_duration || 60);
+    const workMinutes = totalMinutes - (break_duration !== null && break_duration !== undefined ? break_duration : 60);
     const workHours = workMinutes / 60;
 
     // Crea la presenza automatica
@@ -3314,7 +3314,7 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
     }
 
     // Crea i dettagli della presenza basati sull'orario specifico
-    const breakMinutes = break_duration || 60;
+    const breakMinutes = break_duration !== null && break_duration !== undefined ? break_duration : 60;
     let details = [];
 
     if (schedule.work_type === 'full_day') {
@@ -3588,7 +3588,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       const contractHours = calculateExpectedHoursForSchedule({
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        break_duration: schedule.break_duration || 60
+        break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
       });
 
       console.log(`🔵 [current-hours] User has 104 permission today - returning today's schedule hours: ${contractHours}h (from schedule ${schedule.start_time}-${schedule.end_time})`);
@@ -3598,7 +3598,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         schedule: {
           start_time: schedule.start_time,
           end_time: schedule.end_time,
-          break_duration: schedule.break_duration || 60
+          break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
         },
         currentTime,
         expectedHours: contractHours,
@@ -3665,7 +3665,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       schedule: {
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        break_duration: schedule.break_duration || 60
+        break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
       },
       currentTime,
       expectedHours,
@@ -3826,7 +3826,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         schedule: {
           start_time,
           end_time,
-          break_duration: break_duration || 60
+          break_duration: break_duration !== null && break_duration !== undefined ? break_duration : 60
         },
         currentTime,
         expectedHours: Math.round(expectedHours * 10) / 10,
@@ -3986,11 +3986,21 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
 
       console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), balance=${balanceHours.toFixed(2)}h`);
     } else {
-      // Per date passate: usa contractHours ricalcolato dallo schedule (sopra), non dal DB
-      expectedHours = contractHours;
-      remainingHours = Math.max(0, contractHours - actualHours);
-      balanceHours = actualHours - contractHours;
-      console.log(`📅 Attendance details for past date: using recalculated contractHours=${contractHours.toFixed(2)}h, actual=${actualHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
+      // Per date passate: usa i valori dal DB se presenti, altrimenti ricalcola
+      // Questo garantisce coerenza con la banca ore globale
+      if (attendance.balance_hours !== null && attendance.balance_hours !== undefined) {
+        balanceHours = attendance.balance_hours;
+        // Usa expected_hours dal DB se c'è, altrimenti usa contractHours ricalcolato
+        expectedHours = attendance.expected_hours !== null ? attendance.expected_hours : contractHours;
+        remainingHours = Math.max(0, expectedHours - actualHours);
+        console.log(`📅 Attendance details for past date: using DB values - expected=${expectedHours}h, balance=${balanceHours}h`);
+      } else {
+        // Fallback: ricalcola se mancano i dati nel DB
+        expectedHours = contractHours;
+        remainingHours = Math.max(0, contractHours - actualHours);
+        balanceHours = actualHours - contractHours;
+        console.log(`📅 Attendance details for past date: DB values missing, using recalculated - expected=${expectedHours.toFixed(2)}h, balance=${balanceHours.toFixed(2)}h`);
+      }
     }
 
     res.json({
@@ -4086,7 +4096,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           // Aggiorna il record di attendance con balance_hours = 0
@@ -5936,7 +5946,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             const expectedHours = calculateExpectedHoursForSchedule({
               start_time: schedule.start_time,
               end_time: schedule.end_time,
-              break_duration: schedule.break_duration || 60
+              break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
             });
 
             // Aggiorna o crea il record di attendance con balance_hours = 0
@@ -5982,7 +5992,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           const originalExpectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
@@ -6457,7 +6467,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           // Aggiorna o crea il record di attendance con balance_hours = 0
@@ -6608,7 +6618,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           // Recupera permessi APPROVATI per questa data (escludendo quello appena cancellato)
@@ -6692,7 +6702,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const originalExpectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
@@ -7872,7 +7882,7 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration || 60
+            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
           });
 
           if (!expectedHours || expectedHours <= 0) {
@@ -10558,7 +10568,7 @@ async function saveHourlyAttendance() {
         const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
-        const breakDuration = break_duration || 60;
+        const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 60;
 
         // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
@@ -10871,7 +10881,7 @@ async function finalizeDailyAttendance() {
         const { start_time, end_time, break_duration } = yesterdaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
-        const breakDuration = break_duration || 60;
+        const breakDuration = break_duration !== null && break_duration !== undefined ? break_duration : 60;
 
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
@@ -11164,7 +11174,7 @@ app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, a
         break_duration: s.break_duration,
         break_end: (() => {
           const [hour, min] = s.break_start_time.split(':').map(Number);
-          const endMin = min + (s.break_duration || 60);
+          const endMin = min + (s.break_duration !== null && break_duration !== undefined ? break_duration : 60);
           const endHour = hour + Math.floor(endMin / 60);
           const endMinFinal = endMin % 60;
           return `${String(endHour).padStart(2, '0')}:${String(endMinFinal).padStart(2, '0')}`;

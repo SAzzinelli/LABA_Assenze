@@ -12,12 +12,12 @@ const CONTRACT_TYPES = {
 
 function calculateWeeklyHours(workPattern) {
   if (!workPattern) return 0;
-  const { monday=0, tuesday=0, wednesday=0, thursday=0, friday=0, saturday=0, sunday=0 } = workPattern;
+  const { monday = 0, tuesday = 0, wednesday = 0, thursday = 0, friday = 0, saturday = 0, sunday = 0 } = workPattern;
   return monday + tuesday + wednesday + thursday + friday + saturday + sunday;
 }
 
 function getDailyHoursForDay(workPattern, dayOfWeek) {
-  const dayMap = { 0:'sunday',1:'monday',2:'tuesday',3:'wednesday',4:'thursday',5:'friday',6:'saturday' };
+  const dayMap = { 0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday' };
   return (workPattern && workPattern[dayMap[dayOfWeek]]) || 0;
 }
 
@@ -72,7 +72,7 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   }
 
   const { start_time, end_time, break_duration, break_start_time } = schedule;
-  
+
   // Converti currentTime in Date object se è string
   let now;
   if (typeof currentTime === 'string') {
@@ -82,22 +82,22 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   } else {
     now = new Date(currentTime);
   }
-  
+
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-  
+
   // Ore contrattuali (restano fisse per la banca ore)
   const contractExpectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration });
 
   // Calcola orari effettivi considerando i permessi
   let effectiveStartTime = start_time;
   let effectiveEndTime = end_time;
-  
+
   if (permissionData?.entry_time) {
     effectiveStartTime = permissionData.entry_time;
   }
-  
+
   if (permissionData?.exit_time) {
     effectiveEndTime = permissionData.exit_time;
   }
@@ -118,7 +118,8 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     };
   }
 
-  const breakDurationMinutes = break_duration || 60;
+  // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
+  const breakDurationMinutes = (break_duration !== null && break_duration !== undefined) ? break_duration : 60;
   let breakStartTimeStr = null;
   let breakEndTimeStr = null;
 
@@ -187,11 +188,11 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     actualHours = Math.max(0, (workedIntervalMinutes - breakMinutesElapsed) / 60);
     const breakOverlapsShift = breakStartTimeObj && breakEndTimeObj
       ? calculateOverlapMinutes(
-          effectiveStartTimeObj,
-          effectiveEndTimeObj,
-          breakStartTimeObj,
-          breakEndTimeObj
-        ) > 0
+        effectiveStartTimeObj,
+        effectiveEndTimeObj,
+        breakStartTimeObj,
+        breakEndTimeObj
+      ) > 0
       : false;
     const isOnBreak = breakOverlapsShift && breakStartTimeObj && breakEndTimeObj
       ? currentTimeObj >= breakStartTimeObj && currentTimeObj < breakEndTimeObj
@@ -210,7 +211,7 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   const roundedContractHours = Math.round(contractExpectedHours * 10) / 10;
   const balanceHours = Math.round((roundedActualHours - roundedContractHours) * 10) / 10;
   const remainingHours = Math.max(0, Math.round((effectiveExpectedHoursRaw - actualHours) * 10) / 10);
-  
+
   return {
     actualHours: roundedActualHours,
     expectedHours: roundedEffectiveExpectedHours,
