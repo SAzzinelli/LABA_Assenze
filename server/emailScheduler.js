@@ -91,12 +91,12 @@ class EmailScheduler {
         if (isRealEmail(emp.email)) {
           // Calcola dati settimanali reali
           const weekData = await this.calculateWeeklyData(emp.id);
-          
+
           await sendEmail(emp.email, 'weeklyReport', [
             `${emp.first_name} ${emp.last_name}`,
             weekData
           ]);
-          
+
           console.log(`   📧 Report inviato a: ${emp.first_name} ${emp.last_name}`);
         }
       }
@@ -123,7 +123,7 @@ class EmailScheduler {
 
       // Le email di timbratura sono state rimosse - non più necessarie
       console.log('   ⏰ Promemoria timbratura disabilitati (non più necessari)');
-      
+
       /* 
       for (const emp of employees) {
         if (isRealEmail(emp.email)) {
@@ -153,31 +153,35 @@ class EmailScheduler {
 
     const { data: weeklyAttendance } = await supabase
       .from('attendance')
-      .select('hours_worked, date')
+      .select('actual_hours, expected_hours, date')
       .eq('user_id', userId)
       .gte('date', startOfWeek.toISOString().split('T')[0])
       .lte('date', endOfWeek.toISOString().split('T')[0])
-      .not('hours_worked', 'is', null);
+      .not('actual_hours', 'is', null);
 
     let totalHours = 0;
     let daysPresent = 0;
     let overtimeHours = 0;
+    let totalExpectedHours = 0;
 
     if (weeklyAttendance) {
       weeklyAttendance.forEach(record => {
-        if (record.hours_worked) {
-          totalHours += record.hours_worked;
+        const actual = record.actual_hours || 0;
+        const expected = record.expected_hours || 8; // Fallback to 8 if missing, but should be there
+
+        if (actual > 0) {
+          totalHours += actual;
           daysPresent++;
-          
-          if (record.hours_worked > 8) {
-            overtimeHours += (record.hours_worked - 8);
+          totalExpectedHours += expected;
+
+          if (actual > expected) {
+            overtimeHours += (actual - expected);
           }
         }
       });
     }
 
-    const expectedHours = daysPresent * 8;
-    const balanceHours = totalHours - expectedHours;
+    const balanceHours = totalHours - totalExpectedHours;
 
     return {
       weekNumber: Math.ceil((currentDate.getDate() - currentDate.getDay() + 1) / 7),

@@ -119,6 +119,25 @@ class AttendanceScheduler {
 
       // Per ogni dipendente, genera la presenza automatica basata sul suo orario
       for (const employee of employees) {
+        // Check for approved leave requests for today
+        const { data: leaveRequests, error: leaveError } = await supabase
+          .from('leave_requests')
+          .select('id')
+          .eq('user_id', employee.id)
+          .eq('status', 'approved')
+          .lte('start_date', today)
+          .gte('end_date', today);
+
+        if (leaveError) {
+          console.error(`❌ Errore controllo ferie per ${employee.first_name}:`, leaveError);
+          continue;
+        }
+
+        if (leaveRequests && leaveRequests.length > 0) {
+          console.log(`   🏖️ ${employee.first_name} ${employee.last_name} è in ferie/permesso oggi. Salto generazione presenza.`);
+          continue;
+        }
+
         const schedule = employee.work_schedules[0]; // Dovrebbe essere uno solo per giorno
         console.log(`   👤 ${employee.first_name} ${employee.last_name}: ${schedule.start_time}-${schedule.end_time} (${schedule.work_type})`);
         await this.generateEmployeeAttendance(employee, schedule, today);

@@ -82,7 +82,7 @@ app.use(helmet({
 }));
 
 // CORS configuration
-const corsOrigin = process.env.NODE_ENV === 'production' 
+const corsOrigin = process.env.NODE_ENV === 'production'
   ? (process.env.FRONTEND_URL || 'https://hr.laba.biz')
   : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
@@ -91,7 +91,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Permetti richieste senza origin (es. mobile apps, Postman)
     if (!origin) return callback(null, true);
-    
+
     // In produzione, accetta solo il frontend URL
     if (process.env.NODE_ENV === 'production') {
       const allowedOrigin = process.env.FRONTEND_URL || 'https://hr.laba.biz';
@@ -105,7 +105,7 @@ app.use(cors({
         return callback(null, true);
       }
     }
-    
+
     // Default: accetta (per sicurezza, in produzione dovresti rifiutare)
     callback(null, true);
   },
@@ -134,8 +134,8 @@ app.use(session({
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: '2.0.0'
@@ -155,7 +155,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
     // Verifica che l'utente esista ancora nel database
     const { data: user, error } = await supabase
       .from('users')
@@ -206,10 +206,10 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Genera JWT token
     const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
-        role: user.role 
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -245,10 +245,10 @@ app.post('/api/auth/refresh', authenticateToken, async (req, res) => {
   try {
     // Genera un nuovo token per l'utente autenticato
     const newToken = jwt.sign(
-      { 
-        id: req.user.id, 
-        email: req.user.email, 
-        role: req.user.role 
+      {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -292,7 +292,7 @@ app.get('/api/user', authenticateToken, async (req, res) => {
 app.put('/api/user', authenticateToken, async (req, res) => {
   try {
     const updateData = {};
-    
+
     // Aggiungi solo i campi che esistono nel database
     if (req.body.phone !== undefined) updateData.phone = req.body.phone;
     if (req.body.position !== undefined) updateData.position = req.body.position;
@@ -302,12 +302,12 @@ app.put('/api/user', authenticateToken, async (req, res) => {
     if (req.body.contract_type !== undefined) updateData.contract_type = req.body.contract_type;
     if (req.body.birth_date !== undefined) updateData.birth_date = req.body.birth_date;
     if (req.body.has_104 !== undefined) updateData.has_104 = req.body.has_104;
-    
+
     // Se non ci sono dati da aggiornare, restituisci successo
     if (Object.keys(updateData).length === 0) {
       return res.json({ message: 'Nessun dato da aggiornare' });
     }
-    
+
     const { data: updatedUser, error } = await supabase
       .from('users')
       .update(updateData)
@@ -391,14 +391,14 @@ app.post('/api/user/change-password', authenticateToken, async (req, res) => {
 // Registration
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { 
-      email, 
-      password, 
-      firstName, 
-      lastName, 
-      birthDate, 
-      phone, 
-      department, 
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      birthDate,
+      phone,
+      department,
       position,
       hireDate,
       workplace,
@@ -406,17 +406,17 @@ app.post('/api/auth/register', async (req, res) => {
       has104 = false,
       workSchedules = null
     } = req.body;
-    
+
     // Validazione email dominio
     if (!email.endsWith('@labafirenze.com')) {
       return res.status(400).json({ error: 'Solo email @labafirenze.com sono accettate' });
     }
-    
+
     // Validazione dipartimento protetto
     if (department === 'System Owner') {
       return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
     }
-    
+
     // Validazione campi obbligatori (hireDate è opzionale, useremo data corrente se non fornita)
     if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !position || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
@@ -432,15 +432,15 @@ app.post('/api/auth/register', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: 'Utente già esistente' });
     }
-    
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     // Ruolo employee per tutti (admin si crea manualmente)
     const role = 'employee';
-    
+
     // Se hireDate non è fornita, usa la data corrente
     const finalHireDate = hireDate || new Date().toISOString().split('T')[0];
-    
+
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([
@@ -463,7 +463,7 @@ app.post('/api/auth/register', async (req, res) => {
       ])
       .select()
       .single();
-    
+
     if (error) {
       console.error('Registration error:', error);
       return res.status(500).json({ error: 'Errore durante la registrazione' });
@@ -495,14 +495,14 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Crea orari di lavoro per il nuovo dipendente
     let workSchedulesToCreate = [];
-    
+
     if (workSchedules) {
       // Usa gli orari forniti dall'utente
       const dayMapping = {
-        monday: 1, tuesday: 2, wednesday: 3, thursday: 4, 
+        monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
         friday: 5, saturday: 6, sunday: 0
       };
-      
+
       workSchedulesToCreate = Object.entries(workSchedules).map(([day, schedule]) => {
         // Calcola automaticamente break_start_time a metà della giornata lavorativa
         let breakStartTime = null;
@@ -517,7 +517,7 @@ app.post('/api/auth/register', async (req, res) => {
           const breakStartM = Math.round(breakStartMinutes % 60);
           breakStartTime = `${breakStartH.toString().padStart(2, '0')}:${breakStartM.toString().padStart(2, '0')}`;
         }
-        
+
         return {
           user_id: newUser.id,
           day_of_week: dayMapping[day],
@@ -603,7 +603,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.get('/api/employees', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 Fetching employees for user:', req.user.id, 'role:', req.user.role);
-    
+
     const { data: employees, error } = await supabase
       .from('users')
       .select(`
@@ -623,13 +623,13 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
 
     const formattedEmployees = employees.map(emp => {
       // Trova il work pattern attivo più recente
-      const activeWorkPattern = emp.work_patterns?.find(pattern => pattern.is_active) || 
-                               emp.work_patterns?.[0] || null;
+      const activeWorkPattern = emp.work_patterns?.find(pattern => pattern.is_active) ||
+        emp.work_patterns?.[0] || null;
 
       // Formatta gli orari dettagliati
       const detailedWorkSchedule = {};
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      
+
       if (emp.work_schedules && emp.work_schedules.length > 0) {
         emp.work_schedules.forEach(schedule => {
           const dayName = dayNames[schedule.day_of_week];
@@ -647,8 +647,8 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
               breakStartTime: schedule.break_start_time,
               break_start_time: schedule.break_start_time, // Manteniamo per compatibilità
               // Calcola ore totali per il giorno
-              totalHours: schedule.is_working_day ? 
-                (schedule.start_time && schedule.end_time ? 
+              totalHours: schedule.is_working_day ?
+                (schedule.start_time && schedule.end_time ?
                   Math.abs(new Date(`2000-01-01T${schedule.end_time}`) - new Date(`2000-01-01T${schedule.start_time}`)) / (1000 * 60 * 60) - (schedule.break_duration || 0) / 60 : 0) : 0
             };
           }
@@ -673,7 +673,7 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         birthDate: emp.birth_date || '',
         birth_date: emp.birth_date || '', // Manteniamo per compatibilità
         // Aggiungi dati orario di lavoro dettagliati
-        workSchedule: Object.keys(detailedWorkSchedule).length > 0 ? detailedWorkSchedule : 
+        workSchedule: Object.keys(detailedWorkSchedule).length > 0 ? detailedWorkSchedule :
           (activeWorkPattern ? {
             monday: { hours: activeWorkPattern.monday_hours, active: activeWorkPattern.monday_hours > 0 },
             tuesday: { hours: activeWorkPattern.tuesday_hours, active: activeWorkPattern.tuesday_hours > 0 },
@@ -685,14 +685,14 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
           } : null),
         contractType: activeWorkPattern?.contract_type || 'full_time',
         // Calcola ore settimanali standard escludendo sabato e domenica (solo lun-ven)
-        weeklyHours: Object.keys(detailedWorkSchedule).length > 0 ? 
+        weeklyHours: Object.keys(detailedWorkSchedule).length > 0 ?
           Object.entries(detailedWorkSchedule)
             .filter(([dayName]) => dayName !== 'saturday' && dayName !== 'sunday')
             .reduce((total, [, day]) => total + (day.totalHours || 0), 0) :
-          (activeWorkPattern ? 
-            (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours + 
-             activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours + 
-             activeWorkPattern.friday_hours) : emp.weekly_hours || 0),
+          (activeWorkPattern ?
+            (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours +
+              activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours +
+              activeWorkPattern.friday_hours) : emp.weekly_hours || 0),
         // Dati ferie (30 giorni per tutti i dipendenti)
         usedVacationDays: 0,
         totalVacationDays: 30
@@ -747,7 +747,7 @@ app.get('/api/admins', authenticateToken, requireAdmin, async (req, res) => {
 app.post('/api/employees/approve/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const { data: updatedEmployee, error } = await supabase
       .from('users')
       .update({
@@ -791,14 +791,14 @@ app.post('/api/employees/approve/:id', authenticateToken, requireAdmin, async (r
 app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      birthDate, 
-      department, 
-      position, 
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      birthDate,
+      department,
+      position,
       has104,
       personalEmail // Manteniamo compatibilità con vecchio endpoint
     } = req.body;
@@ -810,7 +810,7 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
 
     // Costruisci l'oggetto di aggiornamento
     const updateData = {};
-    
+
     if (firstName !== undefined) updateData.first_name = firstName;
     if (lastName !== undefined) updateData.last_name = lastName;
     if (email !== undefined) updateData.email = email;
@@ -893,18 +893,18 @@ app.post('/api/admin/employees/:id/reset-password', authenticateToken, requireAd
       const length = 12;
       const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';
       let password = '';
-      
+
       // Assicura almeno un carattere di ogni tipo
       password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]; // minuscola
       password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]; // maiuscola
       password += '0123456789'[Math.floor(Math.random() * 10)]; // numero
       password += '!@#$%&*'[Math.floor(Math.random() * 7)]; // speciale
-      
+
       // Riempi il resto
       for (let i = password.length; i < length; i++) {
         password += charset[Math.floor(Math.random() * charset.length)];
       }
-      
+
       // Mescola la password
       return password.split('').sort(() => Math.random() - 0.5).join('');
     };
@@ -965,22 +965,22 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      department, 
-      position, 
-      phone, 
-      birthDate, 
-      hireDate, 
-      workplace, 
-      contractType, 
+    const {
+      firstName,
+      lastName,
+      email,
+      department,
+      position,
+      phone,
+      birthDate,
+      hireDate,
+      workplace,
+      contractType,
       has104 = false,
       role = 'employee', // Nuovo campo per il ruolo
       workSchedules // Aggiunto per gestire l'orario di lavoro
     } = req.body;
-    
+
     // Validazione dipartimento protetto
     if (department === 'System Owner') {
       return res.status(400).json({ error: 'Dipartimento "System Owner" non assegnabile' });
@@ -1147,7 +1147,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
     // Elimina prima i record correlati (attendance, requests, etc.)
     const tablesToClean = [
       'attendance',
-      'leave_requests', 
+      'leave_requests',
       'sick_leave_requests',
       'vacation_requests',
       'business_trips',
@@ -1160,7 +1160,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
         .from(table)
         .delete()
         .eq('user_id', id);
-      
+
       if (deleteError) {
         console.warn(`Warning: Could not clean ${table} for user ${id}:`, deleteError);
       }
@@ -1206,7 +1206,7 @@ app.delete('/api/employees/:id', authenticateToken, async (req, res) => {
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
     const { date, userId, month, year } = req.query;
-    
+
     // IMPORTANTE: Leggi SEMPRE da attendance (dati reali)
     // La modalità test viene usata solo per i calcoli real-time (orario simulato)
     // I dati di test vengono salvati in test_attendance, ma per la visualizzazione usiamo sempre i dati reali
@@ -1222,7 +1222,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     if (req.user.role === 'employee') {
       query = query.eq('user_id', req.user.id);
     }
-    
+
     if (date) {
       query = query.eq('date', date);
     } else if (month && year) {
@@ -1234,7 +1234,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0];
       query = query.gte('date', startDate).lte('date', endDate);
     }
-    
+
     if (userId) {
       query = query.eq('user_id', userId);
     } else if (req.user.role === 'employee') {
@@ -1255,14 +1255,14 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       .from('leave_requests')
       .select('*')
       .eq('status', 'approved');
-    
+
     // Filtra per user_id solo se specificato, altrimenti per admin mostra tutte le leave requests
     if (userId) {
       leaveQuery = leaveQuery.eq('user_id', userId);
     } else if (req.user.role === 'employee') {
       leaveQuery = leaveQuery.eq('user_id', req.user.id);
     }
-    
+
     if (month && year) {
       const monthNum = parseInt(month, 10);
       const yearNum = parseInt(year, 10);
@@ -1273,7 +1273,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     const { data: leaveRequests, error: leaveError } = await leaveQuery;
-    
+
     if (leaveError) {
       console.error('Leave requests fetch error:', leaveError);
     }
@@ -1281,7 +1281,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     // Mappa le attendance con informazioni su assenze giustificate
     const attendanceWithLeaves = attendance.map(record => {
       const recordDate = record.date;
-      
+
       // Controlla se c'è una leave request approvata per questa data
       const hasApprovedLeave = leaveRequests?.some(leave => {
         const leaveStart = new Date(leave.start_date).toISOString().split('T')[0];
@@ -1321,20 +1321,53 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
   try {
     const { date, actualHours, expectedHours, balanceHours, notes } = req.body;
-    
+
     if (!date || actualHours === undefined || expectedHours === undefined) {
       return res.status(400).json({ error: 'Dati mancanti' });
     }
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
-    
+
+    // SECURITY CHECK: Recalculate actualHours from details if possible
+    // This prevents users from sending arbitrary hours without backing details
+    let validatedActualHours = parseFloat(actualHours);
+
+    // Fetch details for this day
+    const { data: details, error: detailsError } = await supabase
+      .from('attendance_details')
+      .select('start_time, end_time')
+      .eq('user_id', targetUserId)
+      .eq('date', date)
+      .eq('status', 'completed');
+
+    if (!detailsError && details && details.length > 0) {
+      // Calculate total minutes from details
+      let totalMinutes = 0;
+      details.forEach(detail => {
+        if (detail.start_time && detail.end_time) {
+          const start = new Date(`2000-01-01T${detail.start_time}`);
+          const end = new Date(`2000-01-01T${detail.end_time}`);
+          const diff = (end - start) / (1000 * 60);
+          if (diff > 0) totalMinutes += diff;
+        }
+      });
+
+      const calculatedHours = Math.round((totalMinutes / 60) * 10) / 10;
+
+      // If calculated hours differ significantly (> 0.5h) from sent hours, use calculated
+      if (Math.abs(calculatedHours - validatedActualHours) > 0.5) {
+        console.warn(`⚠️ Security Warning: User ${targetUserId} sent ${validatedActualHours}h but details sum to ${calculatedHours}h. Using calculated.`);
+        validatedActualHours = calculatedHours;
+      }
+    }
+
     // Aggiorna o inserisci il record di presenza
     const { data, error } = await supabase
       .from('attendance')
       .upsert({
         user_id: targetUserId,
         date: date,
-        actual_hours: parseFloat(actualHours),
+        actual_hours: validatedActualHours,
         expected_hours: parseFloat(expectedHours),
         balance_hours: parseFloat(balanceHours || 0),
         notes: notes || '',
@@ -1366,7 +1399,7 @@ app.put('/api/attendance/save-daily', authenticateToken, async (req, res) => {
 app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
   try {
     const { date, actualHours, expectedHours, balanceHours, notes } = req.body;
-    
+
     if (!date || actualHours === undefined || expectedHours === undefined) {
       return res.status(400).json({ error: 'Dati mancanti' });
     }
@@ -1428,7 +1461,7 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
     }
 
     const { data, error } = await query;
-    
+
     // Ottieni la data di oggi per il controllo permessi approvati
     const today = new Date().toISOString().split('T')[0];
 
@@ -1464,18 +1497,18 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
     for (const row of data || []) {
       const uid = row.user_id;
       const dateStr = row.date;
-      
+
       // Se questo giorno ha un permesso 104, non includerlo nel balance (o usa 0)
       const hasPerm104 = perm104Map[uid]?.includes(dateStr);
       if (hasPerm104) {
         // Con permesso 104, balance = 0
         continue;
       }
-      
+
       // Per OGGI: includi solo se c'è un permesso approvato (balance già definitivo)
       if (dateStr === today) {
         const hasApprovedPermission = row.notes && (
-          row.notes.includes('Permesso approvato') || 
+          row.notes.includes('Permesso approvato') ||
           row.notes.includes('Permesso creato dall\'admin')
         );
         if (!hasApprovedPermission) {
@@ -1483,7 +1516,7 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
           continue;
         }
       }
-      
+
       const bal = row.balance_hours || 0;
       totals[uid] = (totals[uid] || 0) + bal;
     }
@@ -1501,11 +1534,11 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     const { year, month, userId } = req.query;
     const targetUserId = userId || req.user.id;
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
-    
+
     if (isTestMode) {
       console.log(`🧪 TEST MODE: Hours balance per ${today} alle ${currentTime}`);
     }
-    
+
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -1542,25 +1575,25 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
 
     // Calculate real-time hours for today (hybrid system) - usa data simulata se in test mode
     const todayRecord = attendance.find(record => record.date === today);
-    
+
     let realTimeActualHours = 0;
     let realTimeContractHours = 0;
     let realTimeEffectiveHours = 0;
     let realTimeRemainingHours = 0;
     let hasRealTimeCalculation = false;
-    
+
     // Always calculate real-time if today is within the month range (usa data simulata se in test mode)
-    const isCurrentMonth = now.getFullYear() === parseInt(targetYear) && 
-                          (now.getMonth() + 1) === parseInt(targetMonth);
-    
+    const isCurrentMonth = now.getFullYear() === parseInt(targetYear) &&
+      (now.getMonth() + 1) === parseInt(targetMonth);
+
     if (isCurrentMonth && workSchedules && workSchedules.length > 0) {
       const dayOfWeek = now.getDay();
-      
+
       // Find today's work schedule
-      const todaySchedule = workSchedules.find(schedule => 
+      const todaySchedule = workSchedules.find(schedule =>
         schedule.day_of_week === dayOfWeek && schedule.is_working_day
       );
-      
+
       if (todaySchedule) {
         // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
         const { data: permissionsToday } = await supabase
@@ -1571,14 +1604,14 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
           .eq('status', 'approved')
           .lte('start_date', today)
           .gte('end_date', today);
-        
+
         let permissionData = null;
         if (permissionsToday && permissionsToday.length > 0) {
           let totalHours = 0;
           let exitTime = null;
           let entryTime = null;
           const permissionTypes = new Set();
-          
+
           permissionsToday.forEach(perm => {
             totalHours += parseFloat(perm.hours || 0);
             if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -1597,20 +1630,20 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
               permissionTypes.add('full_day');
             }
           });
-          
+
           // Crea permissionData se ci sono permessi (anche solo full_day senza exitTime/entryTime)
           if (exitTime || entryTime || permissionTypes.has('full_day')) {
             permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
           }
         }
-        
+
         // USA LA FUNZIONE CENTRALIZZATA per calcolare le ore real-time (usa currentTime da getCurrentDateTime)
         const result = calculateRealTimeHours(todaySchedule, currentTime, permissionData);
         realTimeActualHours = result.actualHours;
         realTimeEffectiveHours = result.expectedHours;
         realTimeContractHours = result.contractHours;
         realTimeRemainingHours = result.remainingHours;
-        
+
         hasRealTimeCalculation = true;
         console.log(`🕐 Real-time calculation (centralized) for today: ${realTimeActualHours.toFixed(2)}h worked, ${realTimeContractHours.toFixed(2)}h contract, ${realTimeEffectiveHours.toFixed(2)}h effective (remaining ${realTimeRemainingHours.toFixed(2)}h)`);
       }
@@ -1619,16 +1652,16 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
     // Calculate statistics with real-time data for today ONLY
     let totalActualHours = 0;
     let totalExpectedHours = 0;
-    
+
     // If we have real-time calculation for today, use ONLY that (ignore DB record for today)
     // IMPORTANTE: Questo assicura che i dati real-time sovrascrivano sempre i dati del database per oggi
     if (hasRealTimeCalculation && isCurrentMonth) {
       // Use real-time for today (IGNORA completamente il record DB per oggi)
       totalActualHours = realTimeActualHours;
       totalExpectedHours = realTimeContractHours;
-      
+
       console.log(`🔄 Using real-time for today: ${realTimeActualHours.toFixed(2)}h actual, ${realTimeContractHours.toFixed(2)}h contract`);
-      
+
       // Add other days from database (excluding today if it exists)
       attendance.forEach(record => {
         if (record.date !== today) {
@@ -1646,16 +1679,16 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
         totalExpectedHours += record.expected_hours || 8;
       });
     }
-    
+
     // Calcola il saldo totale: usa il calcolo real-time per oggi, database per i giorni passati
     const totalBalance = totalActualHours - totalExpectedHours;
-    
+
     // Per overtime e deficit, ricalcola anche per oggi usando il balance real-time
     let todayBalanceHours = 0;
     if (hasRealTimeCalculation && isCurrentMonth) {
       todayBalanceHours = realTimeActualHours - realTimeContractHours;
     }
-    
+
     const overtimeHours = attendance.reduce((sum, record) => {
       if (record.date === today && hasRealTimeCalculation && isCurrentMonth) {
         // Usa il balance real-time per oggi
@@ -1664,7 +1697,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       const balance = record.balance_hours || 0;
       return balance > 0 ? sum + balance : sum;
     }, 0);
-    
+
     // Deficit = ore mancanti (sempre positivo per chiarezza)
     const deficitHours = attendance.reduce((sum, record) => {
       if (record.date === today && hasRealTimeCalculation && isCurrentMonth) {
@@ -1674,11 +1707,11 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       const balance = record.balance_hours || 0;
       return balance < 0 ? sum + Math.abs(balance) : sum;
     }, 0);
-    
+
     // Calcola workingDays considerando anche il calcolo real-time di oggi
     let workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
     let absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
-    
+
     // Se abbiamo calcolo real-time per oggi, aggiungilo ai workingDays se > 0
     if (hasRealTimeCalculation && isCurrentMonth && realTimeActualHours > 0) {
       // Controlla se oggi è già nel database
@@ -1723,9 +1756,9 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { 
-      actual_hours, 
-      notes 
+    const {
+      actual_hours,
+      notes
     } = req.body;
 
     // Calcola il saldo ore automaticamente
@@ -1748,7 +1781,7 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', attendance.date)
       .gte('end_date', attendance.date);
-    
+
     let balance_hours;
     if (!permError && approvedPermissions && approvedPermissions.length > 0) {
       // IMPORTANTE: Se c'è un permesso approvato, balance = -permesso_hours
@@ -1892,7 +1925,7 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
         const iso = d.toISOString().split('T')[0];
         const dow = d.getDay();
         const todaySchedule = schedules.find(s => s.day_of_week === dow && s.is_working_day === true);
-        
+
         if (!todaySchedule) {
           console.log(`⏭️ Skip ${iso} (day ${dow}): no working schedule`);
           continue;
@@ -1904,9 +1937,9 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
         }
 
         try {
-          const expectedHours = calculateExpectedHoursForSchedule({ 
-            start_time: todaySchedule.start_time, 
-            end_time: todaySchedule.end_time, 
+          const expectedHours = calculateExpectedHoursForSchedule({
+            start_time: todaySchedule.start_time,
+            end_time: todaySchedule.end_time,
             break_duration: todaySchedule.break_duration || 60
           });
 
@@ -1969,7 +2002,7 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
 app.get('/api/work-schedules', authenticateToken, async (req, res) => {
   try {
     const { userId } = req.query;
-    
+
     // Se è admin e non specifica userId, restituisce tutti i work schedules
     if (req.user.role === 'admin' && !userId) {
       const { data: schedules, error } = await supabase
@@ -1979,12 +2012,12 @@ app.get('/api/work-schedules', authenticateToken, async (req, res) => {
           users!work_schedules_user_id_fkey(first_name, last_name, id)
         `)
         .order('user_id, day_of_week');
-      
+
       if (error) {
         console.error('Work schedules fetch error:', error);
         return res.status(500).json({ error: 'Errore nel recupero degli orari' });
       }
-      
+
       // Log dettagliato per debug
       console.log(`📅 [work-schedules GET] Returning ${schedules?.length || 0} schedules for admin`);
       if (schedules && schedules.length > 0) {
@@ -1995,13 +2028,13 @@ app.get('/api/work-schedules', authenticateToken, async (req, res) => {
           console.log(`      - ${userName}: is_working_day=${s.is_working_day}, start=${s.start_time || 'null'}, end=${s.end_time || 'null'}`);
         });
       }
-      
+
       return res.json(schedules);
     }
-    
+
     // Per dipendenti o admin che specifica userId
     const targetUserId = userId || req.user.id;
-    
+
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -2030,7 +2063,7 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
   try {
     const { userId, schedules } = req.body;
     const targetUserId = userId || req.user.id;
-    
+
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -2063,7 +2096,7 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
       .from('work_schedules')
       .insert(schedulesWithUserId)
       .select();
-    
+
     // Log cosa è stato effettivamente salvato
     if (!error && newSchedules) {
       console.log(`✅ [work-schedules] Successfully saved ${newSchedules.length} schedules for user ${targetUserId}`);
@@ -2097,18 +2130,18 @@ app.post('/api/work-schedules', authenticateToken, async (req, res) => {
 app.get('/api/debug/stats', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Check if tables exist and have data
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('*', { count: 'exact' })
       .limit(5);
-    
+
     const { data: attendance, error: attError } = await supabase
       .from('attendance')
       .select('*', { count: 'exact' })
       .limit(5);
-    
+
     const { data: leaveRequests, error: leaveError } = await supabase
       .from('leave_requests')
       .select('*', { count: 'exact' })
@@ -2144,7 +2177,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    
+
     // Total employees
     const { count: totalEmployees } = await supabase
       .from('employees')
@@ -2172,7 +2205,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         .select('total_balance')
         .eq('year', currentYear)
         .eq('month', currentMonth);
-      
+
       monthlyBalance = balances?.reduce((sum, balance) => sum + (balance.total_balance || 0), 0) || 0;
     } else {
       // Employee vede solo il proprio
@@ -2183,7 +2216,7 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
         .eq('year', currentYear)
         .eq('month', currentMonth)
         .single();
-      
+
       monthlyBalance = balance?.total_balance || 0;
     }
 
@@ -2211,29 +2244,29 @@ app.get('/api/dashboard/attendance', authenticateToken, async (req, res) => {
     // Get last 7 days
     const today = new Date();
     const weekData = [];
-    
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       let presenzeQuery = supabase
         .from('attendance')
         .select('*', { count: 'exact', head: true })
         .eq('date', dateStr);
-      
+
       // Calcola assenze: per ora non abbiamo un sistema di assenze
       let assenzeQuery = { count: 0 };
-      
+
       // Se è employee, mostra solo i propri dati
       if (req.user.role === 'employee') {
         presenzeQuery = presenzeQuery.eq('user_id', req.user.id);
         assenzeQuery = assenzeQuery.eq('user_id', req.user.id);
       }
-      
+
       const { count: presenze } = await presenzeQuery;
       const { count: assenze } = await assenzeQuery;
-      
+
       weekData.push({
         name: date.toLocaleDateString('it-IT', { weekday: 'short' }),
         presenze: presenze || 0,
@@ -2258,7 +2291,7 @@ app.get('/api/dashboard/departments', authenticateToken, async (req, res) => {
 
     // Count employees per department con gestione errore campo mancante
     let deptCount = {};
-    
+
     try {
       const { data: departments, error } = await supabase
         .from('users')
@@ -2310,11 +2343,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const dayOfWeek = now.getDay();
-    
+
     if (isTestMode) {
       console.log(`🧪 ADMIN TEST MODE: Visualizzazione presenze per ${today} alle ${currentTime}`);
     }
-    
+
     // Get all users with their work schedules
     const { data: allUsers, error: usersError } = await supabase
       .from('users')
@@ -2323,7 +2356,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         work_schedules!left(*)
       `)
       .neq('role', 'admin');
-    
+
     if (usersError) {
       console.error('Users error:', usersError);
       return res.status(500).json({ error: 'Errore nel recupero degli utenti' });
@@ -2331,17 +2364,17 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
 
     console.log(`🔍 Admin current attendance - Day: ${dayOfWeek}, Time: ${currentHour}:${currentMinute}`);
     console.log(`🔍 Total users found: ${allUsers.length}`);
-    
+
     // IMPORTANTE: Leggi SEMPRE da attendance e leave_requests (dati reali)
     // La modalità test viene usata solo per simulare l'orario nei calcoli real-time
     // I dati di test vengono salvati in test_attendance, ma per la visualizzazione usiamo sempre i dati reali
-    
+
     // Recupera presenze per oggi (SEMPRE da attendance - dati reali)
     const { data: attendanceToday, error: attendanceError } = await supabase
       .from('attendance')
       .select('user_id, actual_hours, expected_hours')
       .eq('date', today);
-    
+
     // Crea mappa user_id -> presenza per oggi
     const attendanceMap = {};
     if (attendanceToday && !attendanceError) {
@@ -2353,7 +2386,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       });
     }
     console.log(`📅 Presenze oggi (attendance):`, Object.keys(attendanceMap).length, 'utenti');
-    
+
     // Recupera malattie per oggi (SEMPRE da leave_requests - dati reali)
     const { data: sickToday, error: sickError } = await supabase
       .from('leave_requests')
@@ -2362,7 +2395,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     // Crea mappa user_id -> date per malattie
     const sickMap = {};
     if (sickToday && !sickError) {
@@ -2372,7 +2405,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       });
     }
     console.log(`🤒 Malattie oggi:`, Object.keys(sickMap).length);
-    
+
     // Recupera permessi 104 per oggi (SEMPRE da leave_requests - dati reali)
     const { data: perm104Today, error: perm104Error } = await supabase
       .from('leave_requests')
@@ -2381,7 +2414,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     // Crea mappa user_id -> date per permessi 104
     const perm104Map = {};
     if (perm104Today && !perm104Error) {
@@ -2391,7 +2424,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       });
     }
     console.log(`🔵 Permessi 104 oggi:`, Object.keys(perm104Map).length);
-    
+
     // Recupera permessi approvati per oggi per tutti gli utenti (SEMPRE da leave_requests - dati reali)
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
@@ -2400,7 +2433,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     // Crea una mappa user_id -> array di permessi (per gestire test mode per utente)
     const permissionsMap = {};
     if (permissionsToday && !permError) {
@@ -2417,7 +2450,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       });
       console.log(`🕐 Permessi oggi:`, Object.keys(permissionsMap).length, 'utenti con permessi');
     }
-    
+
     // Calculate real-time attendance for each user
     // Per ogni utente, controlla se ha modalità test attiva e usa quella data/ora
     const currentAttendance = await Promise.all(allUsers.map(async (user) => {
@@ -2427,12 +2460,12 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       const userDayOfWeek = userNow.getDay();
       const userCurrentHour = userNow.getHours();
       const userCurrentMinute = userNow.getMinutes();
-      
+
       console.log(`🔍 Processing user: ${user.first_name} ${user.last_name}`);
       console.log(`🔍 User work_schedules:`, user.work_schedules?.length || 0);
-      
+
       // Controlla se è in malattia (usa la data dell'utente se in test mode)
-      const userSick = sickMap[user.id]?.some(s => 
+      const userSick = sickMap[user.id]?.some(s =>
         userToday >= s.start && userToday <= s.end
       );
       if (userSick) {
@@ -2451,19 +2484,19 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           permission_end_time: null
         };
       }
-      
+
       // Controlla se ha permesso 104 (usa la data dell'utente se in test mode)
-      const userPerm104 = perm104Map[user.id]?.some(p => 
+      const userPerm104 = perm104Map[user.id]?.some(p =>
         userToday >= p.start && userToday <= p.end
       );
       if (userPerm104) {
         console.log(`🔵 ${user.first_name} ha permesso 104 oggi`);
-        
+
         // Trova lo schedule per calcolare le ore attese complete
-        let todaySchedule = user.work_schedules?.find(schedule => 
+        let todaySchedule = user.work_schedules?.find(schedule =>
           schedule.day_of_week === userDayOfWeek && schedule.is_working_day
         );
-        
+
         // Calcola ore attese complete dalla giornata lavorativa
         let expectedHours = 0;
         if (todaySchedule && todaySchedule.start_time && todaySchedule.end_time) {
@@ -2473,7 +2506,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             break_duration: todaySchedule.break_duration || 60
           });
         }
-        
+
         return {
           user_id: user.id,
           first_name: user.first_name,
@@ -2488,21 +2521,21 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           permission_end_time: null
         };
       }
-      
+
       // Find today's work schedule (usa il giorno della settimana dell'utente se in test mode)
-      let todaySchedule = user.work_schedules?.find(schedule => 
+      let todaySchedule = user.work_schedules?.find(schedule =>
         schedule.day_of_week === userDayOfWeek && schedule.is_working_day
       );
-      
+
       console.log(`🔍 Today schedule found:`, !!todaySchedule);
       if (todaySchedule) {
         console.log(`🔍 Schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}, break: ${todaySchedule.break_duration}min`);
       }
-      
+
       // Se non trova schedule, crea automaticamente quelli di default
       if (!todaySchedule || !user.work_schedules || user.work_schedules.length === 0) {
         console.log(`🔧 [current] Creating default schedules for user ${user.id} (${user.first_name})...`);
-        
+
         const defaultSchedules = [
           { user_id: user.id, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
           { user_id: user.id, day_of_week: 2, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
@@ -2512,11 +2545,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           { user_id: user.id, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 },
           { user_id: user.id, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
         ];
-        
+
         const { error: createError } = await supabase
           .from('work_schedules')
           .insert(defaultSchedules);
-        
+
         if (createError) {
           console.error(`❌ [current] Failed to create default schedules for ${user.first_name}:`, createError);
           return {
@@ -2533,9 +2566,9 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             permission_end_time: null
           };
         }
-        
+
         console.log(`✅ [current] Default schedules created for ${user.first_name}!`);
-        
+
         // Usa lo schedule di oggi dai default appena creati
         const newTodaySchedule = defaultSchedules.find(s => s.day_of_week === userDayOfWeek);
         if (!newTodaySchedule || !newTodaySchedule.is_working_day) {
@@ -2553,19 +2586,19 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             permission_end_time: null
           };
         }
-        
+
         todaySchedule = newTodaySchedule;
         console.log(`🔍 Using new schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}`);
       }
 
       // Se c'è una presenza salvata per oggi, controllare se la giornata è completata
       const savedAttendance = attendanceMap[user.id];
-      
+
       // Determina se la giornata è completata (orario corrente > orario fine)
       const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
       const [scheduleEndHour, scheduleEndMin] = end_time.split(':').map(Number);
       const isCompleted = userCurrentHour > scheduleEndHour || (userCurrentHour === scheduleEndHour && userCurrentMinute >= scheduleEndMin);
-      
+
       // Usa la presenza salvata SOLO se la giornata è completata
       if (savedAttendance && isCompleted) {
         console.log(`📅 ${user.first_name} - Giornata completata, uso dati salvati: ${savedAttendance.actual_hours}h / ${savedAttendance.expected_hours}h`);
@@ -2583,35 +2616,35 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           permission_end_time: null
         };
       }
-      
+
       // Se la giornata NON è completata, calcola sempre real-time (anche se esiste presenza salvata)
       if (savedAttendance && !isCompleted) {
         console.log(`🕐 ${user.first_name} - Giornata in corso, ignoro dati salvati (${savedAttendance.actual_hours}h) e calcolo real-time`);
       }
-      
+
       // Se non c'è presenza salvata, calcola se dovrebbe essere presente basandosi sull'orario
       // (questo è importante per la modalità test, dove potresti non aver ancora salvato presenze)
       const [startHour, startMin] = start_time.split(':').map(Number);
       const [endHour, endMin] = end_time.split(':').map(Number);
       const breakDuration = break_duration || 60;
-      
+
       // Calculate expected hours (ORE CONTRATTUALI - sempre fisse)
       const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       const workMinutes = totalMinutes - breakDuration;
       const expectedHours = calculateExpectedHoursForSchedule({ start_time: start_time, end_time: end_time, break_duration }); // NON modificare per permessi early_exit/late_entry!
-      
+
       // Controlla se c'è un permesso per la data dell'utente (usa la data dell'utente se in test mode)
-      const userPermissions = permissionsMap[user.id]?.filter(p => 
+      const userPermissions = permissionsMap[user.id]?.filter(p =>
         userToday >= p.start_date && userToday <= p.end_date
       ) || [];
-      
+
       let permissionData = null;
       if (userPermissions.length > 0) {
         let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
         const permissionTypes = new Set();
-        
+
         userPermissions.forEach(perm => {
           totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -2627,7 +2660,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             }
           }
         });
-        
+
         if (exitTime || entryTime) {
           permissionData = {
             hours: totalHours,
@@ -2637,13 +2670,13 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           };
         }
       }
-      
+
       // Calcola l'orario di fine/inizio effettivo considerando i permessi
       let effectiveEndHour = endHour;
       let effectiveEndMin = endMin;
       let effectiveStartHour = startHour;
       let effectiveStartMin = startMin;
-      
+
       // PERMESSO USCITA ANTICIPATA: non riduce expectedHours, crea solo debito
       if (permissionData?.exit_time) {
         const [exitHour, exitMin] = permissionData.exit_time.split(':').map(Number);
@@ -2651,7 +2684,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         effectiveEndMin = exitMin;
         console.log(`🚪 ${user.first_name} ha permesso uscita anticipata alle ${permissionData.exit_time} → potenziale debito di ${permissionData.hours}h`);
       }
-      
+
       // PERMESSO ENTRATA POSTICIPATA: non riduce expectedHours, crea solo debito
       if (permissionData?.entry_time) {
         const [entryHour, entryMin] = permissionData.entry_time.split(':').map(Number);
@@ -2659,11 +2692,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         effectiveStartMin = entryMin;
         console.log(`🚪 ${user.first_name} ha permesso entrata posticipata alle ${permissionData.entry_time} → potenziale debito di ${permissionData.hours}h`);
       }
-      
+
       // Calculate real-time hours (same logic as employee page)
       let actualHours = 0;
       let status = 'not_started';
-      
+
       // Controlla se ha iniziato (usa effectiveStartHour per late_entry e userCurrentHour per test mode)
       if (userCurrentHour < effectiveStartHour || (userCurrentHour === effectiveStartHour && userCurrentMinute < effectiveStartMin)) {
         actualHours = 0;
@@ -2681,13 +2714,13 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         const minutesFromStart = (userCurrentHour - effectiveStartHour) * 60 + (userCurrentMinute - effectiveStartMin);
         const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const hasLunchBreak = totalWorkMinutes > 300;
-        
+
         let totalMinutesWorked = 0;
-        
+
         if (hasLunchBreak) {
           // FULL DAY: usa break_start_time se disponibile, altrimenti 13:00
           const currentTimeInMinutes = userCurrentHour * 60 + userCurrentMinute;
-          
+
           let breakStartInMinutes;
           if (break_start_time) {
             const [breakHour, breakMin] = break_start_time.split(':').map(Number);
@@ -2696,14 +2729,14 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             // Default: 13:00
             breakStartInMinutes = 13 * 60;
           }
-          
+
           const breakEndInMinutes = breakStartInMinutes + breakDuration;
-          
+
           console.log(`🔍 ${user.first_name} - Current: ${userCurrentHour}:${userCurrentMinute}, Start: ${effectiveStartHour}:${effectiveStartMin}, Break: ${break_start_time || '13:00'}`);
-          
+
           // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
           const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
-          
+
           if (currentTimeInMinutes < breakStartInMinutes) {
             // Prima della pausa pranzo
             totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
@@ -2728,12 +2761,12 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           status = 'working';
           console.log(`✅ ${user.first_name} - WORKING (half day): ${totalMinutesWorked}min`);
         }
-        
+
         actualHours = totalMinutesWorked / 60;
       }
-      
+
       const balanceHours = actualHours - expectedHours;
-      
+
       const result = {
         user_id: user.id,
         first_name: user.first_name,
@@ -2750,7 +2783,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         break_duration: breakDuration,
         permission_end_time: permissionData?.exit_time || null
       };
-      
+
       console.log(`🔍 User result: ${result.name} - Status: ${result.status}, Hours: ${result.actual_hours}h, Working day: ${result.is_working_day}`);
       return result;
     }));
@@ -2782,7 +2815,7 @@ app.get('/api/attendance/sick-today', authenticateToken, async (req, res) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Get all approved sick leave requests for today
     const { data: sickLeaves, error: leaveError } = await supabase
       .from('leave_requests')
@@ -2794,7 +2827,7 @@ app.get('/api/attendance/sick-today', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     if (leaveError) {
       console.error('Sick leave fetch error:', leaveError);
       return res.status(500).json({ error: 'Errore nel recupero delle malattie' });
@@ -2824,7 +2857,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
   try {
     const { userId } = req.query;
     const targetUserId = userId || req.user.id;
-    
+
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -2835,7 +2868,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       .from('attendance')
       .select('balance_hours, date, actual_hours, expected_hours, notes')
       .eq('user_id', targetUserId);
-    
+
     if (error) {
       console.error('Total balance fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero del saldo' });
@@ -2862,10 +2895,10 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     }
 
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
-    
+
     // CONTROLLA PRIMA se oggi ha un permesso 104 - se sì, salta il calcolo real-time
     const hasPerm104Today = perm104Dates.has(today);
-    
+
     let todayBalance = 0;
     let todayRecord = allAttendance.find(r => r.date === today);
     let hasRealTimeCalculation = false;
@@ -2874,7 +2907,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
     let realTimeContractHours = 0;
     let realTimeRemainingHours = 0;
     let todayBalanceHours = 0;
-    
+
     // Carica lo schedule per oggi (serve per verificare se la giornata è conclusa)
     const dayOfWeek = now.getDay();
     let schedule = null;
@@ -2886,7 +2919,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       .eq('is_working_day', true)
       .single();
     schedule = scheduleData || null;
-    
+
     // Se oggi c'è un permesso 104, il balance è SEMPRE 0 (non calcolare real-time)
     if (hasPerm104Today) {
       console.log(`🔵 [total-balance] Today has 104 permission - skipping real-time calculation, balance = 0`);
@@ -2913,74 +2946,74 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
         // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
         const [startHour, startMin] = schedule.start_time.split(':').map(Number);
-      const currentHour = now.getHours();
-      const currentMin = now.getMinutes();
-      const currentTimeInMinutes = currentHour * 60 + currentMin;
-      const startTimeInMinutes = startHour * 60 + startMin;
-      
-      // Se siamo prima dell'inizio del turno (es. mezzanotte), usa il balance del DB
-      if (currentTimeInMinutes < startTimeInMinutes) {
-        console.log(`⏰ Before work start (${currentTime}:${currentMin < 10 ? '0' + currentMin : currentMin} < ${schedule.start_time}), using DB balance instead of real-time to avoid incorrect credits`);
-        if (todayRecord) {
-          todayBalance = todayRecord.balance_hours || 0;
+        const currentHour = now.getHours();
+        const currentMin = now.getMinutes();
+        const currentTimeInMinutes = currentHour * 60 + currentMin;
+        const startTimeInMinutes = startHour * 60 + startMin;
+
+        // Se siamo prima dell'inizio del turno (es. mezzanotte), usa il balance del DB
+        if (currentTimeInMinutes < startTimeInMinutes) {
+          console.log(`⏰ Before work start (${currentTime}:${currentMin < 10 ? '0' + currentMin : currentMin} < ${schedule.start_time}), using DB balance instead of real-time to avoid incorrect credits`);
+          if (todayRecord) {
+            todayBalance = todayRecord.balance_hours || 0;
+          } else {
+            todayBalance = 0;
+          }
         } else {
-          todayBalance = 0;
-        }
-      } else {
-        // Siamo durante o dopo il turno, usa calcolo real-time
-      // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
-      const { data: permissionsToday } = await supabase
-        .from('leave_requests')
-        .select('hours, permission_type, exit_time, entry_time')
-        .eq('user_id', targetUserId)
-        .eq('type', 'permission')
-        .eq('status', 'approved')
-        .lte('start_date', today)
-        .gte('end_date', today);
-      
-      let permissionData = null;
-      if (permissionsToday && permissionsToday.length > 0) {
-        let totalHours = 0;
-        let exitTime = null;
-        let entryTime = null;
-        const permissionTypes = new Set();
-        
-        permissionsToday.forEach(perm => {
-          totalHours += parseFloat(perm.hours || 0);
-          if (perm.permission_type === 'early_exit' && perm.exit_time) {
-            permissionTypes.add('early_exit');
-            if (!exitTime || perm.exit_time < exitTime) {
-              exitTime = perm.exit_time;
+          // Siamo durante o dopo il turno, usa calcolo real-time
+          // Recupera permessi per oggi (SEMPRE da leave_requests - dati reali)
+          const { data: permissionsToday } = await supabase
+            .from('leave_requests')
+            .select('hours, permission_type, exit_time, entry_time')
+            .eq('user_id', targetUserId)
+            .eq('type', 'permission')
+            .eq('status', 'approved')
+            .lte('start_date', today)
+            .gte('end_date', today);
+
+          let permissionData = null;
+          if (permissionsToday && permissionsToday.length > 0) {
+            let totalHours = 0;
+            let exitTime = null;
+            let entryTime = null;
+            const permissionTypes = new Set();
+
+            permissionsToday.forEach(perm => {
+              totalHours += parseFloat(perm.hours || 0);
+              if (perm.permission_type === 'early_exit' && perm.exit_time) {
+                permissionTypes.add('early_exit');
+                if (!exitTime || perm.exit_time < exitTime) {
+                  exitTime = perm.exit_time;
+                }
+              }
+              if (perm.permission_type === 'late_entry' && perm.entry_time) {
+                permissionTypes.add('late_entry');
+                if (!entryTime || perm.entry_time > entryTime) {
+                  entryTime = perm.entry_time;
+                }
+              }
+            });
+
+            if (exitTime || entryTime) {
+              permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
             }
           }
-          if (perm.permission_type === 'late_entry' && perm.entry_time) {
-            permissionTypes.add('late_entry');
-            if (!entryTime || perm.entry_time > entryTime) {
-              entryTime = perm.entry_time;
-            }
-          }
-        });
-        
-        if (exitTime || entryTime) {
-          permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
-        }
-      }
-      
-      // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
-      const result = calculateRealTimeHours(schedule, currentTime, permissionData);
-      todayBalance = result.balanceHours;
-        todayBalanceHours = result.balanceHours;
-        realTimeActualHours = result.actualHours;
-        realTimeEffectiveHours = result.expectedHours;
-        realTimeContractHours = result.contractHours;
-        realTimeRemainingHours = result.remainingHours;
-        hasRealTimeCalculation = true;
-      
-      console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
+
+          // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
+          const result = calculateRealTimeHours(schedule, currentTime, permissionData);
+          todayBalance = result.balanceHours;
+          todayBalanceHours = result.balanceHours;
+          realTimeActualHours = result.actualHours;
+          realTimeEffectiveHours = result.expectedHours;
+          realTimeContractHours = result.contractHours;
+          realTimeRemainingHours = result.remainingHours;
+          hasRealTimeCalculation = true;
+
+          console.log(`🔄 Using real-time balance for today: ${todayBalance.toFixed(2)}h (instead of DB: ${todayRecord?.balance_hours || 0}h)`);
         }
       }
     }
-    
+
     // Se non c'è schedule ma c'è un record nel DB, usa quello
     if (!hasPerm104Today && !hasRealTimeCalculation && todayRecord) {
       // Non è un giorno lavorativo, usa il balance dal DB
@@ -2988,10 +3021,10 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       if (hasPerm104Today) {
         todayBalance = 0;
       } else {
-      todayBalance = todayRecord.balance_hours || 0;
+        todayBalance = todayRecord.balance_hours || 0;
+      }
     }
-    }
-    
+
     // Verifica finale: se oggi ha un permesso 104, il balance è SEMPRE 0
     if (hasPerm104Today) {
       todayBalance = 0;
@@ -3008,13 +3041,13 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       const currentMin = now.getMinutes();
       const currentTimeInMinutes = currentHour * 60 + currentMin;
       const endTimeInMinutes = endHour * 60 + endMin;
-      
+
       // Se siamo almeno 30 minuti dopo la fine del lavoro, considera la giornata conclusa
       // Altrimenti usa il balance del DB (se disponibile) che indica una giornata già salvata
       isTodayCompleted = (currentTimeInMinutes >= endTimeInMinutes + 30) || (todayRecord.balance_hours !== null && !hasRealTimeCalculation);
       console.log(`⏰ Today completion check: current=${currentHour}:${currentMin < 10 ? '0' + currentMin : currentMin}, end=${schedule.end_time}, completed=${isTodayCompleted}`);
     }
-    
+
     // Somma tutti i saldi, escludendo i giorni con permesso 104 E oggi se la giornata non è conclusa
     const totalBalance = allAttendance.reduce((sum, record) => {
       // Se questo giorno ha un permesso 104, NON includerlo nel balance (balance = 0)
@@ -3022,7 +3055,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         console.log(`🔵 [total-balance] Excluding day ${record.date} from balance (has 104 permission)`);
         return sum + 0; // Con permesso 104, balance = 0
       }
-      
+
       // Per OGGI: includi se:
       // 1. La giornata è conclusa (usando DB), OPPURE
       // 2. C'è un permesso approvato (balance già definitivo)
@@ -3030,10 +3063,10 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         // Controlla se c'è un permesso approvato per oggi (controlla sia record.notes che todayRecord.notes)
         const recordNotes = record.notes || todayRecord?.notes || '';
         const hasApprovedPermission = recordNotes && (
-          recordNotes.includes('Permesso approvato') || 
+          recordNotes.includes('Permesso approvato') ||
           recordNotes.includes('Permesso creato dall\'admin')
         );
-        
+
         if ((isTodayCompleted && !hasRealTimeCalculation) || hasApprovedPermission) {
           // Giornata conclusa OPPURE permesso approvato, usa il balance dal DB
           const recordBalance = record.balance_hours || 0;
@@ -3045,7 +3078,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
           return sum + 0;
         }
       }
-      
+
       // Per giorni passati senza permesso 104, usa il balance dal DB
       const recordBalance = record.balance_hours || 0;
       return sum + recordBalance;
@@ -3082,7 +3115,7 @@ app.get('/api/attendance/permissions-today', authenticateToken, async (req, res)
     }
 
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Get all approved permission requests for today
     const { data: permissions, error: permError } = await supabase
       .from('leave_requests')
@@ -3094,7 +3127,7 @@ app.get('/api/attendance/permissions-today', authenticateToken, async (req, res)
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     if (permError) {
       console.error('Permissions fetch error:', permError);
       return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
@@ -3131,7 +3164,7 @@ app.get('/api/attendance/104-today', authenticateToken, async (req, res) => {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Get all approved 104 permissions for today
     const { data: permissions104, error: perm104Error } = await supabase
       .from('leave_requests')
@@ -3143,7 +3176,7 @@ app.get('/api/attendance/104-today', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     if (perm104Error) {
       console.error('104 permissions fetch error:', perm104Error);
       return res.status(500).json({ error: 'Errore nel recupero dei permessi 104' });
@@ -3177,7 +3210,7 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
 
     const now = new Date();
     const in2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    
+
     const { data: upcoming, error } = await supabase
       .from('attendance')
       .select(`
@@ -3198,7 +3231,7 @@ app.get('/api/attendance/upcoming-departures', authenticateToken, async (req, re
     const upcomingDepartures = upcoming.map(att => {
       const checkInTime = new Date(att.clock_in);
       const expectedCheckOut = new Date(checkInTime.getTime() + 8 * 60 * 60 * 1000);
-      
+
       return {
         id: att.id,
         name: `${att.users.first_name} ${att.users.last_name}`,
@@ -3224,7 +3257,7 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
     const { userId, date } = req.body;
     const targetUserId = userId || req.user.id;
     const targetDate = date || new Date().toISOString().split('T')[0];
-    
+
     // Verifica permessi: admin può generare per chiunque, employee solo per se stesso
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -3289,10 +3322,10 @@ app.post('/api/attendance/generate-manual', authenticateToken, async (req, res) 
       const workMinutes = totalMinutes - breakMinutes;
       const morningMinutes = Math.floor(workMinutes / 2);
       const afternoonMinutes = workMinutes - morningMinutes;
-      
+
       const breakStart = new Date(start.getTime() + (morningMinutes * 60 * 1000));
       const breakEnd = new Date(breakStart.getTime() + (breakMinutes * 60 * 1000));
-      
+
       details = [
         {
           attendance_id: newAttendance.id,
@@ -3471,13 +3504,13 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
   try {
     const userId = req.user.id;
     const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
-    
+
     console.log(`🕐 [current-hours] User: ${req.user.email}, Date: ${today}, Time: ${currentTime}, TestMode: ${isTestMode}`);
-    
+
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();
     console.log(`📅 [current-hours] Day of week: ${dayOfWeek} (0=Dom, 1=Lun, 5=Ven)`);
-    
+
     const { data: schedule, error: scheduleError } = await supabase
       .from('work_schedules')
       .select('*')
@@ -3489,7 +3522,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     if (scheduleError || !schedule) {
       console.log(`❌ [current-hours] No schedule found:`, scheduleError);
       console.log(`🔧 [current-hours] Creating default schedules for user ${userId}...`);
-      
+
       // Crea orari di default per tutti i giorni
       const defaultSchedules = [
         { user_id: userId, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Lunedì
@@ -3500,11 +3533,11 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         { user_id: userId, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Sabato
         { user_id: userId, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }  // Domenica
       ];
-      
+
       const { error: createError } = await supabase
         .from('work_schedules')
         .insert(defaultSchedules);
-      
+
       if (createError) {
         console.error(`❌ [current-hours] Failed to create default schedules:`, createError);
         return res.json({
@@ -3512,9 +3545,9 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
           message: 'Nessun orario di lavoro per oggi'
         });
       }
-      
+
       console.log(`✅ [current-hours] Default schedules created! Retrying...`);
-      
+
       // Riprova a recuperare lo schedule
       const { data: retrySchedule, error: retryError } = await supabase
         .from('work_schedules')
@@ -3523,18 +3556,18 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         .eq('day_of_week', dayOfWeek)
         .eq('is_working_day', true)
         .single();
-      
+
       if (retryError || !retrySchedule) {
         return res.json({
           isWorkingDay: false,
           message: 'Nessun orario di lavoro per oggi'
         });
       }
-      
+
       // Usa il nuovo schedule
       schedule = retrySchedule;
     }
-    
+
     console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
 
     // Controlla se l'utente ha un permesso 104 approvato per oggi
@@ -3587,7 +3620,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     let permissionData = null;
     if (permissionsToday && !permError && permissionsToday.length > 0) {
       // Aggrega i permessi per oggi
@@ -3595,7 +3628,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       let exitTime = null;
       let entryTime = null;
       const permissionTypes = new Set();
-      
+
       permissionsToday.forEach(perm => {
         totalHours += parseFloat(perm.hours || 0);
         if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -3611,7 +3644,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
           }
         }
       });
-      
+
       if (exitTime || entryTime) {
         permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
         console.log(`🚪 Permessi trovati: [${permissionData.permission_types.join(', ')}], exit=${exitTime}, entry=${entryTime}`);
@@ -3624,7 +3657,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       currentTime,
       permissionData
     );
-    
+
     console.log(`📊 [current-hours] Result: actual=${actualHours}h, expected=${expectedHours}h, contract=${contractHours}h, balance=${balanceHours}h, status=${status}`);
 
     res.json({
@@ -3656,13 +3689,13 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
     const currentTime = now.toTimeString().substring(0, 5); // HH:MM format
-    
+
     console.log(`🔄 Update current attendance for user ${userId}, today: ${today}, current time: ${currentTime}`);
-    
+
     // Ottieni l'orario di lavoro per oggi
     const dayOfWeek = now.getDay();
     console.log(`📅 Day of week: ${dayOfWeek}`);
-    
+
     const { data: schedule, error: scheduleError } = await supabase
       .from('work_schedules')
       .select('*')
@@ -3687,14 +3720,14 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
-    
+
     let permissionData = null;
     if (permissionsToday && permissionsToday.length > 0) {
       let totalHours = 0;
       let exitTime = null;
       let entryTime = null;
       const permissionTypes = new Set();
-      
+
       permissionsToday.forEach(perm => {
         totalHours += parseFloat(perm.hours || 0);
         if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -3710,7 +3743,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
           }
         }
       });
-      
+
       if (exitTime || entryTime) {
         permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
       }
@@ -3722,18 +3755,18 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       currentTime,
       permissionData
     );
-    
+
     // Se ci sono permessi approvati, usa expectedHours (già ridotte) e balance = -permesso_hours
     let finalExpectedHours = expectedHours;
     let finalBalanceHours = balanceHours;
-    
+
     if (permissionsToday && permissionsToday.length > 0) {
       const totalPermissionHours = permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
       finalExpectedHours = contractHours - totalPermissionHours; // Expected = contract - permesso
       finalBalanceHours = -totalPermissionHours; // Balance = -permesso_hours (sempre)
       console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
     }
-    
+
     console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
@@ -3815,13 +3848,13 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
 app.get('/api/attendance/details', authenticateToken, async (req, res) => {
   try {
     const { date, userId } = req.query;
-    
+
     if (!date) {
       return res.status(400).json({ error: 'Data richiesta' });
     }
 
     const targetUserId = userId || req.user.id;
-    
+
     // Verifica permessi: admin può vedere tutti, employee solo i propri
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
@@ -3861,7 +3894,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       .single();
 
     const { date: today, time: currentTime } = await getCurrentDateTime();
-    
+
     // Controlla se c'è un permesso 104 per questa data
     const { data: perm104Today } = await supabase
       .from('leave_requests')
@@ -3872,13 +3905,13 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       .lte('start_date', date)
       .gte('end_date', date)
       .single();
-    
+
     let actualHours = attendance.actual_hours || 0;
     let expectedHours = attendance.expected_hours || 8;
     let contractHours = attendance.expected_hours || 8;
     let remainingHours = Math.max(0, expectedHours - actualHours);
     let balanceHours = attendance.balance_hours || 0;
-    
+
     // IMPORTANTE: Per date passate, ricalcola SEMPRE le ore attese dallo schedule (non usare DB)
     // Perché il DB potrebbe avere valori errati salvati in passato
     if (schedule && schedule.start_time && schedule.end_time) {
@@ -3891,8 +3924,8 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       });
       console.log(`📅 [attendance/details] Ricalcolato ore attese da schedule: ${schedule.start_time}-${schedule.end_time}, break: ${breakDuration}min = ${contractHours.toFixed(2)}h`);
     }
-    
-      // Se c'è un permesso 104, calcola le ore attese complete dalla giornata lavorativa
+
+    // Se c'è un permesso 104, calcola le ore attese complete dalla giornata lavorativa
     if (perm104Today && schedule) {
       const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
       expectedHours = calculateExpectedHoursForSchedule({
@@ -3914,14 +3947,14 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
         .eq('status', 'approved')
         .lte('start_date', today)
         .gte('end_date', today);
-      
+
       let permissionData = null;
       if (permissionsToday && permissionsToday.length > 0) {
         let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
         const permissionTypes = new Set();
-        
+
         permissionsToday.forEach(perm => {
           totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -3937,12 +3970,12 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
             }
           }
         });
-        
+
         if (exitTime || entryTime) {
           permissionData = { hours: totalHours, permission_types: Array.from(permissionTypes), exit_time: exitTime, entry_time: entryTime };
         }
       }
-      
+
       // USA LA FUNZIONE CENTRALIZZATA con data/ora simulate se in test mode
       const result = calculateRealTimeHours(schedule, currentTime, permissionData);
       actualHours = result.actualHours;
@@ -3950,7 +3983,7 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
       contractHours = result.contractHours;
       remainingHours = result.remainingHours;
       balanceHours = result.balanceHours;
-      
+
       console.log(`🔄 Attendance details for today: real-time calculation (centralized) - actual=${actualHours.toFixed(2)}h, expected=${expectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), balance=${balanceHours.toFixed(2)}h`);
     } else {
       // Per date passate: usa contractHours ricalcolato dallo schedule (sopra), non dal DB
@@ -3994,7 +4027,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
     console.log('🔧 Fix 104 attendance request received');
     console.log('   Body:', JSON.stringify(req.body, null, 2));
     console.log('   Content-Type:', req.get('Content-Type'));
-    
+
     const { userId } = req.body || {};
 
     // Recupera tutti i permessi 104 approvati
@@ -4031,7 +4064,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
       const start = new Date(perm.start_date);
       const end = new Date(perm.end_date);
       const dates = [];
-      
+
       // Genera array di date
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(d.toISOString().split('T')[0]);
@@ -4092,7 +4125,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
     console.error('❌ Fix 104 attendance error:', error);
     console.error('   Error stack:', error.stack);
     console.error('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Errore interno del server',
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -4296,7 +4329,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
 
     let isClockedIn = false;
     let todayHours = '0h 0m';
-    
+
     if (todayAttendance && !todayError) {
       isClockedIn = !!todayAttendance.clock_in && !todayAttendance.clock_out;
       if (todayAttendance.clock_in && todayAttendance.clock_out) {
@@ -4321,18 +4354,18 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     // (indipendentemente da clock_in, actual_hours, etc.)
     const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
     const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-    
+
     console.log(`🔍 Querying attendance for user ${userId} from ${monthStart} to ${monthEnd}`);
-    
+
     const { data: attendanceRecords, error: monthlyError } = await supabase
       .from('attendance')
       .select('date')
       .eq('user_id', userId)
       .gte('date', monthStart)
       .lt('date', monthEnd);
-    
+
     console.log(`🔍 Query result: ${attendanceRecords?.length || 0} records, error: ${monthlyError ? JSON.stringify(monthlyError) : 'none'}`);
-    
+
     // Conta giorni unici: se esiste un record, è un giorno lavorato
     let daysWithAttendance = 0;
     if (attendanceRecords && !monthlyError) {
@@ -4364,9 +4397,9 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       console.error('❌ Error fetching attendance records:', monthlyError);
       // In caso di errore, prova a contare comunque usando una query più semplice
       const { count: fallbackCount } = await supabase
-      .from('attendance')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
         .gte('date', monthStart)
         .lt('date', monthEnd);
       console.log(`🔧 Fallback count: ${fallbackCount || 0} records`);
@@ -4388,17 +4421,17 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     if (approvedLeaves && approvedLeaves.length > 0) {
       const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
       const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-      
+
       approvedLeaves.forEach(leave => {
         const start = new Date(leave.start_date);
         const end = new Date(leave.end_date);
         const monthStartDate = new Date(monthStart);
         const monthEndDate = new Date(monthEnd);
-        
+
         // Calcola i giorni nel range che cadono nel mese corrente
         const actualStart = start < monthStartDate ? monthStartDate : start;
         const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
-        
+
         if (actualStart <= actualEnd) {
           const daysDiff = Math.ceil((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
           approvedLeaveDays += daysDiff;
@@ -4442,20 +4475,20 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       // Calcola il primo e l'ultimo giorno del mese
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
       const lastDay = new Date(currentYear, currentMonth, 0);
-      
+
       // Conta i giorni lavorativi nel mese ESCLUDENDO le festività
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(currentYear, currentMonth - 1, day);
         const dateStr = date.toISOString().split('T')[0];
         const dayOfWeekJS = date.getDay(); // 0 = domenica, 1 = lunedì, 6 = sabato
-        
+
         // Il database usa day_of_week: 0=domenica, 1=lunedì, ..., 6=sabato (stesso formato di JS getDay())
         // Verifica se è un giorno lavorativo E non è una festività
         if (workingDaysMap[dayOfWeekJS] && !holidayDates.has(dateStr)) {
           expectedMonthlyPresences++;
         }
       }
-      
+
       console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId} (escluse ${holidayDates.size} festività)`);
       console.log(`📅 Working days map:`, workingDaysMap);
       console.log(`📅 monthlyPresences: ${monthlyPresences}, expectedMonthlyPresences: ${expectedMonthlyPresences}, remainingDays: ${Math.max(0, expectedMonthlyPresences - monthlyPresences)}`);
@@ -4497,7 +4530,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     console.log(`   - expectedMonthlyPresences: ${verifiedExpected} (totale giorni lavorativi mese)`);
     console.log(`   - remainingDays: ${remainingDays} (${verifiedExpected} - ${verifiedMonthlyPresences})`);
     console.log(`✅ CALCOLO VERIFICATO: remainingDays = ${verifiedExpected} (totale) - ${verifiedMonthlyPresences} (lavorati) = ${remainingDays} (RIMANENTI)`);
-    
+
     // VERIFICA FINALE: remainingDays NON può essere >= expectedMonthlyPresences
     if (remainingDays >= verifiedExpected && verifiedMonthlyPresences > 0) {
       console.error(`❌ ERRORE BACKEND: remainingDays (${remainingDays}) >= expectedMonthlyPresences (${verifiedExpected}) ma monthlyPresences=${verifiedMonthlyPresences} > 0. Questo è un BUG!`);
@@ -4602,7 +4635,7 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
         if (createError) {
           console.error('Absence 104 balance creation error:', createError);
           console.error('Create error details:', JSON.stringify(createError, null, 2));
-          
+
           // Se anche la creazione fallisce per PGRST205 (tabella non esiste), restituisci default
           if (createError.code === 'PGRST205') {
             console.warn('⚠️ Tabella absence_104_balances non esiste nel database. Restituisco valori di default.');
@@ -4614,7 +4647,7 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
               remainingDays: 3
             });
           }
-          
+
           return res.status(500).json({ error: 'Errore nella creazione del bilancio assenze 104', details: createError.message });
         }
 
@@ -4640,10 +4673,10 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
     // Calcola giorni utilizzati dalle richieste approvate del mese corrente
     const startDate = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
     const endDate = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-    
+
     console.log(`🔍 Fetching approved 104 requests for user ${userId}, month ${currentMonth}/${currentYear}`);
     console.log(`   Date range: ${startDate} to ${endDate}`);
-    
+
     const { data: approvedRequests, error: approvedError } = await supabase
       .from('leave_requests')
       .select('days_requested, start_date, end_date')
@@ -4699,7 +4732,7 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
         const days = req.days_requested || 1;
         return sum + Math.ceil(days); // Arrotonda sempre per eccesso
       }, 0);
-      
+
       // Aggiorna il balance con i pending_days calcolati
       await supabase
         .from('absence_104_balances')
@@ -4754,7 +4787,7 @@ app.get('/api/absence-104-balance', authenticateToken, async (req, res) => {
     console.error('❌ Absence 104 balance error:', error);
     console.error('   Error stack:', error.stack);
     console.error('   Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Errore nel recupero del bilancio assenze 104',
       details: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -4842,7 +4875,7 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   try {
     const { month, year, type } = req.query;
     const targetUserId = req.user.role === 'admin' && req.query.userId ? req.query.userId : req.user.id;
-    
+
     // IMPORTANTE: Leggi SEMPRE da leave_requests (dati reali)
     // La modalità test viene usata solo per i calcoli real-time (orario simulato)
     // I dati di test vengono salvati in test_leave_requests, ma per la visualizzazione usiamo sempre i dati reali
@@ -5008,7 +5041,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (!type || !startDate || !endDate) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti' });
     }
-    
+
     // Reason is required only for certain types
     if (type !== 'vacation' && type !== 'permission' && type !== 'permission_104' && !reason) {
       return res.status(400).json({ error: 'Motivo richiesto per questo tipo di richiesta' });
@@ -5033,7 +5066,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       }
 
       if (!periods || periods.length === 0) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Non ci sono periodi di richiesta ferie aperti per le date selezionate',
           startDate,
           endDate
@@ -5047,7 +5080,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         const dateStr = d.toISOString().split('T')[0];
-        const isInValidPeriod = periods.some(period => 
+        const isInValidPeriod = periods.some(period =>
           dateStr >= period.vacation_start_date && dateStr <= period.vacation_end_date
         );
 
@@ -5057,7 +5090,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       }
 
       if (invalidDates.length > 0) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Alcune date richieste non sono disponibili nei periodi aperti',
           invalidDates
         });
@@ -5119,7 +5152,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       const remainingDays = (balance.total_days || 30) - (balance.used_days || 0) - pendingDays;
 
       if (daysRequested > remainingDays) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Giorni di ferie insufficienti',
           requested: daysRequested,
           available: remainingDays,
@@ -5151,7 +5184,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       // Verifica limite mensile (3 GIORNI al mese, non permessi)
       const currentMonth = new Date(startDate).getMonth() + 1;
       const currentYear = new Date(startDate).getFullYear();
-      
+
       // Recupera o crea bilancio assenze 104 per il mese corrente
       let { data: balance, error: balanceError } = await supabase
         .from('absence_104_balances')
@@ -5239,7 +5272,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       if (daysRequestedFor104 > remainingDays) {
         const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleDateString('it-IT', { month: 'long' });
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: `Hai già utilizzato tutti i giorni disponibili per le assenze 104 in ${monthName} ${currentYear}`,
           requested: daysRequestedFor104,
           available: remainingDays,
@@ -5253,7 +5286,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       // I permessi 104 sono auto-approvati, quindi aggiorna used_days, non pending_days
       const newUsedDays = usedDays + daysRequestedFor104;
-      
+
       if (!balance || !balance.id) {
         console.error('Balance ID missing, cannot update absence 104 balance');
         return res.status(500).json({ error: 'Errore nell\'aggiornamento del bilancio assenze 104' });
@@ -5278,8 +5311,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       daysRequested = daysRequestedFor104;
     } else {
       // Calcola i giorni richiesti per gli altri tipi
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
       daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     }
 
@@ -5313,11 +5346,11 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           const standardStartMinutes = timeToMinutes(workSchedule.start_time);
           const standardEndMinutes = timeToMinutes(workSchedule.end_time);
           const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
-          
+
           // Calcola inizio e fine pausa pranzo
           let breakStartMinutes = null;
           let breakEndMinutes = null;
-          
+
           if (breakDuration > 0) {
             if (workSchedule.break_start_time) {
               breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
@@ -5335,7 +5368,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             // IMPORTANTE: considera la pausa pranzo se l'uscita è prima o durante la pausa
             const exitMinutes = timeToMinutes(exitTime);
             let permissionMinutes = 0;
-            
+
             if (breakDuration === 0 || !breakStartMinutes) {
               // Nessuna pausa: calcolo semplice
               permissionMinutes = standardEndMinutes - exitMinutes;
@@ -5350,7 +5383,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
               // Esce durante la pausa: perde la parte rimanente della pausa + tutto il pomeriggio
               permissionMinutes = standardEndMinutes - exitMinutes;
             }
-            
+
             calculatedHours = Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
             console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} (break: ${breakDuration}min) = ${calculatedHours} ore`);
           } else if (permissionType === 'late_entry' && entryTime) {
@@ -5358,7 +5391,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             // IMPORTANTE: considera la pausa pranzo se l'entrata è dopo la pausa
             const entryMinutes = timeToMinutes(entryTime);
             let permissionMinutes = 0;
-            
+
             if (breakDuration === 0 || !breakStartMinutes) {
               // Nessuna pausa: calcolo semplice
               permissionMinutes = entryMinutes - standardStartMinutes;
@@ -5372,7 +5405,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
               // Entra durante la pausa: perde la mattina + parte della pausa
               permissionMinutes = entryMinutes - standardStartMinutes;
             }
-            
+
             calculatedHours = Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
             console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} (break: ${breakDuration}min) = ${calculatedHours} ore`);
           }
@@ -5415,13 +5448,13 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     if (notes !== undefined) insertData.notes = notes;
     if (doctor !== undefined) insertData.doctor = doctor;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    
+
     // Per FERIE: non salvare ore (sono giorni interi, non ore)
     // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
     if (type !== 'vacation' && type !== 'permission_104') {
-    const normalizedHours = normalizeHours(calculatedHours);
-    if (normalizedHours !== null) {
+      const normalizedHours = normalizeHours(calculatedHours);
+      if (normalizedHours !== null) {
         insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
@@ -5461,7 +5494,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     }
 
     const userName = userData ? `${userData.first_name} ${userData.last_name}` : 'Dipendente';
-    
+
     // Parse date as local time to avoid UTC timezone issues
     const parseLocalDate = (dateStr) => {
       if (!dateStr || typeof dateStr !== 'string') {
@@ -5479,22 +5512,22 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
       console.log(`📅 Parsing date: ${dateStr} -> ${year}-${month}-${day} -> ${parsedDate.toLocaleDateString('it-IT')}`);
       return parsedDate;
     };
-    
-    const formattedStartDate = parseLocalDate(startDate).toLocaleDateString('it-IT', { 
-      day: '2-digit', 
-      month: 'long', 
+
+    const formattedStartDate = parseLocalDate(startDate).toLocaleDateString('it-IT', {
+      day: '2-digit',
+      month: 'long',
       year: 'numeric',
       timeZone: 'Europe/Rome'
     });
     console.log(`✅ Formatted start date: ${startDate} -> ${formattedStartDate}`);
-    const formattedEndDate = startDate === endDate 
-      ? formattedStartDate 
-      : parseLocalDate(endDate).toLocaleDateString('it-IT', { 
-          day: '2-digit', 
-          month: 'long', 
-          year: 'numeric',
-          timeZone: 'Europe/Rome'
-        });
+    const formattedEndDate = startDate === endDate
+      ? formattedStartDate
+      : parseLocalDate(endDate).toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
+      });
     const dateRange = startDate === endDate ? formattedStartDate : `${formattedStartDate} - ${formattedEndDate}`;
 
     // Crea notifiche per tutti gli admin
@@ -5514,7 +5547,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           'permission_104': 'Permesso Legge 104',
           'business_trip': 'Trasferta'
         };
-        
+
         const notificationTypes = {
           'permission': 'permission',
           'vacation': 'vacation',
@@ -5522,18 +5555,18 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           'permission_104': 'permission_104',
           'business_trip': 'permission'
         };
-        
+
         const requestTypeLabel = typeLabels[type] || 'Richiesta';
         const notificationType = notificationTypes[type] || 'info';
         const requestTypeText = type === 'vacation' ? 'ferie' : type === 'sick_leave' ? 'malattia' : type === 'permission_104' ? 'permesso Legge 104' : type === 'business_trip' ? 'trasferta' : 'permesso';
-        
+
         // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
         let messageText = '';
-        
+
         if (type === 'permission' || type === 'permission_104') {
           // PERMESSI: sono in ORE, non giorni
           const hours = newRequest.hours || 0;
-          const hoursFormatted = hours > 0 
+          const hoursFormatted = hours > 0
             ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
             : '0h';
           messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
@@ -5545,8 +5578,8 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             messageText = `${userName} ha richiesto ${requestTypeText === 'ferie' ? 'delle' : 'una'} ${requestTypeText} dal ${formattedStartDate} al ${formattedEndDate}`;
           }
         }
-        
-        const notificationPromises = admins.map(admin => 
+
+        const notificationPromises = admins.map(admin =>
           supabase
             .from('notifications')
             .insert([{
@@ -5600,7 +5633,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
     }
 
     console.log('🎉 Sending success response for request:', newRequest.id);
-    
+
     res.status(201).json({
       success: true,
       message: 'Richiesta inviata con successo',
@@ -5791,17 +5824,17 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (doctor !== undefined) insertData.doctor = doctor;
     if (medicalCode !== undefined) insertData.medical_code = medicalCode;
     if (permissionType !== undefined) insertData.permission_type = permissionType;
-    
+
     // Per FERIE: non salvare ore (sono giorni interi, non ore)
     // Per ASSENZE 104: non salvare ore (sono giorni interi, non influenzano banca ore)
     // Per PERMESSI: salva le ore calcolate
     if (type !== 'vacation' && type !== 'permission_104') {
-    const normalizedHours = normalizeHours(calculatedHours);
-    if (normalizedHours !== null) {
+      const normalizedHours = normalizeHours(calculatedHours);
+      if (normalizedHours !== null) {
         insertData.hours = normalizedHours; // Usa le ore calcolate solo per permessi normali
       }
     }
-    
+
     // Se admin crea ferie approvate direttamente, aggiorna bilancio ferie
     if (type === 'vacation' && insertData.status === 'approved') {
       const requestYear = new Date(startDate).getFullYear();
@@ -5931,10 +5964,10 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (type === 'permission' && insertData.status === 'approved' && calculatedHours && calculatedHours > 0) {
       const permissionDate = startDate;
       const permissionHours = parseFloat(calculatedHours);
-      
+
       setTimeout(async () => {
         const dayOfWeek = new Date(permissionDate).getDay();
-        
+
         // Recupera l'orario di lavoro per quel giorno
         const { data: schedule, error: scheduleError } = await supabase
           .from('work_schedules')
@@ -5943,7 +5976,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           .eq('day_of_week', dayOfWeek)
           .eq('is_working_day', true)
           .single();
-        
+
         if (!scheduleError && schedule) {
           // Calcola le ore attese originali (senza permessi)
           const originalExpectedHours = calculateExpectedHoursForSchedule({
@@ -5951,7 +5984,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             end_time: schedule.end_time,
             break_duration: schedule.break_duration || 60
           });
-          
+
           // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
           const { data: approvedPermissions, error: permError } = await supabase
             .from('leave_requests')
@@ -5961,15 +5994,15 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             .eq('status', 'approved')
             .lte('start_date', permissionDate)
             .gte('end_date', permissionDate);
-          
+
           let totalPermissionHours = 0;
           if (!permError && approvedPermissions) {
             totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
           }
-          
+
           // Ore attese finali = ore originali - ore permessi approvati
           const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
-          
+
           // Recupera o crea la presenza per questa data
           const { data: attendanceRecord, error: attError } = await supabase
             .from('attendance')
@@ -5977,11 +6010,11 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             .eq('user_id', userId)
             .eq('date', permissionDate)
             .single();
-          
+
           if (!attError && attendanceRecord) {
             // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
             const newBalanceHours = -permissionHours;
-            
+
             const { error: updateAttError } = await supabase
               .from('attendance')
               .update({
@@ -5991,7 +6024,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
               })
               .eq('user_id', userId)
               .eq('date', permissionDate);
-            
+
             if (updateAttError) {
               console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
             } else {
@@ -6010,7 +6043,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
                 balance_hours: Math.round(-permissionHours * 100) / 100,
                 notes: `[Permesso creato dall'admin: -${permissionHours}h]`
               });
-            
+
             if (createAttError) {
               console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
             } else {
@@ -6044,7 +6077,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       console.error('❌ Admin leave request creation error:', error);
       console.error('❌ Error details:', JSON.stringify(error, null, 2));
       console.error('❌ Insert data that failed:', JSON.stringify(insertData, null, 2));
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Errore nella creazione della richiesta',
         details: error.message || 'Errore sconosciuto'
       });
@@ -6064,22 +6097,22 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             const [year, month, day] = dateStr.split('-').map(Number);
             return new Date(year, month - 1, day);
           };
-          
-          const formattedStart = parseLocalDate(startDate).toLocaleDateString('it-IT', { 
-            day: '2-digit', 
-            month: 'long', 
+
+          const formattedStart = parseLocalDate(startDate).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
             year: 'numeric',
             timeZone: 'Europe/Rome'
           });
-          const formattedEnd = startDate === endDate 
-            ? formattedStart 
-            : parseLocalDate(endDate).toLocaleDateString('it-IT', { 
-                day: '2-digit', 
-                month: 'long', 
-                year: 'numeric',
-                timeZone: 'Europe/Rome'
-              });
-          
+          const formattedEnd = startDate === endDate
+            ? formattedStart
+            : parseLocalDate(endDate).toLocaleDateString('it-IT', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+              timeZone: 'Europe/Rome'
+            });
+
           // Formatta il messaggio in modo logico: permessi (ore) vs permessi 104/ferie/malattia (giorni)
           if (type === 'permission_104') {
             // PERMESSI 104: sono in GIORNI, non ore
@@ -6088,7 +6121,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           } else if (type === 'permission') {
             // PERMESSI NORMALI: sono in ORE, non giorni
             const hours = newRequest.hours || 0;
-            const hoursFormatted = hours > 0 
+            const hoursFormatted = hours > 0
               ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
               : '0h';
             return `L'amministratore ha registrato un permesso di ${hoursFormatted} per il ${formattedStart}.${reason ? ` Motivo: ${reason}` : ''}`;
@@ -6123,7 +6156,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     try {
       const { sendEmail } = require('./emailService');
       const typeLabel = type === 'vacation' ? 'vacation' : type === 'sick_leave' ? 'sick_leave' : 'permission';
-      
+
       // Invia email usando il template requestResponse con status approved
       await sendEmail(
         employee.email,
@@ -6137,7 +6170,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           newRequest.id     // requestId
         ]
       );
-      
+
       console.log('✅ Email sent to employee:', employee.email);
     } catch (emailError) {
       console.error('❌ Email send error:', emailError);
@@ -6173,7 +6206,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Prepara i dati da aggiornare
     const updateData = {};
-    
+
     // Gestione modifica permessi 104 (date e giorni)
     if (existingRequest.type === 'permission_104') {
       if (start_date !== undefined) {
@@ -6186,7 +6219,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         updateData.days_requested = days_requested;
       }
     }
-    
+
     // Se viene fornito status, aggiorna lo status
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
       updateData.status = status;
@@ -6195,12 +6228,12 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         updateData.approved_by = req.user.id;
       }
     }
-    
+
     // Se vengono fornite notes, aggiorna le note
     if (notes !== undefined) {
       updateData.notes = notes || '';
     }
-    
+
     // Se viene fornito entryTime o exitTime, calcola automaticamente le ore
     if ((entryTime !== undefined || exitTime !== undefined) && existingRequest.type === 'permission') {
       if (entryTime !== undefined) {
@@ -6209,11 +6242,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       if (exitTime !== undefined) {
         updateData.exit_time = exitTime || null;
       }
-      
+
       // Calcola automaticamente le ore basandosi sull'orario di lavoro
       const permissionDate = existingRequest.start_date;
       const dayOfWeek = new Date(permissionDate).getDay();
-      
+
       // Recupera l'orario di lavoro per quel giorno
       const { data: schedule, error: scheduleError } = await supabase
         .from('work_schedules')
@@ -6222,32 +6255,32 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         .eq('day_of_week', dayOfWeek)
         .eq('is_working_day', true)
         .single();
-      
+
       if (!scheduleError && schedule) {
         const finalEntryTime = entryTime !== undefined ? entryTime : existingRequest.entry_time;
         const finalExitTime = exitTime !== undefined ? exitTime : existingRequest.exit_time;
-        
+
         // Calcola le ore in base al tipo di permesso
         if (finalEntryTime && (existingRequest.permission_type === 'late_entry' || existingRequest.permission_type === 'entrata_posticipata')) {
           // Entrata posticipata: ore = (entryTime - start_time) / 60
-          const startMinutes = schedule.start_time ? 
+          const startMinutes = schedule.start_time ?
             (parseInt(schedule.start_time.split(':')[0]) * 60 + parseInt(schedule.start_time.split(':')[1])) : 0;
-          const entryMinutes = finalEntryTime ? 
+          const entryMinutes = finalEntryTime ?
             (parseInt(finalEntryTime.split(':')[0]) * 60 + parseInt(finalEntryTime.split(':')[1])) : 0;
           const hoursDiff = Math.max(0, (entryMinutes - startMinutes) / 60);
           updateData.hours = parseFloat(hoursDiff.toFixed(2));
         } else if (finalExitTime && (existingRequest.permission_type === 'early_exit' || existingRequest.permission_type === 'uscita_anticipata')) {
           // Uscita anticipata: ore = (end_time - exitTime) / 60
-          const endMinutes = schedule.end_time ? 
+          const endMinutes = schedule.end_time ?
             (parseInt(schedule.end_time.split(':')[0]) * 60 + parseInt(schedule.end_time.split(':')[1])) : 0;
-          const exitMinutes = finalExitTime ? 
+          const exitMinutes = finalExitTime ?
             (parseInt(finalExitTime.split(':')[0]) * 60 + parseInt(finalExitTime.split(':')[1])) : 0;
           const hoursDiff = Math.max(0, (endMinutes - exitMinutes) / 60);
           updateData.hours = parseFloat(hoursDiff.toFixed(2));
         }
       }
     }
-    
+
     // Se vengono fornite hours direttamente (override manuale), usa quelle
     if (hours !== undefined && existingRequest.type === 'permission') {
       updateData.hours = hours !== null ? parseFloat(hours) : null;
@@ -6340,15 +6373,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       const oldStatus = existingRequest.status;
       const newStatus = status || oldStatus;
       const datesChanged = (start_date !== undefined && start_date !== existingRequest.start_date) ||
-                          (end_date !== undefined && end_date !== existingRequest.end_date);
+        (end_date !== undefined && end_date !== existingRequest.end_date);
       const daysChanged = days_requested !== undefined && days_requested !== existingRequest.days_requested;
-      
+
       // Se un permesso 104 già approvato viene modificato (date o giorni), rimuovi i vecchi giorni
       if (oldStatus === 'approved' && (datesChanged || daysChanged || newStatus === 'rejected' || newStatus === 'cancelled')) {
         const oldMonth = new Date(existingRequest.start_date).getMonth() + 1;
         const oldYear = new Date(existingRequest.start_date).getFullYear();
         const oldDays = Math.ceil(existingRequest.days_requested || 1);
-        
+
         // Rimuovi i vecchi giorni dal bilancio
         let { data: oldBalance } = await supabase
           .from('absence_104_balances')
@@ -6357,11 +6390,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .eq('year', oldYear)
           .eq('month', oldMonth)
           .single();
-        
+
         if (oldBalance) {
           const newUsedDays = Math.max(0, (oldBalance.used_days || 0) - oldDays);
           const remainingDays = (oldBalance.total_days || 3) - newUsedDays - (oldBalance.pending_days || 0);
-          
+
           await supabase
             .from('absence_104_balances')
             .update({
@@ -6370,10 +6403,10 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               updated_at: new Date().toISOString()
             })
             .eq('id', oldBalance.id);
-          
+
           console.log(`📊 Bilancio 104 aggiornato per rimozione vecchi giorni: -${oldDays} giorni (rimasti: ${newUsedDays}/3)`);
         }
-        
+
         // Elimina vecchie attendance records
         for (let d = new Date(existingRequest.start_date); d <= new Date(existingRequest.end_date); d.setDate(d.getDate() + 1)) {
           await supabase
@@ -6382,16 +6415,16 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .eq('user_id', updatedRequest.user_id)
             .eq('date', d.toISOString().split('T')[0]);
         }
-        
+
         console.log(`🔄 Attendance records eliminati per modifica permesso 104`);
       }
-      
+
       // Se viene rifiutato o cancellato, non fare altro (già gestito sopra)
       if (newStatus === 'rejected' || newStatus === 'cancelled') {
         console.log(`❌ Permesso 104 rifiutato/cancellato: ${updatedRequest.days_requested || 1} giorni non utilizzati`);
       }
     }
-    
+
     // Se è una richiesta ASSENZA 104 approvata, aggiorna il bilancio assenze 104 (giorni, non ore)
     // IMPORTANTE: Le assenze 104 NON influenzano la banca ore (balance_hours)
     // Le assenze 104 sono normalmente auto-approvate, ma gestiamo anche l'approvazione manuale
@@ -6401,13 +6434,13 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
       const startDate = new Date(updatedRequest.start_date);
       const endDate = new Date(updatedRequest.end_date);
-      
+
       // Genera array di date
       const dates = [];
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         dates.push(d.toISOString().split('T')[0]);
       }
-      
+
       // Per ogni data, aggiorna o crea il record di attendance
       for (const dateStr of dates) {
         const dayOfWeek = new Date(dateStr).getDay();
@@ -6418,7 +6451,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .eq('day_of_week', dayOfWeek)
           .eq('is_working_day', true)
           .single();
-        
+
         if (schedule) {
           // Calcola le ore attese complete dalla giornata lavorativa
           const expectedHours = calculateExpectedHoursForSchedule({
@@ -6426,7 +6459,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             end_time: schedule.end_time,
             break_duration: schedule.break_duration || 60
           });
-          
+
           // Aggiorna o crea il record di attendance con balance_hours = 0
           await supabase
             .from('attendance')
@@ -6441,11 +6474,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             }, {
               onConflict: 'user_id,date'
             });
-          
+
           console.log(`✅ Attendance aggiornata per permesso 104: ${dateStr} - balance_hours = 0`);
         }
       }
-      
+
       const requestMonth = new Date(updatedRequest.start_date).getMonth() + 1;
       const requestYear = new Date(updatedRequest.start_date).getFullYear();
       const daysRequested = Math.max(1, updatedRequest.days_requested || 1); // Minimo 1 giorno intero
@@ -6547,20 +6580,20 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     // Se un PERMESSO viene CANCELLATO, ricalcola le presenze per ripristinare le ore attese originali
     if (updatedRequest.type === 'permission' && status === 'cancelled') {
       console.log(`🔄 Permesso cancellato - ricalcolo presenze per ${updatedRequest.start_date}...`);
-      
+
       // Calcola tutte le date del permesso (dal start_date al end_date)
       const startDate = new Date(updatedRequest.start_date);
       const endDate = new Date(updatedRequest.end_date);
       const datesToRecalculate = [];
-      
+
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         datesToRecalculate.push(d.toISOString().split('T')[0]);
       }
-      
+
       // Per ogni data, ricalcola le ore attese delle presenze
       for (const dateStr of datesToRecalculate) {
         const dayOfWeek = new Date(dateStr).getDay();
-        
+
         // Recupera l'orario di lavoro per quel giorno
         const { data: schedule, error: scheduleError } = await supabase
           .from('work_schedules')
@@ -6569,7 +6602,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .eq('day_of_week', dayOfWeek)
           .eq('is_working_day', true)
           .single();
-        
+
         if (!scheduleError && schedule) {
           // Calcola le ore attese originali (senza permessi)
           const expectedHours = calculateExpectedHoursForSchedule({
@@ -6577,7 +6610,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             end_time: schedule.end_time,
             break_duration: schedule.break_duration || 60
           });
-          
+
           // Recupera permessi APPROVATI per questa data (escludendo quello appena cancellato)
           const { data: approvedPermissions, error: permError } = await supabase
             .from('leave_requests')
@@ -6588,15 +6621,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .lte('start_date', dateStr)
             .gte('end_date', dateStr)
             .neq('id', updatedRequest.id); // Escludi il permesso appena cancellato
-          
+
           let permissionHours = 0;
           if (!permError && approvedPermissions) {
             permissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
           }
-          
+
           // Ore attese finali = ore originali - ore permessi approvati rimanenti
           const finalExpectedHours = Math.max(0, expectedHours - permissionHours);
-          
+
           // Recupera la presenza per questa data
           const { data: attendanceRecord, error: attError } = await supabase
             .from('attendance')
@@ -6604,12 +6637,12 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .eq('user_id', updatedRequest.user_id)
             .eq('date', dateStr)
             .single();
-          
+
           if (!attError && attendanceRecord) {
             // Aggiorna la presenza con le nuove ore attese
             const newActualHours = Math.max(0, finalExpectedHours); // Le ore effettive diventano uguali alle attese (presenza completa)
             const newBalanceHours = newActualHours - finalExpectedHours; // Dovrebbe essere 0
-            
+
             const { error: updateAttError } = await supabase
               .from('attendance')
               .update({
@@ -6620,7 +6653,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               })
               .eq('user_id', updatedRequest.user_id)
               .eq('date', dateStr);
-            
+
             if (updateAttError) {
               console.error(`❌ Errore aggiornamento presenza per ${dateStr}:`, updateAttError);
             } else {
@@ -6631,20 +6664,20 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           }
         }
       }
-      
+
       console.log(`✅ Ricalcolo presenze completato per permesso cancellato`);
     }
 
     // Se un PERMESSO viene APPROVATO, aggiorna l'attendance per ridurre le expected_hours
     if (updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved') {
       console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
-      
+
       const permissionDate = updatedRequest.start_date;
       const permissionHours = parseFloat(updatedRequest.hours || 0);
-      
+
       if (permissionHours > 0) {
         const dayOfWeek = new Date(permissionDate).getDay();
-        
+
         // Recupera l'orario di lavoro per quel giorno
         const { data: schedule, error: scheduleError } = await supabase
           .from('work_schedules')
@@ -6653,7 +6686,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .eq('day_of_week', dayOfWeek)
           .eq('is_working_day', true)
           .single();
-        
+
         if (!scheduleError && schedule) {
           // Calcola le ore attese originali (senza permessi)
           const originalExpectedHours = calculateExpectedHoursForSchedule({
@@ -6661,7 +6694,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             end_time: schedule.end_time,
             break_duration: schedule.break_duration || 60
           });
-          
+
           // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
           const { data: approvedPermissions, error: permError } = await supabase
             .from('leave_requests')
@@ -6671,15 +6704,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .eq('status', 'approved')
             .lte('start_date', permissionDate)
             .gte('end_date', permissionDate);
-          
+
           let totalPermissionHours = 0;
           if (!permError && approvedPermissions) {
             totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
           }
-          
+
           // Ore attese finali = ore originali - ore permessi approvati
           const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
-          
+
           // Recupera o crea la presenza per questa data
           const { data: attendanceRecord, error: attError } = await supabase
             .from('attendance')
@@ -6687,14 +6720,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .eq('user_id', updatedRequest.user_id)
             .eq('date', permissionDate)
             .single();
-          
+
           if (!attError && attendanceRecord) {
             // Aggiorna la presenza con le nuove ore attese
             // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
             // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
             // perché il permesso aggiunge sempre quel debito, indipendentemente dalle ore effettive lavorate
             const newBalanceHours = -permissionHours;
-            
+
             const { error: updateAttError } = await supabase
               .from('attendance')
               .update({
@@ -6704,7 +6737,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               })
               .eq('user_id', updatedRequest.user_id)
               .eq('date', permissionDate);
-            
+
             if (updateAttError) {
               console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
             } else {
@@ -6723,7 +6756,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                 balance_hours: Math.round(-permissionHours * 100) / 100,
                 notes: `[Permesso approvato: -${permissionHours}h]`
               });
-            
+
             if (createAttError) {
               console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
             } else {
@@ -6740,54 +6773,54 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Crea notifica per il dipendente (solo se lo status è stato cambiato)
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
-    try {
-      const typeLabels = {
-        'permission': 'Permesso',
+      try {
+        const typeLabels = {
+          'permission': 'Permesso',
           'sick_leave': 'Malattia',
-        'sick': 'Malattia', 
+          'sick': 'Malattia',
           'vacation': 'Ferie',
           'permission_104': 'Permesso Legge 104',
           'business_trip': 'Trasferta'
-      };
+        };
 
-      const statusLabels = {
-        'approved': 'approvata',
+        const statusLabels = {
+          'approved': 'approvata',
           'rejected': 'rifiutata',
           'cancelled': 'annullata'
-      };
+        };
 
         // Parse date as local time to avoid UTC timezone issues
         const parseLocalDate = (dateStr) => {
           const [year, month, day] = dateStr.split('-').map(Number);
           return new Date(year, month - 1, day);
         };
-        
+
         // Formatta le date in italiano
-        const formattedStartDate = parseLocalDate(updatedRequest.start_date).toLocaleDateString('it-IT', { 
-          day: '2-digit', 
-          month: 'long', 
+        const formattedStartDate = parseLocalDate(updatedRequest.start_date).toLocaleDateString('it-IT', {
+          day: '2-digit',
+          month: 'long',
           year: 'numeric',
           timeZone: 'Europe/Rome'
         });
         const formattedEndDate = updatedRequest.start_date === updatedRequest.end_date
           ? formattedStartDate
-          : parseLocalDate(updatedRequest.end_date).toLocaleDateString('it-IT', { 
-              day: '2-digit', 
-              month: 'long', 
-              year: 'numeric',
-              timeZone: 'Europe/Rome'
-            });
+          : parseLocalDate(updatedRequest.end_date).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
 
         const requestTypeLabel = typeLabels[updatedRequest.type] || updatedRequest.type;
         const statusLabel = statusLabels[status] || status;
 
         // Formatta il messaggio in modo logico: permessi (ore) vs ferie/malattia (giorni)
         let messageText = '';
-        
+
         if (updatedRequest.type === 'permission' || updatedRequest.type === 'permission_104') {
           // PERMESSI: sono in ORE, non giorni
           const hours = updatedRequest.hours || 0;
-          const hoursFormatted = hours > 0 
+          const hoursFormatted = hours > 0
             ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
             : '0h';
           messageText = `Il tuo ${requestTypeLabel.toLowerCase()} di ${hoursFormatted} per il ${formattedStartDate} è stato ${statusLabel}`;
@@ -6799,7 +6832,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             messageText = `La tua richiesta di ${requestTypeLabel.toLowerCase()} dal ${formattedStartDate} al ${formattedEndDate} è stata ${statusLabel}`;
           }
         }
-        
+
         if (notes) {
           messageText += `. Note: ${notes}`;
         }
@@ -6832,15 +6865,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             if (isRealEmail(user.email)) {
               const requestType = typeLabels[updatedRequest.type] || updatedRequest.type;
               const requestId = updatedRequest.id;
-              
+
               // Per permessi, passa anche entry_time, exit_time e hours
               if (updatedRequest.type === 'permission') {
                 await sendEmail(user.email, 'requestResponse', [
-                  requestType, 
-                  status, 
-                  updatedRequest.start_date, 
-                  updatedRequest.end_date, 
-                  notes || '', 
+                  requestType,
+                  status,
+                  updatedRequest.start_date,
+                  updatedRequest.end_date,
+                  notes || '',
                   requestId,
                   updatedRequest.entry_time || null,
                   updatedRequest.exit_time || null,
@@ -6848,14 +6881,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   updatedRequest.permission_type || null
                 ]);
               } else {
-              await sendEmail(user.email, 'requestResponse', [
-                requestType, 
-                status, 
-                updatedRequest.start_date, 
-                updatedRequest.end_date, 
-                notes || '', 
-                requestId
-              ]);
+                await sendEmail(user.email, 'requestResponse', [
+                  requestType,
+                  status,
+                  updatedRequest.start_date,
+                  updatedRequest.end_date,
+                  notes || '',
+                  requestId
+                ]);
               }
               console.log(`Email inviata a ${user.email} per risposta richiesta`);
             } else {
@@ -6866,10 +6899,10 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           console.error('Errore invio email dipendente:', emailError);
           // Non bloccare la risposta se l'email fallisce
         }
-    } catch (notificationError) {
-      console.error('Notification creation error:', notificationError);
-      // Non bloccare l'aggiornamento se le notifiche falliscono
-    }
+      } catch (notificationError) {
+        console.error('Notification creation error:', notificationError);
+        // Non bloccare l'aggiornamento se le notifiche falliscono
+      }
     }
 
     const statusMessages = {
@@ -6947,7 +6980,7 @@ app.post('/api/leave-requests/request-modification', authenticateToken, async (r
 
     // Formatta le ore
     const hours = leaveRequest.hours || 0;
-    const hoursFormatted = hours > 0 
+    const hoursFormatted = hours > 0
       ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
       : '0h';
 
@@ -7018,8 +7051,8 @@ app.post('/api/leave-requests/request-modification', authenticateToken, async (r
 // ==================== HEALTH CHECK ====================
 
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -7038,7 +7071,7 @@ if (process.env.NODE_ENV === 'production') {
 app.post('/api/updates/check', authenticateToken, async (req, res) => {
   try {
     const { userId, lastUpdate } = req.body;
-    
+
     // Per ora restituiamo sempre false, in futuro possiamo implementare
     // un sistema di tracking degli aggiornamenti
     res.json({
@@ -7078,7 +7111,7 @@ app.use((err, req, res, next) => {
 app.post('/api/settings', authenticateToken, async (req, res) => {
   try {
     const { settings } = req.body;
-    
+
     if (!settings) {
       return res.status(400).json({ error: 'Settings data required' });
     }
@@ -7086,7 +7119,7 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
     // Salva nelle tabelle settings per categoria
     const categories = Object.keys(settings);
     const results = [];
-    
+
     for (const category of categories) {
       // Prima cancella le impostazioni esistenti per questa categoria
       await supabase
@@ -7105,7 +7138,7 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
           updated_at: new Date().toISOString()
         })
         .select();
-      
+
       if (error) {
         console.error(`Settings save error for ${category}:`, error);
         results.push({ category, success: false, error: error.message });
@@ -7115,11 +7148,11 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
     }
 
     const hasErrors = results.some(r => !r.success);
-    
+
     if (hasErrors) {
-      return res.status(500).json({ 
-        error: 'Errore nel salvare alcune impostazioni', 
-        details: results 
+      return res.status(500).json({
+        error: 'Errore nel salvare alcune impostazioni',
+        details: results
       });
     }
 
@@ -7165,7 +7198,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 app.post('/api/work-schedules', authenticateToken, async (req, res) => {
   try {
     const { schedules } = req.body;
-    
+
     if (!schedules || !Array.isArray(schedules)) {
       return res.status(400).json({ error: 'Array schedules richiesto' });
     }
@@ -7208,7 +7241,7 @@ app.get('/api/work-schedules/:userId', authenticateToken, async (req, res) => {
     }
 
     const { userId } = req.params;
-    
+
     const { data, error } = await supabase
       .from('work_schedules')
       .select('*')
@@ -7273,7 +7306,7 @@ app.post('/api/notifications', authenticateToken, async (req, res) => {
 app.get('/api/leave-balances', authenticateToken, async (req, res) => {
   try {
     const { year = new Date().getFullYear() } = req.query;
-    
+
     const { data, error } = await supabase
       .from('leave_balances')
       .select('*')
@@ -7300,30 +7333,30 @@ app.get('/api/leave-balances', authenticateToken, async (req, res) => {
 app.get('/api/vacation-periods', authenticateToken, async (req, res) => {
   try {
     const { isOpen, date } = req.query;
-    
+
     let query = supabase
       .from('vacation_periods')
       .select('*, users:created_by(first_name, last_name)')
       .order('start_date', { ascending: false });
-    
+
     if (isOpen !== undefined) {
       query = query.eq('is_open', isOpen === 'true');
     }
-    
+
     // Se viene passata una data, filtra solo i periodi che includono quella data
     if (date) {
       query = query
         .lte('start_date', date)
         .gte('end_date', date);
     }
-    
+
     const { data, error } = await query;
-    
+
     if (error) {
       console.error('Vacation periods fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero dei periodi ferie' });
     }
-    
+
     res.json(data || []);
   } catch (error) {
     console.error('Vacation periods error:', error);
@@ -7335,7 +7368,7 @@ app.get('/api/vacation-periods', authenticateToken, async (req, res) => {
 app.get('/api/vacation-periods/available', authenticateToken, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    
+
     const { data, error } = await supabase
       .from('vacation_periods')
       .select('*')
@@ -7343,12 +7376,12 @@ app.get('/api/vacation-periods/available', authenticateToken, async (req, res) =
       .lte('start_date', today)
       .gte('end_date', today)
       .order('vacation_start_date', { ascending: true });
-    
+
     if (error) {
       console.error('Available vacation periods fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero dei periodi disponibili' });
     }
-    
+
     res.json(data || []);
   } catch (error) {
     console.error('Available vacation periods error:', error);
@@ -7360,11 +7393,11 @@ app.get('/api/vacation-periods/available', authenticateToken, async (req, res) =
 app.post('/api/vacation-periods/validate', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate } = req.body;
-    
+
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'Date inizio e fine richieste' });
     }
-    
+
     // Verifica che esista almeno un periodo aperto che include tutte le date richieste
     const { data: periods, error } = await supabase
       .from('vacation_periods')
@@ -7372,31 +7405,31 @@ app.post('/api/vacation-periods/validate', authenticateToken, async (req, res) =
       .eq('is_open', true)
       .lte('start_date', startDate)
       .gte('end_date', endDate);
-    
+
     if (error) {
       console.error('Period validation error:', error);
       return res.status(500).json({ error: 'Errore nella validazione del periodo' });
     }
-    
+
     // Verifica che tutte le date richieste siano nei periodi validi per le ferie
     const start = new Date(startDate);
     const end = new Date(endDate);
     let isValid = false;
     let invalidDates = [];
-    
+
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
-      const isInValidPeriod = periods.some(period => 
+      const isInValidPeriod = periods.some(period =>
         dateStr >= period.vacation_start_date && dateStr <= period.vacation_end_date
       );
-      
+
       if (!isInValidPeriod) {
         invalidDates.push(dateStr);
       }
     }
-    
+
     isValid = invalidDates.length === 0;
-    
+
     res.json({
       isValid,
       invalidDates,
@@ -7412,11 +7445,11 @@ app.post('/api/vacation-periods/validate', authenticateToken, async (req, res) =
 app.post('/api/vacation-periods', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { name, startDate, endDate, vacationStartDate, vacationEndDate, isOpen, maxConcurrentRequests, notes } = req.body;
-    
+
     if (!name || !startDate || !endDate || !vacationStartDate || !vacationEndDate) {
       return res.status(400).json({ error: 'Campi obbligatori mancanti' });
     }
-    
+
     const { data, error } = await supabase
       .from('vacation_periods')
       .insert([{
@@ -7432,12 +7465,12 @@ app.post('/api/vacation-periods', authenticateToken, requireAdmin, async (req, r
       }])
       .select()
       .single();
-    
+
     if (error) {
       console.error('Vacation period creation error:', error);
       return res.status(500).json({ error: 'Errore nella creazione del periodo' });
     }
-    
+
     res.status(201).json(data);
   } catch (error) {
     console.error('Vacation period creation error:', error);
@@ -7450,7 +7483,7 @@ app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req
   try {
     const { id } = req.params;
     const { name, startDate, endDate, vacationStartDate, vacationEndDate, isOpen, maxConcurrentRequests, notes } = req.body;
-    
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (startDate !== undefined) updateData.start_date = startDate;
@@ -7461,23 +7494,23 @@ app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req
     if (maxConcurrentRequests !== undefined) updateData.max_concurrent_requests = maxConcurrentRequests;
     if (notes !== undefined) updateData.notes = notes;
     updateData.updated_at = new Date().toISOString();
-    
+
     const { data, error } = await supabase
       .from('vacation_periods')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) {
       console.error('Vacation period update error:', error);
       return res.status(500).json({ error: 'Errore nell\'aggiornamento del periodo' });
     }
-    
+
     if (!data) {
       return res.status(404).json({ error: 'Periodo non trovato' });
     }
-    
+
     res.json(data);
   } catch (error) {
     console.error('Vacation period update error:', error);
@@ -7489,37 +7522,37 @@ app.put('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req
 app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('🔄 Starting notification migration...');
-    
+
     // Recupera tutte le notifiche con request_type permission o permission_104
     const { data: notifications, error: notifError } = await supabase
       .from('notifications')
       .select('id, request_id, request_type, message, title')
       .in('request_type', ['permission', 'permission_104']);
-    
+
     if (notifError) {
       console.error('❌ Error fetching notifications:', notifError);
       return res.status(500).json({ error: 'Errore nel recupero delle notifiche' });
     }
-    
+
     if (!notifications || notifications.length === 0) {
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         message: 'Nessuna notifica da migrare',
-        updated: 0 
+        updated: 0
       });
     }
-    
+
     console.log(`📋 Found ${notifications.length} notifications to migrate`);
-    
+
     let updatedCount = 0;
     let errorCount = 0;
-    
+
     // Per ogni notifica, recupera la richiesta associata e riformatta
     for (const notification of notifications) {
       if (!notification.request_id) {
         continue; // Skip se non ha request_id
       }
-      
+
       try {
         // Recupera la richiesta associata
         const { data: request, error: requestError } = await supabase
@@ -7527,42 +7560,42 @@ app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, as
           .select('type, hours, start_date, end_date, status')
           .eq('id', notification.request_id)
           .single();
-        
+
         if (requestError || !request) {
           console.log(`⚠️ Request not found for notification ${notification.id}`);
           continue;
         }
-        
+
         // Riformatta il messaggio usando la stessa logica delle nuove notifiche
         const parseLocalDate = (dateStr) => {
           const [year, month, day] = dateStr.split('-').map(Number);
           return new Date(year, month - 1, day);
         };
-        
-        const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', { 
-          day: '2-digit', 
-          month: 'long', 
+
+        const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', {
+          day: '2-digit',
+          month: 'long',
           year: 'numeric',
           timeZone: 'Europe/Rome'
         });
-        
+
         const typeLabels = {
           'permission': 'Permesso',
           'permission_104': 'Permesso Legge 104'
         };
-        
+
         const statusLabels = {
           'approved': 'approvata',
           'rejected': 'rifiutata',
           'cancelled': 'annullata'
         };
-        
+
         let newMessage = '';
-        
+
         if (request.type === 'permission' || request.type === 'permission_104') {
           // PERMESSI: sono in ORE
           const hours = request.hours || 0;
-          const hoursFormatted = hours > 0 
+          const hoursFormatted = hours > 0
             ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
             : '0h';
           const requestTypeLabel = typeLabels[request.type] || 'Permesso';
@@ -7572,14 +7605,14 @@ app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, as
           // Non è un permesso, salta (dovrebbe essere già corretto)
           continue;
         }
-        
+
         // Aggiorna la notifica solo se il messaggio è diverso
         if (notification.message !== newMessage) {
           const { error: updateError } = await supabase
             .from('notifications')
             .update({ message: newMessage })
             .eq('id', notification.id);
-          
+
           if (updateError) {
             console.error(`❌ Error updating notification ${notification.id}:`, updateError);
             errorCount++;
@@ -7593,9 +7626,9 @@ app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, as
         errorCount++;
       }
     }
-    
+
     console.log(`✅ Migration completed: ${updatedCount} updated, ${errorCount} errors`);
-    
+
     res.json({
       success: true,
       message: `Migrazione completata: ${updatedCount} notifiche aggiornate`,
@@ -7613,26 +7646,26 @@ app.post('/api/admin/migrate-notifications', authenticateToken, requireAdmin, as
 app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Recupera la richiesta per verificare che esista
     const { data: request, error: fetchError } = await supabase
       .from('leave_requests')
       .select('*, users!leave_requests_user_id_fkey(first_name, last_name)')
       .eq('id', id)
       .single();
-    
+
     if (fetchError || !request) {
       return res.status(404).json({ error: 'Richiesta non trovata' });
     }
-    
+
     const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
-    
+
     // Se è un permesso 104 approvato, aggiorna il bilancio e le attendance records
     if (request.type === 'permission_104' && request.status === 'approved') {
       const requestMonth = new Date(request.start_date).getMonth() + 1; // 1-12
       const requestYear = new Date(request.start_date).getFullYear();
       const daysToRemove = request.days_requested || 1;
-      
+
       // Recupera o crea bilancio assenze 104
       let { data: balance, error: balanceError } = await supabase
         .from('absence_104_balances')
@@ -7641,12 +7674,12 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
         .eq('year', requestYear)
         .eq('month', requestMonth)
         .single();
-      
+
       if (!balanceError && balance) {
         // Decrementa i giorni utilizzati
         const newUsedDays = Math.max(0, (balance.used_days || 0) - Math.ceil(daysToRemove));
         const remainingDays = (balance.total_days || 3) - newUsedDays - (balance.pending_days || 0);
-        
+
         await supabase
           .from('absence_104_balances')
           .update({
@@ -7655,10 +7688,10 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
             updated_at: new Date().toISOString()
           })
           .eq('id', balance.id);
-        
+
         console.log(`📊 Bilancio 104 aggiornato per eliminazione: -${Math.ceil(daysToRemove)} giorni (rimasti: ${newUsedDays}/3)`);
       }
-      
+
       // Ripristina le attendance records per le date del permesso 104 eliminato
       // Le attendance records verranno ricalcolate automaticamente al prossimo accesso
       // Oppure possiamo eliminarle/aggiornarle qui
@@ -7668,7 +7701,7 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         dates.push(d.toISOString().split('T')[0]);
       }
-      
+
       // Elimina i record di attendance per quelle date (verranno ricalcolati automaticamente)
       for (const dateStr of dates) {
         await supabase
@@ -7677,25 +7710,25 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
           .eq('user_id', request.user_id)
           .eq('date', dateStr);
       }
-      
+
       console.log(`🔄 Attendance records eliminati per permesso 104 rimosso (${dates.length} date)`);
     }
-    
+
     // Elimina la richiesta
     const { error: deleteError } = await supabase
       .from('leave_requests')
       .delete()
       .eq('id', id);
-    
+
     if (deleteError) {
       console.error('Leave request deletion error:', deleteError);
       return res.status(500).json({ error: 'Errore nell\'eliminazione della richiesta' });
     }
-    
+
     console.log(`✅ Leave request ${id} eliminata per ${userName}`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: `Richiesta eliminata con successo`,
       deletedRequest: {
         id: request.id,
@@ -7713,22 +7746,22 @@ app.delete('/api/leave-requests/:id', authenticateToken, requireAdmin, async (re
 app.post('/api/admin/generate-historical-attendance', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const startDate = '2025-10-01'; // Data di inizio fissa: 1 ottobre 2025
-    
+
     console.log(`🔄 Generazione presenze storiche dal ${startDate} per tutti i dipendenti...`);
-    
+
     // Trova tutti i dipendenti attivi
     const { data: employees, error: employeesError } = await supabase
       .from('users')
       .select('id, first_name, last_name, created_at, hire_date')
       .eq('role', 'employee')
       .eq('is_active', true);
-    
+
     if (employeesError || !employees || employees.length === 0) {
       return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
     }
-    
+
     console.log(`📋 Trovati ${employees.length} dipendenti attivi`);
-    
+
     const results = {
       totalEmployees: employees.length,
       processedEmployees: 0,
@@ -7736,26 +7769,26 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
       skippedDays: 0,
       errors: []
     };
-    
+
     // Per ogni dipendente
     for (const employee of employees) {
       try {
         console.log(`\n👤 Elaborazione: ${employee.first_name} ${employee.last_name} (${employee.id})`);
-        
+
         // Determina la data di fine: data di registrazione (created_at)
         // Generiamo presenze dal 1 ottobre 2025 fino al giorno di registrazione (incluso)
         const registrationDate = employee.created_at ? new Date(employee.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
         const endDate = registrationDate;
-        
+
         console.log(`   📅 Periodo: ${startDate} → ${endDate}`);
-        
+
         // Recupera gli orari di lavoro del dipendente
         const { data: schedules, error: schedulesError } = await supabase
           .from('work_schedules')
           .select('*')
           .eq('user_id', employee.id)
           .eq('is_working_day', true);
-        
+
         if (schedulesError || !schedules || schedules.length === 0) {
           console.log(`   ⚠️ Nessun orario di lavoro configurato per ${employee.first_name} ${employee.last_name}`);
           results.errors.push({
@@ -7764,7 +7797,7 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           });
           continue;
         }
-        
+
         // Recupera presenze esistenti per questo dipendente nel periodo
         const { data: existingAttendance, error: attError } = await supabase
           .from('attendance')
@@ -7772,14 +7805,14 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           .eq('user_id', employee.id)
           .gte('date', startDate)
           .lte('date', endDate);
-        
+
         if (attError) {
           console.error(`   ❌ Errore recupero presenze:`, attError);
           continue;
         }
-        
+
         const existingDates = new Set(existingAttendance?.map(a => a.date) || []);
-        
+
         // Recupera permessi/ferie/malattia approvati per questo dipendente nel periodo
         const { data: leaveRequests, error: leaveError } = await supabase
           .from('leave_requests')
@@ -7788,12 +7821,12 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           .eq('status', 'approved')
           .lte('start_date', endDate)
           .gte('end_date', startDate);
-        
+
         if (leaveError) {
           console.error(`   ❌ Errore recupero leave requests:`, leaveError);
           continue;
         }
-        
+
         // Crea set di date con permessi/ferie/malattia
         const leaveDates = new Set();
         if (leaveRequests) {
@@ -7805,47 +7838,47 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
             }
           }
         }
-        
+
         // Genera presenze per ogni giorno dal 1 ottobre alla data di registrazione
         const start = new Date(startDate);
         const end = new Date(endDate);
         const inserts = [];
-        
+
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
           const dateStr = d.toISOString().split('T')[0];
           const dayOfWeek = d.getDay();
-          
+
           // Salta se già esiste una presenza
           if (existingDates.has(dateStr)) {
             results.skippedDays++;
             continue;
           }
-          
+
           // Salta se c'è un permesso/ferie/malattia per questo giorno
           if (leaveDates.has(dateStr)) {
             results.skippedDays++;
             continue;
           }
-          
+
           // Trova l'orario di lavoro per questo giorno della settimana
           const schedule = schedules.find(s => s.day_of_week === dayOfWeek && s.is_working_day === true);
-          
+
           if (!schedule || !schedule.start_time || !schedule.end_time) {
             // Non è un giorno lavorativo
             continue;
           }
-          
+
           // Calcola le ore attese dall'orario
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
             break_duration: schedule.break_duration || 60
           });
-          
+
           if (!expectedHours || expectedHours <= 0) {
             continue;
           }
-          
+
           // Crea record di presenza
           inserts.push({
             user_id: employee.id,
@@ -7856,13 +7889,13 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
             notes: '[Presenza storica - generata automaticamente]'
           });
         }
-        
+
         if (inserts.length > 0) {
           // Inserisci in batch
           const { error: insertError } = await supabase
             .from('attendance')
             .insert(inserts);
-          
+
           if (insertError) {
             console.error(`   ❌ Errore inserimento per ${employee.first_name}:`, insertError);
             results.errors.push({
@@ -7878,7 +7911,7 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           console.log(`   ⏭️ Nessuna presenza da creare per ${employee.first_name} ${employee.last_name} (tutte già esistenti o con permessi)`);
           results.processedEmployees++;
         }
-        
+
       } catch (error) {
         console.error(`   ❌ Errore elaborazione ${employee.first_name} ${employee.last_name}:`, error);
         results.errors.push({
@@ -7887,19 +7920,19 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
         });
       }
     }
-    
+
     console.log(`\n✅ Generazione completata!`);
     console.log(`   - Dipendenti processati: ${results.processedEmployees}/${results.totalEmployees}`);
     console.log(`   - Record creati: ${results.totalRecordsCreated}`);
     console.log(`   - Giorni saltati (già esistenti o con permessi): ${results.skippedDays}`);
     console.log(`   - Errori: ${results.errors.length}`);
-    
+
     res.json({
       success: true,
       message: `Generazione presenze storiche completata`,
       results
     });
-    
+
   } catch (error) {
     console.error('❌ Errore generazione presenze storiche:', error);
     res.status(500).json({ error: 'Errore interno del server', details: error.message });
@@ -7910,17 +7943,17 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
 app.delete('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const { error } = await supabase
       .from('vacation_periods')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
       console.error('Vacation period deletion error:', error);
       return res.status(500).json({ error: 'Errore nell\'eliminazione del periodo' });
     }
-    
+
     res.json({ success: true, message: 'Periodo eliminato con successo' });
   } catch (error) {
     console.error('Vacation period deletion error:', error);
@@ -7937,12 +7970,12 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
     const { userId, year } = req.query;
     const targetUserId = userId || req.user.id;
     const targetYear = year ? parseInt(year) : new Date().getFullYear();
-    
+
     // Verifica permessi
     if (req.user.role === 'employee' && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Accesso negato' });
     }
-    
+
     // Recupera o crea bilancio ferie
     let { data: balance, error } = await supabase
       .from('vacation_balances')
@@ -7950,7 +7983,7 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
       .eq('user_id', targetUserId)
       .eq('year', targetYear)
       .single();
-    
+
     if (error && error.code === 'PGRST116') {
       // Nessun bilancio trovato, creane uno nuovo con 30 giorni
       const { data: newBalance, error: createError } = await supabase
@@ -7965,18 +7998,18 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
         }])
         .select()
         .single();
-      
+
       if (createError) {
         console.error('Vacation balance creation error:', createError);
         return res.status(500).json({ error: 'Errore nella creazione del bilancio' });
       }
-      
+
       balance = newBalance;
     } else if (error) {
       console.error('Vacation balance fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero del bilancio' });
     }
-    
+
     // Calcola pending_days dalle richieste in attesa
     const { data: pendingRequests, error: pendingError } = await supabase
       .from('leave_requests')
@@ -7986,14 +8019,14 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
       .eq('status', 'pending')
       .gte('start_date', `${targetYear}-01-01`)
       .lte('end_date', `${targetYear}-12-31`);
-    
+
     if (!pendingError && pendingRequests) {
       const pendingDays = pendingRequests.reduce((sum, req) => sum + (req.days_requested || 0), 0);
-      
+
       // Aggiorna pending_days se diverso
       if (balance.pending_days !== pendingDays) {
         const remainingDays = balance.total_days - balance.used_days - pendingDays;
-        
+
         const { data: updatedBalance, error: updateError } = await supabase
           .from('vacation_balances')
           .update({
@@ -8004,13 +8037,13 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
           .eq('id', balance.id)
           .select()
           .single();
-        
+
         if (!updateError && updatedBalance) {
           balance = updatedBalance;
         }
       }
     }
-    
+
     res.json(balance);
   } catch (error) {
     console.error('Vacation balance error:', error);
@@ -8074,7 +8107,7 @@ app.get('/api/departments', authenticateToken, async (req, res) => {
     // Ottieni conteggio dipendenti per dipartimento
     // Prima controlla se il campo department esiste
     let departmentCounts = {};
-    
+
     try {
       const { data: employees, error: empError } = await supabase
         .from('users')
@@ -8193,30 +8226,30 @@ function getDefaultHolidays(year) {
 app.post('/api/admin/holidays/insert-year', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { year = 2026 } = req.body;
-    
+
     console.log(`🔄 Inserting holidays for year ${year}...`);
-    
+
     // Ottieni le festività di default per l'anno
     const defaultHolidays = getDefaultHolidays(year);
-    
+
     if (!defaultHolidays || defaultHolidays.length === 0) {
       return res.status(400).json({ error: `Nessuna festività disponibile per l'anno ${year}` });
     }
-    
+
     // Verifica quali festività esistono già
     const { data: existingHolidays, error: fetchError } = await supabase
       .from('holidays')
       .select('date')
       .gte('date', `${year}-01-01`)
       .lte('date', `${year}-12-31`);
-    
+
     if (fetchError) {
       console.error('❌ Error fetching existing holidays:', fetchError);
       return res.status(500).json({ error: 'Errore nel recupero delle festività esistenti' });
     }
-    
+
     const existingDates = new Set((existingHolidays || []).map(h => h.date));
-    
+
     // Filtra solo le festività che non esistono già
     const holidaysToInsert = defaultHolidays
       .filter(holiday => !existingDates.has(holiday.date))
@@ -8228,7 +8261,7 @@ app.post('/api/admin/holidays/insert-year', authenticateToken, requireAdmin, asy
         region: holiday.region || null,
         year: year
       }));
-    
+
     if (holidaysToInsert.length === 0) {
       return res.json({
         success: true,
@@ -8238,20 +8271,20 @@ app.post('/api/admin/holidays/insert-year', authenticateToken, requireAdmin, asy
         total: defaultHolidays.length
       });
     }
-    
+
     // Inserisci le festività
     const { data: insertedHolidays, error: insertError } = await supabase
       .from('holidays')
       .insert(holidaysToInsert)
       .select();
-    
+
     if (insertError) {
       console.error('❌ Error inserting holidays:', insertError);
       return res.status(500).json({ error: 'Errore nell\'inserimento delle festività' });
     }
-    
+
     console.log(`✅ Inserted ${insertedHolidays?.length || 0} holidays for year ${year}`);
-    
+
     res.json({
       success: true,
       message: `Festività per l'anno ${year} inserite con successo`,
@@ -8308,7 +8341,7 @@ const isRealEmail = (email) => {
 app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { type, userId, customMessage } = req.body;
-    
+
     if (!type || !userId) {
       return res.status(400).json({ error: 'Tipo e userId richiesti' });
     }
@@ -8327,7 +8360,7 @@ app.post('/api/email/reminder', authenticateToken, requireAdmin, async (req, res
     if (!isRealEmail(user.email)) {
       return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
     }
-    
+
     // Usa sempre l'email aziendale
     if (!user.email) {
       return res.status(400).json({ error: 'Email non configurata per questo utente' });
@@ -8388,10 +8421,10 @@ async function calculateWeeklyReportData(userId) {
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Lunedì
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6); // Domenica
-    
+
     // Recupera presenze della settimana
     const { data: attendance, error } = await supabase
       .from('attendance')
@@ -8399,21 +8432,21 @@ async function calculateWeeklyReportData(userId) {
       .eq('user_id', userId)
       .gte('date', startOfWeek.toISOString().split('T')[0])
       .lte('date', endOfWeek.toISOString().split('T')[0]);
-    
+
     if (error) {
       console.error('Error fetching weekly attendance:', error);
       return { weekNumber: 1, totalHours: 0, daysPresent: 0, overtimeHours: 0, balanceHours: 0 };
     }
-    
+
     // Calcola statistiche
     const totalHours = attendance.reduce((sum, day) => sum + (day.actual_hours || 0), 0);
     const daysPresent = attendance.filter(day => (day.actual_hours || 0) > 0).length;
     const overtimeHours = attendance.reduce((sum, day) => sum + Math.max(0, (day.balance_hours || 0)), 0);
     const balanceHours = attendance.reduce((sum, day) => sum + (day.balance_hours || 0), 0);
-    
+
     // Calcola numero settimana
     const weekNumber = Math.ceil((today.getDate() - today.getDay() + 1) / 7);
-    
+
     return {
       weekNumber,
       totalHours: Math.round(totalHours * 10) / 10,
@@ -8430,7 +8463,7 @@ async function calculateWeeklyReportData(userId) {
 app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { employeeId, type, message } = req.body;
-    
+
     if (!employeeId || !type) {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
@@ -8449,7 +8482,7 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
     // Invia email in base al tipo
     let emailTemplate;
     let emailData;
-    
+
     switch (type) {
       case 'attendance':
         // Le email di timbratura sono state rimosse
@@ -8477,10 +8510,10 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
             </div>
           `
         };
-        
+
         const { sendEmail } = require('./emailService');
         const result = await sendEmail(employee.email, customTemplate.subject, customTemplate.html);
-        
+
         if (result.success) {
           res.json({ message: 'Email inviata con successo' });
         } else {
@@ -8493,7 +8526,7 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
 
     const { sendEmail } = require('./emailService');
     const result = await sendEmail(employee.email, emailTemplate, emailData);
-    
+
     if (result.success) {
       res.json({ message: 'Email inviata con successo' });
     } else {
@@ -8509,13 +8542,13 @@ app.post('/api/email/send', authenticateToken, requireAdmin, async (req, res) =>
 app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { email, template, type } = req.body;
-    
+
     const { sendEmail, sendEmailToAdmins } = require('./emailService');
-    
+
     // Se email specificata, invia a quell'email, altrimenti invia a tutti gli admin
     if (email) {
       let result;
-      
+
       switch (template || 'newRequest') {
         case 'newRequest': {
           const today = new Date().toISOString().split('T')[0];
@@ -8558,17 +8591,17 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
         default:
           return res.status(400).json({ error: 'Template non valido' });
       }
-      
+
       if (result.success) {
-        return res.json({ 
-          success: true, 
+        return res.json({
+          success: true,
           message: `Email di test inviata a ${email}`,
-          messageId: result.messageId 
+          messageId: result.messageId
         });
       } else {
-        return res.status(500).json({ 
-          error: 'Errore nell\'invio dell\'email', 
-          details: result.error 
+        return res.status(500).json({
+          error: 'Errore nell\'invio dell\'email',
+          details: result.error
         });
       }
     } else {
@@ -8581,9 +8614,9 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
         today,
         12345
       ]);
-      
-      return res.json({ 
-        success: true, 
+
+      return res.json({
+        success: true,
         message: `Email di test inviate a ${result.length} admin`,
         results: result
       });
@@ -8598,7 +8631,7 @@ app.post('/api/email/test', authenticateToken, requireAdmin, async (req, res) =>
 app.post('/api/email/scheduler/toggle', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const currentStatus = emailScheduler.getStatus();
-    
+
     if (currentStatus.active) {
       emailScheduler.stop();
       res.json({
@@ -8625,7 +8658,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
   try {
     console.log('📊 Weekly report request received:', req.body);
     const { userId, weekNumber } = req.body;
-    
+
     if (!userId) {
       console.log('❌ Missing userId');
       return res.status(400).json({ error: 'UserId richiesto' });
@@ -8650,7 +8683,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
       console.log('❌ Email not authorized:', user.email);
       return res.status(403).json({ error: 'Privacy: email non autorizzata per invii' });
     }
-    
+
     // Usa sempre l'email aziendale
     if (!user.email) {
       console.log('❌ No email configured');
@@ -8684,7 +8717,7 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
           totalHours += record.hours_worked;
           daysPresent++;
           expectedSum += (record.expected_hours || 8);
-          
+
           // Calcola straordinario (oltre 8 ore al giorno)
           if (record.hours_worked > 8) {
             overtimeHours += (record.hours_worked - 8);
@@ -8707,11 +8740,11 @@ app.post('/api/email/weekly-report', authenticateToken, requireAdmin, async (req
 
     console.log('📊 Week data calculated:', weekData);
 
-         console.log('📧 Sending email to:', user.email);
-         const emailResult = await sendEmail(user.email, 'weeklyReport', [
-           `${user.first_name} ${user.last_name}`,
-           weekData
-         ]);
+    console.log('📧 Sending email to:', user.email);
+    const emailResult = await sendEmail(user.email, 'weeklyReport', [
+      `${user.first_name} ${user.last_name}`,
+      weekData
+    ]);
 
     console.log('📧 Email result:', emailResult);
 
@@ -8741,7 +8774,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     // Per admin, aumenta il limite a 200 per vedere tutte le notifiche
     const defaultLimit = req.user.role === 'admin' ? 200 : 50;
     const { limit = defaultLimit, unread_only = false } = req.query;
-    
+
     let query = supabase
       .from('notifications')
       .select('*')
@@ -8784,7 +8817,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
 
           if (!existingError && existingNotifications) {
             const existingRequestIds = new Set(existingNotifications.map(n => n.request_id));
-            
+
             // Crea notifiche "virtuali" per le richieste senza notifica
             const virtualNotifications = pendingRequests
               .filter(req => !existingRequestIds.has(req.id))
@@ -8796,36 +8829,36 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
                   'permission_104': 'Permesso Legge 104',
                   'business_trip': 'Trasferta'
                 };
-                
+
                 const parseLocalDate = (dateStr) => {
                   const [year, month, day] = dateStr.split('-').map(Number);
                   return new Date(year, month - 1, day);
                 };
-                
-                const formattedStartDate = parseLocalDate(req.start_date).toLocaleDateString('it-IT', { 
-                  day: '2-digit', 
-                  month: 'long', 
+
+                const formattedStartDate = parseLocalDate(req.start_date).toLocaleDateString('it-IT', {
+                  day: '2-digit',
+                  month: 'long',
                   year: 'numeric',
                   timeZone: 'Europe/Rome'
                 });
-                
+
                 const formattedEndDate = req.start_date === req.end_date
                   ? formattedStartDate
-                  : parseLocalDate(req.end_date).toLocaleDateString('it-IT', { 
-                      day: '2-digit', 
-                      month: 'long', 
-                      year: 'numeric',
-                      timeZone: 'Europe/Rome'
-                    });
+                  : parseLocalDate(req.end_date).toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'Europe/Rome'
+                  });
 
                 const requestTypeLabel = typeLabels[req.type] || req.type;
                 const userName = req.users ? `${req.users.first_name} ${req.users.last_name}` : 'Dipendente';
                 const requestTypeText = req.type === 'vacation' ? 'ferie' : req.type === 'sick_leave' ? 'malattia' : req.type === 'permission_104' ? 'permesso Legge 104' : 'permesso';
-                
+
                 let messageText = '';
                 if (req.type === 'permission' || req.type === 'permission_104') {
                   const hours = req.hours || 0;
-                  const hoursFormatted = hours > 0 
+                  const hoursFormatted = hours > 0
                     ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
                     : '0h';
                   messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
@@ -8854,12 +8887,12 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
             // Combina notifiche reali e virtuali, ordinate per data
             const allNotifications = [...(data || []), ...virtualNotifications];
             allNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
             // Limita il risultato se necessario
             const limitedNotifications = allNotifications.slice(0, parseInt(limit));
-            
+
             console.log(`📬 Admin notifications: ${data?.length || 0} real, ${virtualNotifications.length} virtual, total: ${limitedNotifications.length}`);
-            
+
             return res.json(limitedNotifications);
           }
         }
@@ -8880,11 +8913,11 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
 app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Se è una notifica virtuale (id inizia con "virtual_"), crea la notifica reale
     if (id.startsWith('virtual_')) {
       const requestId = id.replace('virtual_', '');
-      
+
       // Verifica che la richiesta esista
       const { data: request, error: requestError } = await supabase
         .from('leave_requests')
@@ -8894,11 +8927,11 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
         `)
         .eq('id', requestId)
         .single();
-      
+
       if (requestError || !request) {
         return res.status(404).json({ error: 'Richiesta non trovata' });
       }
-      
+
       // Crea la notifica reale per l'admin
       const typeLabels = {
         'permission': 'Permesso',
@@ -8907,36 +8940,36 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
         'permission_104': 'Permesso Legge 104',
         'business_trip': 'Trasferta'
       };
-      
+
       const parseLocalDate = (dateStr) => {
         const [year, month, day] = dateStr.split('-').map(Number);
         return new Date(year, month - 1, day);
       };
-      
-      const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', { 
-        day: '2-digit', 
-        month: 'long', 
+
+      const formattedStartDate = parseLocalDate(request.start_date).toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'long',
         year: 'numeric',
         timeZone: 'Europe/Rome'
       });
-      
+
       const formattedEndDate = request.start_date === request.end_date
         ? formattedStartDate
-        : parseLocalDate(request.end_date).toLocaleDateString('it-IT', { 
-            day: '2-digit', 
-            month: 'long', 
-            year: 'numeric',
-            timeZone: 'Europe/Rome'
-          });
+        : parseLocalDate(request.end_date).toLocaleDateString('it-IT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Europe/Rome'
+        });
 
       const requestTypeLabel = typeLabels[request.type] || request.type;
       const userName = request.users ? `${request.users.first_name} ${request.users.last_name}` : 'Dipendente';
       const requestTypeText = request.type === 'vacation' ? 'ferie' : request.type === 'sick_leave' ? 'malattia' : request.type === 'permission_104' ? 'permesso Legge 104' : 'permesso';
-      
+
       let messageText = '';
       if (request.type === 'permission' || request.type === 'permission_104') {
         const hours = request.hours || 0;
-        const hoursFormatted = hours > 0 
+        const hoursFormatted = hours > 0
           ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
           : '0h';
         messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
@@ -8971,13 +9004,13 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 
       return res.json({ success: true, data: newNotification });
     }
-    
+
     // Notifica reale - aggiorna normalmente
     const { data, error } = await supabase
       .from('notifications')
-      .update({ 
-        is_read: true, 
-        read_at: new Date().toISOString() 
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString()
       })
       .eq('id', id)
       .eq('user_id', req.user.id)
@@ -9012,17 +9045,17 @@ app.use('/api/hours', authenticateToken, (req, res, next) => {
 app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Get current week start and end dates
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
     startOfWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
     endOfWeek.setHours(23, 59, 59, 999);
-    
+
     // Get attendance records for current week
     const { data: weeklyAttendance, error } = await supabase
       .from('attendance')
@@ -9030,16 +9063,16 @@ app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res)
       .eq('user_id', userId)
       .gte('date', startOfWeek.toISOString().split('T')[0])
       .lte('date', endOfWeek.toISOString().split('T')[0]);
-    
+
     if (error) {
       console.error('Weekly hours error:', error);
       return res.status(500).json({ error: 'Errore nel calcolo delle ore settimanali' });
     }
-    
+
     // Calculate total hours including current session
     let totalHours = 0;
     const today = new Date().toISOString().split('T')[0];
-    
+
     weeklyAttendance.forEach(record => {
       if (record.hours_worked) {
         // Use saved hours
@@ -9052,13 +9085,13 @@ app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res)
         totalHours += currentHours;
       }
     });
-    
-    res.json({ 
-      success: true, 
-      data: { 
+
+    res.json({
+      success: true,
+      data: {
         totalHours: totalHours,
         weeklyAttendance: weeklyAttendance.length
-      } 
+      }
     });
   } catch (error) {
     console.error('Weekly hours error:', error);
@@ -9070,12 +9103,12 @@ app.get('/api/attendance/user-weekly-hours', authenticateToken, async (req, res)
 app.get('/api/attendance/user-overtime', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Get current month start and end dates
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
+
     // Get attendance records for current month
     const { data: monthlyAttendance, error } = await supabase
       .from('attendance')
@@ -9084,26 +9117,26 @@ app.get('/api/attendance/user-overtime', authenticateToken, async (req, res) => 
       .gte('date', startOfMonth.toISOString().split('T')[0])
       .lte('date', endOfMonth.toISOString().split('T')[0])
       .not('hours_worked', 'is', null);
-    
+
     if (error) {
       console.error('Overtime error:', error);
       return res.status(500).json({ error: 'Errore nel calcolo degli straordinari' });
     }
-    
+
     // Calculate total hours worked this month
     const totalHoursWorked = monthlyAttendance.reduce((sum, record) => sum + (parseFloat(record.hours_worked) || 0), 0);
-    
+
     // Calculate expected hours from records when available, fallback to 160
     const expectedHours = monthlyAttendance.reduce((sum, r) => sum + (parseFloat(r.expected_hours) || 0), 0) || 160;
     const overtimeHours = totalHoursWorked - expectedHours;
-    
-    res.json({ 
-      success: true, 
-      data: { 
+
+    res.json({
+      success: true,
+      data: {
         overtimeHours: overtimeHours,
         totalHoursWorked: totalHoursWorked,
         expectedHours: expectedHours
-      } 
+      }
     });
   } catch (error) {
     console.error('Overtime error:', error);
@@ -9406,15 +9439,15 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
     // Dipendenti possono richiedere, admin può proporre
     const { recoveryDate, startTime, endTime, hours, reason, notes, userId: targetUserId } = req.body;
-    
+
     // Determina userId: se admin propone, usa targetUserId, altrimenti usa req.user.id
     const userId = (req.user.role === 'admin' && targetUserId) ? targetUserId : req.user.id;
-    
+
     // Se admin propone, deve specificare userId
     if (req.user.role === 'admin' && !targetUserId) {
       return res.status(400).json({ error: 'Admin deve specificare userId per proporre recupero' });
     }
-    
+
     // Dipendenti non possono creare richieste per altri
     if (req.user.role === 'employee' && targetUserId && targetUserId !== req.user.id) {
       return res.status(403).json({ error: 'Non puoi creare richieste per altri dipendenti' });
@@ -9430,7 +9463,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     recoveryDateObj.setHours(0, 0, 0, 0);
-    
+
     if (recoveryDateObj <= today) {
       return res.status(400).json({ error: 'La data di recupero deve essere nel futuro' });
     }
@@ -9449,7 +9482,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
     // Verifica che ci sia un debito nella banca ore (solo per dipendenti)
     // Admin può proporre recuperi anche senza debito esplicito
     const isAdminProposal = req.user.role === 'admin' && req.body.userId && req.body.userId !== req.user.id;
-    
+
     if (!isAdminProposal) {
       // Per dipendenti, verifica il debito
       const { data: balanceData } = await supabase
@@ -9460,7 +9493,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
         .limit(100);
 
       const totalBalance = balanceData?.reduce((sum, row) => sum + (parseFloat(row.balance_hours) || 0), 0) || 0;
-      
+
       if (totalBalance >= 0) {
         return res.status(400).json({ error: 'Non puoi richiedere recupero ore se non hai un debito nella banca ore' });
       }
@@ -9470,7 +9503,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
     // Se è admin che propone, submitted_by è l'admin, altrimenti è il dipendente
     const submittedById = isAdminProposal ? req.user.id : userId;
     const requestStatus = isAdminProposal ? 'proposed' : 'pending'; // 'proposed' = proposta admin, 'pending' = richiesta dipendente
-    
+
     const { data: recoveryRequest, error } = await supabase
       .from('recovery_requests')
       .insert({
@@ -9501,7 +9534,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
           .select('id, email, first_name, last_name')
           .eq('id', userId)
           .single();
-        
+
         if (employeeError || !employee) {
           console.error('Error fetching employee for notification:', employeeError);
         } else {
@@ -9512,14 +9545,14 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
             year: 'numeric',
             timeZone: 'Europe/Rome'
           });
-          
+
           const hoursFormatted = (() => {
             const h = Math.floor(Math.abs(calculatedHours));
             const m = Math.round((Math.abs(calculatedHours) - h) * 60);
             if (m === 0) return `${h}h`;
             return `${h}h ${m}min`;
           })();
-          
+
           await supabase
             .from('notifications')
             .insert([{
@@ -9531,9 +9564,9 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
               related_id: recoveryRequest.id,
               created_at: new Date().toISOString()
             }]);
-          
+
           console.log(`✅ Notifica creata per dipendente ${employee.first_name} ${employee.last_name}`);
-          
+
           // Invia email al dipendente
           if (isRealEmail(employee.email)) {
             try {
@@ -9613,13 +9646,13 @@ async function calculateOvertimeBalance(userId, year = null) {
     // Il debito deve essere basato solo sui giorni già completati
     const totalBalance = attendance && attendance.length > 0
       ? attendance.reduce((sum, record) => {
-          // Escludi la giornata corrente: le ore rimanenti oggi non sono debito
-          if (record.date === today) {
-            return sum;
-          }
-          const balance = parseFloat(record.balance_hours || 0);
-          return sum + balance;
-        }, 0)
+        // Escludi la giornata corrente: le ore rimanenti oggi non sono debito
+        if (record.date === today) {
+          return sum;
+        }
+        const balance = parseFloat(record.balance_hours || 0);
+        return sum + balance;
+      }, 0)
       : 0;
 
     const roundedBalance = Math.round(totalBalance * 100) / 100;
@@ -9719,7 +9752,7 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
 
     // IMPORTANTE: Usa la funzione centralizzata per calcolare i saldi
     const balances = {};
-    
+
     for (const emp of employees) {
       const balanceData = await calculateOvertimeBalance(emp.id, currentYear);
       balances[emp.id] = balanceData.balance;
@@ -9769,7 +9802,7 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
 app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
     const { userId, status } = req.query;
-    
+
     let query = supabase
       .from('recovery_requests')
       .select(`
@@ -9886,13 +9919,13 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       const { date: today, time: currentTime } = await getCurrentDateTime();
       const recoveryDate = new Date(existingRequest.recovery_date);
       const isDatePast = recoveryDate.toISOString().split('T')[0] < today;
-      const isTimePast = recoveryDate.toISOString().split('T')[0] === today && 
-                        existingRequest.end_time <= currentTime;
+      const isTimePast = recoveryDate.toISOString().split('T')[0] === today &&
+        existingRequest.end_time <= currentTime;
 
       if (isDatePast || isTimePast) {
         // Processa immediatamente per aggiornare il saldo banca ore
         console.log(`🔄 Processing approved recovery ${id} immediately (date/time passed)`);
-        
+
         // Aggiungi le ore al saldo della banca ore nella tabella attendance
         const { data: existingAttendance } = await supabase
           .from('attendance')
@@ -9943,7 +9976,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
     try {
       const employee = updatedRequest.users;
       const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : 'Dipendente';
-      
+
       // Scenario 1: Admin approva/rifiuta recovery request del dipendente
       if (req.user.role === 'admin' && existingRequest.status === 'pending') {
         // Notifica in-app al dipendente
@@ -9953,14 +9986,14 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           year: 'numeric',
           timeZone: 'Europe/Rome'
         });
-        
+
         const hoursFormatted = (() => {
           const h = Math.floor(Math.abs(existingRequest.hours));
           const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
           if (m === 0) return `${h}h`;
           return `${h}h ${m}min`;
         })();
-        
+
         await supabase
           .from('notifications')
           .insert([{
@@ -9972,7 +10005,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             related_id: id,
             created_at: new Date().toISOString()
           }]);
-        
+
         // Email al dipendente
         if (employee && isRealEmail(employee.email)) {
           try {
@@ -9991,7 +10024,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           }
         }
       }
-      
+
       // Scenario 2: Dipendente accetta proposta admin
       if (status === 'approved' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
         // Recupera admin che ha proposto
@@ -10000,7 +10033,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           .select('id, email, first_name, last_name')
           .eq('id', existingRequest.submitted_by)
           .single();
-        
+
         if (adminData) {
           // Notifica in-app all'admin
           const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
@@ -10009,14 +10042,14 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             year: 'numeric',
             timeZone: 'Europe/Rome'
           });
-          
+
           const hoursFormatted = (() => {
             const h = Math.floor(Math.abs(existingRequest.hours));
             const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
             if (m === 0) return `${h}h`;
             return `${h}h ${m}min`;
           })();
-          
+
           await supabase
             .from('notifications')
             .insert([{
@@ -10028,7 +10061,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
               related_id: id,
               created_at: new Date().toISOString()
             }]);
-          
+
           // Email all'admin
           if (isRealEmail(adminData.email)) {
             try {
@@ -10047,7 +10080,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           }
         }
       }
-      
+
       // Scenario 3: Dipendente rifiuta proposta admin
       if (status === 'rejected' && existingRequest.status === 'proposed' && req.user.role === 'employee') {
         // Recupera admin che ha proposto
@@ -10056,7 +10089,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           .select('id, email, first_name, last_name')
           .eq('id', existingRequest.submitted_by)
           .single();
-        
+
         if (adminData) {
           // Notifica in-app all'admin
           const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
@@ -10065,7 +10098,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             year: 'numeric',
             timeZone: 'Europe/Rome'
           });
-          
+
           await supabase
             .from('notifications')
             .insert([{
@@ -10077,7 +10110,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
               related_id: id,
               created_at: new Date().toISOString()
             }]);
-          
+
           console.log(`✅ Notifica creata per admin ${adminData.first_name} ${adminData.last_name}`);
         }
       }
@@ -10288,7 +10321,7 @@ app.delete('/api/recovery-requests/:id', authenticateToken, async (req, res) => 
       }
     }
 
-    const employeeName = existingRequest.users 
+    const employeeName = existingRequest.users
       ? `${existingRequest.users.first_name} ${existingRequest.users.last_name}`
       : 'Dipendente';
 
@@ -10355,7 +10388,7 @@ app.get('/api/debug/cron-logs', async (req, res) => {
     const logs = [];
     const originalLog = console.log;
     const originalError = console.error;
-    
+
     // Intercetta i log
     console.log = (...args) => {
       logs.push({ type: 'log', message: args.join(' ') });
@@ -10365,14 +10398,14 @@ app.get('/api/debug/cron-logs', async (req, res) => {
       logs.push({ type: 'error', message: args.join(' ') });
       originalError(...args);
     };
-    
+
     // Esegui la funzione
     await saveHourlyAttendance();
-    
+
     // Ripristina i log
     console.log = originalLog;
     console.error = originalError;
-    
+
     res.json({ success: true, logs });
   } catch (error) {
     console.error('❌ Errore debug:', error);
@@ -10385,21 +10418,21 @@ app.post('/api/test/create-attendance-record', async (req, res) => {
   try {
     console.log('🔧 Creazione record di test...');
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Trova il primo dipendente
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name')
       .eq('role', 'employee')
       .limit(1);
-    
+
     if (usersError || !users || users.length === 0) {
       return res.status(500).json({ error: 'Nessun dipendente trovato' });
     }
-    
+
     const user = users[0];
     console.log(`🔧 Creando record per: ${user.first_name} ${user.last_name}`);
-    
+
     // Crea record di test
     const { data, error } = await supabase
       .from('attendance')
@@ -10415,15 +10448,15 @@ app.post('/api/test/create-attendance-record', async (req, res) => {
       })
       .select()
       .single();
-    
+
     if (error) {
       console.error('❌ Errore creazione record:', error);
       return res.status(500).json({ error: 'Errore nella creazione del record' });
     }
-    
+
     console.log('✅ Record creato:', data);
     res.json({ success: true, message: 'Record di test creato', record: data });
-    
+
   } catch (error) {
     console.error('❌ Errore endpoint test:', error);
     res.status(500).json({ error: 'Errore interno del server' });
@@ -10447,70 +10480,70 @@ app.post('/api/cron/daily-finalize', async (req, res) => {
  */
 async function saveHourlyAttendance() {
   console.log('🕘 Salvataggio automatico presenze orarie...');
-  
+
   try {
     // Ottieni tutti i dipendenti (non admin)
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name, role')
       .eq('role', 'employee');
-    
+
     if (usersError) {
       console.error('❌ Errore nel recupero dipendenti:', usersError);
       return;
     }
-    
+
     console.log(`👥 Trovati ${users.length} dipendenti`);
-    
+
     if (!users || users.length === 0) {
       console.log('⚠️  Nessun dipendente trovato');
       return;
     }
-    
+
     const today = new Date().toISOString().split('T')[0];
     let successCount = 0;
     let errorCount = 0;
-    
+
     for (const user of users) {
       try {
         console.log(`🔍 Processando: ${user.first_name} ${user.last_name}`);
-        
+
         // Calcola le ore real-time per questo dipendente oggi
         const dayOfWeek = new Date().getDay();
         const currentHour = new Date().getHours();
         const currentMinute = new Date().getMinutes();
-        
+
         console.log(`📅 Oggi è: giorno ${dayOfWeek}, ora ${currentHour}:${currentMinute}`);
-        
+
         // Ottieni l'orario di lavoro per oggi
         const { data: workSchedules, error: scheduleError } = await supabase
           .from('work_schedules')
           .select('*')
           .eq('user_id', user.id);
-        
+
         if (scheduleError) {
           console.error(`❌ Errore recupero orari per ${user.first_name}:`, scheduleError);
           continue;
         }
-        
+
         if (!workSchedules || workSchedules.length === 0) {
           console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - nessun orario configurato`);
           continue;
         }
-        
+
         console.log(`📋 Trovati ${workSchedules.length} orari per ${user.first_name}`);
-        
-        const todaySchedule = workSchedules.find(schedule => 
+
+        const todaySchedule = workSchedules.find(schedule =>
           schedule.day_of_week === dayOfWeek && schedule.is_working_day
         );
-        
+
         if (!todaySchedule) {
           console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo (giorno ${dayOfWeek})`);
           continue;
         }
-        
+
         console.log(`✅ Trovato orario per ${user.first_name}: ${todaySchedule.start_time} - ${todaySchedule.end_time}`);
-        
+
         // DEBUG: Log dettagliato per Simone
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Orario schedule:`, {
@@ -10520,18 +10553,18 @@ async function saveHourlyAttendance() {
             break_start_time: todaySchedule.break_start_time
           });
         }
-        
+
         // Calcola ore real-time usando la STESSA LOGICA del frontend
         const { start_time, end_time, break_duration, break_start_time } = todaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
         const breakDuration = break_duration || 60;
-        
+
         // Calcola ore attese totali dall'orario contrattuale (SEMPRE FISSE!)
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
         const expectedHours = calculateExpectedHoursForSchedule({ start_time, end_time, break_duration }); // NON ridurre per permessi!
-        
+
         // DEBUG: Log calcolo ore attese per Simone
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Calcolo ore attese:`, {
@@ -10539,7 +10572,7 @@ async function saveHourlyAttendance() {
             totalMinutes, breakDuration, workMinutes, expectedHours
           });
         }
-        
+
         // Controlla se ci sono permessi per questo dipendente oggi
         const { data: permissions, error: permError } = await supabase
           .from('leave_requests')
@@ -10549,7 +10582,7 @@ async function saveHourlyAttendance() {
           .eq('status', 'approved')
           .lte('start_date', today)
           .gte('end_date', today);
-        
+
         // DEBUG: Log permessi per Simone
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Permessi trovati:`, {
@@ -10558,13 +10591,13 @@ async function saveHourlyAttendance() {
             permError: permError
           });
         }
-        
+
         // Trova orari effettivi considerando permessi
         let effectiveEndHour = endHour;
         let effectiveEndMin = endMin;
         let effectiveStartHour = startHour;
         let effectiveStartMin = startMin;
-        
+
         if (permissions && permissions.length > 0) {
           for (const perm of permissions) {
             if (perm.permission_type === 'early_exit' && perm.exit_time) {
@@ -10581,7 +10614,7 @@ async function saveHourlyAttendance() {
             }
           }
         }
-        
+
         // DEBUG: Log orari effettivi per Simone
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Orari effettivi:`, {
@@ -10592,11 +10625,11 @@ async function saveHourlyAttendance() {
             currentTime: `${currentHour}:${currentMinute}`
           });
         }
-        
+
         // Calcola ore effettive real-time
         let actualHours = 0;
         let status = 'not_started';
-        
+
         // DEBUG: Log condizioni per Simone
         if (user.first_name === 'Simone') {
           console.log(`🔍 DEBUG SIMONE - Controllo condizioni:`, {
@@ -10615,7 +10648,7 @@ async function saveHourlyAttendance() {
             condition4: currentHour === effectiveEndHour && currentMinute >= effectiveEndMin
           });
         }
-        
+
         // Se è prima dell'inizio effettivo (considerando late_entry)
         if (currentHour < effectiveStartHour || (currentHour === effectiveStartHour && currentMinute < effectiveStartMin)) {
           actualHours = 0;
@@ -10644,11 +10677,11 @@ async function saveHourlyAttendance() {
           // Determina se è una giornata completa (ha pausa pranzo) o mezza giornata
           const totalWorkMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
           const hasLunchBreak = totalWorkMinutes > 300; // Più di 5 ore = giornata completa
-          
+
           if (hasLunchBreak) {
             // GIORNATA COMPLETA: usa break_start_time se disponibile, altrimenti 13:00
             const currentTimeInMinutes = currentHour * 60 + currentMinute;
-            
+
             let breakStartInMinutes;
             if (break_start_time) {
               const [breakHour, breakMin] = break_start_time.split(':').map(Number);
@@ -10657,12 +10690,12 @@ async function saveHourlyAttendance() {
               // Default: 13:00
               breakStartInMinutes = 13 * 60;
             }
-            
+
             const breakEndInMinutes = breakStartInMinutes + breakDuration;
-            
+
             // Calcola minuti dall'inizio EFFETTIVO (considerando late_entry)
             const startTimeInMinutes = effectiveStartHour * 60 + effectiveStartMin;
-            
+
             if (currentTimeInMinutes < breakStartInMinutes) {
               // Prima della pausa pranzo
               const totalMinutesWorked = currentTimeInMinutes - startTimeInMinutes;
@@ -10688,7 +10721,7 @@ async function saveHourlyAttendance() {
             status = 'working';
           }
         }
-        
+
         // Controlla se ci sono permessi APPROVATI per oggi
         const { data: approvedPermissions, error: approvedPermError } = await supabase
           .from('leave_requests')
@@ -10698,10 +10731,10 @@ async function saveHourlyAttendance() {
           .eq('status', 'approved')
           .lte('start_date', today)
           .gte('end_date', today);
-        
+
         let finalExpectedHours = expectedHours;
         let finalBalanceHours = actualHours - expectedHours;
-        
+
         if (!approvedPermError && approvedPermissions && approvedPermissions.length > 0) {
           // Ci sono permessi approvati: riduci expected_hours e imposta balance = -permesso_hours
           const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
@@ -10710,7 +10743,7 @@ async function saveHourlyAttendance() {
           finalBalanceHours = -totalPermissionHours;
           console.log(`🔐 ${user.first_name} ha permesso approvato: expected ${expectedHours}h → ${finalExpectedHours}h, balance = ${finalBalanceHours}h`);
         }
-        
+
         // DEBUG: Log risultato finale
         console.log(`📊 Risultato calcolo ${user.first_name}:`, {
           actualHours: actualHours.toFixed(2),
@@ -10720,10 +10753,10 @@ async function saveHourlyAttendance() {
           hasPermissions: permissions && permissions.length > 0,
           hasApprovedPermissions: approvedPermissions && approvedPermissions.length > 0
         });
-        
+
         // FIX GENERALE: Se dipendente senza permessi dopo la fine dell'orario, deve avere expectedHours
         const isAfterWorkEnd = currentHour > effectiveEndHour || (currentHour === effectiveEndHour && currentMinute >= effectiveEndMin);
-        
+
         if (isAfterWorkEnd && (!permissions || permissions.length === 0) && (!approvedPermissions || approvedPermissions.length === 0)) {
           // Dipendente senza permessi dopo la fine dell'orario = ha lavorato le ore attese
           if (Math.abs(actualHours - finalExpectedHours) > 0.01) {
@@ -10733,10 +10766,10 @@ async function saveHourlyAttendance() {
             status = 'completed'; // Forza anche lo status
           }
         }
-        
+
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
         console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${finalExpectedHours.toFixed(2)}h - Balance: ${finalBalanceHours.toFixed(2)}h - Status: ${status}`);
-        
+
         const { error: saveError } = await supabase
           .from('attendance')
           .upsert({
@@ -10745,13 +10778,13 @@ async function saveHourlyAttendance() {
             actual_hours: Math.round(actualHours * 100) / 100,
             expected_hours: Math.round(finalExpectedHours * 100) / 100,
             balance_hours: Math.round(finalBalanceHours * 100) / 100,
-            notes: approvedPermissions && approvedPermissions.length > 0 
+            notes: approvedPermissions && approvedPermissions.length > 0
               ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
               : 'Salvataggio automatico orario'
           }, {
             onConflict: 'user_id,date'
           });
-        
+
         if (saveError) {
           console.error(`❌ Errore salvataggio per ${user.first_name} ${user.last_name}:`, saveError);
           errorCount++;
@@ -10759,15 +10792,15 @@ async function saveHourlyAttendance() {
           console.log(`✅ Salvato: ${user.first_name} ${user.last_name} - ${actualHours.toFixed(2)}h (${status})`);
           successCount++;
         }
-        
+
       } catch (error) {
         console.error(`❌ Errore per ${user.first_name} ${user.last_name}:`, error.message);
         errorCount++;
       }
     }
-    
+
     console.log(`✅ Salvataggio automatico completato: ${successCount} salvati, ${errorCount} errori`);
-    
+
   } catch (error) {
     console.error('❌ Errore durante il salvataggio automatico:', error.message);
   }
@@ -10778,29 +10811,29 @@ async function saveHourlyAttendance() {
  */
 async function finalizeDailyAttendance() {
   console.log('🌙 Finalizzazione automatica giornata appena conclusa...');
-  
+
   try {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
+
     console.log(`📅 Finalizzazione per il giorno: ${yesterdayStr}`);
-    
+
     // Ottieni tutti i dipendenti (non admin)
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name, role')
       .eq('role', 'employee');
-    
+
     if (usersError) {
       console.error('❌ Errore nel recupero dipendenti:', usersError);
       return;
     }
-    
+
     let successCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
-    
+
     for (const user of users) {
       try {
         // Controlla se esiste già un record per ieri
@@ -10810,42 +10843,42 @@ async function finalizeDailyAttendance() {
           .eq('user_id', user.id)
           .eq('date', yesterdayStr)
           .single();
-        
+
         if (existingRecord && existingRecord.actual_hours > 0) {
           console.log(`✅ Già finalizzato: ${user.first_name} ${user.last_name} - ${existingRecord.actual_hours}h`);
           skippedCount++;
           continue;
         }
-        
+
         // Calcola le ore finali per ieri
         const dayOfWeek = yesterday.getDay();
         const { data: workSchedules } = await supabase
           .from('work_schedules')
           .select('*')
           .eq('user_id', user.id);
-        
-        const yesterdaySchedule = workSchedules?.find(schedule => 
+
+        const yesterdaySchedule = workSchedules?.find(schedule =>
           schedule.day_of_week === dayOfWeek && schedule.is_working_day
         );
-        
+
         if (!yesterdaySchedule) {
           console.log(`⏭️  Saltato: ${user.first_name} ${user.last_name} - giorno non lavorativo`);
           skippedCount++;
           continue;
         }
-        
+
         // Per una giornata completa, le ore effettive = ore attese
         const { start_time, end_time, break_duration } = yesterdaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
         const breakDuration = break_duration || 60;
-        
+
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
         const finalExpectedHours = workMinutes / 60;
         const finalActualHours = finalExpectedHours; // Giornata completa
         const finalBalanceHours = 0;
-        
+
         // Salva il record finale per ieri
         const { error: saveError } = await supabase
           .from('attendance')
@@ -10859,7 +10892,7 @@ async function finalizeDailyAttendance() {
           }, {
             onConflict: 'user_id,date'
           });
-        
+
         if (saveError) {
           console.error(`❌ Errore finalizzazione per ${user.first_name} ${user.last_name}:`, saveError);
           errorCount++;
@@ -10867,15 +10900,15 @@ async function finalizeDailyAttendance() {
           console.log(`✅ Finalizzato: ${user.first_name} ${user.last_name} - ${finalActualHours}h`);
           successCount++;
         }
-        
+
       } catch (error) {
         console.error(`❌ Errore per ${user.first_name} ${user.last_name}:`, error.message);
         errorCount++;
       }
     }
-    
+
     console.log(`✅ Finalizzazione automatica completata: ${successCount} finalizzati, ${skippedCount} saltati, ${errorCount} errori`);
-    
+
   } catch (error) {
     console.error('❌ Errore durante la finalizzazione automatica:', error.message);
   }
@@ -10901,7 +10934,7 @@ const dailyFinalizeJob = cron.schedule('0 0 * * *', async () => {
 app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (req, res) => {
   try {
     console.log('🔧 Correzione dati Simone...');
-    
+
     // Trova Simone
     const { data: simone, error: userError } = await supabase
       .from('users')
@@ -10909,28 +10942,28 @@ app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (r
       .eq('first_name', 'Simone')
       .eq('last_name', 'Azzinelli')
       .single();
-      
+
     if (userError) {
       console.error('❌ Errore nel trovare Simone:', userError);
       return res.status(404).json({ error: 'Simone non trovato' });
     }
-    
+
     console.log('👤 Simone trovato:', simone);
-    
+
     // Controlla tutte le presenze di Simone
     const { data: attendance, error: attError } = await supabase
       .from('attendance')
       .select('*')
       .eq('user_id', simone.id)
       .order('date', { ascending: false });
-      
+
     if (attError) {
       console.error('❌ Errore nel recuperare presenze:', attError);
       return res.status(500).json({ error: 'Errore nel recuperare presenze' });
     }
-    
+
     console.log('📊 Presenze Simone trovate:', attendance.length);
-    
+
     // Mostra i dati attuali
     const currentData = attendance.map(record => ({
       date: record.date,
@@ -10938,21 +10971,21 @@ app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (r
       expected_hours: record.expected_hours,
       balance_hours: record.balance_hours
     }));
-    
+
     // Calcola saldo totale attuale
     const totalBalance = attendance.reduce((sum, record) => sum + (record.balance_hours || 0), 0);
     console.log('💰 Saldo totale attuale Simone:', totalBalance, 'h');
-    
+
     if (totalBalance !== 0) {
       console.log('🔧 Correggo i dati di Simone...');
-      
+
       // Per ogni record, correggo il balance_hours a 0
       for (const record of attendance) {
         const correctedBalance = 0;
         const correctedActualHours = record.expected_hours; // Assume che abbia lavorato le ore complete
-        
+
         console.log(`🔧 Correggo ${record.date}: ${record.balance_hours}h → ${correctedBalance}h`);
-        
+
         const { error: updateError } = await supabase
           .from('attendance')
           .update({
@@ -10960,16 +10993,16 @@ app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (r
             actual_hours: correctedActualHours
           })
           .eq('id', record.id);
-          
+
         if (updateError) {
           console.error(`❌ Errore nell'aggiornare ${record.date}:`, updateError);
         } else {
           console.log(`✅ Corretto ${record.date}`);
         }
       }
-      
+
       console.log('🎉 Correzione completata! Simone ora ha saldo 0h');
-      
+
       res.json({
         success: true,
         message: 'Dati di Simone corretti con successo',
@@ -10987,7 +11020,7 @@ app.post('/api/admin/fix-simone-data', authenticateToken, requireAdmin, async (r
         data: currentData
       });
     }
-    
+
   } catch (error) {
     console.error('❌ Errore generale:', error);
     res.status(500).json({ error: 'Errore interno del server' });
@@ -11006,7 +11039,7 @@ app.post('/api/admin/migrate/break-start-time', authenticateToken, requireAdmin,
       .limit(1);
 
     let columnExists = !checkError;
-    
+
     if (!columnExists) {
       console.log('➕ Colonna non esiste, creazione in corso...');
       // Crea la colonna con RawSQL (se Supabase lo supporta)
@@ -11032,7 +11065,7 @@ app.post('/api/admin/migrate/break-start-time', authenticateToken, requireAdmin,
     }
 
     console.log(`✅ ${updated?.length || 0} record aggiornati`);
-    
+
     res.json({
       success: true,
       message: `Migration completata! ${updated?.length || 0} orari aggiornati con break_start_time = 13:00`,
@@ -11119,7 +11152,7 @@ app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, a
     }
 
     console.log(`✅ Aggiornati ${updated.length} orari di lavoro`);
-    
+
     res.json({
       success: true,
       message: `Correzione completata! ${updated.length} orari aggiornati con break_start_time = 13:30`,
@@ -11150,14 +11183,14 @@ server.listen(PORT, () => {
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
   console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
-  
+
   // Avvia Email Scheduler
   emailScheduler.start();
-  
+
   // Avvia Attendance Scheduler
   const attendanceScheduler = new AttendanceScheduler();
   attendanceScheduler.start();
-  
+
   // Avvia Sistema Salvataggio Automatico Presenze
   console.log('🕘 Avvio sistema salvataggio automatico presenze...');
   hourlySaveJob.start();
@@ -11165,12 +11198,12 @@ server.listen(PORT, () => {
   console.log('✅ Sistema salvataggio automatico presenze attivato');
   console.log('📅 Salvataggio ore: Ogni ora al minuto 0');
   console.log('📅 Finalizzazione giornata: Ogni giorno a mezzanotte');
-  
+
   // Processa recuperi completati ogni ora
   setInterval(async () => {
     await processCompletedRecoveries();
   }, 60 * 60 * 1000); // Ogni ora
-  
+
   // Processa anche all'avvio
   processCompletedRecoveries();
 });
