@@ -601,25 +601,24 @@ const AdminAttendance = () => {
     // Converti le date in oggetti Date per confronto corretto
     const todayDate = new Date(today);
     const recordDateObj = new Date(recordDate);
+    // Reset hours to compare dates only
+    todayDate.setHours(0, 0, 0, 0);
+    recordDateObj.setHours(0, 0, 0, 0);
+
     const isPast = recordDateObj < todayDate;
     const isToday = recordDate === today;
     const isFuture = recordDateObj > todayDate;
 
     // Se è oggi, controlla prima se è in malattia (PRIORITÀ MASSIMA)
     if (isToday) {
-      console.log('🔍 Checking sick leave for user:', record.user_id);
-      console.log('🔍 Sick today data:', sickToday);
-
+      // Check sick leave
       const isSickToday = sickToday.some(sickRequest =>
         sickRequest.user_id === record.user_id &&
         new Date(sickRequest.start_date) <= new Date(today) &&
         new Date(sickRequest.end_date) >= new Date(today)
       );
 
-      console.log('🔍 Is sick today result:', isSickToday);
-
       if (isSickToday) {
-        console.log('🏥 User is sick today:', record.user_id);
         return {
           expectedHours: 0,
           actualHours: 0,
@@ -629,912 +628,1062 @@ const AdminAttendance = () => {
         };
       }
 
-      // Controlla se ha permesso 104 oggi
+      // Check 104 permission
       const has104Today = permissions104Today.some(perm104 =>
         perm104.user_id === record.user_id &&
         new Date(perm104.start_date) <= new Date(today) &&
         new Date(perm104.end_date) >= new Date(today)
       );
 
-      console.log(`🔍 [DEBUG] Checking 104 permission for user ${record.user_id}:`, {
-        has104Today,
-        permissions104TodayCount: permissions104Today.length,
-        todayDate: today,
-        dayOfWeek: todayDate.getDay()
-      });
-
       if (has104Today) {
-        console.log('🔵 User has 104 permission today:', record.user_id);
-
         // Trova l'orario di lavoro per questo dipendente nel giorno corrente
         const dayOfWeek = todayDate.getDay();
-        console.log(`🔍 [DEBUG] Looking for schedule: user_id=${record.user_id}, day_of_week=${dayOfWeek}`);
-        console.log(`🔍 [DEBUG] Available schedules count:`, workSchedules.length);
-        console.log(`🔍 [DEBUG] Schedules for this user:`, workSchedules.filter(s => s.user_id === record.user_id));
-
-        // IMPORTANTE: usa Number() per confronto robusto (evita problemi string vs number)
         const scheduleForDay = workSchedules.find(schedule =>
           schedule.user_id === record.user_id &&
           Number(schedule.day_of_week) === Number(dayOfWeek) &&
           schedule.is_working_day === true
         );
 
-        // PERMESSO USCITA ANTICIPATA / ENTRATA POSTICIPATA
-        // Prepara i dati per la utility
-        const permissionData = permissionsHoursToday[record.user_id];
-        let utilityPermissionData = null;
+        let expectedHours104 = record.expected_hours || 0;
 
-        if (permissionData?.permissions) {
-          const earlyExitPerm = permissionData.permissions.find(p => p.type === 'early_exit' && p.exitTime);
-          const lateEntryPerm = permissionData.permissions.find(p => p.type === 'late_entry' && p.entryTime);
+        if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+          const [startHour, startMin] = scheduleForDay.start_time.split(':').map(Number);
+          const [endHour, endMin] = scheduleForDay.end_time.split(':').map(Number);
+          const breakDuration = scheduleForDay.break_duration !== null && scheduleForDay.break_duration !== undefined ? scheduleForDay.break_duration : 0;
 
-          if (earlyExitPerm || lateEntryPerm) {
-            utilityPermissionData = {};
-            if (earlyExitPerm) {
-              utilityPermissionData.exit_time = earlyExitPerm.exitTime;
-              console.log(`🚪 ${record.user_id} ha permesso uscita anticipata alle ${earlyExitPerm.exitTime}`);
-            }
-            if (lateEntryPerm) {
-              utilityPermissionData.entry_time = lateEntryPerm.entryTime;
-              console.log(`🚪 ${record.user_id} ha permesso entrata posticipata alle ${lateEntryPerm.entryTime}`);
-            }
-          }
+          const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+          const workMinutes = Math.max(0, totalMinutes - breakDuration);
+          expectedHours104 = workMinutes / 60;
         }
 
-        // Usa la utility centralizzata
-        const result = calculateRealTimeHours(workSchedule, now, utilityPermissionData);
-
-        console.log('✅ Calculated real-time hours for today (using utility):', result);
-
-        // Mappa il risultato della utility al formato atteso dal componente
         return {
-          expectedHours: result.expectedHours, // Ore attese "effettive" (ridotte se c'è permesso)
-          actualHours: result.actualHours,
-          balanceHours: result.balanceHours,
-          status: result.status,
-          isPresent: result.status === 'working' || result.status === 'on_break'
+          expectedHours: expectedHours104,
+          actualHours: 0,
+          balanceHours: 0,
+          status: 'permission_104',
+          isPresent: false
         };
-      };
+      }
 
+      // Normal calculation for today
+      const dayOfWeek = todayDate.getDay();
+      const workSchedule = workSchedules.find(schedule =>
+        schedule.user_id === record.user_id &&
+        Number(schedule.day_of_week) === Number(dayOfWeek) &&
+        schedule.is_working_day === true
+      );
 
-      const getStatusIcon = (status) => {
-        switch (status) {
-          case 'present': return <CheckCircle className="h-4 w-4" />;
-          case 'completed': return <CheckCircle className="h-4 w-4" />;
-          case 'working': return <Clock className="h-4 w-4" />;
-          case 'not_started': return <Clock className="h-4 w-4" />;
-          case 'absent': return <XCircle className="h-4 w-4" />;
-          case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
-          case 'permission_104': return <Accessibility className="h-4 w-4" />;
-          case 'holiday': return <Calendar className="h-4 w-4" />;
-          case 'non_working_day': return <Minus className="h-4 w-4" />;
-          default: return <AlertCircle className="h-4 w-4" />;
+      if (!workSchedule) {
+        return {
+          expectedHours: 0,
+          actualHours: 0,
+          balanceHours: 0,
+          status: 'non_working_day',
+          isPresent: false
+        };
+      }
+
+      // Check permissions (early exit / late entry)
+      const permissionData = permissionsHoursToday[record.user_id];
+      let utilityPermissionData = null;
+
+      if (permissionData?.permissions) {
+        const earlyExitPerm = permissionData.permissions.find(p => p.type === 'early_exit' && p.exitTime);
+        const lateEntryPerm = permissionData.permissions.find(p => p.type === 'late_entry' && p.entryTime);
+
+        if (earlyExitPerm || lateEntryPerm) {
+          utilityPermissionData = {};
+          if (earlyExitPerm) utilityPermissionData.exit_time = earlyExitPerm.exitTime;
+          if (lateEntryPerm) utilityPermissionData.entry_time = lateEntryPerm.entryTime;
         }
-      };
+      }
 
-      const getBalanceColor = (balance) => {
-        if (balance > 0) return 'text-green-600 bg-green-50 border-green-200';
-        if (balance < 0) return 'text-red-600 bg-red-50 border-red-200';
-        return 'text-gray-600 bg-gray-50 border-gray-200';
-      };
+      // Use shared utility
+      const result = calculateRealTimeHours(workSchedule, now, utilityPermissionData);
 
-      // Funzione per convertire ore decimali in formato HH:MM
-      const hoursToTime = (hours) => {
-        if (!hours && hours !== 0) return '0:00';
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
-        return `${h}:${String(m).padStart(2, '0')}`;
+      return {
+        expectedHours: result.expectedHours,
+        actualHours: result.actualHours,
+        balanceHours: result.balanceHours,
+        status: result.status,
+        isPresent: result.status === 'working' || result.status === 'on_break'
       };
+    }
 
-      // Funzione per convertire formato HH:MM in ore decimali
-      const timeToHours = (timeStr) => {
-        if (!timeStr || timeStr === '') return 0;
-        const [h, m] = timeStr.split(':').map(Number);
-        return h + (m || 0) / 60;
+    // PAST DATES
+    if (isPast) {
+      // Recalculate expected hours from schedule
+      const recordDayOfWeek = recordDateObj.getDay();
+      const scheduleForDay = workSchedules.find(schedule =>
+        schedule.user_id === record.user_id &&
+        Number(schedule.day_of_week) === Number(recordDayOfWeek) &&
+        schedule.is_working_day === true
+      );
+
+      let expectedHoursFromSchedule = record.expected_hours || 0;
+
+      if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+        const [startHour, startMin] = scheduleForDay.start_time.split(':').map(Number);
+        const [endHour, endMin] = scheduleForDay.end_time.split(':').map(Number);
+        const breakDuration = scheduleForDay.break_duration !== null && scheduleForDay.break_duration !== undefined ? scheduleForDay.break_duration : 0;
+
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        const workMinutes = Math.max(0, totalMinutes - breakDuration);
+        expectedHoursFromSchedule = workMinutes / 60;
+      }
+
+      const actual = record.actual_hours || 0;
+      const balance = actual - expectedHoursFromSchedule;
+
+      // Determine status
+      let status = 'completed';
+      if (actual === 0 && expectedHoursFromSchedule > 0) status = 'absent';
+      if (record.notes && record.notes.includes('Malattia')) status = 'sick_leave';
+      if (record.notes && record.notes.includes('Ferie')) status = 'holiday';
+      if (expectedHoursFromSchedule === 0) status = 'non_working_day';
+
+      return {
+        expectedHours: expectedHoursFromSchedule,
+        actualHours: actual,
+        balanceHours: balance,
+        status: status,
+        isPresent: false
       };
+    }
 
-      const handleEditRecord = (record) => {
-        setEditingRecord(record);
-        setEditForm({
-          actual_hours: hoursToTime(record.actual_hours || record.expected_hours || 0),
-          notes: record.notes || ''
+    // FUTURE DATES
+    if (isFuture) {
+      const recordDayOfWeek = recordDateObj.getDay();
+      const scheduleForDay = workSchedules.find(schedule =>
+        schedule.user_id === record.user_id &&
+        Number(schedule.day_of_week) === Number(recordDayOfWeek) &&
+        schedule.is_working_day === true
+      );
+
+      let expected = 0;
+      if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+        const [startHour, startMin] = scheduleForDay.start_time.split(':').map(Number);
+        const [endHour, endMin] = scheduleForDay.end_time.split(':').map(Number);
+        const breakDuration = scheduleForDay.break_duration !== null && scheduleForDay.break_duration !== undefined ? scheduleForDay.break_duration : 0;
+        const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        expected = Math.max(0, totalMinutes - breakDuration) / 60;
+      }
+
+      return {
+        expectedHours: expected,
+        actualHours: 0,
+        balanceHours: 0,
+        status: 'scheduled',
+        isPresent: false
+      };
+    }
+
+    return {
+      expectedHours: 0,
+      actualHours: 0,
+      balanceHours: 0,
+      status: 'unknown',
+      isPresent: false
+    };
+  };
+
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'present': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'working': return <Clock className="h-4 w-4" />;
+      case 'not_started': return <Clock className="h-4 w-4" />;
+      case 'absent': return <XCircle className="h-4 w-4" />;
+      case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
+      case 'permission_104': return <Accessibility className="h-4 w-4" />;
+      case 'holiday': return <Calendar className="h-4 w-4" />;
+      case 'non_working_day': return <Minus className="h-4 w-4" />;
+      default: return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  const getBalanceColor = (balance) => {
+    if (balance > 0) return 'text-green-600 bg-green-50 border-green-200';
+    if (balance < 0) return 'text-red-600 bg-red-50 border-red-200';
+    return 'text-gray-600 bg-gray-50 border-gray-200';
+  };
+
+  // Funzione per convertire ore decimali in formato HH:MM
+  const hoursToTime = (hours) => {
+    if (!hours && hours !== 0) return '0:00';
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+    return `${h}:${String(m).padStart(2, '0')}`;
+  };
+
+  // Funzione per convertire formato HH:MM in ore decimali
+  const timeToHours = (timeStr) => {
+    if (!timeStr || timeStr === '') return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return h + (m || 0) / 60;
+  };
+
+  const handleEditRecord = (record) => {
+    setEditingRecord(record);
+    setEditForm({
+      actual_hours: hoursToTime(record.actual_hours || record.expected_hours || 0),
+      notes: record.notes || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleDeleteRecord = async (record) => {
+    try {
+      const response = await apiCall(`/api/attendance/${record.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        alert('Record eliminato con successo!');
+        setShowDeleteConfirm(false);
+        setRecordToDelete(null);
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante l\'eliminazione');
+      }
+    } catch (error) {
+      console.error('Error deleting attendance:', error);
+      alert('Errore durante l\'eliminazione');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      // Converti ore in formato HH:MM in ore decimali
+      const actualHoursDecimal = timeToHours(editForm.actual_hours);
+
+      const response = await apiCall(`/api/attendance/${editingRecord.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          actual_hours: actualHoursDecimal,
+          notes: editForm.notes
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || 'Record aggiornato con successo!');
+        setShowEditModal(false);
+        setEditingRecord(null);
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante l\'aggiornamento');
+      }
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      alert('Errore durante l\'aggiornamento');
+    }
+  };
+
+
+  const handleGenerateAttendance = async () => {
+    try {
+      const response = await apiCall('/api/attendance/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: generateForm.employeeId,
+          startDate: generateForm.startDate,
+          endDate: generateForm.endDate
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || 'Presenze generate con successo!');
+        setShowGenerateModal(false);
+        setGenerateForm({
+          startDate: '',
+          endDate: '',
+          employeeId: ''
         });
-        setShowEditModal(true);
-      };
-
-      const handleDeleteRecord = async (record) => {
-        try {
-          const response = await apiCall(`/api/attendance/${record.id}`, {
-            method: 'DELETE'
-          });
-
-          if (response.ok) {
-            alert('Record eliminato con successo!');
-            setShowDeleteConfirm(false);
-            setRecordToDelete(null);
-            fetchAttendanceData();
-            fetchStats();
-            if (activeTab === 'history') {
-              fetchAttendanceHistory();
-            }
-          } else {
-            const error = await response.json();
-            alert(error.error || 'Errore durante l\'eliminazione');
-          }
-        } catch (error) {
-          console.error('Error deleting attendance:', error);
-          alert('Errore durante l\'eliminazione');
+        setGenerateStep(1);
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
         }
-      };
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante la generazione');
+      }
+    } catch (error) {
+      console.error('Error generating attendance:', error);
+      alert('Errore durante la generazione');
+    }
+  };
 
-      const handleSaveEdit = async () => {
-        try {
-          // Converti ore in formato HH:MM in ore decimali
-          const actualHoursDecimal = timeToHours(editForm.actual_hours);
+  const filteredData = (() => {
+    let data = [];
+    if (activeTab === 'today') {
+      // Per "Oggi" combina dati database + real-time
+      data = attendance;
 
-          const response = await apiCall(`/api/attendance/${editingRecord.id}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              actual_hours: actualHoursDecimal,
-              notes: editForm.notes
-            })
-          });
+      // Aggiungi dati real-time se non ci sono record per oggi nel database
+      const today = new Date().toISOString().split('T')[0];
+      const hasTodayInDatabase = attendance.some(record => record.date === today);
 
-          if (response.ok) {
-            const data = await response.json();
-            alert(data.message || 'Record aggiornato con successo!');
-            setShowEditModal(false);
-            setEditingRecord(null);
-            fetchAttendanceData();
-            fetchStats();
-            if (activeTab === 'history') {
-              fetchAttendanceHistory();
+      if (!hasTodayInDatabase && allEmployees.length > 0) {
+        // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
+        const todayRealTimeData = allEmployees
+          .filter(emp => emp.role !== 'admin') // Escludi admin
+          .map(emp => {
+            // Calcola ore real-time per questo dipendente
+            const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
+            if (realTimeHours && realTimeHours.actualHours > 0) {
+              return {
+                id: `realtime-${emp.id}`,
+                user_id: emp.id,
+                date: today,
+                actual_hours: realTimeHours.actualHours,
+                expected_hours: realTimeHours.expectedHours,
+                balance_hours: realTimeHours.balanceHours,
+                status: realTimeHours.status,
+                users: { first_name: emp.firstName, last_name: emp.lastName },
+                is_realtime: true // Flag per identificare dati real-time
+              };
             }
-          } else {
-            const error = await response.json();
-            alert(error.error || 'Errore durante l\'aggiornamento');
-          }
-        } catch (error) {
-          console.error('Error updating attendance:', error);
-          alert('Errore durante l\'aggiornamento');
-        }
-      };
+            return null;
+          })
+          .filter(Boolean); // Rimuovi null values
 
+        data = [...data, ...todayRealTimeData];
+      }
+    } else {
+      // Per "Cronologia" usa attendanceHistory (già filtrato dal backend per mese/anno/userId)
+      const today = new Date().toISOString().split('T')[0];
 
-      const handleGenerateAttendance = async () => {
-        try {
-          const response = await apiCall('/api/attendance/generate', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              userId: generateForm.employeeId,
-              startDate: generateForm.startDate,
-              endDate: generateForm.endDate
-            })
-          });
+      // Ottieni il mese/anno corrente
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
 
-          if (response.ok) {
-            const data = await response.json();
-            alert(data.message || 'Presenze generate con successo!');
-            setShowGenerateModal(false);
-            setGenerateForm({
-              startDate: '',
-              endDate: '',
-              employeeId: ''
-            });
-            setGenerateStep(1);
-            fetchAttendanceData();
-            fetchStats();
-            if (activeTab === 'history') {
-              fetchAttendanceHistory();
+      // Il backend già filtra per mese/anno/userId, quindi usiamo direttamente i dati
+      data = [...attendanceHistory];
+
+      // Aggiungi dati real-time per oggi SOLO se il mese/anno selezionato è quello corrente
+      const isCurrentPeriod = selectedMonth === currentMonth && selectedYear === currentYear;
+      const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
+
+      if (!hasTodayInHistory && allEmployees.length > 0 && isCurrentPeriod) {
+        // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
+        const employeesToProcess = allEmployees.filter(emp => emp.role !== 'admin');
+
+        const todayRealTimeData = employeesToProcess
+          .map(emp => {
+            // Calcola ore real-time per questo dipendente
+            const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
+            if (realTimeHours && realTimeHours.actualHours > 0) {
+              return {
+                id: `realtime-${emp.id}`,
+                user_id: emp.id,
+                date: today,
+                actual_hours: realTimeHours.actualHours,
+                expected_hours: realTimeHours.expectedHours,
+                balance_hours: realTimeHours.balanceHours,
+                status: realTimeHours.status,
+                users: { first_name: emp.firstName, last_name: emp.lastName },
+                is_realtime: true // Flag per identificare dati real-time
+              };
             }
-          } else {
-            const error = await response.json();
-            alert(error.error || 'Errore durante la generazione');
-          }
-        } catch (error) {
-          console.error('Error generating attendance:', error);
-          alert('Errore durante la generazione');
+            return null;
+          })
+          .filter(Boolean); // Rimuovi null values
+
+        data = [...data, ...todayRealTimeData];
+      }
+    }
+
+    return data.filter(record => {
+      // Filtro per ricerca
+      if (searchTerm) {
+        let employeeName = '';
+        // Per attendance records, usa la struttura normale
+        employeeName = record.users ?
+          `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
+        if (!employeeName.includes(searchTerm.toLowerCase())) {
+          return false;
         }
-      };
+      }
 
-      const filteredData = (() => {
-        let data = [];
-        if (activeTab === 'today') {
-          // Per "Oggi" combina dati database + real-time
-          data = attendance;
+      // Logica specifica per ogni tab
+      if (activeTab === 'today') {
+        // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
+        const realTimeData = calculateRealTimeHoursForRecord(record);
+        return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday' || realTimeData.status === 'permission_104';
+      }
 
-          // Aggiungi dati real-time se non ci sono record per oggi nel database
-          const today = new Date().toISOString().split('T')[0];
-          const hasTodayInDatabase = attendance.some(record => record.date === today);
+      return true;
+    });
+  })();
 
-          if (!hasTodayInDatabase && allEmployees.length > 0) {
-            // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
-            const todayRealTimeData = allEmployees
-              .filter(emp => emp.role !== 'admin') // Escludi admin
-              .map(emp => {
-                // Calcola ore real-time per questo dipendente
-                const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
-                if (realTimeHours && realTimeHours.actualHours > 0) {
-                  return {
-                    id: `realtime-${emp.id}`,
-                    user_id: emp.id,
-                    date: today,
-                    actual_hours: realTimeHours.actualHours,
-                    expected_hours: realTimeHours.expectedHours,
-                    balance_hours: realTimeHours.balanceHours,
-                    status: realTimeHours.status,
-                    users: { first_name: emp.firstName, last_name: emp.lastName },
-                    is_realtime: true // Flag per identificare dati real-time
-                  };
-                }
-                return null;
-              })
-              .filter(Boolean); // Rimuovi null values
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
+          <div className="text-white text-xl font-semibold">Caricamento dati...</div>
+          <div className="text-slate-400 text-sm">Preparazione sistema presenze</div>
+          <div className="flex space-x-1">
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-            data = [...data, ...todayRealTimeData];
-          }
-        } else {
-          // Per "Cronologia" usa attendanceHistory (già filtrato dal backend per mese/anno/userId)
-          const today = new Date().toISOString().split('T')[0];
+  return (
+    <div className="min-h-screen bg-slate-900 text-white">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Gestione Presenze</h1>
+              <p className="text-slate-400">
+                Sistema di gestione presenze avanzato per amministratori
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-slate-500 text-sm">
+                  Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
+                </p>
+                {dataLoading && (
+                  <div className="flex items-center gap-1 text-indigo-400 text-sm">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-indigo-400 border-t-transparent"></div>
+                    <span>Aggiornamento...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setShowGenerateModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Aggiungi presenza
+              </button>
+            </div>
+          </div>
+        </div>
 
-          // Ottieni il mese/anno corrente
-          const currentMonth = new Date().getMonth() + 1;
-          const currentYear = new Date().getFullYear();
-
-          // Il backend già filtra per mese/anno/userId, quindi usiamo direttamente i dati
-          data = [...attendanceHistory];
-
-          // Aggiungi dati real-time per oggi SOLO se il mese/anno selezionato è quello corrente
-          const isCurrentPeriod = selectedMonth === currentMonth && selectedYear === currentYear;
-          const hasTodayInHistory = attendanceHistory.some(record => record.date === today);
-
-          if (!hasTodayInHistory && allEmployees.length > 0 && isCurrentPeriod) {
-            // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
-            const employeesToProcess = allEmployees.filter(emp => emp.role !== 'admin');
-
-            const todayRealTimeData = employeesToProcess
-              .map(emp => {
-                // Calcola ore real-time per questo dipendente
-                const realTimeHours = calculateRealTimeHoursForEmployee(emp.id);
-                if (realTimeHours && realTimeHours.actualHours > 0) {
-                  return {
-                    id: `realtime-${emp.id}`,
-                    user_id: emp.id,
-                    date: today,
-                    actual_hours: realTimeHours.actualHours,
-                    expected_hours: realTimeHours.expectedHours,
-                    balance_hours: realTimeHours.balanceHours,
-                    status: realTimeHours.status,
-                    users: { first_name: emp.firstName, last_name: emp.lastName },
-                    is_realtime: true // Flag per identificare dati real-time
-                  };
-                }
-                return null;
-              })
-              .filter(Boolean); // Rimuovi null values
-
-            data = [...data, ...todayRealTimeData];
-          }
-        }
-
-        return data.filter(record => {
-          // Filtro per ricerca
-          if (searchTerm) {
-            let employeeName = '';
-            // Per attendance records, usa la struttura normale
-            employeeName = record.users ?
-              `${record.users.first_name} ${record.users.last_name}`.toLowerCase() : '';
-            if (!employeeName.includes(searchTerm.toLowerCase())) {
-              return false;
-            }
-          }
-
-          // Logica specifica per ogni tab
-          if (activeTab === 'today') {
-            // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
-            const realTimeData = calculateRealTimeHoursForRecord(record);
-            return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday' || realTimeData.status === 'permission_104';
-          }
-
-          return true;
-        });
-      })();
-
-      if (loading) {
-        return (
-          <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
-              <div className="text-white text-xl font-semibold">Caricamento dati...</div>
-              <div className="text-slate-400 text-sm">Preparazione sistema presenze</div>
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+        {/* Statistiche */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-slate-400 text-sm">Hanno Lavorato Oggi</p>
+                <p className="text-2xl font-bold text-white">{stats.workedToday}</p>
               </div>
             </div>
           </div>
-        );
-      }
 
-      return (
-        <div className="min-h-screen bg-slate-900 text-white">
-          <div className="max-w-7xl mx-auto p-6">
-            {/* Header */}
-            <div className="mb-8">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-slate-400 text-sm">Attualmente Presenti</p>
+                <p className="text-2xl font-bold text-white">{stats.currentlyPresent}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-slate-400 text-sm">Assenti Oggi</p>
+                <p className="text-2xl font-bold text-white">{stats.absentToday}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-6">
+          <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+            <button
+              onClick={() => setActiveTab('today')}
+              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Oggi
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Cronologia
+            </button>
+          </div>
+        </div>
+
+        {/* Filtri */}
+        {activeTab === 'history' && (
+          <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
                 <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Gestione Presenze</h1>
-                  <p className="text-slate-400">
-                    Sistema di gestione presenze avanzato per amministratori
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-slate-500 text-sm">
-                      Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
-                    </p>
-                    {dataLoading && (
-                      <div className="flex items-center gap-1 text-indigo-400 text-sm">
-                        <div className="animate-spin rounded-full h-3 w-3 border border-indigo-400 border-t-transparent"></div>
-                        <span>Aggiornamento...</span>
-                      </div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
+                  <div className="relative">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Nome o cognome..."
+                      className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const year = new Date().getFullYear() - 2 + i;
+                      return (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={handleDownloadMonthlyReport}
+                  disabled={downloadingReport}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                    }`}
+                >
+                  <Download className="h-4 w-4" />
+                  {downloadingReport ? 'Creazione report...' : 'Scarica report CSV'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Presenze - Responsive: cards on mobile, table on lg+ */}
+        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-700">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <Calendar className="h-5 w-5 mr-2" />
+              {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
+            </h2>
+          </div>
+
+          {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 lg:hidden">
+            {filteredData.map((record) => {
+              const realTime = record.is_realtime ? {
+                expectedHours: record.expected_hours,
+                actualHours: record.actual_hours,
+                balanceHours: record.balance_hours,
+                status: record.status
+              } : calculateRealTimeHoursForRecord(record);
+              const name = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A';
+              return (
+                <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 transition-colors">
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="font-semibold text-white truncate text-sm sm:text-base flex-1 min-w-0">{name}</div>
+                    <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
+                  </div>
+                  <div className="text-slate-400 text-xs sm:text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.expectedHours)}</div>
+                    </div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.actualHours)}</div>
+                    </div>
+                    <div className="bg-slate-700/50 rounded-lg p-2">
+                      <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Saldo</div>
+                      <div className={`font-mono font-bold text-xs sm:text-sm ${realTime.balanceHours > 0 ? 'text-green-400' : realTime.balanceHours < 0 ? 'text-red-400' : 'text-slate-400'}`}>{realTime.balanceHours > 0 ? '+' : ''}{formatHours(realTime.balanceHours)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => handleViewAttendanceDetails(record)}
+                      className="flex-1 py-2 px-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 text-xs sm:text-sm rounded-lg transition-colors border border-green-500/30 touch-manipulation min-h-[44px] flex items-center justify-center"
+                    >
+                      Dettagli
+                    </button>
+                    {!record.is_realtime && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
+                          className="p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors border border-blue-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="Modifica"
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRecordToDelete(record); setShowDeleteConfirm(true); }}
+                          className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors border border-red-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          title="Elimina"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setShowGenerateModal(true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Aggiungi presenza
-                  </button>
-                </div>
-              </div>
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Statistiche */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-slate-400 text-sm">Hanno Lavorato Oggi</p>
-                    <p className="text-2xl font-bold text-white">{stats.workedToday}</p>
-                  </div>
-                </div>
-              </div>
+          {/* Desktop Table */}
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0 hidden lg:block">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                <table className="min-w-full divide-y divide-slate-700">
+                  <thead className="bg-slate-700">
+                    <tr>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Dipendente</th>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Data</th>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Stato</th>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Attese</th>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Effettive</th>
+                      <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((record) => {
+                      // Calcola real-time o usa dati esistenti
+                      let displayData;
+                      if (record.is_realtime) {
+                        // Per dati real-time, usa direttamente i valori calcolati
+                        displayData = {
+                          name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
+                          email: record.users?.email || '',
+                          date: record.date,
+                          status: record.status,
+                          expectedHours: record.expected_hours,
+                          actualHours: record.actual_hours,
+                          balanceHours: record.balance_hours,
+                          department: record.users?.department || 'N/A'
+                        };
+                      } else {
+                        // Per dati database, calcola le ore real-time
+                        const realTimeData = calculateRealTimeHoursForRecord(record);
 
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Clock className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-slate-400 text-sm">Attualmente Presenti</p>
-                    <p className="text-2xl font-bold text-white">{stats.currentlyPresent}</p>
-                  </div>
-                </div>
-              </div>
+                        // Usa i dati del database per giorni passati, real-time per oggi
+                        const now = new Date();
+                        const today = now.toISOString().split('T')[0];
+                        const recordDate = record.date;
 
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <AlertCircle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-slate-400 text-sm">Assenti Oggi</p>
-                    <p className="text-2xl font-bold text-white">{stats.absentToday}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+                        // Converti le date in oggetti Date per confronto corretto
+                        const todayDate = new Date(today);
+                        const recordDateObj = new Date(recordDate);
+                        const isPast = recordDateObj < todayDate;
+                        const isToday = recordDate === today;
 
-            {/* Tabs */}
-            <div className="mb-6">
-              <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
-                <button
-                  onClick={() => setActiveTab('today')}
-                  className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
-                    ? 'bg-indigo-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                    }`}
-                >
-                  <CalendarDays className="h-4 w-4" />
-                  Oggi
-                </button>
-                <button
-                  onClick={() => setActiveTab('history')}
-                  className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
-                    ? 'bg-indigo-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                    }`}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Cronologia
-                </button>
-              </div>
-            </div>
+                        // Determina status in base ai dati: 
+                        // - Se il DB ha actual_hours > 0, usa sempre quelli (dati salvati dal cron)
+                        // - Altrimenti se è oggi, usa real-time
+                        // - Altrimenti usa DB (anche se 0)
+                        let finalStatus;
+                        let finalActualHours;
+                        let finalExpectedHours;
+                        let finalBalanceHours;
 
-            {/* Filtri */}
-            {activeTab === 'history' && (
-              <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-                <div className="flex flex-col md:flex-row md:items-end gap-4">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
-                      <div className="relative">
-                        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="text"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder="Nome o cognome..."
-                          className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </div>
+                        const hasActualData = (record.actual_hours || 0) > 0;
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                        // IMPORTANTE: Usa sempre realTimeData.status perché include il controllo malattie
+                        // IMPORTANTE: realTimeData per giorni passati ricalcola già le ore attese dallo schedule
+                        if (isToday) {
+                          // Oggi: usa sempre real-time (include controllo malattie)
+                          finalStatus = realTimeData.status;
+                          finalActualHours = realTimeData.actualHours;
+                          finalExpectedHours = realTimeData.expectedHours;
+                          finalBalanceHours = realTimeData.balanceHours;
+                        } else if (hasActualData || isPast) {
+                          // Giorno passato: usa actual_hours dal DB (sono già salvati), ma expectedHours ricalcolato dallo schedule
+                          finalActualHours = record.actual_hours || 0;
+                          finalExpectedHours = realTimeData.expectedHours; // Usa il valore ricalcolato dallo schedule (non DB)
+                          finalBalanceHours = finalActualHours - finalExpectedHours; // Ricalcola il balance
+                          finalStatus = finalActualHours > 0 ? 'present' : 'absent';
+                        } else {
+                          // Fallback
+                          finalStatus = realTimeData.status;
+                          finalActualHours = realTimeData.actualHours;
+                          finalExpectedHours = realTimeData.expectedHours;
+                          finalBalanceHours = realTimeData.balanceHours;
+                        }
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                      <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {Array.from({ length: 5 }, (_, i) => {
-                          const year = new Date().getFullYear() - 2 + i;
-                          return (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={handleDownloadMonthlyReport}
-                      disabled={downloadingReport}
-                      className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport
-                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-500'
-                        }`}
-                    >
-                      <Download className="h-4 w-4" />
-                      {downloadingReport ? 'Creazione report...' : 'Scarica report CSV'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                        displayData = {
+                          name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
+                          email: record.users?.email || '',
+                          date: record.date,
+                          status: finalStatus,
+                          expectedHours: finalExpectedHours,
+                          actualHours: finalActualHours,
+                          balanceHours: finalBalanceHours,
+                          department: ''
+                        };
+                      }
 
-            {/* Presenze - Responsive: cards on mobile, table on lg+ */}
-            <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-700">
-                <h2 className="text-xl font-semibold text-white flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
-                </h2>
-              </div>
-
-              {/* Mobile Cards - Responsive: 1 colonna su mobile, 2 su tablet */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 lg:hidden">
-                {filteredData.map((record) => {
-                  const realTime = record.is_realtime ? {
-                    expectedHours: record.expected_hours,
-                    actualHours: record.actual_hours,
-                    balanceHours: record.balance_hours,
-                    status: record.status
-                  } : calculateRealTimeHoursForRecord(record);
-                  const name = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A';
-                  return (
-                    <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 transition-colors">
-                      <div className="flex items-center justify-between mb-2 gap-2">
-                        <div className="font-semibold text-white truncate text-sm sm:text-base flex-1 min-w-0">{name}</div>
-                        <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
-                      </div>
-                      <div className="text-slate-400 text-xs sm:text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
-                      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                        <div className="bg-slate-700/50 rounded-lg p-2">
-                          <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
-                          <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.expectedHours)}</div>
-                        </div>
-                        <div className="bg-slate-700/50 rounded-lg p-2">
-                          <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
-                          <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.actualHours)}</div>
-                        </div>
-                        <div className="bg-slate-700/50 rounded-lg p-2">
-                          <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Saldo</div>
-                          <div className={`font-mono font-bold text-xs sm:text-sm ${realTime.balanceHours > 0 ? 'text-green-400' : realTime.balanceHours < 0 ? 'text-red-400' : 'text-slate-400'}`}>{realTime.balanceHours > 0 ? '+' : ''}{formatHours(realTime.balanceHours)}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => handleViewAttendanceDetails(record)}
-                          className="flex-1 py-2 px-3 bg-green-600/20 hover:bg-green-600/30 text-green-400 hover:text-green-300 text-xs sm:text-sm rounded-lg transition-colors border border-green-500/30 touch-manipulation min-h-[44px] flex items-center justify-center"
-                        >
-                          Dettagli
-                        </button>
-                        {!record.is_realtime && (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
-                              className="p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors border border-blue-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-                              title="Modifica"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setRecordToDelete(record); setShowDeleteConfirm(true); }}
-                              className="p-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors border border-red-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
-                              title="Elimina"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Desktop Table */}
-              <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0 hidden lg:block">
-                <div className="inline-block min-w-full align-middle">
-                  <div className="overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                    <table className="min-w-full divide-y divide-slate-700">
-                      <thead className="bg-slate-700">
-                        <tr>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Dipendente</th>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Data</th>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Stato</th>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Attese</th>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Effettive</th>
-                          <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Azioni</th>
+                      return (
+                        <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                          <td className="py-3 px-2 sm:py-4 sm:px-6 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="h-6 w-6 sm:h-8 sm:w-8 bg-slate-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                                <User className="h-3 w-3 sm:h-4 sm:w-4 text-slate-300" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-white text-xs sm:text-sm truncate">
+                                  {displayData.name}
+                                </p>
+                                <p className="text-xs text-slate-400 truncate hidden sm:block">
+                                  {displayData.email || displayData.department}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 sm:py-4 sm:px-4">
+                            <div className="flex items-center">
+                              <Calendar className="h-4 w-4 text-slate-400 mr-2" />
+                              <span className="text-slate-300">
+                                {new Date(displayData.date).toLocaleDateString('it-IT')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-2 sm:py-4 sm:px-4">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status)}`}>
+                              {getStatusIcon(displayData.status)}
+                              <span className="ml-1">{getStatusText(displayData.status)}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 sm:py-4 sm:px-4">
+                            <span className="font-mono text-slate-300">
+                              {formatHours(displayData.expectedHours)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 sm:py-4 sm:px-4">
+                            <span className="font-mono text-slate-300">
+                              {formatHours(displayData.actualHours)}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditRecord(record)}
+                                disabled={record.is_realtime}
+                                className={`p-2 rounded-lg transition-colors ${record.is_realtime
+                                  ? 'text-slate-500 cursor-not-allowed opacity-50'
+                                  : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20'
+                                  }`}
+                                title={record.is_realtime ? "Dati real-time non modificabili" : "Modifica record"}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRecordToDelete(record);
+                                  setShowDeleteConfirm(true);
+                                }}
+                                disabled={record.is_realtime}
+                                className={`p-2 rounded-lg transition-colors ${record.is_realtime
+                                  ? 'text-slate-500 cursor-not-allowed opacity-50'
+                                  : 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
+                                  }`}
+                                title={record.is_realtime ? "Dati real-time non eliminabili" : "Elimina record"}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleViewAttendanceDetails(record)}
+                                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
+                                title="Visualizza dettagli presenze"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {filteredData.map((record) => {
-                          // Calcola real-time o usa dati esistenti
-                          let displayData;
-                          if (record.is_realtime) {
-                            // Per dati real-time, usa direttamente i valori calcolati
-                            displayData = {
-                              name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
-                              email: record.users?.email || '',
-                              date: record.date,
-                              status: record.status,
-                              expectedHours: record.expected_hours,
-                              actualHours: record.actual_hours,
-                              balanceHours: record.balance_hours,
-                              department: record.users?.department || 'N/A'
-                            };
-                          } else {
-                            // Per dati database, calcola le ore real-time
-                            const realTimeData = calculateRealTimeHoursForRecord(record);
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-                            // Usa i dati del database per giorni passati, real-time per oggi
-                            const now = new Date();
-                            const today = now.toISOString().split('T')[0];
-                            const recordDate = record.date;
+          {filteredData.length === 0 && (
+            <div className="text-center py-12">
+              <AlertCircle className="h-16 w-16 mx-auto mb-4 text-slate-500" />
+              <h3 className="text-lg font-medium text-slate-300 mb-2">Nessun record trovato</h3>
+              <p className="text-slate-500">
+                {activeTab === 'today'
+                  ? 'Non ci sono presenze registrate per oggi'
+                  : 'Nessun record di presenza trovato per i filtri selezionati'
+                }
+              </p>
+            </div>
+          )}
+        </div>
 
-                            // Converti le date in oggetti Date per confronto corretto
-                            const todayDate = new Date(today);
-                            const recordDateObj = new Date(recordDate);
-                            const isPast = recordDateObj < todayDate;
-                            const isToday = recordDate === today;
+        {/* Modale Modifica Record */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Modifica Record Presenza</h3>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
-                            // Determina status in base ai dati: 
-                            // - Se il DB ha actual_hours > 0, usa sempre quelli (dati salvati dal cron)
-                            // - Altrimenti se è oggi, usa real-time
-                            // - Altrimenti usa DB (anche se 0)
-                            let finalStatus;
-                            let finalActualHours;
-                            let finalExpectedHours;
-                            let finalBalanceHours;
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Ore Effettive</label>
+                  <input
+                    type="text"
+                    pattern="[0-9]{1,2}:[0-5][0-9]"
+                    value={editForm.actual_hours}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Permetti solo numeri e due punti
+                      if (value === '' || /^\d{0,2}:?\d{0,2}$/.test(value.replace(':', ''))) {
+                        // Aggiungi automaticamente i due punti dopo 2 cifre
+                        if (value.length === 2 && !value.includes(':')) {
+                          value = value + ':';
+                        }
+                        setEditForm({ ...editForm, actual_hours: value });
+                      }
+                    }}
+                    placeholder="0:00"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Formato: HH:MM (es. 8:30 per 8 ore e 30 minuti)</p>
+                </div>
 
-                            const hasActualData = (record.actual_hours || 0) > 0;
-
-                            // IMPORTANTE: Usa sempre realTimeData.status perché include il controllo malattie
-                            // IMPORTANTE: realTimeData per giorni passati ricalcola già le ore attese dallo schedule
-                            if (isToday) {
-                              // Oggi: usa sempre real-time (include controllo malattie)
-                              finalStatus = realTimeData.status;
-                              finalActualHours = realTimeData.actualHours;
-                              finalExpectedHours = realTimeData.expectedHours;
-                              finalBalanceHours = realTimeData.balanceHours;
-                            } else if (hasActualData || isPast) {
-                              // Giorno passato: usa actual_hours dal DB (sono già salvati), ma expectedHours ricalcolato dallo schedule
-                              finalActualHours = record.actual_hours || 0;
-                              finalExpectedHours = realTimeData.expectedHours; // Usa il valore ricalcolato dallo schedule (non DB)
-                              finalBalanceHours = finalActualHours - finalExpectedHours; // Ricalcola il balance
-                              finalStatus = finalActualHours > 0 ? 'present' : 'absent';
-                            } else {
-                              // Fallback
-                              finalStatus = realTimeData.status;
-                              finalActualHours = realTimeData.actualHours;
-                              finalExpectedHours = realTimeData.expectedHours;
-                              finalBalanceHours = realTimeData.balanceHours;
-                            }
-
-                            displayData = {
-                              name: record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A',
-                              email: record.users?.email || '',
-                              date: record.date,
-                              status: finalStatus,
-                              expectedHours: finalExpectedHours,
-                              actualHours: finalActualHours,
-                              balanceHours: finalBalanceHours,
-                              department: ''
-                            };
-                          }
-
-                          return (
-                            <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                              <td className="py-3 px-2 sm:py-4 sm:px-6 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <div className="h-6 w-6 sm:h-8 sm:w-8 bg-slate-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
-                                    <User className="h-3 w-3 sm:h-4 sm:w-4 text-slate-300" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-white text-xs sm:text-sm truncate">
-                                      {displayData.name}
-                                    </p>
-                                    <p className="text-xs text-slate-400 truncate hidden sm:block">
-                                      {displayData.email || displayData.department}
-                                    </p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:py-4 sm:px-4">
-                                <div className="flex items-center">
-                                  <Calendar className="h-4 w-4 text-slate-400 mr-2" />
-                                  <span className="text-slate-300">
-                                    {new Date(displayData.date).toLocaleDateString('it-IT')}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 sm:py-4 sm:px-4">
-                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status)}`}>
-                                  {getStatusIcon(displayData.status)}
-                                  <span className="ml-1">{getStatusText(displayData.status)}</span>
-                                </span>
-                              </td>
-                              <td className="py-3 px-2 sm:py-4 sm:px-4">
-                                <span className="font-mono text-slate-300">
-                                  {formatHours(displayData.expectedHours)}
-                                </span>
-                              </td>
-                              <td className="py-3 px-2 sm:py-4 sm:px-4">
-                                <span className="font-mono text-slate-300">
-                                  {formatHours(displayData.actualHours)}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleEditRecord(record)}
-                                    disabled={record.is_realtime}
-                                    className={`p-2 rounded-lg transition-colors ${record.is_realtime
-                                      ? 'text-slate-500 cursor-not-allowed opacity-50'
-                                      : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20'
-                                      }`}
-                                    title={record.is_realtime ? "Dati real-time non modificabili" : "Modifica record"}
-                                  >
-                                    <Edit3 className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setRecordToDelete(record);
-                                      setShowDeleteConfirm(true);
-                                    }}
-                                    disabled={record.is_realtime}
-                                    className={`p-2 rounded-lg transition-colors ${record.is_realtime
-                                      ? 'text-slate-500 cursor-not-allowed opacity-50'
-                                      : 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
-                                      }`}
-                                    title={record.is_realtime ? "Dati real-time non eliminabili" : "Elimina record"}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewAttendanceDetails(record)}
-                                    className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
-                                    title="Visualizza dettagli presenze"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    rows="3"
+                    placeholder="Aggiungi note..."
+                  />
                 </div>
               </div>
 
-              {filteredData.length === 0 && (
-                <div className="text-center py-12">
-                  <AlertCircle className="h-16 w-16 mx-auto mb-4 text-slate-500" />
-                  <h3 className="text-lg font-medium text-slate-300 mb-2">Nessun record trovato</h3>
-                  <p className="text-slate-500">
-                    {activeTab === 'today'
-                      ? 'Non ci sono presenze registrate per oggi'
-                      : 'Nessun record di presenza trovato per i filtri selezionati'
-                    }
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Salva
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modale Conferma Eliminazione */}
+        {showDeleteConfirm && recordToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Conferma Eliminazione</h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setRecordToDelete(null);
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-slate-300">
+                  Sei sicuro di voler eliminare questo record di presenza?
+                </p>
+                <div className="bg-slate-700 rounded-lg p-3">
+                  <p className="text-sm text-slate-400">
+                    {(() => {
+                      const emp = allEmployees.find(e => e.id === recordToDelete.user_id);
+                      return emp ? `${emp.first_name} ${emp.last_name}` : 'Dipendente';
+                    })()}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {new Date(recordToDelete.date).toLocaleDateString('it-IT')}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Ore: {recordToDelete.actual_hours || 0}h
                   </p>
                 </div>
-              )}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setRecordToDelete(null);
+                  }}
+                  className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={() => handleDeleteRecord(recordToDelete)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Elimina
+                </button>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* Modale Modifica Record */}
-            {showEditModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">Modifica Record Presenza</h3>
-                    <button
-                      onClick={() => setShowEditModal(false)}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
+        {/* Modale Genera Presenze */}
+        {showGenerateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-600">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Aggiungi presenza</h3>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Step {generateStep} di 2
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowGenerateModal(false);
+                    setGenerateStep(1);
+                    setGenerateForm({
+                      startDate: '',
+                      endDate: '',
+                      employeeId: ''
+                    });
+                  }}
+                  className="text-slate-400 hover:text-slate-300 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                    1
                   </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Ore Effettive</label>
-                      <input
-                        type="text"
-                        pattern="[0-9]{1,2}:[0-5][0-9]"
-                        value={editForm.actual_hours}
-                        onChange={(e) => {
-                          let value = e.target.value;
-                          // Permetti solo numeri e due punti
-                          if (value === '' || /^\d{0,2}:?\d{0,2}$/.test(value.replace(':', ''))) {
-                            // Aggiungi automaticamente i due punti dopo 2 cifre
-                            if (value.length === 2 && !value.includes(':')) {
-                              value = value + ':';
-                            }
-                            setEditForm({ ...editForm, actual_hours: value });
-                          }
-                        }}
-                        placeholder="0:00"
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <p className="text-xs text-slate-400 mt-1">Formato: HH:MM (es. 8:30 per 8 ore e 30 minuti)</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
-                      <textarea
-                        value={editForm.notes}
-                        onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        rows="3"
-                        placeholder="Aggiungi note..."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 mt-6">
-                    <button
-                      onClick={() => setShowEditModal(false)}
-                      className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                      Annulla
-                    </button>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Save className="h-4 w-4" />
-                      Salva
-                    </button>
+                  <div className={`flex-1 h-1 mx-2 ${generateStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}></div>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
+                    2
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Modale Conferma Eliminazione */}
-            {showDeleteConfirm && recordToDelete && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white">Conferma Eliminazione</h3>
-                    <button
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setRecordToDelete(null);
-                      }}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    <p className="text-slate-300">
-                      Sei sicuro di voler eliminare questo record di presenza?
-                    </p>
-                    <div className="bg-slate-700 rounded-lg p-3">
-                      <p className="text-sm text-slate-400">
-                        {(() => {
-                          const emp = allEmployees.find(e => e.id === recordToDelete.user_id);
-                          return emp ? `${emp.first_name} ${emp.last_name}` : 'Dipendente';
-                        })()}
-                      </p>
-                      <p className="text-sm text-slate-400">
-                        {new Date(recordToDelete.date).toLocaleDateString('it-IT')}
-                      </p>
-                      <p className="text-sm text-slate-400">
-                        Ore: {recordToDelete.actual_hours || 0}h
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 mt-6">
-                    <button
-                      onClick={() => {
-                        setShowDeleteConfirm(false);
-                        setRecordToDelete(null);
-                      }}
-                      className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
-                    >
-                      Annulla
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRecord(recordToDelete)}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Elimina
-                    </button>
-                  </div>
+                <div className="flex justify-between mt-2 text-xs text-slate-400">
+                  <span>Seleziona Dipendente</span>
+                  <span>Seleziona Date</span>
                 </div>
               </div>
-            )}
 
-            {/* Modale Genera Presenze */}
-            {showGenerateModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-6 border-b border-slate-600">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">Aggiungi presenza</h3>
-                      <p className="text-sm text-slate-400 mt-1">
-                        Step {generateStep} di 2
-                      </p>
-                    </div>
+              {/* Step 1: Selezione Dipendente */}
+              {generateStep === 1 && (
+                <div className="p-6">
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Seleziona Dipendente
+                    </label>
+                    <select
+                      value={generateForm.employeeId}
+                      onChange={(e) => setGenerateForm({ ...generateForm, employeeId: e.target.value })}
+                      className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="">Seleziona dipendente</option>
+                      {allEmployees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
                     <button
                       onClick={() => {
                         setShowGenerateModal(false);
@@ -1545,177 +1694,119 @@ const AdminAttendance = () => {
                           employeeId: ''
                         });
                       }}
-                      className="text-slate-400 hover:text-slate-300 transition-colors"
+                      className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
                     >
-                      <X className="h-5 w-5" />
+                      Annulla
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (generateForm.employeeId) {
+                          setGenerateStep(2);
+                        } else {
+                          alert('Seleziona un dipendente per continuare');
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
+                    >
+                      Avanti
                     </button>
                   </div>
+                </div>
+              )}
 
-                  {/* Progress Bar */}
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <div className="flex items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                        }`}>
-                        1
-                      </div>
-                      <div className={`flex-1 h-1 mx-2 ${generateStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}></div>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
-                        }`}>
-                        2
-                      </div>
+              {/* Step 2: Selezione Date */}
+              {generateStep === 2 && (
+                <div className="p-6">
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Data Inizio</label>
+                      <input
+                        type="date"
+                        value={generateForm.startDate}
+                        onChange={(e) => setGenerateForm({ ...generateForm, startDate: e.target.value })}
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
                     </div>
-                    <div className="flex justify-between mt-2 text-xs text-slate-400">
-                      <span>Seleziona Dipendente</span>
-                      <span>Seleziona Date</span>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Data Fine</label>
+                      <input
+                        type="date"
+                        value={generateForm.endDate}
+                        onChange={(e) => setGenerateForm({ ...generateForm, endDate: e.target.value })}
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      />
                     </div>
                   </div>
 
-                  {/* Step 1: Selezione Dipendente */}
-                  {generateStep === 1 && (
-                    <div className="p-6">
-                      <div className="mb-6">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Seleziona Dipendente
-                        </label>
-                        <select
-                          value={generateForm.employeeId}
-                          onChange={(e) => setGenerateForm({ ...generateForm, employeeId: e.target.value })}
-                          className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="">Seleziona dipendente</option>
-                          {allEmployees.map((emp) => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.first_name || emp.firstName} {emp.last_name || emp.lastName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => {
-                            setShowGenerateModal(false);
-                            setGenerateStep(1);
-                            setGenerateForm({
-                              startDate: '',
-                              endDate: '',
-                              employeeId: ''
-                            });
-                          }}
-                          className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
-                        >
-                          Annulla
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (generateForm.employeeId) {
-                              setGenerateStep(2);
-                            } else {
-                              alert('Seleziona un dipendente per continuare');
-                            }
-                          }}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
-                        >
-                          Avanti
-                        </button>
-                      </div>
+                  {/* Riepilogo */}
+                  <div className="bg-slate-700 rounded-md p-4 mb-6">
+                    <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
+                    <div className="text-sm text-slate-300 space-y-1">
+                      <p><span className="text-slate-400">Dipendente:</span> {
+                        (() => {
+                          const selectedEmp = allEmployees.find(emp => emp.id === generateForm.employeeId);
+                          if (!selectedEmp) return '';
+                          return (selectedEmp.first_name || selectedEmp.firstName || '') + ' ' + (selectedEmp.last_name || selectedEmp.lastName || '');
+                        })()
+                      }</p>
+                      <p><span className="text-slate-400">Periodo:</span> {
+                        (() => {
+                          const formatDate = (dateStr) => {
+                            if (!dateStr) return '';
+                            const date = new Date(dateStr);
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const year = date.getFullYear();
+                            return `${day}-${month}-${year}`;
+                          };
+                          return `${formatDate(generateForm.startDate)} - ${formatDate(generateForm.endDate)}`;
+                        })()
+                      }</p>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Step 2: Selezione Date */}
-                  {generateStep === 2 && (
-                    <div className="p-6">
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-2">Data Inizio</label>
-                          <input
-                            type="date"
-                            value={generateForm.startDate}
-                            onChange={(e) => setGenerateForm({ ...generateForm, startDate: e.target.value })}
-                            className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-2">Data Fine</label>
-                          <input
-                            type="date"
-                            value={generateForm.endDate}
-                            onChange={(e) => setGenerateForm({ ...generateForm, endDate: e.target.value })}
-                            className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Riepilogo */}
-                      <div className="bg-slate-700 rounded-md p-4 mb-6">
-                        <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
-                        <div className="text-sm text-slate-300 space-y-1">
-                          <p><span className="text-slate-400">Dipendente:</span> {
-                            (() => {
-                              const selectedEmp = allEmployees.find(emp => emp.id === generateForm.employeeId);
-                              if (!selectedEmp) return '';
-                              return (selectedEmp.first_name || selectedEmp.firstName || '') + ' ' + (selectedEmp.last_name || selectedEmp.lastName || '');
-                            })()
-                          }</p>
-                          <p><span className="text-slate-400">Periodo:</span> {
-                            (() => {
-                              const formatDate = (dateStr) => {
-                                if (!dateStr) return '';
-                                const date = new Date(dateStr);
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const year = date.getFullYear();
-                                return `${day}-${month}-${year}`;
-                              };
-                              return `${formatDate(generateForm.startDate)} - ${formatDate(generateForm.endDate)}`;
-                            })()
-                          }</p>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between gap-3">
-                        <button
-                          onClick={() => setGenerateStep(1)}
-                          className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
-                        >
-                          Indietro
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (generateForm.startDate && generateForm.endDate) {
-                              handleGenerateAttendance();
-                            } else {
-                              alert('Seleziona entrambe le date per continuare');
-                            }
-                          }}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Aggiungi presenza
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex justify-between gap-3">
+                    <button
+                      onClick={() => setGenerateStep(1)}
+                      className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+                    >
+                      Indietro
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (generateForm.startDate && generateForm.endDate) {
+                          handleGenerateAttendance();
+                        } else {
+                          alert('Seleziona entrambe le date per continuare');
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Aggiungi presenza
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Modal Dettagli Presenze */}
-            {showAttendanceDetails && selectedAttendanceDetails && (
-              <AttendanceDetails
-                userId={selectedAttendanceDetails.userId}
-                date={selectedAttendanceDetails.date}
-                onClose={() => {
-                  setShowAttendanceDetails(false);
-                  setSelectedAttendanceDetails(null);
-                }}
-              />
-            )}
+              )}
+            </div>
           </div>
-        </div>
-      );
+        )}
+
+        {/* Modal Dettagli Presenze */}
+        {showAttendanceDetails && selectedAttendanceDetails && (
+          <AttendanceDetails
+            userId={selectedAttendanceDetails.userId}
+            date={selectedAttendanceDetails.date}
+            onClose={() => {
+              setShowAttendanceDetails(false);
+              setSelectedAttendanceDetails(null);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default AdminAttendance;
