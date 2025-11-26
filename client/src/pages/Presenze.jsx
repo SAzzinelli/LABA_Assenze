@@ -879,6 +879,16 @@ const Attendance = () => {
       };
     }
 
+    // Se ha lavorato (actual_hours > 0), è presente anche se expected_hours === 0
+    if (hasWorked) {
+      return {
+        text: 'Presente',
+        colorClass: 'text-green-400',
+        badgeClass: badgeClasses.green
+      };
+    }
+
+    // Solo se expected_hours === 0 E actual_hours === 0, allora è non lavorativo
     if (expected_hours === 0) {
       return {
         text: 'Non lavorativo',
