@@ -71,10 +71,11 @@ const Attendance = () => {
           fetchTotalBalance(),
           fetchWorkSchedules(),
           fetchUserStats(),
-          fetchPermissions104()
+          fetchPermissions104(),
+          fetchCurrentHours() // Carica i dati real-time dall'endpoint
         ]);
 
-        // 2. Calcola IMMEDIATAMENTE le ore in tempo reale
+        // 2. Calcola IMMEDIATAMENTE le ore in tempo reale (come backup/aggiornamento)
         console.log('🔄 Forcing immediate real-time calculation...');
         await performRealTimeCalculation();
 
