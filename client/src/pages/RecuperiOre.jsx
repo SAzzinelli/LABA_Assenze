@@ -9,7 +9,8 @@ import {
   Timer, 
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Calendar
 } from 'lucide-react';
 
 const RecuperiOre = () => {
@@ -645,32 +646,113 @@ const RecuperiOre = () => {
 
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
-            <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 mr-3 text-amber-400" />
-            Recupero Ore
-          </h1>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center mb-2">
+              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 mr-3 text-amber-400" />
+              Recupero Ore
+            </h1>
+            <p className="text-slate-400 text-sm sm:text-base">
+              Richiedi di recuperare le ore di debito attraverso straordinari concordati
+            </p>
+          </div>
         </div>
 
-        {/* Sezione Recupero Ore (solo se ha debito) */}
+        {/* KPI Cards - Saldo Banca Ore */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Saldo Totale */}
+          <div className={`rounded-lg p-6 ${totalBalance < 0 ? 'bg-red-900/20 border border-red-500/30' : totalBalance > 0 ? 'bg-green-900/20 border border-green-500/30' : 'bg-slate-800 border border-slate-700'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-slate-400">Saldo Banca Ore</h3>
+              <Clock className={`h-5 w-5 ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-slate-400'}`} />
+            </div>
+            <p className={`text-2xl font-bold ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-white'}`}>
+              {totalBalance < 0 ? '-' : '+'}{formatHours(Math.abs(totalBalance))}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {totalBalance < 0 ? 'Debito da recuperare' : totalBalance > 0 ? 'Credito disponibile' : 'In pari'}
+            </p>
+          </div>
+
+          {/* Debito */}
+          {totalBalance < 0 && (
+            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-amber-300">Debito Attuale</h3>
+                <AlertCircle className="h-5 w-5 text-amber-400" />
+              </div>
+              <p className="text-2xl font-bold text-amber-400">
+                {formatHours(Math.abs(totalBalance))}
+              </p>
+              <p className="text-xs text-amber-300/70 mt-1">Ore da recuperare</p>
+            </div>
+          )}
+
+          {/* Credito */}
+          {totalBalance > 0 && (
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-green-300">Credito Disponibile</h3>
+                <CheckCircle className="h-5 w-5 text-green-400" />
+              </div>
+              <p className="text-2xl font-bold text-green-400">
+                {formatHours(totalBalance)}
+              </p>
+              <p className="text-xs text-green-300/70 mt-1">Ore disponibili</p>
+            </div>
+          )}
+
+          {/* Recuperi Totali */}
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-slate-400">Recuperi Attivi</h3>
+              <Timer className="h-5 w-5 text-blue-400" />
+            </div>
+            <p className="text-2xl font-bold text-blue-400">
+              {approvedRecoveries.length + pendingRecoveries.length + proposedRecoveries.length}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">Richieste programmate</p>
+          </div>
+        </div>
+
+        {/* Sezione Informazioni e Azioni */}
         {totalBalance < 0 && (
-          <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white flex items-center">
-                <AlertCircle className="h-6 w-6 mr-3 text-amber-400" />
-                Debito Banca Ore
-              </h3>
+          <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-500/40 rounded-lg p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center mb-3">
+                  <AlertCircle className="h-6 w-6 mr-3 text-amber-400" />
+                  <h3 className="text-xl font-bold text-white">Hai un debito da recuperare</h3>
+                </div>
+                <div className="space-y-2 text-amber-100">
+                  <p className="text-base">
+                    Il tuo saldo banca ore è <span className="font-bold text-amber-300">{formatHours(Math.abs(totalBalance))}</span> in negativo.
+                  </p>
+                  <p className="text-sm text-amber-200/80">
+                    Puoi richiedere di recuperare queste ore attraverso straordinari concordati con l'amministratore. 
+                    Una volta approvata la richiesta, potrai lavorare negli orari indicati per compensare il debito.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowRecoveryModal(true)}
-                className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px]"
+                className="flex items-center justify-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[48px] font-semibold shadow-lg hover:shadow-xl"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Nuova Richiesta
+                <Plus className="h-5 w-5 mr-2" />
+                Nuova Richiesta Recupero
               </button>
             </div>
-            <p className="text-amber-200">
-              Hai un debito di <span className="font-bold">{formatHours(Math.abs(totalBalance))}</span> nella banca ore. 
-              Puoi richiedere di recuperare queste ore concordando degli straordinari con l'amministratore.
+          </div>
+        )}
+
+        {/* Messaggio se in regola */}
+        {totalBalance >= 0 && (approvedRecoveries.length === 0 && pendingRecoveries.length === 0 && proposedRecoveries.length === 0) && (
+          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6 text-center">
+            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Banca Ore in Regola</h3>
+            <p className="text-slate-400">
+              Non hai debiti da recuperare. Il tuo saldo è {totalBalance > 0 ? `positivo di ${formatHours(totalBalance)}` : 'in pari'}.
             </p>
           </div>
         )}
@@ -678,35 +760,53 @@ const RecuperiOre = () => {
         {/* Recuperi Programmati */}
         {(approvedRecoveries.length > 0 || pendingRecoveries.length > 0 || proposedRecoveries.length > 0) ? (
           <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <Timer className="h-6 w-6 mr-3 text-blue-400" />
-              Recuperi Programmati
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center mb-1">
+                  <Timer className="h-6 w-6 mr-3 text-blue-400" />
+                  Recuperi Programmati
+                </h3>
+                <p className="text-sm text-slate-400 ml-9">
+                  Le tue richieste di recupero ore e le proposte dell'amministratore
+                </p>
+              </div>
+            </div>
             
             {approvedRecoveries.length > 0 && (
               <div className="space-y-3 mb-6">
-                <h4 className="text-sm font-semibold text-green-400 mb-2">✅ Approvati</h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <h4 className="text-base font-semibold text-green-400">Approvati ({approvedRecoveries.length})</h4>
+                </div>
                 {approvedRecoveries.map((recovery) => (
-                  <div key={recovery.id} className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                  <div key={recovery.id} className="bg-green-500/10 border-l-4 border-green-500 rounded-lg p-4 hover:bg-green-500/15 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <div className="text-white font-semibold">
-                          {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </div>
-                          <div className="text-green-300 text-sm mt-1">
-                            Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-green-400" />
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-green-300 text-sm">
+                          <Clock className="h-4 w-4" />
+                          <span>Dalle {recovery.start_time} alle {recovery.end_time}</span>
+                          <span className="text-green-400 font-semibold ml-2">({formatHours(recovery.hours)})</span>
+                        </div>
                         {recovery.reason && (
-                          <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
                         )}
                       </div>
-                      <div className="text-green-400 font-semibold">
-                        +{formatHours(recovery.hours)}
+                      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                        <div className="bg-green-500/20 px-3 py-1 rounded-full">
+                          <span className="text-green-400 font-bold text-lg">+{formatHours(recovery.hours)}</span>
+                        </div>
+                        <span className="text-xs text-green-400/70">Approvato</span>
                       </div>
                     </div>
                   </div>
@@ -716,28 +816,39 @@ const RecuperiOre = () => {
 
             {pendingRecoveries.length > 0 && (
               <div className="space-y-3 mb-6">
-                <h4 className="text-sm font-semibold text-yellow-400 mb-2">⏳ In attesa di approvazione</h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <Timer className="h-5 w-5 text-yellow-400" />
+                  <h4 className="text-base font-semibold text-yellow-400">In attesa di approvazione ({pendingRecoveries.length})</h4>
+                </div>
                 {pendingRecoveries.map((recovery) => (
-                  <div key={recovery.id} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+                  <div key={recovery.id} className="bg-yellow-500/10 border-l-4 border-yellow-500 rounded-lg p-4 hover:bg-yellow-500/15 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <div className="text-white font-semibold">
-                          {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </div>
-                          <div className="text-yellow-300 text-sm mt-1">
-                            Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-yellow-400" />
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
                           </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-yellow-300 text-sm">
+                          <Clock className="h-4 w-4" />
+                          <span>Dalle {recovery.start_time} alle {recovery.end_time}</span>
+                          <span className="text-yellow-400 font-semibold ml-2">({formatHours(recovery.hours)})</span>
+                        </div>
                         {recovery.reason && (
-                          <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
                         )}
                       </div>
-                      <div className="text-yellow-400 font-semibold">
-                        In attesa
+                      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                        <div className="bg-yellow-500/20 px-3 py-1 rounded-full">
+                          <span className="text-yellow-400 font-bold text-lg">{formatHours(recovery.hours)}</span>
+                        </div>
+                        <span className="text-xs text-yellow-400/70">In attesa</span>
                       </div>
                     </div>
                   </div>
@@ -747,30 +858,38 @@ const RecuperiOre = () => {
 
             {proposedRecoveries.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-blue-400 mb-2">📩 Proposte dall'amministratore</h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertCircle className="h-5 w-5 text-blue-400" />
+                  <h4 className="text-base font-semibold text-blue-400">Proposte dall'amministratore ({proposedRecoveries.length})</h4>
+                </div>
                 {proposedRecoveries.map((recovery) => (
-                  <div key={recovery.id} className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div key={recovery.id} className="bg-blue-500/10 border-l-4 border-blue-500 rounded-lg p-4 hover:bg-blue-500/15 transition-colors">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
-                        <div className="text-white font-semibold">
-                          {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calendar className="h-4 w-4 text-blue-400" />
+                          <div className="text-white font-semibold">
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </div>
                         </div>
-                        <div className="text-blue-300 text-sm mt-1">
-                          Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})
+                        <div className="flex items-center gap-2 text-blue-300 text-sm mb-2">
+                          <Clock className="h-4 w-4" />
+                          <span>Dalle {recovery.start_time} alle {recovery.end_time}</span>
+                          <span className="text-blue-400 font-semibold ml-2">({formatHours(recovery.hours)})</span>
                         </div>
                         {recovery.reason && (
-                          <div className="text-slate-400 text-xs mt-1">{recovery.reason}</div>
+                          <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
                         )}
                         {recovery.notes && (
-                          <div className="text-slate-300 text-xs mt-1 italic">{recovery.notes}</div>
+                          <div className="text-blue-200 text-xs mt-2 pl-6 italic bg-blue-500/10 p-2 rounded">{recovery.notes}</div>
                         )}
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <button
                           onClick={async () => {
                             try {
@@ -837,12 +956,6 @@ const RecuperiOre = () => {
                 ))}
               </div>
             )}
-          </div>
-        ) : totalBalance >= 0 ? (
-          // Mostra "in regola" SOLO se non c'è debito E non ci sono recuperi programmati
-          <div className="bg-slate-800 rounded-lg p-6 text-center">
-            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <p className="text-slate-400">Nessun recupero programmato. La tua banca ore è in regola.</p>
           </div>
         ) : null}
 
