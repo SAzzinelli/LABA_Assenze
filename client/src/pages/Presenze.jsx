@@ -1253,16 +1253,16 @@ const Attendance = () => {
                 }, ...combined];
               }
 
-              // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
+              // Se esiste già un record per oggi nel database, aggiorna sempre con i dati real-time
               if (isCurrentMonth && todayExists) {
                 combined = combined.map(record => {
-                  if (record.date === today && currentHours?.contractHours !== undefined) {
+                  if (record.date === today && currentHours?.isWorkingDay) {
                     return {
                       ...record,
-                      expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
-                      actual_hours: currentHours.actualHours,
-                      balance_hours: currentHours.balanceHours,
-                      status: currentHours.status
+                      expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                      actual_hours: currentHours.actualHours || 0,
+                      balance_hours: currentHours.balanceHours || 0,
+                      status: currentHours.status || 'not_started'
                     };
                   }
                   return record;
@@ -1284,7 +1284,36 @@ const Attendance = () => {
                     <div className="font-semibold text-white text-sm sm:text-base">
                       {new Date(record.date).toLocaleDateString('it-IT')}
                     </div>
-                    <div className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border flex-shrink-0 ${getStatusColor(record)}`}>{getStatusText(record)}</div>
+                    <div className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border flex-shrink-0 ${(() => {
+                      const today = new Date().toISOString().split('T')[0];
+                      const isToday = record.date === today;
+                      // Per oggi, usa direttamente currentHours.status se disponibile
+                      if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
+                        return getStatusColor({
+                          ...record,
+                          actual_hours: currentHours.actualHours || 0,
+                          expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                          status: currentHours.status
+                        });
+                      }
+                      return getStatusColor(record);
+                    })()}`}>
+                      {(() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        const isToday = record.date === today;
+                        // Per oggi, usa direttamente currentHours.status se disponibile
+                        if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
+                          const statusRecord = {
+                            ...record,
+                            actual_hours: currentHours.actualHours || 0,
+                            expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                            status: currentHours.status
+                          };
+                          return getStatusText(statusRecord);
+                        }
+                        return getStatusText(record);
+                      })()}
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
                     <div className="bg-slate-700/50 rounded-lg p-2">
@@ -1401,16 +1430,16 @@ const Attendance = () => {
                     combinedAttendance = [todayRecord, ...combinedAttendance];
                   }
 
-                  // Se esiste già un record per oggi nel database, aggiorna le ore attese con contractHours
+                  // Se esiste già un record per oggi nel database, aggiorna sempre con i dati real-time
                   if (isCurrentMonth && todayExists) {
                     combinedAttendance = combinedAttendance.map(record => {
-                      if (record.date === today && currentHours?.contractHours !== undefined) {
+                      if (record.date === today && currentHours?.isWorkingDay) {
                         return {
                           ...record,
-                          expected_hours: currentHours.contractHours, // Usa contractHours per permesso 104
-                          actual_hours: currentHours.actualHours,
-                          balance_hours: currentHours.balanceHours,
-                          status: currentHours.status
+                          expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                          actual_hours: currentHours.actualHours || 0,
+                          balance_hours: currentHours.balanceHours || 0,
+                          status: currentHours.status || 'not_started'
                         };
                       }
                       return record;
@@ -1434,8 +1463,35 @@ const Attendance = () => {
                         {new Date(record.date).toLocaleDateString('it-IT')}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`font-semibold ${getStatusColor(record)}`}>
-                          {getStatusText(record)}
+                        <span className={`font-semibold ${(() => {
+                          const today = new Date().toISOString().split('T')[0];
+                          const isToday = record.date === today;
+                          // Per oggi, usa direttamente currentHours.status se disponibile
+                          if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
+                            return getStatusColor({
+                              ...record,
+                              actual_hours: currentHours.actualHours || 0,
+                              expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                              status: currentHours.status
+                            });
+                          }
+                          return getStatusColor(record);
+                        })()}`}>
+                          {(() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            const isToday = record.date === today;
+                            // Per oggi, usa direttamente currentHours.status se disponibile
+                            if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
+                              const statusRecord = {
+                                ...record,
+                                actual_hours: currentHours.actualHours || 0,
+                                expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
+                                status: currentHours.status
+                              };
+                              return getStatusText(statusRecord);
+                            }
+                            return getStatusText(record);
+                          })()}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-mono">
