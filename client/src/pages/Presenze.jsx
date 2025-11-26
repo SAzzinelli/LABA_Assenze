@@ -183,7 +183,7 @@ const Attendance = () => {
   // Ricalcola le ore real-time quando cambiano i work schedules
   useEffect(() => {
     if (workSchedules.length > 0) {
-      calculateRealTimeHours();
+      performRealTimeCalculation();
     }
   }, [workSchedules]);
 
