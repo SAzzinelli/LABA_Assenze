@@ -102,7 +102,15 @@ const Attendance = () => {
     // Timer per calcoli real-time ogni minuto
     const realTimeTimer = setInterval(() => {
       setCurrentTime(new Date());
-      performRealTimeCalculation();
+      // Chiama performRealTimeCalculation solo se workSchedules è disponibile
+      // Altrimenti ricarica dall'endpoint per evitare di resettare i valori a 0
+      if (workSchedules && workSchedules.length > 0) {
+        performRealTimeCalculation();
+      } else {
+        // Se workSchedules non è disponibile, ricarica dall'endpoint
+        console.log('🔄 Work schedules not available, fetching from endpoint...');
+        fetchCurrentHours();
+      }
     }, 60000); // Ogni minuto
 
     // Timer per salvataggio orario ogni ora
@@ -415,6 +423,13 @@ const Attendance = () => {
     console.log('🔄 performRealTimeCalculation called (using shared utility)');
 
     try {
+      // Se workSchedules non è disponibile, ricarica dall'endpoint invece di resettare
+      if (!workSchedules || workSchedules.length === 0) {
+        console.log('⚠️ Work schedules not available, fetching from endpoint instead...');
+        await fetchCurrentHours();
+        return;
+      }
+
       const now = new Date();
       const dayOfWeek = now.getDay();
 
@@ -425,18 +440,14 @@ const Attendance = () => {
       );
 
       if (!todaySchedule) {
-        setCurrentHours({
-          isWorkingDay: false,
-          schedule: { start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          currentTime: now.toTimeString().substring(0, 5),
-          expectedHours: 0,
-          contractHours: 0,
-          remainingHours: 0,
-          actualHours: 0,
-          balanceHours: 0,
-          status: 'not_started',
-          progress: 0
-        });
+        // Non sovrascrivere i valori esistenti se non troviamo lo schedule
+        // Potrebbe essere un problema temporaneo, meglio mantenere i dati dall'endpoint
+        console.warn('⚠️ No schedule found for today, keeping existing currentHours values');
+        // Se currentHours non è ancora popolato, ricarica dall'endpoint
+        if (!currentHours?.isWorkingDay && (!currentHours?.actualHours || currentHours.actualHours === 0)) {
+          console.log('🔄 No schedule and no existing data, fetching from endpoint...');
+          await fetchCurrentHours();
+        }
         return;
       }
 
