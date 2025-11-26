@@ -174,11 +174,11 @@ const Attendance = () => {
     };
   }, []);
 
-  // Calcola KPI quando cambiano i dati di attendance
+  // Calcola KPI quando cambiano i dati di attendance o currentHours
   useEffect(() => {
     // Calcola sempre i KPI, anche se non ci sono record (per il sistema ibrido)
     calculateKPIs(attendance);
-  }, [attendance]);
+  }, [attendance, currentHours]);
 
   // Ricalcola le ore real-time quando cambiano i work schedules
   useEffect(() => {
@@ -355,6 +355,7 @@ const Attendance = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
+    const today = now.toISOString().split('T')[0];
 
     console.log('🔄 Calculating KPIs with data:', attendanceData?.length || 0, 'records');
 
@@ -364,8 +365,14 @@ const Attendance = () => {
       return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
     });
 
-    // Calcola ore totali del mese
-    const totalMonthlyHours = monthlyRecords.reduce((sum, record) => sum + (record.actual_hours || 0), 0);
+    // Calcola ore totali del mese, includendo le ore real-time di oggi se disponibili
+    let totalMonthlyHours = monthlyRecords.reduce((sum, record) => {
+      // Se è oggi e abbiamo dati real-time, usa quelli invece del record del database
+      if (record.date === today && currentHours?.actualHours !== undefined && currentHours?.isWorkingDay) {
+        return sum + (currentHours.actualHours || 0);
+      }
+      return sum + (record.actual_hours || 0);
+    }, 0);
 
     // Calcola straordinari (ore positive)
     const overtime = monthlyRecords.reduce((sum, record) => {
@@ -1350,9 +1357,11 @@ const Attendance = () => {
                             }
                           }
 
-                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
-                          if (isToday && currentHours?.contractHours !== undefined) {
-                            return formatHours(currentHours.contractHours);
+                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa SEMPRE i dati real-time
+                          if (isToday && currentHours?.isWorkingDay) {
+                            // Usa contractHours se disponibile, altrimenti expectedHours, altrimenti dal record
+                            const expectedHours = currentHours.contractHours ?? currentHours.expectedHours ?? record.expected_hours ?? 0;
+                            return formatHours(expectedHours);
                           }
 
                           // PRIORITÀ 3: Altrimenti usa i dati dal database
@@ -1362,7 +1371,7 @@ const Attendance = () => {
                     </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
-                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.date === today ? currentHours.actualHours : (record.actual_hours || 0))}</div>
+                      <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(record.date === today && currentHours?.isWorkingDay ? (currentHours.actualHours || 0) : (record.actual_hours || 0))}</div>
                     </div>
                     <div className="bg-slate-700/50 rounded-lg p-2">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Mancanti</div>
@@ -1528,9 +1537,11 @@ const Attendance = () => {
                             }
                           }
 
-                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa i dati real-time
-                          if (isToday && currentHours?.contractHours !== undefined) {
-                            return formatHours(currentHours.contractHours);
+                          // PRIORITÀ 2: Se è oggi (senza permesso 104), usa SEMPRE i dati real-time
+                          if (isToday && currentHours?.isWorkingDay) {
+                            // Usa contractHours se disponibile, altrimenti expectedHours, altrimenti dal record
+                            const expectedHours = currentHours.contractHours ?? currentHours.expectedHours ?? record.expected_hours ?? 0;
+                            return formatHours(expectedHours);
                           }
 
                           // PRIORITÀ 3: Altrimenti usa i dati dal database
@@ -1539,9 +1550,9 @@ const Attendance = () => {
                       </td>
                       <td className="py-3 px-4 font-mono">
                         {(() => {
-                          // Se è oggi, usa i dati real-time
+                          // Se è oggi, usa SEMPRE i dati real-time
                           const today = new Date().toISOString().split('T')[0];
-                          if (record.date === today && currentHours?.actualHours !== undefined) {
+                          if (record.date === today && currentHours?.isWorkingDay && currentHours?.actualHours !== undefined) {
                             return formatHours(currentHours.actualHours);
                           }
                           // Altrimenti usa i dati dal database
