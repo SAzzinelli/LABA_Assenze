@@ -64,20 +64,25 @@ const Attendance = () => {
       console.log('🔄 Initializing with real-time calculation...');
 
       try {
-        // 1. Carica i dati di base
+        // 1. Carica i dati di base (incluso fetchCurrentHours per popolare i KPI)
         await Promise.all([
           fetchAttendance(),
           fetchHoursBalance(),
           fetchTotalBalance(),
           fetchWorkSchedules(),
           fetchUserStats(),
-          fetchPermissions104(),
-          fetchCurrentHours() // Carica i dati real-time dall'endpoint
+          fetchPermissions104()
         ]);
 
-        // 2. Calcola IMMEDIATAMENTE le ore in tempo reale (come backup/aggiornamento)
-        console.log('🔄 Forcing immediate real-time calculation...');
-        await performRealTimeCalculation();
+        // 2. Carica i dati real-time dall'endpoint PRIMA di calcolare localmente
+        await fetchCurrentHours();
+
+        // 3. Calcola IMMEDIATAMENTE le ore in tempo reale (come backup/aggiornamento)
+        // Solo se workSchedules è disponibile, altrimenti usa i dati dall'endpoint
+        if (workSchedules.length > 0) {
+          console.log('🔄 Forcing immediate real-time calculation...');
+          await performRealTimeCalculation();
+        }
 
         // 3. Ricalcola anche dopo un breve delay per sicurezza
         setTimeout(() => {
