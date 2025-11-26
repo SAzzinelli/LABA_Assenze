@@ -417,7 +417,7 @@ function parseTimeToDate(timeStr) {
 
 function addMinutesToTimeString(timeStr, minutesToAdd) {
   const baseDate = parseTimeToDate(timeStr);
-  baseDate.setMinutes(baseDate.getMinutes() + minutesToAdd);
+  baseDate.setMinutes(baseDate.getMinutes() + parseInt(minutesToAdd, 10));
   return `${baseDate.getHours().toString().padStart(2, '0')}:${baseDate.getMinutes().toString().padStart(2, '0')}`;
 }
 
@@ -505,7 +505,9 @@ export function calculateRealTimeHours(schedule, currentTime, permissionData = n
   }
 
   // IMPORTANTE: usa break_duration dal database, non default 60 (se è 0, è 0!)
-  const breakDurationMinutes = (break_duration !== null && break_duration !== undefined) ? break_duration : 60;
+  // FIX: Parse as integer to avoid string concatenation issues
+  const breakDurationRaw = (break_duration !== null && break_duration !== undefined) ? break_duration : 60;
+  const breakDurationMinutes = parseInt(breakDurationRaw, 10);
   let breakStartTimeStr = null;
   let breakEndTimeStr = null;
 
