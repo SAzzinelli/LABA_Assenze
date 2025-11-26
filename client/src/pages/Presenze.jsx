@@ -290,10 +290,15 @@ const Attendance = () => {
           break_duration: s.break_duration ? parseInt(s.break_duration, 10) : 0
         }));
 
-        console.log('📅 [Presenze] Work schedules dati (sanitized):', sanitizedData);
+        // Filter for current user if user_id is present (fixes issue where admin gets all schedules)
+        const userSchedules = user?.id
+          ? sanitizedData.filter(s => !s.user_id || s.user_id === user.id)
+          : sanitizedData;
+
+        console.log('📅 [Presenze] Work schedules dati (sanitized & filtered):', userSchedules);
 
         // Verifica specificamente lo schedule del giovedì (day_of_week = 4)
-        const thursdaySchedule = sanitizedData.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
+        const thursdaySchedule = userSchedules.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
         if (thursdaySchedule) {
           console.log('✅ [Presenze] Schedule GIOVEDÌ trovato:', {
             day_of_week: thursdaySchedule.day_of_week,
@@ -305,13 +310,13 @@ const Attendance = () => {
           });
         } else {
           console.warn('⚠️ [Presenze] Schedule GIOVEDÌ NON trovato!');
-          console.warn('⚠️ [Presenze] Schedule disponibili:', sanitizedData.map(s => ({
+          console.warn('⚠️ [Presenze] Schedule disponibili:', userSchedules.map(s => ({
             day: s.day_of_week,
             working: s.is_working_day,
             time: s.start_time && s.end_time ? `${s.start_time}-${s.end_time}` : 'N/A'
           })));
         }
-        setWorkSchedules(sanitizedData || []);
+        setWorkSchedules(userSchedules || []);
       } else {
         console.error('❌ [Presenze] Errore nel caricamento work schedules:', response?.status || 'No response');
       }
