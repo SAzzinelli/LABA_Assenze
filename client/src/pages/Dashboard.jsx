@@ -696,6 +696,41 @@ const Dashboard = () => {
         </div>
       )}
 
+      {/* GAYometro - Solo per Michele Catelani */}
+      {user?.role !== 'admin' && user?.firstName === 'Michele' && user?.lastName === 'Catelani' && (
+        <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-lg p-6 border-4 border-rainbow animate-pulse">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white flex items-center">
+              <span className="text-3xl mr-2">🌈</span>
+              GAYometro
+            </h2>
+            <div className="bg-red-600 px-4 py-2 rounded-full animate-bounce">
+              <span className="text-white font-bold text-lg">ALERT!</span>
+            </div>
+          </div>
+          
+          <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-300 text-sm">Livello Gay</span>
+              <span className="text-white font-bold text-lg">100%</span>
+            </div>
+            <div className="w-full bg-slate-700 rounded-full h-6 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 h-full flex items-center justify-center text-white font-bold text-xs animate-pulse"
+                style={{ width: '100%' }}
+              >
+                MASSIMO
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-500/20 border-2 border-yellow-500 rounded-lg p-3">
+            <p className="text-yellow-200 text-sm font-semibold text-center">
+              ⚠️ Il GAYometro rileva valori costantemente al massimo! Giorno dopo giorno, sempre al 100%! 🌈
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Admin Dashboard - Layout a 2 colonne */}
       {user?.role === 'admin' && (
