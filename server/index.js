@@ -1587,7 +1587,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       (now.getMonth() + 1) === parseInt(targetMonth);
 
     if (isCurrentMonth && workSchedules && workSchedules.length > 0) {
-      const dayOfWeek = now.getDay();
+      const dayOfWeek = now.getUTCDay();
 
       // Find today's work schedule
       const todaySchedule = workSchedules.find(schedule =>
@@ -1666,8 +1666,8 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       attendance.forEach(record => {
         if (record.date !== today) {
           totalActualHours += record.actual_hours || 0;
-          totalExpectedHours += record.expected_hours || 8;
-          console.log(`  📅 ${record.date}: +${record.actual_hours || 0}h actual, +${record.expected_hours || 8}h expected`);
+          totalExpectedHours += record.expected_hours !== null && record.expected_hours !== undefined ? record.expected_hours : 8;
+          console.log(`  📅 ${record.date}: +${record.actual_hours || 0}h actual, +${record.expected_hours !== null && record.expected_hours !== undefined ? record.expected_hours : 8}h expected`);
         } else {
           console.log(`  ⏭️ Skipping DB record for today (${record.date}) - using real-time instead`);
         }
@@ -1676,7 +1676,7 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       // No real-time calculation, use all database values
       attendance.forEach(record => {
         totalActualHours += record.actual_hours || 0;
-        totalExpectedHours += record.expected_hours || 8;
+        totalExpectedHours += record.expected_hours !== null && record.expected_hours !== undefined ? record.expected_hours : 8;
       });
     }
 
@@ -1940,7 +1940,7 @@ app.post('/api/attendance/generate', authenticateToken, async (req, res) => {
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: todaySchedule.start_time,
             end_time: todaySchedule.end_time,
-            break_duration: todaySchedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: todaySchedule.break_duration !== null && todaySchedule.break_duration !== undefined ? todaySchedule.break_duration : 60
           });
 
           if (!expectedHours || expectedHours <= 0) {
@@ -2503,7 +2503,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           expectedHours = calculateExpectedHoursForSchedule({
             start_time: todaySchedule.start_time,
             end_time: todaySchedule.end_time,
-            break_duration: todaySchedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: todaySchedule.break_duration !== null && todaySchedule.break_duration !== undefined ? todaySchedule.break_duration : 60
           });
         }
 
@@ -2930,7 +2930,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         const contractHours = calculateExpectedHoursForSchedule({
           start_time: schedule.start_time,
           end_time: schedule.end_time,
-          break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+          break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
         });
         // Con permesso 104, NON ha lavorato (actualHours = 0), ma la giornata è considerata completa (contractHours = ore schedule)
         realTimeActualHours = 0; // NON ha lavorato (è assente giustificata)
@@ -3508,7 +3508,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     console.log(`🕐 [current-hours] User: ${req.user.email}, Date: ${today}, Time: ${currentTime}, TestMode: ${isTestMode}`);
 
     // Ottieni l'orario di lavoro per oggi
-    const dayOfWeek = now.getDay();
+    const dayOfWeek = now.getUTCDay();
     console.log(`📅 [current-hours] Day of week: ${dayOfWeek} (0=Dom, 1=Lun, 5=Ven)`);
 
     const { data: schedule, error: scheduleError } = await supabase
@@ -3588,7 +3588,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       const contractHours = calculateExpectedHoursForSchedule({
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+        break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
       });
 
       console.log(`🔵 [current-hours] User has 104 permission today - returning today's schedule hours: ${contractHours}h (from schedule ${schedule.start_time}-${schedule.end_time})`);
@@ -3598,7 +3598,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         schedule: {
           start_time: schedule.start_time,
           end_time: schedule.end_time,
-          break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+          break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
         },
         currentTime,
         expectedHours: contractHours,
@@ -3665,7 +3665,7 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       schedule: {
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+        break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
       },
       currentTime,
       expectedHours,
