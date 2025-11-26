@@ -698,7 +698,7 @@ const Dashboard = () => {
 
       {/* GAYometro - Solo per Michele Catelani */}
       {user?.role !== 'admin' && user?.firstName === 'Michele' && user?.lastName === 'Catelani' && (
-        <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-lg p-6 border-4 border-rainbow animate-pulse">
+        <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 rounded-lg p-6 border-4 border-purple-400 animate-pulse">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-white flex items-center">
               <span className="text-3xl mr-2">🌈</span>
