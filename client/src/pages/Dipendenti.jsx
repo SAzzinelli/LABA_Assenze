@@ -1090,22 +1090,56 @@ const Employees = () => {
                   </h4>
                   {(() => {
                     const today = new Date().toISOString().split('T')[0];
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    const currentMinute = now.getMinutes();
+                    
+                    // Verifica se la giornata è conclusa (controlla orario di fine lavoro)
+                    let isWorkDayCompleted = false;
+                    if (selectedEmployee?.workSchedule) {
+                      const dayOfWeek = now.getDay();
+                      const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+                      const todaySchedule = selectedEmployee.workSchedule[dayKey];
+                      
+                      if (todaySchedule && todaySchedule.active) {
+                        // Usa endTime o end_time con fallback a '18:00'
+                        const endTime = todaySchedule.endTime || todaySchedule.end_time || '18:00';
+                        if (endTime) {
+                          const [endHour, endMin] = endTime.split(':').map(Number);
+                          // La giornata è conclusa se l'ora attuale è dopo l'orario di fine
+                          isWorkDayCompleted = currentHour > endHour || (currentHour === endHour && currentMinute >= endMin);
+                        }
+                      }
+                    }
+                    
                     // Filtra: mostra giornate con balance != 0
-                    // Include anche oggi se c'è un permesso approvato (balance già definitivo)
+                    // Include oggi solo se la giornata è conclusa O c'è un permesso approvato (balance già definitivo)
                     const completedRecords = balanceHistory.filter(record => {
                       const balance = record.balance_hours || 0;
                       const isToday = record.date === today;
-                      // Include oggi solo se c'è un permesso (balance già definitivo per permessi)
-                      // Altrimenti escludi oggi (la giornata non è ancora conclusa, il balance è parziale)
+                      
+                      // Se non è oggi, mostra solo se balance != 0
+                      if (!isToday) {
+                        return balance !== 0;
+                      }
+                      
+                      // Per oggi: escludi sempre a meno che:
+                      // 1. La giornata sia conclusa (orario di fine passato)
+                      // 2. OPPURE ci sia un permesso approvato (balance già definitivo)
                       if (isToday) {
                         // Controlla se ci sono note che indicano un permesso approvato
                         const hasPermission = record.notes && (
                           record.notes.includes('Permesso approvato') ||
-                          record.notes.includes('Permesso creato dall\'admin')
+                          record.notes.includes('Permesso creato dall\'admin') ||
+                          record.notes.includes('Permesso 104') ||
+                          record.notes.includes('permission_104')
                         );
-                        return balance !== 0 && hasPermission;
+                        
+                        // Include solo se (giornata conclusa O permesso approvato) E balance != 0
+                        return balance !== 0 && (isWorkDayCompleted || hasPermission);
                       }
-                      return balance !== 0;
+                      
+                      return false;
                     });
                     return completedRecords.length > 0 ? (
                       <div className="space-y-3">
