@@ -829,9 +829,6 @@ const Vacation = () => {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
-          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
-            <p>30 giorni per tutti (full-time e part-time)</p>
-          </div>
         </div>
         
         <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
@@ -841,9 +838,6 @@ const Vacation = () => {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Ferie già godute</p>
-          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
-            <p>{vacationBalance.totalDays - vacationBalance.usedDays} giorni disponibili</p>
-          </div>
         </div>
         
         <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
@@ -853,9 +847,6 @@ const Vacation = () => {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Disponibili per richieste</p>
-          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
-            <p>Escludendo richieste in attesa</p>
-          </div>
         </div>
         
         <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
@@ -865,9 +856,6 @@ const Vacation = () => {
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Richieste pendenti</p>
-          <div className="mt-2 text-[10px] sm:text-xs text-slate-500">
-            <p>Giorni in attesa di approvazione</p>
-          </div>
         </div>
       </div>
       )}
