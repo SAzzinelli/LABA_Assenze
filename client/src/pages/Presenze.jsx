@@ -283,10 +283,17 @@ const Attendance = () => {
       if (response && response.ok) {
         const data = await response.json();
         console.log('📅 [Presenze] Work schedules caricati:', data.length, 'schedule totali');
-        console.log('📅 [Presenze] Work schedules dati:', data);
+
+        // Sanitize data: ensure break_duration is an integer
+        const sanitizedData = data.map(s => ({
+          ...s,
+          break_duration: s.break_duration ? parseInt(s.break_duration, 10) : 0
+        }));
+
+        console.log('📅 [Presenze] Work schedules dati (sanitized):', sanitizedData);
 
         // Verifica specificamente lo schedule del giovedì (day_of_week = 4)
-        const thursdaySchedule = data.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
+        const thursdaySchedule = sanitizedData.find(s => Number(s.day_of_week) === 4 && s.is_working_day);
         if (thursdaySchedule) {
           console.log('✅ [Presenze] Schedule GIOVEDÌ trovato:', {
             day_of_week: thursdaySchedule.day_of_week,
@@ -298,13 +305,13 @@ const Attendance = () => {
           });
         } else {
           console.warn('⚠️ [Presenze] Schedule GIOVEDÌ NON trovato!');
-          console.warn('⚠️ [Presenze] Schedule disponibili:', data.map(s => ({
+          console.warn('⚠️ [Presenze] Schedule disponibili:', sanitizedData.map(s => ({
             day: s.day_of_week,
             working: s.is_working_day,
             time: s.start_time && s.end_time ? `${s.start_time}-${s.end_time}` : 'N/A'
           })));
         }
-        setWorkSchedules(data || []);
+        setWorkSchedules(sanitizedData || []);
       } else {
         console.error('❌ [Presenze] Errore nel caricamento work schedules:', response?.status || 'No response');
       }
