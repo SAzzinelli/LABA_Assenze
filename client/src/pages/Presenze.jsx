@@ -1007,7 +1007,7 @@ const Attendance = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Presenze</h1>
           <p className="text-slate-400">
-            Sistema automatico basato su orari di lavoro - Monte ore: {formatHours(currentHours?.balanceHours || 0)}
+            Sistema automatico basato su orari di lavoro
           </p>
         </div>
 
