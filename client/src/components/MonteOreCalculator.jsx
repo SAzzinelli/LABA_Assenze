@@ -28,7 +28,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
+
         // Carica balance totale
         if (user?.id) {
           let balanceValue = null;
@@ -37,18 +37,18 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${user.id}`);
           if (singleBalanceResponse && singleBalanceResponse.ok) {
             const singleBalance = await singleBalanceResponse.json();
-          const totalBalance = typeof singleBalance.totalBalanceHours === 'number'
-            ? singleBalance.totalBalanceHours
-            : null;
-          const realTimeBalance = typeof singleBalance.realTime?.balanceHours === 'number'
-            ? singleBalance.realTime.balanceHours
-            : null;
-          const remainingToday = typeof singleBalance.realTime?.remainingHours === 'number'
-            ? singleBalance.realTime.remainingHours
-            : 0;
+            const totalBalance = typeof singleBalance.totalBalanceHours === 'number'
+              ? singleBalance.totalBalanceHours
+              : null;
+            const realTimeBalance = typeof singleBalance.realTime?.balanceHours === 'number'
+              ? singleBalance.realTime.balanceHours
+              : null;
+            const remainingToday = typeof singleBalance.realTime?.remainingHours === 'number'
+              ? singleBalance.realTime.remainingHours
+              : 0;
 
-          const baseBalance = totalBalance ?? realTimeBalance ?? 0;
-          balanceValue = baseBalance + remainingToday;
+            const baseBalance = totalBalance ?? realTimeBalance ?? 0;
+            balanceValue = baseBalance;
           }
 
           // fallback per admin (ricerca multipla) se necessario
@@ -63,16 +63,16 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           if (balanceValue !== null) {
             setCurrentBalance(balanceValue);
           }
-          
+
           // Carica history recente (ultimi 10 record)
           const historyResponse = await apiCall(`/api/attendance?userId=${user.id}&limit=10`);
           if (historyResponse && historyResponse.ok) {
             const historyData = await historyResponse.json();
-            
+
             // Carica permessi 104 approvati per correggere i dati della history
             const perm104Response = await apiCall(`/api/leave-requests?type=permission_104&status=approved&userId=${user.id}`);
             let perm104Dates = new Set();
-            
+
             if (perm104Response && perm104Response.ok) {
               const perm104Data = await perm104Response.json();
               if (Array.isArray(perm104Data)) {
@@ -85,14 +85,14 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                 });
               }
             }
-            
+
             // Carica work schedules per ricalcolare le ore attese per permessi 104
             const schedulesResponse = await apiCall('/api/work-schedules');
             let workSchedules = [];
             if (schedulesResponse && (schedulesResponse.ok || Array.isArray(schedulesResponse))) {
               workSchedules = Array.isArray(schedulesResponse) ? schedulesResponse : await schedulesResponse.json();
             }
-            
+
             // Correggi i dati della history per permessi 104
             const correctedHistory = (historyData || []).map(record => {
               const recordDate = record.date?.split('T')[0] || record.date;
@@ -100,12 +100,12 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                 // Ricalcola le ore attese dallo schedule
                 const recordDateObj = new Date(recordDate);
                 const dayOfWeek = recordDateObj.getDay();
-                const daySchedule = workSchedules.find(schedule => 
-                  schedule.user_id === user.id && 
-                  schedule.day_of_week === dayOfWeek && 
+                const daySchedule = workSchedules.find(schedule =>
+                  schedule.user_id === user.id &&
+                  schedule.day_of_week === dayOfWeek &&
                   schedule.is_working_day
                 );
-                
+
                 let expectedHours = record.expected_hours || 0;
                 if (daySchedule && daySchedule.start_time && daySchedule.end_time) {
                   const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
@@ -115,7 +115,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                   const workMinutes = Math.max(0, totalMinutes - breakDuration);
                   expectedHours = workMinutes / 60;
                 }
-                
+
                 return {
                   ...record,
                   actual_hours: 0, // Con permesso 104, NON ha lavorato
@@ -126,11 +126,11 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
               }
               return record;
             });
-            
+
             setBalanceHistory(correctedHistory);
           }
         }
-        
+
         // Carica saldi ferie
         const response = await apiCall('/api/leave-balances?year=2025');
         if (response && response.ok) {
@@ -180,13 +180,13 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
     const currentYear = new Date().getFullYear();
     const hireYear = user?.hireDate ? new Date(user.hireDate).getFullYear() : currentYear;
     const yearsOfService = currentYear - hireYear;
-    
+
     // Calcolo ferie base + bonus anzianità
     let vacationDays = 30; // 30 giorni per tutti i dipendenti
     if (yearsOfService >= 10) vacationDays += 2;
     if (yearsOfService >= 15) vacationDays += 2;
     if (yearsOfService >= 20) vacationDays += 2;
-    
+
     return [
       {
         leave_type: 'vacation',
@@ -211,24 +211,24 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
       }
     ];
   };
-  
+
   // Calcolo ore settimanali teoriche
   const calculateWeeklyHours = () => {
     let totalHours = 0;
     Object.values(workSchedule).forEach(day => {
       if (day.active) {
         let dayHours = 0;
-        
+
         if (day.workType === 'morning' && day.morning) {
           const [start, end] = day.morning.split('-');
           dayHours += calculateHours(start, end);
         }
-        
+
         if (day.workType === 'afternoon' && day.afternoon) {
           const [start, end] = day.afternoon.split('-');
           dayHours += calculateHours(start, end);
         }
-        
+
         if (day.workType === 'full') {
           if (day.morning) {
             const [start, end] = day.morning.split('-');
@@ -241,7 +241,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           // NON sottrarre la pausa pranzo: è già esclusa dal calcolo mattina/pomeriggio
           // La pausa pranzo (13:00-14:00) è il gap tra mattina e pomeriggio
         }
-        
+
         totalHours += dayHours;
       }
     });
@@ -250,13 +250,13 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
 
   const calculateHours = (startTime, endTime) => {
     if (!startTime || !endTime) return 0;
-    
+
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
+
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    
+
     return (endMinutes - startMinutes) / 60;
   };
 
@@ -264,15 +264,15 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const calculateAnnualVacation = () => {
     const baseDays = 26; // Minimo legale in Italia
     let bonusDays = 0;
-    
+
     // Bonus per anzianità (esempio)
     const hireYear = user?.hireDate ? new Date(user.hireDate).getFullYear() : new Date().getFullYear();
     const yearsWorked = new Date().getFullYear() - hireYear;
-    
+
     if (yearsWorked >= 10) bonusDays += 2;
     if (yearsWorked >= 15) bonusDays += 2;
     if (yearsWorked >= 20) bonusDays += 2;
-    
+
     return baseDays + bonusDays;
   };
 
@@ -280,13 +280,13 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const calculateROLHours = () => {
     const weeklyHours = calculateWeeklyHours();
     const standardWeeklyHours = 40; // Ore standard settimanali
-    
+
     if (weeklyHours > standardWeeklyHours) {
       const extraHours = weeklyHours - standardWeeklyHours;
       const rolHours = Math.floor(extraHours * 52); // Ore annuali in più
       return Math.floor(rolHours / 8); // Converti in giorni (8 ore = 1 giorno)
     }
-    
+
     return 0;
   };
 
@@ -303,7 +303,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   // Calcolo permessi legge 104
   const calculate104Permissions = () => {
     if (!user?.has104) return null;
-    
+
     return {
       monthlyHours: 3, // Ore mensili per assistenza
       annualHours: 36, // Ore annuali totali
@@ -315,7 +315,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   const calculateOvertime = () => {
     const weeklyHours = calculateWeeklyHours();
     const standardWeeklyHours = 40;
-    
+
     if (weeklyHours > standardWeeklyHours) {
       return {
         weekly: weeklyHours - standardWeeklyHours,
@@ -323,7 +323,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         compensation: 'Retribuzione maggiorata o recupero ore'
       };
     }
-    
+
     return { weekly: 0, annual: 0, compensation: 'Nessuno straordinario' };
   };
 
@@ -365,13 +365,12 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           Banca Ore Attuale
         </h4>
         <div className="flex items-center justify-center py-8">
-          <div className={`text-6xl font-bold ${
-            currentBalance > 0 
-              ? 'text-green-400' 
-              : currentBalance < 0 
-                ? 'text-red-400' 
+          <div className={`text-6xl font-bold ${currentBalance > 0
+              ? 'text-green-400'
+              : currentBalance < 0
+                ? 'text-red-400'
                 : 'text-slate-400'
-          }`}>
+            }`}>
             {formattedCurrentBalance.sign}
             {formattedCurrentBalance.hours}
             <span className="text-4xl">h</span>
@@ -380,13 +379,12 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
           </div>
         </div>
         <div className="text-center mt-4">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-            currentBalance > 0 
-              ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
-              : currentBalance < 0 
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentBalance > 0
+              ? 'bg-green-500/20 text-green-300 border border-green-400/30'
+              : currentBalance < 0
                 ? 'bg-red-500/20 text-red-300 border border-red-400/30'
                 : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
-          }`}>
+            }`}>
             {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
             {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
             {currentBalance === 0 ? 'In pari' : currentBalance > 0 ? 'In credito' : 'In debito'}
@@ -413,38 +411,37 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
             }).map((record, index) => {
               const formattedRecordBalance = formatHoursValue(record.balance_hours || 0);
               return (
-              <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 text-slate-400 mr-3" />
-                  <div>
-                    <p className="text-white font-medium">
-                      {new Date(record.date).toLocaleDateString('it-IT', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
-                      })}
+                <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 text-slate-400 mr-3" />
+                    <div>
+                      <p className="text-white font-medium">
+                        {new Date(record.date).toLocaleDateString('it-IT', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-slate-400 text-sm">
+                        Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-lg font-bold ${record.balance_hours > 0
+                        ? 'text-green-400'
+                        : record.balance_hours < 0
+                          ? 'text-red-400'
+                          : 'text-slate-400'
+                      }`}>
+                      {formattedRecordBalance.sign}
+                      {formattedRecordBalance.hours}h {formattedRecordBalance.minutes}m
                     </p>
-                    <p className="text-slate-400 text-sm">
-                      Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                    <p className="text-slate-400 text-xs mt-1">
+                      Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${
-                    record.balance_hours > 0 
-                      ? 'text-green-400' 
-                      : record.balance_hours < 0 
-                        ? 'text-red-400' 
-                        : 'text-slate-400'
-                  }`}>
-                    {formattedRecordBalance.sign}
-                    {formattedRecordBalance.hours}h {formattedRecordBalance.minutes}m
-                  </p>
-                  <p className="text-slate-400 text-xs mt-1">
-                    Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
-                  </p>
-                </div>
-              </div>
               );
             })}
           </div>
