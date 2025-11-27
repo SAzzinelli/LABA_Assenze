@@ -532,7 +532,7 @@ const AdminAttendance = () => {
     switch (status) {
       case 'present': return 'bg-green-900 text-green-100 border-green-700';
       case 'completed': return 'bg-green-800 text-green-200 border-green-600';
-      case 'working': return 'bg-orange-900 text-orange-100 border-orange-700';
+      case 'working': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';

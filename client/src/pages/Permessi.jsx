@@ -792,6 +792,13 @@ const LeaveRequests = () => {
     return dateWithTime > new Date();
   };
 
+  const canModifyRequest = (request) => {
+    if (request.status !== 'approved') return false;
+    const dateWithTime = parseRequestDate(request, true);
+    if (!dateWithTime) return true; // Se non c'è orario, permettere modifica
+    return dateWithTime > new Date(); // Permetti modifica solo se l'orario non è ancora passato
+  };
+
   const getFilteredRequests = () => {
     let filtered = requests;
     const now = new Date();
@@ -1507,17 +1514,19 @@ const LeaveRequests = () => {
                     {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
                     {user?.role === 'admin' && request.status === 'approved' && request.type === 'permission' && (
                       <div className="mt-4 flex gap-3 flex-wrap">
-                        <button
-                          onClick={() => openEditDialog(request)}
-                          className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          Modifica
-                        </button>
+                        {canModifyRequest(request) && (
+                          <button
+                            onClick={() => openEditDialog(request)}
+                            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Modifica
+                          </button>
+                        )}
                         {canCancelRequest(request) && (
                         <button
                           onClick={() => openCancelDialog(request.id)}
-                            className="flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                            className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
                         >
                           <X className="h-4 w-4 mr-2" />
                           Annulla
@@ -1638,7 +1647,7 @@ const LeaveRequests = () => {
               </button>
               <button
                 onClick={confirmCancel}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
                 Conferma Annullamento
               </button>

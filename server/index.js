@@ -9665,13 +9665,32 @@ async function calculateOvertimeBalance(userId, year = null) {
       }, 0)
       : 0;
 
-    const roundedBalance = Math.round(totalBalance * 100) / 100;
+    // IMPORTANTE: Aggiungi le ore delle richieste di recupero in stato "pending" o "proposed"
+    // Queste richieste rappresentano ore che il dipendente deve ancora recuperare,
+    // quindi aumentano il debito totale
+    const { data: pendingRecoveryRequests, error: recoveryError } = await supabase
+      .from('recovery_requests')
+      .select('hours, status')
+      .eq('user_id', userId)
+      .in('status', ['pending', 'proposed']);
+
+    let pendingRecoveryHours = 0;
+    if (!recoveryError && pendingRecoveryRequests && pendingRecoveryRequests.length > 0) {
+      pendingRecoveryHours = pendingRecoveryRequests.reduce((sum, req) => {
+        return sum + parseFloat(req.hours || 0);
+      }, 0);
+    }
+
+    // Il debito totale include sia il saldo negativo dalle presenze che le ore di recupero richieste ma non ancora approvate/completate
+    // Le richieste pending/proposed aumentano il debito perché rappresentano ore che devono ancora essere recuperate
+    const totalBalanceWithRecovery = totalBalance - pendingRecoveryHours;
+    const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log per debug
     const todayRecord = attendance?.find(r => r.date === today);
     if (todayRecord) {
       const todayBalance = parseFloat(todayRecord.balance_hours || 0);
-      console.log(`💰 Balance for user ${userId}: Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
+      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
     }
 
     // Determina lo status
