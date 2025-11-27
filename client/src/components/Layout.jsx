@@ -317,6 +317,37 @@ const Layout = ({ children }) => {
                 })}
               </nav>
             </div>
+            
+            {/* User Profile e Logout - Mobile */}
+            <div className="flex-shrink-0 p-4 border-t border-slate-700">
+              <div className="flex items-center mb-3">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">
+                      {user?.role === 'admin' ? 'HR' : `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`}
+                    </span>
+                  </div>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-white">
+                    {user?.role === 'admin' ? 'HR LABA' : `${user?.firstName || ''} ${user?.lastName || ''}`.trim()}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {getRoleDisplay(user?.role)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setSidebarOpen(false);
+                }}
+                className="w-full flex items-center justify-center px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium touch-manipulation min-h-[44px]"
+              >
+                <LogOut className="h-5 w-5 mr-2" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}
