@@ -86,6 +86,28 @@ const Layout = ({ children }) => {
     }
   };
 
+  // Marca tutte le notifiche come lette
+  const markAllAsRead = async () => {
+    try {
+      const response = await apiCall('/api/notifications/read-all', {
+        method: 'PUT'
+      });
+      if (response.ok) {
+        // Aggiorna tutte le notifiche come lette
+        setNotifications(prev => 
+          prev.map(n => ({ ...n, is_read: true }))
+        );
+        setUnreadCount(0);
+      } else if (response.status === 401) {
+        // Token scaduto, fai logout automatico
+        logout();
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
   // Carica notifiche al mount e ogni 30 secondi
   // Usa useRef per evitare che loadNotifications cambi ad ogni render
   const loadNotificationsRef = React.useRef(null);
@@ -504,7 +526,16 @@ const Layout = ({ children }) => {
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-slate-700">
+                        <div className="p-4 border-t border-slate-700 space-y-2">
+                          {unreadCount > 0 && (
+                            <button
+                              onClick={markAllAsRead}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Leggi tutte ({unreadCount})
+                            </button>
+                          )}
                           <button
                             onClick={() => setNotificationsOpen(false)}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"

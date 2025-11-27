@@ -8912,6 +8912,29 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
 });
 
 // Mark notification as read
+// Marca tutte le notifiche come lette
+app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+
+    if (error) {
+      console.error('Error marking all notifications as read:', error);
+      return res.status(500).json({ error: 'Errore nel marcare tutte le notifiche come lette' });
+    }
+
+    res.json({ success: true, message: 'Tutte le notifiche sono state marcate come lette' });
+  } catch (error) {
+    console.error('Mark all notifications as read error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
