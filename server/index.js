@@ -9670,60 +9670,11 @@ async function calculateOvertimeBalance(userId, year = null) {
       }, 0)
       : 0;
 
-    // IMPORTANTE: Aggiungi le ore dei permessi approvati che non sono ancora stati registrati nelle presenze
-    // Questo include permessi per date future o permessi approvati ma non ancora processati
-    const { data: approvedPermissions, error: permissionsError } = await supabase
-      .from('leave_requests')
-      .select('hours, start_date, end_date')
-      .eq('user_id', userId)
-      .eq('type', 'permission')
-      .eq('status', 'approved')
-      .gte('start_date', startDate)
-      .lte('end_date', endDate);
-
-    let approvedPermissionHours = 0;
-    if (!permissionsError && approvedPermissions && approvedPermissions.length > 0) {
-      // Per ogni permesso approvato, verifica se è già stato registrato nelle presenze
-      for (const perm of approvedPermissions) {
-        const permHours = parseFloat(perm.hours || 0);
-        if (permHours <= 0) continue;
-
-        // Controlla se esiste un record di attendance per le date del permesso
-        const permStart = new Date(perm.start_date);
-        const permEnd = new Date(perm.end_date);
-        const permDates = [];
-        for (let d = new Date(permStart); d <= permEnd; d.setDate(d.getDate() + 1)) {
-          permDates.push(d.toISOString().split('T')[0]);
-        }
-
-        // Verifica se tutte le date del permesso hanno un record di attendance con il debito registrato
-        let allDatesHaveAttendance = true;
-        for (const dateStr of permDates) {
-          const attendanceRecord = attendance?.find(r => r.date === dateStr);
-          if (!attendanceRecord) {
-            allDatesHaveAttendance = false;
-            break;
-          }
-          // Verifica se il balance_hours include già questo permesso
-          // Se il balance è >= 0 o non include il permesso, aggiungilo
-          const recordBalance = parseFloat(attendanceRecord.balance_hours || 0);
-          // Se il balance non è negativo almeno quanto le ore del permesso, il permesso non è stato registrato
-          if (recordBalance > -permHours) {
-            allDatesHaveAttendance = false;
-            break;
-          }
-        }
-
-        // Se il permesso non è stato completamente registrato nelle presenze, aggiungilo al debito
-        if (!allDatesHaveAttendance) {
-          approvedPermissionHours += permHours;
-        }
-      }
-    }
-
     // IMPORTANTE: Aggiungi le ore delle richieste di recupero in stato "pending" o "proposed"
     // Queste richieste rappresentano ore che il dipendente deve ancora recuperare,
     // quindi aumentano il debito totale
+    // NOTA: I permessi approvati NON vengono aggiunti qui perché quando vengono approvati,
+    // vengono già registrati nel record di attendance con il balance_hours corretto
     const { data: pendingRecoveryRequests, error: recoveryError } = await supabase
       .from('recovery_requests')
       .select('hours, status')
@@ -9738,19 +9689,18 @@ async function calculateOvertimeBalance(userId, year = null) {
     }
 
     // Il debito totale include:
-    // 1. Il saldo negativo dalle presenze (già registrato)
-    // 2. Le ore dei permessi approvati non ancora registrati nelle presenze
-    // 3. Le ore di recupero richieste ma non ancora approvate/completate
-    const totalBalanceWithRecovery = totalBalance - approvedPermissionHours - pendingRecoveryHours;
+    // 1. Il saldo negativo dalle presenze (già include i permessi approvati registrati)
+    // 2. Le ore di recupero richieste ma non ancora approvate/completate
+    const totalBalanceWithRecovery = totalBalance - pendingRecoveryHours;
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log per debug
     const todayRecord = attendance?.find(r => r.date === today);
     if (todayRecord) {
       const todayBalance = parseFloat(todayRecord.balance_hours || 0);
-      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Approved permissions not in attendance=${approvedPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
+      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
     } else {
-      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Approved permissions not in attendance=${approvedPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
+      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
     }
 
     // Determina lo status
