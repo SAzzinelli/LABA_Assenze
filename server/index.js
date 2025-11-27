@@ -295,7 +295,6 @@ app.put('/api/user', authenticateToken, async (req, res) => {
 
     // Aggiungi solo i campi che esistono nel database
     if (req.body.phone !== undefined) updateData.phone = req.body.phone;
-    if (req.body.position !== undefined) updateData.position = req.body.position;
     if (req.body.department !== undefined) updateData.department = req.body.department;
     if (req.body.hire_date !== undefined) updateData.hire_date = req.body.hire_date;
     if (req.body.workplace !== undefined) updateData.workplace = req.body.workplace;
@@ -399,7 +398,6 @@ app.post('/api/auth/register', async (req, res) => {
       birthDate,
       phone,
       department,
-      position,
       hireDate,
       workplace,
       contractType,
@@ -418,7 +416,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Validazione campi obbligatori (hireDate è opzionale, useremo data corrente se non fornita)
-    if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !position || !workplace || !contractType) {
+    if (!email || !password || !firstName || !lastName || !birthDate || !phone || !department || !workplace || !contractType) {
       return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
@@ -453,7 +451,6 @@ app.post('/api/auth/register', async (req, res) => {
           is_active: true,
           has_104: has104,
           phone: phone,
-          position: position,
           hire_date: finalHireDate,
           workplace: workplace,
           contract_type: contractType,
@@ -478,7 +475,6 @@ app.post('/api/auth/register', async (req, res) => {
           user_id: newUser.id,
           employee_number: employeeNumber,
           department: department,
-          position: 'Dipendente',
           hire_date: finalHireDate,
           status: 'active',
           has_104: has104,
@@ -664,7 +660,6 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         name: `${emp.first_name} ${emp.last_name}`,
         email: emp.email,
         department: emp.department || 'Amministrazione',
-        position: emp.position || 'Dipendente',
         hireDate: emp.hire_date || emp.created_at?.split('T')[0],
         status: emp.is_active ? 'active' : 'inactive',
         has104: emp.has_104,
@@ -716,7 +711,7 @@ app.get('/api/admins', authenticateToken, requireAdmin, async (req, res) => {
 
     const { data: admins, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, department, position, created_at')
+      .select('id, first_name, last_name, email, department, created_at')
       .eq('role', 'admin')
       .order('last_name');
 
@@ -732,7 +727,6 @@ app.get('/api/admins', authenticateToken, requireAdmin, async (req, res) => {
       name: `${admin.first_name} ${admin.last_name}`,
       email: admin.email,
       department: admin.department || 'Amministrazione',
-      position: admin.position || 'Amministratore',
       created_at: admin.created_at
     }));
 
@@ -798,7 +792,6 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
       phone,
       birthDate,
       department,
-      position,
       has104,
       personalEmail // Manteniamo compatibilità con vecchio endpoint
     } = req.body;
@@ -817,7 +810,6 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
     if (phone !== undefined) updateData.phone = phone;
     if (birthDate !== undefined) updateData.birth_date = birthDate;
     if (department !== undefined) updateData.department = department;
-    if (position !== undefined) updateData.position = position;
     if (has104 !== undefined) updateData.has_104 = has104;
     if (personalEmail !== undefined) updateData.personal_email = personalEmail;
 
@@ -853,7 +845,6 @@ app.put('/api/employees/:id', authenticateToken, requireAdmin, async (req, res) 
       phone: updatedEmployee.phone,
       birthDate: updatedEmployee.birth_date || updatedEmployee.birth_date?.split('T')[0],
       department: updatedEmployee.department || 'Amministrazione',
-      position: updatedEmployee.position || 'Dipendente',
       has104: updatedEmployee.has_104 || false,
       hireDate: updatedEmployee.hire_date || updatedEmployee.created_at?.split('T')[0],
       status: updatedEmployee.is_active ? 'active' : 'inactive'
@@ -970,7 +961,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
       lastName,
       email,
       department,
-      position,
       phone,
       birthDate,
       hireDate,
@@ -1011,7 +1001,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
           has_104: has104,
           hire_date: finalHireDate,
           department: department,
-          position: position || 'Dipendente',
           workplace: workplace,
           contract_type: contractType,
           phone: phone,
@@ -1035,7 +1024,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
           user_id: newUser.id,
           employee_number: employeeNumber,
           department: department,
-          position: position || 'Dipendente',
           hire_date: finalHireDate,
           status: 'active',
           has_104: has104,
@@ -1105,7 +1093,6 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         lastName: newUser.last_name,
         email: newUser.email,
         department: newEmployee.department,
-        position: newEmployee.position
       }
     });
   } catch (error) {

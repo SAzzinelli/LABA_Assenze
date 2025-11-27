@@ -45,7 +45,6 @@ const Profile = () => {
     birthDate: user?.birthDate || '',
     department: user?.department || '',
     has104: user?.has104 || false,
-    position: user?.position || '',
     hireDate: user?.hireDate || '',
     officeLocation: user?.workplace || '',
     contractType: user?.contractType || ''
@@ -109,7 +108,6 @@ const Profile = () => {
             birthDate: data.birth_date || savedData.birthDate || '',
             department: data.department || savedData.department || '',
             has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
-            position: data.position || savedData.position || '',
             hireDate: data.hire_date || savedData.hireDate || '',
             officeLocation: data.workplace || savedData.officeLocation || '',
             contractType: data.contract_type || savedData.contractType || ''
@@ -124,7 +122,6 @@ const Profile = () => {
             birthDate: data.birth_date || savedData.birthDate || '',
             department: data.department || savedData.department || '',
             has104: data.has_104 !== undefined ? data.has_104 : (savedData.has104 || false),
-            position: data.position || savedData.position || '',
             hireDate: data.hire_date || savedData.hireDate || '',
             officeLocation: data.workplace || savedData.officeLocation || '',
             contractType: data.contract_type || savedData.contractType || ''
@@ -142,7 +139,6 @@ const Profile = () => {
             birthDate: savedData.birthDate || '',
             department: savedData.department || '',
             has104: savedData.has104 || false,
-            position: savedData.position || '',
             hireDate: savedData.hireDate || '',
             officeLocation: savedData.officeLocation || '',
             contractType: savedData.contractType || ''
@@ -363,7 +359,6 @@ const Profile = () => {
           },
           body: JSON.stringify({
             phone: formData.phone,
-            position: formData.position,
             department: formData.department,
             hire_date: formData.hireDate,
             workplace: formData.officeLocation,
@@ -510,7 +505,6 @@ const Profile = () => {
       birthDate: user?.birthDate || '',
       department: user?.department || '',
       has104: user?.has104 || false,
-      position: user?.position || '',
       hireDate: user?.hireDate || '',
       officeLocation: user?.workplace || '',
       contractType: user?.contractType || ''
@@ -666,21 +660,6 @@ const Profile = () => {
             />
             <span className="ml-2 text-slate-300">Legge 104 (Permessi speciali)</span>
           </label>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-            <Briefcase className="h-4 w-4 mr-2 text-indigo-400" />
-            Posizione
-          </label>
-          <input
-            type="text"
-            name="position"
-            value={formData.position}
-            onChange={handleInputChange}
-            disabled={!isEditing}
-            placeholder="Es. Manager, Sviluppatore, Segretaria..."
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-          />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">

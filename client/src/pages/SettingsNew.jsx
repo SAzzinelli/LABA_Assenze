@@ -36,7 +36,6 @@ const Settings = () => {
       lastName: user?.lastName || '',
       email: user?.email || '',
       phone: '',
-      position: '',
       department: '',
       hireDate: '',
       officeLocation: '',
@@ -166,11 +165,6 @@ const Settings = () => {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Posizione</label>
-          <input
-            type="text"
-            value={settings.profile.position}
-            onChange={(e) => handleSettingChange('profile', 'position', e.target.value)}
             className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>

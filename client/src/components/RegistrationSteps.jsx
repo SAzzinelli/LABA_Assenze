@@ -17,7 +17,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
     
     // Step 2: Informazioni Lavorative
     department: '',
-    position: '',
     workplace: '',
     contractType: '',
     
@@ -91,7 +90,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                formData.password === formData.confirmPassword;
       case 2:
         return formData.department && 
-               formData.position && 
                formData.workplace && 
                formData.contractType;
       case 3:
@@ -293,19 +291,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-2">Posizione *</label>
-          <input
-            type="text"
-            name="position"
-            value={formData.position}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Es. Manager, Sviluppatore, Segretaria..."
-            required
-          />
-        </div>
-
-        <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Sede di Lavoro *</label>
           <div className="relative">
             <select
@@ -471,7 +456,6 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             </h4>
             <div className="space-y-2 text-sm">
               <p><span className="text-slate-400">Dipartimento:</span> <span className="text-white">{formData.department}</span></p>
-              <p><span className="text-slate-400">Posizione:</span> <span className="text-white">{formData.position}</span></p>
               <p><span className="text-slate-400">Sede:</span> <span className="text-white">{workplaces.find(w => w.value === formData.workplace)?.label}</span></p>
               <p><span className="text-slate-400">Contratto:</span> <span className="text-white">{formData.contractType}</span></p>
             </div>

@@ -55,7 +55,6 @@ const Employees = () => {
     phone: '',
     birthDate: '',
     department: '',
-    position: '',
     has104: false
   });
 
@@ -196,7 +195,6 @@ const Employees = () => {
       phone: employee.phone || '',
       birthDate: employee.birthDate || employee.birth_date || '',
       department: employee.department || '',
-      position: employee.position || '',
       has104: employee.has104 || employee.has_104 || false
     });
     setShowEditModal(true);
@@ -214,7 +212,6 @@ const Employees = () => {
           phone: formData.phone,
           birthDate: formData.birthDate,
           department: formData.department,
-          position: formData.position,
           has104: formData.has104
         })
       });
@@ -367,7 +364,6 @@ const Employees = () => {
       phone: '',
       birthDate: '',
       department: '',
-      position: '',
       has104: false
     });
   };
@@ -506,7 +502,6 @@ const Employees = () => {
             </div>
             <div className="mt-3 flex items-center justify-between text-sm">
               <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">{employee.department}</span>
-              <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">{employee.position}</span>
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button
@@ -562,7 +557,6 @@ const Employees = () => {
               </div>
               <div className="mb-3 flex items-center justify-between text-sm">
                 <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600 text-xs">{employee.department}</span>
-                <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600 text-xs">{employee.position}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -612,9 +606,6 @@ const Employees = () => {
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                     Dipartimento
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                    Posizione
-                  </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-auto">
                     Azioni
                   </th>
@@ -662,18 +653,13 @@ const Employees = () => {
                         {employee.department}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col space-y-1">
-                        <span className="inline-block px-3 py-1.5 rounded-full text-xs font-medium bg-slate-500/20 text-slate-300 border border-slate-400/30 shadow-sm w-fit">
-                          {employee.position}
+                    {employee.role === 'supervisor' && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
+                          SUPERVISORE
                         </span>
-                        {employee.role === 'supervisor' && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
-                            SUPERVISORE
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
@@ -838,14 +824,6 @@ const Employees = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Posizione</label>
-                <input
-                  type="text"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
               </div>
 
               <div className="flex items-center">
@@ -988,12 +966,6 @@ const Employees = () => {
                     <div>
                       <span className="text-slate-400 text-sm">Dipartimento:</span>
                       <p className="text-white font-bold">{selectedEmployee.department}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 text-sm">Posizione:</span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ml-2 bg-slate-500/20 text-slate-300 border border-slate-400/30">
-                        {selectedEmployee.position}
-                      </span>
                     </div>
                     <div>
                       <span className="text-slate-400 text-sm">Data Assunzione:</span>
