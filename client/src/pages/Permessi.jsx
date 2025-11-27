@@ -1418,18 +1418,18 @@ const LeaveRequests = () => {
                 const isRejected = request.status === 'rejected';
                 
                 return (
-              <div key={request.id} className={`rounded-lg p-6 transition-all hover:shadow-lg ${
-                isApproved ? 'bg-green-500/10 border-l-4 border-green-500' : 
-                isPending ? 'bg-yellow-500/10 border-l-4 border-yellow-500' : 
-                'bg-red-500/10 border-l-4 border-red-500'
+              <div key={request.id} className={`rounded-lg p-4 bg-slate-800 border-l-4 transition-all hover:shadow-md ${
+                isApproved ? 'border-green-500' : 
+                isPending ? 'border-yellow-500' : 
+                'border-red-500'
               }`}>
                 {/* HEADER: Status e Tipo */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
                     {getStatusIcon(request.status)}
                     <div>
-                      <h3 className="text-lg font-bold text-white">{getPermissionTypeText(request)}</h3>
-                      <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                      <h3 className="text-base font-bold text-white">{getPermissionTypeText(request)}</h3>
+                      <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
                         isApproved ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
                         isPending ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
                         'bg-red-500/20 text-red-300 border border-red-500/30'
@@ -1441,12 +1441,12 @@ const LeaveRequests = () => {
                   
                   {/* LATO ADMIN: Dipendente in evidenza */}
                   {user?.role === 'admin' && (
-                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-4 py-2">
+                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-3 py-1.5">
                       <div className="flex items-center gap-2">
-                        <User className="h-5 w-5 text-indigo-400" />
+                        <User className="h-4 w-4 text-indigo-400" />
                         <div>
                           <p className="text-xs text-indigo-300">Dipendente</p>
-                          <p className="text-base font-bold text-indigo-200">{request.submittedBy}</p>
+                          <p className="text-sm font-bold text-indigo-200">{request.submittedBy}</p>
                         </div>
                       </div>
                     </div>
@@ -1454,33 +1454,33 @@ const LeaveRequests = () => {
                 </div>
 
                 {/* DATI PRINCIPALI: Quando e Per Quanto */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   {/* QUANDO */}
-                  <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-indigo-400" />
+                  <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Calendar className="h-4 w-4 text-indigo-400" />
                       <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Data Permesso</span>
                     </div>
-                    <p className="text-xl font-bold text-white">{permissionDate}</p>
+                    <p className="text-lg font-bold text-white">{permissionDate}</p>
                     {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
-                      <p className="text-sm text-orange-400 mt-1 font-medium">
+                      <p className="text-xs text-orange-400 mt-1 font-medium">
                         Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}
                       </p>
                     )}
                     {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
-                      <p className="text-sm text-blue-400 mt-1 font-medium">
+                      <p className="text-xs text-blue-400 mt-1 font-medium">
                         Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}
                       </p>
                     )}
                   </div>
 
                   {/* PER QUANTO */}
-                  <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-5 w-5 text-amber-400" />
+                  <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Clock className="h-4 w-4 text-amber-400" />
                       <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Durata</span>
                     </div>
-                    <p className="text-xl font-bold text-white">{hours}</p>
+                    <p className="text-lg font-bold text-white">{hours}</p>
                     {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && (
                       <p className="text-xs text-slate-400 mt-1">Uscita Anticipata</p>
                     )}
@@ -1491,36 +1491,36 @@ const LeaveRequests = () => {
                 </div>
 
                 {/* DATI SECONDARI: Approvazione e Richiesta */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   {/* LATO DIPENDENTE: Approvazione */}
                   {user?.role === 'employee' && (
                     <>
                       {isApproved && request.approvedAt && (
-                        <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                        <div className="bg-green-500/20 rounded-lg p-2.5 border border-green-500/30">
                           <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <CheckCircle className="h-3.5 w-3.5 text-green-400" />
                             <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
                           </div>
-                          <p className="text-sm text-white font-medium">
+                          <p className="text-xs text-white font-medium">
                             Da: <span className="text-green-300">{request.approver?.name || request.approvedBy || 'Amministratore'}</span>
                           </p>
-                          <p className="text-xs text-slate-400 mt-1">
+                          <p className="text-xs text-slate-300 mt-1">
                             {formatDateTime(request.approvedAt)}
                           </p>
                         </div>
                       )}
                       {isPending && (
-                        <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
+                        <div className="bg-yellow-500/10 rounded-lg p-2.5 border border-yellow-500/20">
                           <div className="flex items-center gap-2">
-                            <Timer className="h-4 w-4 text-yellow-400" />
-                            <span className="text-sm text-yellow-300 font-medium">In attesa di approvazione</span>
+                            <Timer className="h-3.5 w-3.5 text-yellow-400" />
+                            <span className="text-xs text-yellow-300 font-medium">In attesa di approvazione</span>
                           </div>
                         </div>
                       )}
                       {isRejected && request.rejectedAt && (
-                        <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                        <div className="bg-red-500/10 rounded-lg p-2.5 border border-red-500/20">
                           <div className="flex items-center gap-2 mb-1">
-                            <XCircle className="h-4 w-4 text-red-400" />
+                            <XCircle className="h-3.5 w-3.5 text-red-400" />
                             <span className="text-xs font-medium text-red-300 uppercase">Rifiutato</span>
                           </div>
                           <p className="text-xs text-slate-400 mt-1">
@@ -1528,12 +1528,12 @@ const LeaveRequests = () => {
                           </p>
                         </div>
                       )}
-                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                      <div className="bg-slate-700/50 rounded-lg p-2.5 border border-slate-600">
                         <div className="flex items-center gap-2 mb-1">
-                          <Clock className="h-4 w-4 text-slate-400" />
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
                           <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
                         </div>
-                        <p className="text-sm text-white">{formatDateTime(request.submittedAt)}</p>
+                        <p className="text-xs text-white">{formatDateTime(request.submittedAt)}</p>
                       </div>
                     </>
                   )}
@@ -1542,55 +1542,55 @@ const LeaveRequests = () => {
                   {user?.role === 'admin' && (
                     <>
                       {isApproved && request.approvedAt && (
-                        <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                        <div className="bg-green-500/20 rounded-lg p-2.5 border border-green-500/30">
                           <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <CheckCircle className="h-3.5 w-3.5 text-green-400" />
                             <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
                           </div>
-                          <p className="text-sm text-white">
+                          <p className="text-xs text-white">
                             {formatDateTime(request.approvedAt)}
                           </p>
                         </div>
                       )}
                       {isPending && (
-                        <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
+                        <div className="bg-yellow-500/10 rounded-lg p-2.5 border border-yellow-500/20">
                           <div className="flex items-center gap-2">
-                            <Timer className="h-4 w-4 text-yellow-400" />
-                            <span className="text-sm text-yellow-300 font-medium">In attesa</span>
+                            <Timer className="h-3.5 w-3.5 text-yellow-400" />
+                            <span className="text-xs text-yellow-300 font-medium">In attesa</span>
                           </div>
                         </div>
                       )}
-                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                      <div className="bg-slate-700/50 rounded-lg p-2.5 border border-slate-600">
                         <div className="flex items-center gap-2 mb-1">
-                          <Clock className="h-4 w-4 text-slate-400" />
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
                           <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
                         </div>
-                        <p className="text-sm text-white">{formatDateTime(request.submittedAt)}</p>
+                        <p className="text-xs text-white">{formatDateTime(request.submittedAt)}</p>
                       </div>
                     </>
                   )}
                 </div>
                 {/* NOTE E MOTIVI */}
                 {(request.notes || request.rejectionReason) && (
-                  <div className="space-y-2 mb-4">
+                  <div className="space-y-2 mb-3">
                     {request.notes && (
-                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                      <div className="bg-slate-700/50 rounded-lg p-2.5 border border-slate-600">
                         <div className="flex items-start gap-2">
-                          <FileText className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                          <FileText className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs font-medium text-slate-400 mb-1">Note</p>
-                            <p className="text-sm text-slate-300">{request.notes}</p>
+                            <p className="text-xs text-slate-300">{request.notes}</p>
                           </div>
                         </div>
                       </div>
                     )}
                     {request.rejectionReason && (
-                      <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                      <div className="bg-red-500/10 rounded-lg p-2.5 border border-red-500/20">
                         <div className="flex items-start gap-2">
-                          <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                          <XCircle className="h-3.5 w-3.5 text-red-400 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs font-medium text-red-300 mb-1">Motivo Rifiuto</p>
-                            <p className="text-sm text-red-200">{request.rejectionReason}</p>
+                            <p className="text-xs text-red-200">{request.rejectionReason}</p>
                           </div>
                         </div>
                       </div>
@@ -1599,22 +1599,22 @@ const LeaveRequests = () => {
                 )}
                 
                 {/* PULSANTI AZIONE */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-700">
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-700">
                   {/* Pulsanti di approvazione per admin - solo per richieste pending */}
                   {user?.role === 'admin' && request.status === 'pending' && (
                     <>
                       <button
                         onClick={() => openApproveDialog(request.id)}
-                        className="flex items-center px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium min-h-[44px]"
+                        className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium text-sm min-h-[40px]"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-4 w-4 mr-1.5" />
                         Approva
                       </button>
                       <button
                         onClick={() => openRejectDialog(request.id)}
-                        className="flex items-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium min-h-[44px]"
+                        className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm min-h-[40px]"
                       >
-                        <XCircle className="h-4 w-4 mr-2" />
+                        <XCircle className="h-4 w-4 mr-1.5" />
                         Rifiuta
                       </button>
                     </>
@@ -1626,18 +1626,18 @@ const LeaveRequests = () => {
                       {canModifyRequest(request) && (
                         <button
                           onClick={() => openEditDialog(request)}
-                          className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                          className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[40px] font-medium text-sm"
                         >
-                          <Save className="h-4 w-4 mr-2" />
+                          <Save className="h-4 w-4 mr-1.5" />
                           Modifica
                         </button>
                       )}
                       {canCancelRequest(request) && (
                         <button
                           onClick={() => openCancelDialog(request.id)}
-                          className="flex items-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[40px] font-medium text-sm"
                         >
-                          <X className="h-4 w-4 mr-2" />
+                          <X className="h-4 w-4 mr-1.5" />
                           Annulla
                         </button>
                       )}
@@ -1652,9 +1652,9 @@ const LeaveRequests = () => {
                         setModificationRequest({ reason: '', requestedChanges: '' });
                         setShowRequestModificationDialog(true);
                       }}
-                      className="flex items-center px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                      className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[40px] font-medium text-sm"
                     >
-                      <MessageSquare className="h-4 w-4 mr-2" />
+                      <MessageSquare className="h-4 w-4 mr-1.5" />
                       Richiedi Modifica
                     </button>
                   )}
