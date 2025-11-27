@@ -1,7 +1,8 @@
 import React from 'react';
-import { DollarSign, Loader2 } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 import { useAuthStore } from '../utils/store';
 import MonteOreCalculator from '../components/MonteOreCalculator';
+import { BancaOreSkeleton } from '../components/Skeleton';
 
 const defaultWorkSchedule = {
   monday: { active: true, morning: '09:00-13:00', afternoon: '14:00-18:00', lunchBreak: '13:00-14:00', workType: 'full' },
@@ -94,13 +95,7 @@ const BancaOre = () => {
       </div>
 
       {loadingSchedule ? (
-        <div className="bg-slate-800 rounded-lg p-10 text-center border border-slate-700">
-          <Loader2 className="h-10 w-10 text-indigo-300 animate-spin mx-auto mb-4" />
-          <p className="text-slate-300">Caricamento orario di lavoro...</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Stiamo recuperando i tuoi dati aggiornati di orario e banca ore.
-          </p>
-        </div>
+        <BancaOreSkeleton />
       ) : (
         <MonteOreCalculator user={user} workSchedule={workSchedule} />
       )}

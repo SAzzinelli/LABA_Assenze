@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useOvertimeBalance } from '../hooks/useOvertimeBalance';
 import { formatHours } from '../utils/hoursCalculation';
+import { RecuperiOreSkeleton } from '../components/Skeleton';
 import { 
   RefreshCw, 
   Plus, 
@@ -631,11 +632,7 @@ const RecuperiOre = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-white">Caricamento...</div>
-      </div>
-    );
+    return <RecuperiOreSkeleton />;
   }
 
   // Vista Dipendente

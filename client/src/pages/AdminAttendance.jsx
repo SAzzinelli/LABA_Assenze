@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import AttendanceDetails from '../components/AttendanceDetails';
+import { AdminAttendanceSkeleton } from '../components/AdminAttendanceSkeleton';
 import {
   Users,
   AlertCircle,
@@ -1035,20 +1036,7 @@ const AdminAttendance = () => {
   })();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-500 border-t-transparent"></div>
-          <div className="text-white text-xl font-semibold">Caricamento dati...</div>
-          <div className="text-slate-400 text-sm">Preparazione sistema presenze</div>
-          <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <AdminAttendanceSkeleton />;
   }
 
   return (

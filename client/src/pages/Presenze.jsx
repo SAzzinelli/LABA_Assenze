@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PresenzeSkeleton } from '../components/Skeleton';
 import {
   calculateMonthlyHours,
   calculateRealTimeHours
@@ -987,11 +988,7 @@ const Attendance = () => {
 
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Caricamento...</div>
-      </div>
-    );
+    return <PresenzeSkeleton />;
   }
 
   return (
