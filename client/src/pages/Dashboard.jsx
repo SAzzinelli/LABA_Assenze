@@ -14,7 +14,9 @@ import {
   AlertCircle,
   RefreshCw,
   DollarSign,
-  Plane
+  Plane,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -51,6 +53,17 @@ const Dashboard = () => {
   const [employeeRecentRequests, setEmployeeRecentRequests] = useState([]);
   const [overtimeBalance, setOvertimeBalance] = useState(null);
   const [vacationBalance, setVacationBalance] = useState(null);
+  
+  // Stati per sezioni collassabili
+  const [eventsCollapsed, setEventsCollapsed] = useState(false);
+  const [requestsCollapsed, setRequestsCollapsed] = useState(false);
+  const [bancaOreCollapsed, setBancaOreCollapsed] = useState(false);
+  const [ferieCollapsed, setFerieCollapsed] = useState(false);
+  const [sickTodayCollapsed, setSickTodayCollapsed] = useState(false);
+  const [recoveriesCollapsed, setRecoveriesCollapsed] = useState(false);
+  const [presentNowCollapsed, setPresentNowCollapsed] = useState(false);
+  const [recentRequestsCollapsed, setRecentRequestsCollapsed] = useState(false);
+  const [todayEventsCollapsed, setTodayEventsCollapsed] = useState(false);
   
   // Dati per admin dashboard real-time
   const [adminRealTimeData, setAdminRealTimeData] = useState([]);
@@ -802,64 +815,98 @@ const Dashboard = () => {
             {/* Banca Ore */}
             {overtimeBalance !== null && (
               <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center justify-between mb-4">
+                <div 
+                  className="flex items-center justify-between mb-4 cursor-pointer"
+                  onClick={() => setBancaOreCollapsed(!bancaOreCollapsed)}
+                >
                   <h3 className="text-lg font-bold text-white flex items-center">
                     <DollarSign className="h-5 w-5 mr-2 text-amber-400" />
                     Banca Ore
                   </h3>
-                  <button
-                    onClick={() => navigate('/banca-ore')}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-                  >
-                    Dettagli →
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/banca-ore');
+                      }}
+                      className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                    >
+                      Dettagli →
+                    </button>
+                    {bancaOreCollapsed ? (
+                      <ChevronDown className="h-5 w-5 text-slate-400" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-slate-400" />
+                    )}
+                  </div>
                 </div>
-                <div className={`text-3xl font-bold mb-2 ${
-                  overtimeBalance.balance < 0 ? 'text-red-400' : 
-                  overtimeBalance.balance > 0 ? 'text-green-400' : 'text-white'
-                }`}>
-                  {overtimeBalance.balance < 0 ? '-' : '+'}{formatHours(Math.abs(overtimeBalance.balance || 0))}
-                </div>
-                <p className="text-sm text-slate-400">
-                  {overtimeBalance.balance < 0 ? 'Debito da recuperare' : 
-                   overtimeBalance.balance > 0 ? 'Credito disponibile' : 'In pari'}
-                </p>
+                {!bancaOreCollapsed && (
+                  <>
+                    <div className={`text-3xl font-bold mb-2 ${
+                      overtimeBalance.balance < 0 ? 'text-red-400' : 
+                      overtimeBalance.balance > 0 ? 'text-green-400' : 'text-white'
+                    }`}>
+                      {overtimeBalance.balance < 0 ? '-' : '+'}{formatHours(Math.abs(overtimeBalance.balance || 0))}
+                    </div>
+                    <p className="text-sm text-slate-400">
+                      {overtimeBalance.balance < 0 ? 'Debito da recuperare' : 
+                       overtimeBalance.balance > 0 ? 'Credito disponibile' : 'In pari'}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
             {/* Saldo Ferie */}
             {vacationBalance && (
               <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-                <div className="flex items-center justify-between mb-4">
+                <div 
+                  className="flex items-center justify-between mb-4 cursor-pointer"
+                  onClick={() => setFerieCollapsed(!ferieCollapsed)}
+                >
                   <h3 className="text-lg font-bold text-white flex items-center">
                     <Plane className="h-5 w-5 mr-2 text-blue-400" />
                     Ferie
                   </h3>
-                  <button
-                    onClick={() => navigate('/ferie')}
-                    className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-                  >
-                    Dettagli →
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Giorni Rimanenti</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      {vacationBalance.remaining_days || 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">Giorni Utilizzati</p>
-                    <p className="text-2xl font-bold text-blue-400">
-                      {vacationBalance.used_days || 0}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/ferie');
+                      }}
+                      className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                    >
+                      Dettagli →
+                    </button>
+                    {ferieCollapsed ? (
+                      <ChevronDown className="h-5 w-5 text-slate-400" />
+                    ) : (
+                      <ChevronUp className="h-5 w-5 text-slate-400" />
+                    )}
                   </div>
                 </div>
-                {vacationBalance.pending_days > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-700">
-                    <p className="text-xs text-slate-400">In attesa: <span className="text-yellow-400 font-semibold">{vacationBalance.pending_days} giorni</span></p>
-                  </div>
+                {!ferieCollapsed && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Giorni Rimanenti</p>
+                        <p className="text-2xl font-bold text-green-400">
+                          {vacationBalance.remaining_days || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">Giorni Utilizzati</p>
+                        <p className="text-2xl font-bold text-blue-400">
+                          {vacationBalance.used_days || 0}
+                        </p>
+                      </div>
+                    </div>
+                    {vacationBalance.pending_days > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-700">
+                        <p className="text-xs text-slate-400">In attesa: <span className="text-yellow-400 font-semibold">{vacationBalance.pending_days} giorni</span></p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -867,55 +914,79 @@ const Dashboard = () => {
 
           {/* Eventi Imminenti */}
           <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-4">
+            <div 
+              className="flex items-center justify-between cursor-pointer mb-4"
+              onClick={() => setEventsCollapsed(!eventsCollapsed)}
+            >
               <h3 className="text-lg font-bold text-white flex items-center">
                 <Calendar className="h-5 w-5 mr-2 text-orange-400" />
                 Eventi Imminenti
               </h3>
+              {eventsCollapsed ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              )}
             </div>
-            {upcomingEvents.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingEvents.slice(0, 5).map((event, index) => {
-                  const eventDate = new Date(event.date);
-                  const colorClasses = {
-                    green: 'bg-green-500/10 border-green-500/30',
-                    red: 'bg-red-500/10 border-red-500/30',
-                    blue: 'bg-blue-500/10 border-blue-500/30',
-                    purple: 'bg-purple-500/10 border-purple-500/30'
-                  };
+            {!eventsCollapsed && (
+              <>
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const futureEvents = upcomingEvents.filter(event => {
+                    const eventDate = new Date(event.date);
+                    eventDate.setHours(0, 0, 0, 0);
+                    return eventDate >= today;
+                  });
                   
-                  return (
-                    <div key={index} className={`p-3 rounded-lg border ${colorClasses[event.color]}`}>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-white font-semibold text-sm">{event.name}</p>
-                          <p className="text-slate-400 text-xs mt-1">
-                            {eventDate.toLocaleDateString('it-IT', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          {eventDate.toDateString() === new Date().toDateString() ? (
-                            <span className="text-xs font-semibold text-orange-400">Oggi</span>
-                          ) : (
-                            <span className="text-xs text-slate-400">
-                              {Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24))} giorni
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                  return futureEvents.length > 0 ? (
+                    <div className="space-y-3">
+                      {futureEvents.slice(0, 5).map((event, index) => {
+                        const eventDate = new Date(event.date);
+                        eventDate.setHours(0, 0, 0, 0);
+                        const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                        const colorClasses = {
+                          green: 'bg-green-500/10 border-green-500/30',
+                          red: 'bg-red-500/10 border-red-500/30',
+                          blue: 'bg-blue-500/10 border-blue-500/30',
+                          purple: 'bg-purple-500/10 border-purple-500/30'
+                        };
+                        
+                        return (
+                          <div key={index} className={`p-3 rounded-lg border ${colorClasses[event.color]}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-white font-semibold text-sm">{event.name}</p>
+                                <p className="text-slate-400 text-xs mt-1">
+                                  {eventDate.toLocaleDateString('it-IT', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                {daysDiff === 0 ? (
+                                  <span className="text-xs font-semibold text-orange-400">Oggi</span>
+                                ) : (
+                                  <span className="text-xs text-slate-400">
+                                    Fra {daysDiff} {daysDiff === 1 ? 'giorno' : 'giorni'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-400">
+                      <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">Nessun evento imminente</p>
                     </div>
                   );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-slate-400">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="text-sm">Nessun evento imminente</p>
-              </div>
+                })()}
+              </>
             )}
           </div>
         </div>
@@ -925,10 +996,20 @@ const Dashboard = () => {
       {user?.role !== 'admin' && employeeRecentRequests.length > 0 && (
         <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-white flex items-center">
-              <FileText className="h-5 w-5 mr-2 text-purple-400" />
-              Le Tue Richieste Recenti
-            </h3>
+            <div 
+              className="flex items-center cursor-pointer flex-1"
+              onClick={() => setRequestsCollapsed(!requestsCollapsed)}
+            >
+              <h3 className="text-lg font-bold text-white flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-purple-400" />
+                Le Tue Richieste Recenti
+              </h3>
+              {requestsCollapsed ? (
+                <ChevronDown className="h-5 w-5 text-slate-400 ml-2" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400 ml-2" />
+              )}
+            </div>
             <button
               onClick={() => {
                 const type = employeeRecentRequests[0]?.type;
@@ -941,59 +1022,82 @@ const Dashboard = () => {
               Vedi tutte →
             </button>
           </div>
-          <div className="space-y-3">
-            {employeeRecentRequests.map((request) => {
-              const colors = request.type === 'permission' || request.type === 'permission_104' ? {
-                bg: 'bg-purple-500/10',
-                border: 'border-purple-500/20',
-                text: 'text-purple-300',
-                status: request.status === 'approved' ? 'text-green-400' : 
-                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
-              } : request.type === 'sick_leave' ? {
-                bg: 'bg-red-500/10',
-                border: 'border-red-500/20',
-                text: 'text-red-300',
-                status: request.status === 'approved' ? 'text-green-400' : 
-                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
-              } : {
-                bg: 'bg-blue-500/10',
-                border: 'border-blue-500/20',
-                text: 'text-blue-300',
-                status: request.status === 'approved' ? 'text-green-400' : 
-                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
-              };
+          {!requestsCollapsed && (
+            <div className="space-y-3">
+              {employeeRecentRequests.map((request) => {
+                // Determina tipo specifico del permesso
+                const getPermissionTypeLabel = () => {
+                  if (request.type === 'permission' || request.type === 'permission_104') {
+                    if (request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) {
+                      return 'Uscita Anticipata';
+                    } else if (request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) {
+                      return 'Entrata Posticipata';
+                    } else if (request.permissionType === 'full_day' || request.fullDay) {
+                      return 'Giornata Intera';
+                    } else if (request.type === 'permission_104') {
+                      return 'Permesso 104';
+                    }
+                    return 'Permesso';
+                  } else if (request.type === 'vacation') {
+                    return 'Ferie';
+                  } else if (request.type === 'sick_leave') {
+                    return 'Malattia';
+                  }
+                  return 'Richiesta';
+                };
 
-              const statusText = request.status === 'approved' ? 'Approvata' : 
-                                request.status === 'pending' ? 'In attesa' : 
-                                request.status === 'rejected' ? 'Rifiutata' : 'Sconosciuto';
+                // Colori basati sullo STATO, non sul tipo
+                const statusColors = request.status === 'approved' ? {
+                  bg: 'bg-green-500/20',
+                  border: 'border-green-500/30',
+                  text: 'text-green-300',
+                  statusText: 'text-green-400'
+                } : request.status === 'pending' ? {
+                  bg: 'bg-yellow-500/20',
+                  border: 'border-yellow-500/30',
+                  text: 'text-yellow-300',
+                  statusText: 'text-yellow-400'
+                } : request.status === 'rejected' ? {
+                  bg: 'bg-red-500/20',
+                  border: 'border-red-500/30',
+                  text: 'text-red-300',
+                  statusText: 'text-red-400'
+                } : {
+                  bg: 'bg-slate-500/20',
+                  border: 'border-slate-500/30',
+                  text: 'text-slate-300',
+                  statusText: 'text-slate-400'
+                };
 
-              return (
-                <div key={request.id} className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-white font-semibold text-sm">
-                        {request.type === 'permission' ? 'Permesso' : 
-                         request.type === 'permission_104' ? 'Permesso 104' :
-                         request.type === 'vacation' ? 'Ferie' : 
-                         request.type === 'sick_leave' ? 'Malattia' : 'Richiesta'}
-                      </p>
-                      <p className={`${colors.text} text-xs mt-1`}>
-                        {request.start_date ? new Date(request.start_date).toLocaleDateString('it-IT') : 'Data non disponibile'}
-                        {request.end_date && request.end_date !== request.start_date && 
-                          ` - ${new Date(request.end_date).toLocaleDateString('it-IT')}`
-                        }
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-sm font-semibold ${colors.status}`}>
-                        {statusText}
-                      </span>
+                const statusText = request.status === 'approved' ? 'Approvata' : 
+                                  request.status === 'pending' ? 'In attesa' : 
+                                  request.status === 'rejected' ? 'Rifiutata' : 'Sconosciuto';
+
+                return (
+                  <div key={request.id} className={`${statusColors.bg} border ${statusColors.border} rounded-lg p-4`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-semibold text-sm">
+                          {getPermissionTypeLabel()}
+                        </p>
+                        <p className={`${statusColors.text} text-xs mt-1`}>
+                          {request.start_date ? new Date(request.start_date).toLocaleDateString('it-IT') : 'Data non disponibile'}
+                          {request.end_date && request.end_date !== request.start_date && 
+                            ` - ${new Date(request.end_date).toLocaleDateString('it-IT')}`
+                          }
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-sm font-semibold ${statusColors.statusText}`}>
+                          {statusText}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1008,11 +1112,22 @@ const Dashboard = () => {
           {/* Sezione In Malattia Oggi - Solo se ci sono dipendenti malati */}
           {sickToday.length > 0 && (
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-                <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
-                In malattia oggi
-              </h3>
-              <div className="space-y-3">
+              <div 
+                className="flex items-center justify-between mb-4 cursor-pointer"
+                onClick={() => setSickTodayCollapsed(!sickTodayCollapsed)}
+              >
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
+                  In malattia oggi
+                </h3>
+                {sickTodayCollapsed ? (
+                  <ChevronDown className="h-5 w-5 text-slate-400" />
+                ) : (
+                  <ChevronUp className="h-5 w-5 text-slate-400" />
+                )}
+              </div>
+              {!sickTodayCollapsed && (
+                <div className="space-y-3">
                 {sickToday.map((person) => (
                   <div key={person.user_id} className="bg-red-800/20 rounded-lg p-4">
                     <div className="flex items-center justify-between">
@@ -1040,7 +1155,8 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1048,18 +1164,32 @@ const Dashboard = () => {
           {upcomingRecoveries.length > 0 && (
             <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 sm:p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
-                  <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 text-amber-400" />
-                  Recuperi Imminenti
-                </h3>
+                <div 
+                  className="flex items-center cursor-pointer flex-1"
+                  onClick={() => setRecoveriesCollapsed(!recoveriesCollapsed)}
+                >
+                  <h3 className="text-lg sm:text-xl font-bold text-white flex items-center">
+                    <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 text-amber-400" />
+                    Recuperi Imminenti
+                  </h3>
+                  {recoveriesCollapsed ? (
+                    <ChevronDown className="h-5 w-5 text-slate-400 ml-2" />
+                  ) : (
+                    <ChevronUp className="h-5 w-5 text-slate-400 ml-2" />
+                  )}
+                </div>
                 <button
-                  onClick={() => window.location.href = '/recuperi-ore'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.location.href = '/recuperi-ore';
+                  }}
                   className="text-amber-400 hover:text-amber-300 text-sm font-medium underline min-h-[44px] px-2"
                 >
                   Vai alla gestione
                 </button>
               </div>
-              <div className="space-y-2">
+              {!recoveriesCollapsed && (
+                <div className="space-y-2">
                 {upcomingRecoveries.slice(0, 3).map((recovery) => (
                   <div key={recovery.id} className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1092,22 +1222,33 @@ const Dashboard = () => {
                     +{upcomingRecoveries.length - 3} altri recuperi programmati
                   </p>
                 )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Presenti adesso - Full width con 2 colonne interne */}
           <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <Clock className="h-6 w-6 mr-3 text-green-400" />
-              Presenti adesso
-              <div className="ml-auto flex items-center text-sm text-slate-400">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                Live
-              </div>
-            </h3>
+            <div 
+              className="flex items-center justify-between mb-6 cursor-pointer"
+              onClick={() => setPresentNowCollapsed(!presentNowCollapsed)}
+            >
+              <h3 className="text-xl font-bold text-white flex items-center">
+                <Clock className="h-6 w-6 mr-3 text-green-400" />
+                Presenti adesso
+                <div className="ml-3 flex items-center text-sm text-slate-400">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                  Live
+                </div>
+              </h3>
+              {presentNowCollapsed ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              )}
+            </div>
           
-          {(() => {
+          {!presentNowCollapsed && (() => {
             const presentNow = adminRealTimeData.filter(person => 
               person.status === 'working' || person.status === 'on_break'
             );
@@ -1196,16 +1337,27 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mt-3 sm:mt-4 md:mt-6">
           {/* Richieste Recenti */}
           <div className="bg-slate-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-              <FileText className="h-6 w-6 mr-3 text-purple-400" />
-              Richieste Recenti
-              <div className="ml-auto flex items-center text-sm text-slate-400">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mr-2 animate-pulse"></div>
-                In attesa
-              </div>
-            </h3>
+            <div 
+              className="flex items-center justify-between mb-6 cursor-pointer"
+              onClick={() => setRecentRequestsCollapsed(!recentRequestsCollapsed)}
+            >
+              <h3 className="text-xl font-bold text-white flex items-center">
+                <FileText className="h-6 w-6 mr-3 text-purple-400" />
+                Richieste Recenti
+                <div className="ml-3 flex items-center text-sm text-slate-400">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full mr-2 animate-pulse"></div>
+                  In attesa
+                </div>
+              </h3>
+              {recentRequestsCollapsed ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              )}
+            </div>
           
-          <div className="space-y-3">
+          {!recentRequestsCollapsed && (
+            <div className="space-y-3">
             {recentRequests.length > 0 ? (
               recentRequests.map((request) => {
                 // Determina i colori in base al tipo: viola per permessi, rosso per malattia, blu per ferie
@@ -1284,16 +1436,29 @@ const Dashboard = () => {
                 <p className="text-slate-400">Nessuna richiesta recente</p>
               </div>
             )}
-          </div>
+            </div>
+          )}
           </div>
 
           {/* In programma oggi */}
       <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center">
-          <Calendar className="h-6 w-6 mr-3 text-orange-400" />
-          In programma oggi
-        </h3>
-        {eventsToday.length > 0 ? (
+        <div 
+          className="flex items-center justify-between mb-4 cursor-pointer"
+          onClick={() => setTodayEventsCollapsed(!todayEventsCollapsed)}
+        >
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <Calendar className="h-6 w-6 mr-3 text-orange-400" />
+            In programma oggi
+          </h3>
+          {todayEventsCollapsed ? (
+            <ChevronDown className="h-5 w-5 text-slate-400" />
+          ) : (
+            <ChevronUp className="h-5 w-5 text-slate-400" />
+          )}
+        </div>
+        {!todayEventsCollapsed && (
+          <>
+            {eventsToday.length > 0 ? (
           <div className="space-y-3">
             {eventsToday.map((event, index) => {
               const eventDate = new Date(event.date);
@@ -1357,12 +1522,14 @@ const Dashboard = () => {
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-400">
-            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Nessun evento programmato per oggi</p>
-          </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-400">
+              <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>Nessun evento programmato per oggi</p>
+            </div>
+          )}
+          </>
         )}
       </div>
           </div>
