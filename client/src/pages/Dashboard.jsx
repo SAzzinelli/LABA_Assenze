@@ -50,13 +50,11 @@ const Dashboard = () => {
   const [workSchedules, setWorkSchedules] = useState([]);
   
   // Dati aggiuntivi per dipendente
-  const [employeeRecentRequests, setEmployeeRecentRequests] = useState([]);
   const [overtimeBalance, setOvertimeBalance] = useState(null);
   const [vacationBalance, setVacationBalance] = useState(null);
   
   // Stati per sezioni collassabili
   const [eventsCollapsed, setEventsCollapsed] = useState(false);
-  const [requestsCollapsed, setRequestsCollapsed] = useState(false);
   const [bancaOreCollapsed, setBancaOreCollapsed] = useState(false);
   const [ferieCollapsed, setFerieCollapsed] = useState(false);
   const [sickTodayCollapsed, setSickTodayCollapsed] = useState(false);
@@ -92,7 +90,6 @@ const Dashboard = () => {
           console.log('🔍 Loading employee data...');
           await fetchAttendanceData();
           await fetchWorkSchedules();
-          await fetchEmployeeRecentRequests();
           await fetchOvertimeBalance();
           await fetchVacationBalance();
         }
@@ -413,27 +410,6 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch richieste recenti per dipendente
-  const fetchEmployeeRecentRequests = async () => {
-    try {
-      if (user?.role !== 'employee') return;
-      
-      const response = await apiCall('/api/leave-requests?limit=5');
-      if (response.ok) {
-        const data = await response.json();
-        // Ordina per data di richiesta (più recenti prima)
-        const sorted = data.sort((a, b) => {
-          const dateA = new Date(a.submittedAt || a.created_at);
-          const dateB = new Date(b.submittedAt || b.created_at);
-          return dateB - dateA;
-        });
-        setEmployeeRecentRequests(sorted.slice(0, 5));
-      }
-    } catch (error) {
-      console.error('Error fetching employee recent requests:', error);
-    }
-  };
-
   // Fetch saldo banca ore
   const fetchOvertimeBalance = async () => {
     try {
@@ -485,13 +461,37 @@ const Dashboard = () => {
             
             // Verifica che le date siano valide (non NaN)
             if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+              // Determina il tipo specifico di permesso
+              let eventName = '';
+              if (req.type === 'vacation') {
+                eventName = 'Ferie';
+              } else if (req.type === 'sick' || req.type === 'sick_leave') {
+                eventName = 'Malattia';
+              } else if (req.type === 'permission' || req.type === 'permission_104') {
+                // Determina tipo specifico di permesso
+                if (req.permissionType === 'uscita_anticipata' || req.permissionType === 'early_exit' || req.exitTime || req.exit_time) {
+                  eventName = 'Uscita Anticipata';
+                } else if (req.permissionType === 'entrata_posticipata' || req.permissionType === 'late_entry' || req.entryTime || req.entry_time) {
+                  eventName = 'Entrata Posticipata';
+                } else if (req.permissionType === 'full_day' || req.fullDay) {
+                  eventName = 'Giornata Intera';
+                } else if (req.type === 'permission_104') {
+                  eventName = 'Permesso 104';
+                } else {
+                  eventName = 'Permesso';
+                }
+              } else {
+                eventName = 'Permesso';
+              }
+              
               events.push({
                 date: req.start_date,
                 endDate: req.end_date,
                 type: req.type,
-                name: req.type === 'vacation' ? 'Ferie' : req.type === 'sick' ? 'Malattia' : 'Permesso',
+                permissionType: req.permissionType,
+                name: eventName,
                 user: user?.role === 'admin' ? req.user_name : undefined,
-                color: req.type === 'vacation' ? 'green' : req.type === 'sick' ? 'red' : 'blue'
+                color: req.type === 'vacation' ? 'green' : req.type === 'sick' || req.type === 'sick_leave' ? 'red' : 'blue'
               });
             }
           }
@@ -989,115 +989,6 @@ const Dashboard = () => {
               </>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Richieste Recenti - Dipendente */}
-      {user?.role !== 'admin' && employeeRecentRequests.length > 0 && (
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <div 
-              className="flex items-center cursor-pointer flex-1"
-              onClick={() => setRequestsCollapsed(!requestsCollapsed)}
-            >
-              <h3 className="text-lg font-bold text-white flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-purple-400" />
-                Le Tue Richieste Recenti
-              </h3>
-              {requestsCollapsed ? (
-                <ChevronDown className="h-5 w-5 text-slate-400 ml-2" />
-              ) : (
-                <ChevronUp className="h-5 w-5 text-slate-400 ml-2" />
-              )}
-            </div>
-            <button
-              onClick={() => {
-                const type = employeeRecentRequests[0]?.type;
-                if (type === 'vacation') navigate('/ferie');
-                else if (type === 'sick_leave') navigate('/malattia');
-                else navigate('/permessi');
-              }}
-              className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
-            >
-              Vedi tutte →
-            </button>
-          </div>
-          {!requestsCollapsed && (
-            <div className="space-y-3">
-              {employeeRecentRequests.map((request) => {
-                // Determina tipo specifico del permesso
-                const getPermissionTypeLabel = () => {
-                  if (request.type === 'permission' || request.type === 'permission_104') {
-                    if (request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) {
-                      return 'Uscita Anticipata';
-                    } else if (request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) {
-                      return 'Entrata Posticipata';
-                    } else if (request.permissionType === 'full_day' || request.fullDay) {
-                      return 'Giornata Intera';
-                    } else if (request.type === 'permission_104') {
-                      return 'Permesso 104';
-                    }
-                    return 'Permesso';
-                  } else if (request.type === 'vacation') {
-                    return 'Ferie';
-                  } else if (request.type === 'sick_leave') {
-                    return 'Malattia';
-                  }
-                  return 'Richiesta';
-                };
-
-                // Colori basati sullo STATO, non sul tipo
-                const statusColors = request.status === 'approved' ? {
-                  bg: 'bg-green-500/20',
-                  border: 'border-green-500/30',
-                  text: 'text-green-300',
-                  statusText: 'text-green-400'
-                } : request.status === 'pending' ? {
-                  bg: 'bg-yellow-500/20',
-                  border: 'border-yellow-500/30',
-                  text: 'text-yellow-300',
-                  statusText: 'text-yellow-400'
-                } : request.status === 'rejected' ? {
-                  bg: 'bg-red-500/20',
-                  border: 'border-red-500/30',
-                  text: 'text-red-300',
-                  statusText: 'text-red-400'
-                } : {
-                  bg: 'bg-slate-500/20',
-                  border: 'border-slate-500/30',
-                  text: 'text-slate-300',
-                  statusText: 'text-slate-400'
-                };
-
-                const statusText = request.status === 'approved' ? 'Approvata' : 
-                                  request.status === 'pending' ? 'In attesa' : 
-                                  request.status === 'rejected' ? 'Rifiutata' : 'Sconosciuto';
-
-                return (
-                  <div key={request.id} className={`${statusColors.bg} border ${statusColors.border} rounded-lg p-4`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-semibold text-sm">
-                          {getPermissionTypeLabel()}
-                        </p>
-                        <p className={`${statusColors.text} text-xs mt-1`}>
-                          {request.start_date ? new Date(request.start_date).toLocaleDateString('it-IT') : 'Data non disponibile'}
-                          {request.end_date && request.end_date !== request.start_date && 
-                            ` - ${new Date(request.end_date).toLocaleDateString('it-IT')}`
-                          }
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-sm font-semibold ${statusColors.statusText}`}>
-                          {statusText}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 
