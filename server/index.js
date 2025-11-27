@@ -9656,25 +9656,56 @@ async function calculateOvertimeBalance(userId, year = null) {
       };
     }
 
-    // IMPORTANTE: Escludi la giornata corrente dalla somma del debito
+    // IMPORTANTE: Escludi la giornata corrente dalla somma del debito SOLO se non c'è un permesso approvato
     // Il balance_hours di oggi include le ore ancora da lavorare, che non sono debito
-    // Il debito deve essere basato solo sui giorni già completati
+    // MA se c'è un permesso approvato per oggi, il debito è già definitivo e va incluso
+    const todayRecord = attendance?.find(r => r.date === today);
+    const hasApprovedPermissionToday = todayRecord?.notes && (
+      todayRecord.notes.includes('Permesso approvato') ||
+      todayRecord.notes.includes('Permesso creato dall\'admin')
+    );
+
     const totalBalance = attendance && attendance.length > 0
       ? attendance.reduce((sum, record) => {
-        // Escludi la giornata corrente: le ore rimanenti oggi non sono debito
+        // Per oggi: includi solo se c'è un permesso approvato (debito già definitivo)
         if (record.date === today) {
-          return sum;
+          if (hasApprovedPermissionToday) {
+            const balance = parseFloat(record.balance_hours || 0);
+            return sum + balance;
+          }
+          return sum; // Escludi se non c'è permesso approvato
         }
         const balance = parseFloat(record.balance_hours || 0);
         return sum + balance;
       }, 0)
       : 0;
 
+    // IMPORTANTE: Se c'è un permesso approvato per oggi ma non è ancora stato registrato nell'attendance,
+    // aggiungilo al debito (può succedere se il permesso è stato appena approvato)
+    let todayPermissionHours = 0;
+    if (!hasApprovedPermissionToday || !todayRecord) {
+      // Verifica se c'è un permesso approvato per oggi
+      const { data: todayPermissions, error: todayPermError } = await supabase
+        .from('leave_requests')
+        .select('hours')
+        .eq('user_id', userId)
+        .eq('type', 'permission')
+        .eq('status', 'approved')
+        .lte('start_date', today)
+        .gte('end_date', today);
+
+      if (!todayPermError && todayPermissions && todayPermissions.length > 0) {
+        todayPermissionHours = todayPermissions.reduce((sum, p) => sum + parseFloat(p.hours || 0), 0);
+        // Se non c'è un record di attendance per oggi o non ha il permesso registrato, aggiungi le ore
+        if (!todayRecord || !hasApprovedPermissionToday) {
+          console.log(`⚠️ Found approved permission for today (${todayPermissionHours}h) but not yet in attendance, adding to debt`);
+        }
+      }
+    }
+
     // IMPORTANTE: Aggiungi le ore delle richieste di recupero in stato "pending" o "proposed"
     // Queste richieste rappresentano ore che il dipendente deve ancora recuperare,
     // quindi aumentano il debito totale
-    // NOTA: I permessi approvati NON vengono aggiunti qui perché quando vengono approvati,
-    // vengono già registrati nel record di attendance con il balance_hours corretto
     const { data: pendingRecoveryRequests, error: recoveryError } = await supabase
       .from('recovery_requests')
       .select('hours, status')
@@ -9690,17 +9721,21 @@ async function calculateOvertimeBalance(userId, year = null) {
 
     // Il debito totale include:
     // 1. Il saldo negativo dalle presenze (già include i permessi approvati registrati)
-    // 2. Le ore di recupero richieste ma non ancora approvate/completate
-    const totalBalanceWithRecovery = totalBalance - pendingRecoveryHours;
+    // 2. Le ore dei permessi approvati per oggi non ancora registrati nell'attendance
+    // 3. Le ore di recupero richieste ma non ancora approvate/completate
+    const totalBalanceWithRecovery = totalBalance - todayPermissionHours - pendingRecoveryHours;
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log per debug
-    const todayRecord = attendance?.find(r => r.date === today);
     if (todayRecord) {
       const todayBalance = parseFloat(todayRecord.balance_hours || 0);
-      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h)`);
+      if (hasApprovedPermissionToday) {
+        console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h (including today with approved permission: ${todayBalance.toFixed(2)}h), Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
+      } else {
+        console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h), Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
+      }
     } else {
-      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
+      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
     }
 
     // Determina lo status
