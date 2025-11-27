@@ -1,0 +1,25 @@
+{
+  "name": "Presenze LABA - Sistema HR",
+  "short_name": "Presenze LABA",
+  "description": "Sistema HR completo per la gestione delle presenze e richieste di permesso per LABA Firenze",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#104a96",
+  "theme_color": "#104a96",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
