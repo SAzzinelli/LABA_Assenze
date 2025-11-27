@@ -12,15 +12,31 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
     const loadHolidays = async () => {
       try {
         setLoading(true);
-        const currentYear = year || new Date().getFullYear();
-        const response = await apiCall(`/api/holidays?year=${currentYear}`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log(`📅 Loaded ${data.length} holidays for year ${currentYear}`);
-          setHolidays(data || []);
-        } else {
-          console.error('Failed to load holidays:', response.status);
+        // Carica festivi per 2025 e 2026
+        const [response2025, response2026] = await Promise.all([
+          apiCall('/api/holidays?year=2025'),
+          apiCall('/api/holidays?year=2026')
+        ]);
+        
+        let allHolidays = [];
+        
+        if (response2025.ok) {
+          const data2025 = await response2025.json();
+          allHolidays = [...(data2025 || [])];
+          console.log(`📅 Loaded ${data2025.length} holidays for year 2025`);
         }
+        
+        if (response2026.ok) {
+          const data2026 = await response2026.json();
+          allHolidays = [...allHolidays, ...(data2026 || [])];
+          console.log(`📅 Loaded ${data2026.length} holidays for year 2026`);
+        }
+        
+        // Ordina per data
+        allHolidays.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        setHolidays(allHolidays);
+        console.log(`📅 Total holidays loaded: ${allHolidays.length}`);
       } catch (error) {
         console.error('Error loading holidays:', error);
       } finally {
@@ -29,7 +45,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
     };
 
     loadHolidays();
-  }, [year, apiCall]);
+  }, [apiCall]);
 
   const getUpcomingHolidays = () => {
     const today = new Date();
@@ -46,7 +62,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
       <div className="bg-slate-800 rounded-lg p-6">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-green-400" />
-          Giorni Festivi {year}
+          Giorni Festivi A.A. 2025/2026
         </h3>
         <div className="text-center text-slate-400">Caricamento...</div>
       </div>
@@ -61,7 +77,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
       >
         <h3 className="text-xl font-bold text-white flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-green-400" />
-          Giorni Festivi {year}
+          Giorni Festivi A.A. 2025/2026
         </h3>
         {isCollapsed ? (
           <ChevronDown className="h-5 w-5 text-slate-400" />
@@ -126,8 +142,12 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
 
           <div className="mt-4 pt-4 border-t border-slate-600">
             <div className="flex items-center justify-between text-sm text-slate-400">
-              <span>Totale giorni festivi {year}:</span>
+              <span>Totale giorni festivi A.A. 2025/2026:</span>
               <span className="font-semibold text-white">{holidays.length} giorni</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+              <span>2025: {holidays.filter(h => new Date(h.date).getFullYear() === 2025).length} giorni</span>
+              <span>2026: {holidays.filter(h => new Date(h.date).getFullYear() === 2026).length} giorni</span>
             </div>
           </div>
         </>

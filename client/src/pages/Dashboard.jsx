@@ -999,7 +999,7 @@ const Dashboard = () => {
 
       {/* Calendario Festivi - Dipendente */}
       {user?.role !== 'admin' && (
-        <HolidaysCalendar year={new Date().getFullYear()} />
+        <HolidaysCalendar />
       )}
 
       {/* Admin Dashboard - Layout a 2 colonne */}
@@ -1369,7 +1369,7 @@ const Dashboard = () => {
           {/* Fine grid per Richieste Recenti e In programma oggi */}
 
       {/* Giorni Festivi */}
-      <HolidaysCalendar year={new Date().getFullYear()} />
+      <HolidaysCalendar />
         </>
       )}
 
