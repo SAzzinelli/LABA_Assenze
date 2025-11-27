@@ -767,13 +767,14 @@ const LeaveRequests = () => {
 
   // Filtra le richieste per il mese/anno selezionato, ricerca e tab attiva
   const parseRequestDate = (request, includeTime = false) => {
-    const rawDate = request.permissionDate || request.startDate;
+    const rawDate = request.permissionDate || request.startDate || request.start_date;
     if (!rawDate) return null;
     const date = new Date(rawDate);
     if (isNaN(date.getTime())) return null;
 
     if (includeTime) {
-      const timeStr = request.exitTime || request.entryTime;
+      // Prova entrambi i formati: camelCase e snake_case
+      const timeStr = request.exitTime || request.exit_time || request.entryTime || request.entry_time;
       if (timeStr) {
         const [hours, minutes] = timeStr.split(':').map(Number);
         if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
@@ -789,14 +790,27 @@ const LeaveRequests = () => {
     if (request.status !== 'approved') return false;
     const dateWithTime = parseRequestDate(request, true);
     if (!dateWithTime) return true;
-    return dateWithTime > new Date();
+    // Permetti annullamento solo se l'orario del permesso è almeno 2 ore nel futuro
+    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    return dateWithTime > twoHoursFromNow;
   };
 
   const canModifyRequest = (request) => {
     if (request.status !== 'approved') return false;
     const dateWithTime = parseRequestDate(request, true);
     if (!dateWithTime) return true; // Se non c'è orario, permettere modifica
-    return dateWithTime > new Date(); // Permetti modifica solo se l'orario non è ancora passato
+    // Permetti modifica solo se l'orario del permesso è almeno 2 ore nel futuro
+    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    return dateWithTime > twoHoursFromNow;
+  };
+
+  const canRequestModification = (request) => {
+    if (request.status !== 'approved') return false;
+    const dateWithTime = parseRequestDate(request, true);
+    if (!dateWithTime) return true; // Se non c'è orario, permettere richiesta modifica
+    // Permetti richiesta modifica solo se l'orario del permesso è almeno 2 ore nel futuro
+    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    return dateWithTime > twoHoursFromNow;
   };
 
   const getFilteredRequests = () => {
@@ -1535,8 +1549,8 @@ const LeaveRequests = () => {
                       </div>
                     )}
 
-                    {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate */}
-                    {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && (
+                    {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate e se l'orario non è ancora passato */}
+                    {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && canRequestModification(request) && (
                       <div className="mt-4">
                         <button
                           onClick={() => {
