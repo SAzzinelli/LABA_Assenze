@@ -4,6 +4,7 @@ import { useModal } from '../hooks/useModal';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import AdminCreatePermissionModal from '../components/AdminCreatePermissionModal';
+import { PermessiSkeleton } from '../components/Skeleton';
 import { 
   FileText, 
   Plus, 
@@ -1008,6 +1009,10 @@ const LeaveRequests = () => {
     return diffDays;
   };
 
+
+  if (loading) {
+    return <PermessiSkeleton />;
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">

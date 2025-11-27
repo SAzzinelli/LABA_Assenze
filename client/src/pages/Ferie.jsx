@@ -4,6 +4,7 @@ import { useModal } from '../hooks/useModal';
 import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import VacationCalendar from '../components/VacationCalendar';
 import AdminCreateVacationModal from '../components/AdminCreateVacationModal';
+import { FerieSkeleton } from '../components/Skeleton';
 import { 
   Plane, 
   Plus, 
@@ -675,6 +676,10 @@ const Vacation = () => {
       alert('Errore nell\'aggiornamento del periodo');
     }
   };
+
+  if (loading) {
+    return <FerieSkeleton />;
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">

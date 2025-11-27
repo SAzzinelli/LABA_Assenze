@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useModal } from '../hooks/useModal';
 import CustomAlert from '../components/CustomAlert';
+import { Permessi104Skeleton } from '../components/Skeleton';
 import { 
   Accessibility, 
   Plus, 
@@ -448,8 +449,22 @@ const Permessi104 = () => {
           </span>
         </div>
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="h-5 w-5 bg-slate-600 rounded animate-pulse" />
+                      <div className="h-5 w-48 bg-slate-600 rounded animate-pulse" />
+                      <div className="h-6 w-20 bg-slate-600 rounded-full animate-pulse" />
+                    </div>
+                    <div className="h-4 w-64 bg-slate-600 rounded animate-pulse ml-8 mb-1" />
+                    <div className="h-3 w-48 bg-slate-600 rounded animate-pulse ml-8" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : requests.filter(r=>{
               const matchesSearch= (r.notes||'').toLowerCase().includes(searchTerm.toLowerCase());
