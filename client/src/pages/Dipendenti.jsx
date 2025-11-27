@@ -600,13 +600,13 @@ const Employees = () => {
             <table className="w-full">
               <thead className="bg-slate-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-1/3">
                     Nome
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-1/4">
                     Dipartimento
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-auto">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                     Azioni
                   </th>
                 </tr>
@@ -618,28 +618,33 @@ const Employees = () => {
                     className="hover:bg-slate-700/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
                     onClick={() => handleViewDetails(employee)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                        <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold text-sm">
                             {employee.name.split(' ').map(n => n[0]).join('')}
                           </span>
                         </div>
-                        <div className="ml-4">
-                          <div className="flex items-center space-x-2">
+                        <div className="ml-4 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className="text-sm font-medium text-white">
                               {employee.name}
                             </div>
                             {employee.has104 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400 flex-shrink-0">
                                 104
+                              </span>
+                            )}
+                            {employee.role === 'supervisor' && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 flex-shrink-0">
+                                SUPERVISORE
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${employee.department === 'Amministrazione'
                           ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
                           : employee.department === 'Segreteria'
@@ -653,21 +658,14 @@ const Employees = () => {
                         {employee.department}
                       </span>
                     </td>
-                    {employee.role === 'supervisor' && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30 shadow-sm">
-                          SUPERVISORE
-                        </span>
-                      </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditEmployee(employee);
                           }}
-                          className="flex items-center space-x-2 px-3 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 hover:scale-105"
                           title="Modifica"
                         >
                           <Edit className="h-4 w-4" />
@@ -678,7 +676,7 @@ const Employees = () => {
                             e.stopPropagation();
                             handleViewDetails(employee);
                           }}
-                          className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-green-500/20 text-green-300 border border-green-400/30 rounded-lg hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-200 hover:scale-105"
                           title="Visualizza dettagli"
                         >
                           <Eye className="h-4 w-4" />
@@ -689,7 +687,7 @@ const Employees = () => {
                             e.stopPropagation();
                             handleResetPassword(employee);
                           }}
-                          className="flex items-center space-x-2 px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 hover:border-yellow-400/50 transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-lg hover:bg-yellow-500/30 hover:border-yellow-400/50 transition-all duration-200 hover:scale-105"
                           title="Reset Password"
                         >
                           <Key className="h-4 w-4" />
