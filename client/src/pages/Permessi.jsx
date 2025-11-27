@@ -857,11 +857,24 @@ const LeaveRequests = () => {
         });
       }
     } else {
-      // Per dipendenti: filtra per mese/anno selezionato (tutti gli status)
+      // Per dipendenti: mostra permessi del mese/anno selezionato E permessi futuri (almeno 2 mesi avanti)
       filtered = filtered.filter(request => {
         const requestDate = parseRequestDate(request);
         if (!requestDate) return false;
-        // Filtra per mese/anno - include tutti gli status (pending, approved, rejected)
+        
+        // Mostra sempre permessi futuri (oltre il mese corrente)
+        const requestMonth = requestDate.getMonth();
+        const requestYear = requestDate.getFullYear();
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        
+        // Se il permesso è futuro (oltre il mese corrente), mostralo sempre
+        if (requestYear > currentYear || (requestYear === currentYear && requestMonth > currentMonth)) {
+          return true;
+        }
+        
+        // Altrimenti filtra per mese/anno selezionato (tutti gli status)
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
