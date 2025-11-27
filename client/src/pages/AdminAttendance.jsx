@@ -110,19 +110,16 @@ const AdminAttendance = () => {
 
   useEffect(() => {
     const initializeData = async () => {
-      await fetchAttendanceData();
-      await fetchEmployees();
-      await fetchAllEmployees();  // Questo ora carica anche i permessi internamente
-      await fetchWorkSchedules();
-      await fetchSickToday();
-      await fetch104Today();
-      await fetchStats();
-
-      // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
-      setTimeout(() => {
-        console.log('🔄 Secondary admin data update...');
-        fetchStats();
-      }, 1000);
+      // Carica i dati critici in parallelo per velocità
+      await Promise.all([
+        fetchAttendanceData(),
+        fetchEmployees(),
+        fetchAllEmployees(),  // Questo ora carica anche i permessi internamente
+        fetchWorkSchedules(),
+        fetchSickToday(),
+        fetch104Today(),
+        fetchStats()
+      ]);
 
       // Nasconde il loading iniziale dopo che tutti i dati sono caricati
       setLoading(false);

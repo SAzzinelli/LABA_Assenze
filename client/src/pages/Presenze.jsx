@@ -81,14 +81,8 @@ const Attendance = () => {
         // Solo se workSchedules è disponibile, altrimenti usa i dati dall'endpoint
         if (workSchedules.length > 0) {
           console.log('🔄 Forcing immediate real-time calculation...');
-          await performRealTimeCalculation();
-        }
-
-        // 3. Ricalcola anche dopo un breve delay per sicurezza
-        setTimeout(() => {
-          console.log('🔄 Secondary real-time calculation...');
           performRealTimeCalculation();
-        }, 500);
+        }
 
         console.log('✅ Data loaded with real-time calculation');
       } finally {

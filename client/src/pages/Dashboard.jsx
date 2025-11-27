@@ -76,43 +76,33 @@ const Dashboard = () => {
         // Fetch dashboard stats
         await fetchDashboardData();
         
-        // Fetch data based on role
+        // Fetch data based on role - in parallelo per velocità
         console.log('🔍 Dashboard loading for user role:', user?.role);
         if (user?.role === 'admin') {
-          // Admin: fetch real-time data
+          // Admin: fetch real-time data in parallelo
           console.log('🔍 Loading admin data...');
-          await fetchEmployees();
-          await fetchAdminWorkSchedules();
-          await calculateAdminRealTimeData();
-          await fetchSickToday(); // Fetch employees on sick leave today
+          await Promise.all([
+            fetchEmployees(),
+            fetchAdminWorkSchedules(),
+            fetchSickToday(), // Fetch employees on sick leave today
+            fetchRecentRequests(),
+            fetchUpcomingRecoveries()
+          ]);
+          // Calcola dopo che i dati sono caricati
+          calculateAdminRealTimeData();
         } else {
-          // Employee: fetch personal data
+          // Employee: fetch personal data in parallelo
           console.log('🔍 Loading employee data...');
-          await fetchAttendanceData();
-          await fetchWorkSchedules();
-          await fetchOvertimeBalance();
-          await fetchVacationBalance();
+          await Promise.all([
+            fetchAttendanceData(),
+            fetchWorkSchedules(),
+            fetchOvertimeBalance(),
+            fetchVacationBalance()
+          ]);
         }
         
-        // Fetch recent requests for admin
-        if (user?.role === 'admin') {
-          await fetchRecentRequests();
-          await fetchUpcomingRecoveries();
-        }
-        
-        // Fetch upcoming events for all users
-        await fetchUpcomingEvents();
-        
-        // Forza un secondo aggiornamento dopo 1 secondo per sicurezza
-        setTimeout(() => {
-          if (user?.role === 'employee') {
-            console.log('🔄 Secondary KPI update...');
-            // Non calcolare KPI localmente, usa solo l'endpoint
-          } else if (user?.role === 'admin') {
-            console.log('🔄 Secondary admin real-time update...');
-            calculateAdminRealTimeData();
-          }
-        }, 1000);
+        // Fetch upcoming events for all users (non critico, può caricare dopo)
+        fetchUpcomingEvents().catch(console.error);
         
         // Timer per ricaricare i dati ogni 30 secondi
         const refreshTimer = setInterval(() => {
@@ -135,30 +125,37 @@ const Dashboard = () => {
           }
         }, 60000); // Ogni minuto
         
-        // Fetch weekly attendance data (solo per admin)
+        // Nasconde il loading PRIMA di caricare dati secondari (grafici)
+        setLoading(false);
+        
+        // Fetch weekly attendance data (solo per admin) - dati secondari, non bloccano il loading
         if (user?.role === 'admin') {
-          const weeklyResponse = await apiCall('/api/dashboard/attendance');
-          if (weeklyResponse.ok) {
-            const weeklyData = await weeklyResponse.json();
-            setWeeklyAttendance(weeklyData || []);
-          }
-          
-          // Fetch departments data
-          const departmentsResponse = await apiCall('/api/departments');
-          if (departmentsResponse.ok) {
-            const departmentsData = await departmentsResponse.json();
-            if (departmentsData && departmentsData.length > 0) {
-              const chartData = departmentsData.map((dept, index) => ({
-                name: dept.name,
-                value: dept.employee_count || 0,
-                color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
-                employees: dept.employee_count || 0
-              }));
-              setDepartments(chartData);
-            } else {
-              setDepartments([]);
-            }
-          }
+          Promise.all([
+            apiCall('/api/dashboard/attendance').then(response => {
+              if (response.ok) {
+                return response.json().then(data => {
+                  setWeeklyAttendance(data || []);
+                });
+              }
+            }),
+            apiCall('/api/departments').then(response => {
+              if (response.ok) {
+                return response.json().then(departmentsData => {
+                  if (departmentsData && departmentsData.length > 0) {
+                    const chartData = departmentsData.map((dept, index) => ({
+                      name: dept.name,
+                      value: dept.employee_count || 0,
+                      color: ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'][index % 4],
+                      employees: dept.employee_count || 0
+                    }));
+                    setDepartments(chartData);
+                  } else {
+                    setDepartments([]);
+                  }
+                });
+              }
+            })
+          ]).catch(console.error);
         }
         
         return () => {
@@ -167,7 +164,6 @@ const Dashboard = () => {
         };
       } catch (error) {
         console.error('Error loading dashboard data:', error);
-      } finally {
         setLoading(false);
       }
     };
