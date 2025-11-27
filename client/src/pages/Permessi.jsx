@@ -22,7 +22,8 @@ import {
   User,
   Search,
   UserPlus,
-  MessageSquare
+  MessageSquare,
+  Timer
 } from 'lucide-react';
 
 const LeaveRequests = () => {
@@ -1407,168 +1408,260 @@ const LeaveRequests = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredRequests.map((request) => (
-              <div key={request.id} className="bg-slate-700 rounded-lg p-6 hover:bg-slate-600 transition-colors">
+              {filteredRequests.map((request) => {
+                const permissionDate = request.permissionDate ? formatDate(request.permissionDate) : 
+                                      request.startDate ? formatDate(request.startDate) : 'Data non disponibile';
+                const hours = request.hours ? formatHoursReadable(request.hours) : 
+                             `${calculateDays(request.startDate, request.endDate)} giorni`;
+                const isApproved = request.status === 'approved';
+                const isPending = request.status === 'pending';
+                const isRejected = request.status === 'rejected';
+                
+                return (
+              <div key={request.id} className={`rounded-lg p-6 transition-all hover:shadow-lg ${
+                isApproved ? 'bg-green-500/10 border-l-4 border-green-500' : 
+                isPending ? 'bg-yellow-500/10 border-l-4 border-yellow-500' : 
+                'bg-red-500/10 border-l-4 border-red-500'
+              }`}>
+                {/* HEADER: Status e Tipo */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      {getStatusIcon(request.status)}
-                      <h3 className="text-lg font-semibold text-white ml-2">{getPermissionTypeText(request)}</h3>
-                      <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(request.status)}
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{getPermissionTypeText(request)}</h3>
+                      <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                        isApproved ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                        isPending ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                        'bg-red-500/20 text-red-300 border border-red-500/30'
+                      }`}>
                         {getStatusText(request.status)}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
-                      {user?.role === 'admin' && (
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Dipendente: {request.submittedBy}</span>
+                  </div>
+                  
+                  {/* LATO ADMIN: Dipendente in evidenza */}
+                  {user?.role === 'admin' && (
+                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-5 w-5 text-indigo-400" />
+                        <div>
+                          <p className="text-xs text-indigo-300">Dipendente</p>
+                          <p className="text-base font-bold text-indigo-200">{request.submittedBy}</p>
                         </div>
-                      )}
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-indigo-400" />
-                        <span className="font-medium text-white">
-                          Permesso per il: <span className="text-slate-300 font-normal">
-                            {request.permissionDate ? formatDate(request.permissionDate) : 
-                             request.startDate ? formatDate(request.startDate) : 'Data non disponibile'}
-                          </span>
-                        </span>
                       </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>
-                          {request.hours ? 
-                            formatHoursReadable(request.hours) :
-                            `${calculateDays(request.startDate, request.endDate)} giorni`
-                          }
-                          {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
-                            <span className="ml-2 text-indigo-400">• Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}</span>
-                          )}
-                          {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
-                            <span className="ml-2 text-indigo-400">• Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <FileText className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>
-                          {request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime ? (
-                            <span className="text-orange-400 font-medium">
-                              Uscita Anticipata
-                              {(request.exitTime || request.exit_time) && (
-                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)})</span>
-                              )}
-                            </span>
-                          ) : request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime ? (
-                            <span className="text-blue-400 font-medium">
-                              Entrata Posticipata
-                              {(request.entryTime || request.entry_time) && (
-                                <span className="ml-2 text-sm font-normal text-slate-300">(alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)})</span>
-                              )}
-                            </span>
-                          ) : (
-                        <span>Tipo: {getPermissionTypeText(request)}</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-slate-400" />
-                        <span className="text-slate-400 text-xs">
-                          Richiesta il: {formatDateTime(request.submittedAt)}
-                        </span>
-                      </div>
-                      {request.approvedAt && (
-                        <div className="flex items-center">
-                          <CheckCircle className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Approvato da: {request.approver?.name || request.approvedBy} alle {formatDateTime(request.approvedAt)}</span>
-                        </div>
-                      )}
-                      {request.rejectedAt && (
-                        <div className="flex items-center">
-                          <XCircle className="h-4 w-4 mr-2 text-slate-400" />
-                          <span>Rifiutata: {formatDateTime(request.rejectedAt)}</span>
-                        </div>
-                      )}
                     </div>
+                  )}
+                </div>
+
+                {/* DATI PRINCIPALI: Quando e Per Quanto */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* QUANDO */}
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="h-5 w-5 text-indigo-400" />
+                      <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Data Permesso</span>
+                    </div>
+                    <p className="text-xl font-bold text-white">{permissionDate}</p>
+                    {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
+                      <p className="text-sm text-orange-400 mt-1 font-medium">
+                        Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}
+                      </p>
+                    )}
+                    {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
+                      <p className="text-sm text-blue-400 mt-1 font-medium">
+                        Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* PER QUANTO */}
+                  <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-5 w-5 text-amber-400" />
+                      <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Durata</span>
+                    </div>
+                    <p className="text-xl font-bold text-white">{hours}</p>
+                    {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && (
+                      <p className="text-xs text-slate-400 mt-1">Uscita Anticipata</p>
+                    )}
+                    {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && (
+                      <p className="text-xs text-slate-400 mt-1">Entrata Posticipata</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* DATI SECONDARI: Approvazione e Richiesta */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {/* LATO DIPENDENTE: Approvazione */}
+                  {user?.role === 'employee' && (
+                    <>
+                      {isApproved && request.approvedAt && (
+                        <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
+                          </div>
+                          <p className="text-sm text-white font-medium">
+                            Da: <span className="text-green-300">{request.approver?.name || request.approvedBy || 'Amministratore'}</span>
+                          </p>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {formatDateTime(request.approvedAt)}
+                          </p>
+                        </div>
+                      )}
+                      {isPending && (
+                        <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-4 w-4 text-yellow-400" />
+                            <span className="text-sm text-yellow-300 font-medium">In attesa di approvazione</span>
+                          </div>
+                        </div>
+                      )}
+                      {isRejected && request.rejectedAt && (
+                        <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                          <div className="flex items-center gap-2 mb-1">
+                            <XCircle className="h-4 w-4 text-red-400" />
+                            <span className="text-xs font-medium text-red-300 uppercase">Rifiutato</span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {formatDateTime(request.rejectedAt)}
+                          </p>
+                        </div>
+                      )}
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
+                        </div>
+                        <p className="text-sm text-white">{formatDateTime(request.submittedAt)}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {/* LATO ADMIN: Info Approvazione */}
+                  {user?.role === 'admin' && (
+                    <>
+                      {isApproved && request.approvedAt && (
+                        <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CheckCircle className="h-4 w-4 text-green-400" />
+                            <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
+                          </div>
+                          <p className="text-sm text-white">
+                            {formatDateTime(request.approvedAt)}
+                          </p>
+                        </div>
+                      )}
+                      {isPending && (
+                        <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-4 w-4 text-yellow-400" />
+                            <span className="text-sm text-yellow-300 font-medium">In attesa</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
+                        </div>
+                        <p className="text-sm text-white">{formatDateTime(request.submittedAt)}</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* NOTE E MOTIVI */}
+                {(request.notes || request.rejectionReason) && (
+                  <div className="space-y-2 mb-4">
                     {request.notes && (
-                      <div className="mt-3 p-3 bg-slate-600 rounded-lg">
-                        <p className="text-slate-300 text-sm">
-                          <strong>Note:</strong> {request.notes}
-                        </p>
+                      <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                        <div className="flex items-start gap-2">
+                          <FileText className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-slate-400 mb-1">Note</p>
+                            <p className="text-sm text-slate-300">{request.notes}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
                     {request.rejectionReason && (
-                      <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <p className="text-red-300 text-sm">
-                          <strong>Motivo rifiuto:</strong> {request.rejectionReason}
-                        </p>
+                      <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                        <div className="flex items-start gap-2">
+                          <XCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-red-300 mb-1">Motivo Rifiuto</p>
+                            <p className="text-sm text-red-200">{request.rejectionReason}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
-                    
-                    {/* Pulsanti di approvazione per admin - solo per richieste pending */}
-                    {user?.role === 'admin' && request.status === 'pending' && (
-                      <div className="mt-4 flex gap-3">
-                        <button
-                          onClick={() => openApproveDialog(request.id)}
-                          className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approva
-                        </button>
-                        <button
-                          onClick={() => openRejectDialog(request.id)}
-                          className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Rifiuta
-                        </button>
-                      </div>
-                    )}
+                  </div>
+                )}
+                
+                {/* PULSANTI AZIONE */}
+                <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-700">
+                  {/* Pulsanti di approvazione per admin - solo per richieste pending */}
+                  {user?.role === 'admin' && request.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => openApproveDialog(request.id)}
+                        className="flex items-center px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium min-h-[44px]"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approva
+                      </button>
+                      <button
+                        onClick={() => openRejectDialog(request.id)}
+                        className="flex items-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium min-h-[44px]"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Rifiuta
+                      </button>
+                    </>
+                  )}
 
-                    {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
-                    {user?.role === 'admin' && request.status === 'approved' && request.type === 'permission' && (
-                      <div className="mt-4 flex gap-3 flex-wrap">
-                        {canModifyRequest(request) && (
-                          <button
-                            onClick={() => openEditDialog(request)}
-                            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
-                          >
-                            <Save className="h-4 w-4 mr-2" />
-                            Modifica
-                          </button>
-                        )}
-                        {canCancelRequest(request) && (
+                  {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
+                  {user?.role === 'admin' && request.status === 'approved' && request.type === 'permission' && (
+                    <>
+                      {canModifyRequest(request) && (
+                        <button
+                          onClick={() => openEditDialog(request)}
+                          className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          Modifica
+                        </button>
+                      )}
+                      {canCancelRequest(request) && (
                         <button
                           onClick={() => openCancelDialog(request.id)}
-                            className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                          className="flex items-center px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
                         >
                           <X className="h-4 w-4 mr-2" />
                           Annulla
                         </button>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </>
+                  )}
 
-                    {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate e se l'orario non è ancora passato */}
-                    {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && canRequestModification(request) && (
-                      <div className="mt-4">
-                        <button
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setModificationRequest({ reason: '', requestedChanges: '' });
-                            setShowRequestModificationDialog(true);
-                          }}
-                          className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Richiedi Modifica
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate e se l'orario non è ancora passato */}
+                  {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && canRequestModification(request) && (
+                    <button
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setModificationRequest({ reason: '', requestedChanges: '' });
+                        setShowRequestModificationDialog(true);
+                      }}
+                      className="flex items-center px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Richiedi Modifica
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+              })}
           </div>
           );
         })()}
