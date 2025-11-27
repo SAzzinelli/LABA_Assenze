@@ -1378,8 +1378,8 @@ const LeaveRequests = () => {
       )}
 
       {/* Requests List */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white flex items-center mb-6">
+      <div className="bg-slate-800 rounded-lg p-4">
+        <h2 className="text-xl font-bold text-white flex items-center mb-4">
           <Clock className="h-6 w-6 mr-3 text-slate-400" />
           {user?.role === 'admin' ? 'Gestione Richieste Permessi' : 'Storico Richieste Permessi'}
         </h2>
@@ -1418,7 +1418,7 @@ const LeaveRequests = () => {
                 const isRejected = request.status === 'rejected';
                 
                 return (
-              <div key={request.id} className={`rounded-lg p-3 bg-slate-700/80 border border-slate-600/50 border-l-4 shadow-lg transition-all hover:shadow-xl hover:bg-slate-700/90 max-w-4xl mx-auto ${
+              <div key={request.id} className={`rounded-lg p-3 bg-slate-700/80 border border-slate-600/50 border-l-4 shadow-lg transition-all hover:shadow-xl hover:bg-slate-700/90 w-full ${
                 isApproved ? 'border-l-green-500' : 
                 isPending ? 'border-l-yellow-500' : 
                 'border-l-red-500'
