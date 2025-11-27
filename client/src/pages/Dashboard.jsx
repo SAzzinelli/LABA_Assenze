@@ -12,7 +12,9 @@ import {
   Calendar,
   XCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  DollarSign,
+  Plane
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import HolidaysCalendar from '../components/HolidaysCalendar';
@@ -45,6 +47,11 @@ const Dashboard = () => {
   const [attendanceData, setAttendanceData] = useState([]);
   const [workSchedules, setWorkSchedules] = useState([]);
   
+  // Dati aggiuntivi per dipendente
+  const [employeeRecentRequests, setEmployeeRecentRequests] = useState([]);
+  const [overtimeBalance, setOvertimeBalance] = useState(null);
+  const [vacationBalance, setVacationBalance] = useState(null);
+  
   // Dati per admin dashboard real-time
   const [adminRealTimeData, setAdminRealTimeData] = useState([]);
 
@@ -72,6 +79,9 @@ const Dashboard = () => {
           console.log('🔍 Loading employee data...');
           await fetchAttendanceData();
           await fetchWorkSchedules();
+          await fetchEmployeeRecentRequests();
+          await fetchOvertimeBalance();
+          await fetchVacationBalance();
         }
         
         // Fetch recent requests for admin
@@ -387,6 +397,58 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching upcoming recoveries:', error);
+    }
+  };
+
+  // Fetch richieste recenti per dipendente
+  const fetchEmployeeRecentRequests = async () => {
+    try {
+      if (user?.role !== 'employee') return;
+      
+      const response = await apiCall('/api/leave-requests?limit=5');
+      if (response.ok) {
+        const data = await response.json();
+        // Ordina per data di richiesta (più recenti prima)
+        const sorted = data.sort((a, b) => {
+          const dateA = new Date(a.submittedAt || a.created_at);
+          const dateB = new Date(b.submittedAt || b.created_at);
+          return dateB - dateA;
+        });
+        setEmployeeRecentRequests(sorted.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Error fetching employee recent requests:', error);
+    }
+  };
+
+  // Fetch saldo banca ore
+  const fetchOvertimeBalance = async () => {
+    try {
+      if (user?.role !== 'employee') return;
+      
+      const currentYear = new Date().getFullYear();
+      const response = await apiCall(`/api/hours/overtime-balance?year=${currentYear}`);
+      if (response.ok) {
+        const data = await response.json();
+        setOvertimeBalance(data);
+      }
+    } catch (error) {
+      console.error('Error fetching overtime balance:', error);
+    }
+  };
+
+  // Fetch saldo ferie
+  const fetchVacationBalance = async () => {
+    try {
+      if (user?.role !== 'employee') return;
+      
+      const response = await apiCall('/api/vacation-balances');
+      if (response.ok) {
+        const data = await response.json();
+        setVacationBalance(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vacation balance:', error);
     }
   };
 
@@ -730,6 +792,214 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Dashboard Dipendente - Sezioni Aggiuntive */}
+      {user?.role !== 'admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Banca Ore e Ferie */}
+          <div className="space-y-4">
+            {/* Banca Ore */}
+            {overtimeBalance !== null && (
+              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2 text-amber-400" />
+                    Banca Ore
+                  </h3>
+                  <button
+                    onClick={() => navigate('/banca-ore')}
+                    className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                  >
+                    Dettagli →
+                  </button>
+                </div>
+                <div className={`text-3xl font-bold mb-2 ${
+                  overtimeBalance.balance < 0 ? 'text-red-400' : 
+                  overtimeBalance.balance > 0 ? 'text-green-400' : 'text-white'
+                }`}>
+                  {overtimeBalance.balance < 0 ? '-' : '+'}{formatHours(Math.abs(overtimeBalance.balance || 0))}
+                </div>
+                <p className="text-sm text-slate-400">
+                  {overtimeBalance.balance < 0 ? 'Debito da recuperare' : 
+                   overtimeBalance.balance > 0 ? 'Credito disponibile' : 'In pari'}
+                </p>
+              </div>
+            )}
+
+            {/* Saldo Ferie */}
+            {vacationBalance && (
+              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white flex items-center">
+                    <Plane className="h-5 w-5 mr-2 text-blue-400" />
+                    Ferie
+                  </h3>
+                  <button
+                    onClick={() => navigate('/ferie')}
+                    className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                  >
+                    Dettagli →
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Giorni Rimanenti</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {vacationBalance.remaining_days || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400 mb-1">Giorni Utilizzati</p>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {vacationBalance.used_days || 0}
+                    </p>
+                  </div>
+                </div>
+                {vacationBalance.pending_days > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-700">
+                    <p className="text-xs text-slate-400">In attesa: <span className="text-yellow-400 font-semibold">{vacationBalance.pending_days} giorni</span></p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Eventi Imminenti */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center">
+                <Calendar className="h-5 w-5 mr-2 text-orange-400" />
+                Eventi Imminenti
+              </h3>
+            </div>
+            {upcomingEvents.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingEvents.slice(0, 5).map((event, index) => {
+                  const eventDate = new Date(event.date);
+                  const colorClasses = {
+                    green: 'bg-green-500/10 border-green-500/30',
+                    red: 'bg-red-500/10 border-red-500/30',
+                    blue: 'bg-blue-500/10 border-blue-500/30',
+                    purple: 'bg-purple-500/10 border-purple-500/30'
+                  };
+                  
+                  return (
+                    <div key={index} className={`p-3 rounded-lg border ${colorClasses[event.color]}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white font-semibold text-sm">{event.name}</p>
+                          <p className="text-slate-400 text-xs mt-1">
+                            {eventDate.toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          {eventDate.toDateString() === new Date().toDateString() ? (
+                            <span className="text-xs font-semibold text-orange-400">Oggi</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">
+                              {Math.ceil((eventDate - new Date()) / (1000 * 60 * 60 * 24))} giorni
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nessun evento imminente</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Richieste Recenti - Dipendente */}
+      {user?.role !== 'admin' && employeeRecentRequests.length > 0 && (
+        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center">
+              <FileText className="h-5 w-5 mr-2 text-purple-400" />
+              Le Tue Richieste Recenti
+            </h3>
+            <button
+              onClick={() => {
+                const type = employeeRecentRequests[0]?.type;
+                if (type === 'vacation') navigate('/ferie');
+                else if (type === 'sick_leave') navigate('/malattia');
+                else navigate('/permessi');
+              }}
+              className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+            >
+              Vedi tutte →
+            </button>
+          </div>
+          <div className="space-y-3">
+            {employeeRecentRequests.map((request) => {
+              const colors = request.type === 'permission' || request.type === 'permission_104' ? {
+                bg: 'bg-purple-500/10',
+                border: 'border-purple-500/20',
+                text: 'text-purple-300',
+                status: request.status === 'approved' ? 'text-green-400' : 
+                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
+              } : request.type === 'sick_leave' ? {
+                bg: 'bg-red-500/10',
+                border: 'border-red-500/20',
+                text: 'text-red-300',
+                status: request.status === 'approved' ? 'text-green-400' : 
+                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
+              } : {
+                bg: 'bg-blue-500/10',
+                border: 'border-blue-500/20',
+                text: 'text-blue-300',
+                status: request.status === 'approved' ? 'text-green-400' : 
+                       request.status === 'pending' ? 'text-yellow-400' : 'text-red-400'
+              };
+
+              const statusText = request.status === 'approved' ? 'Approvata' : 
+                                request.status === 'pending' ? 'In attesa' : 
+                                request.status === 'rejected' ? 'Rifiutata' : 'Sconosciuto';
+
+              return (
+                <div key={request.id} className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white font-semibold text-sm">
+                        {request.type === 'permission' ? 'Permesso' : 
+                         request.type === 'permission_104' ? 'Permesso 104' :
+                         request.type === 'vacation' ? 'Ferie' : 
+                         request.type === 'sick_leave' ? 'Malattia' : 'Richiesta'}
+                      </p>
+                      <p className={`${colors.text} text-xs mt-1`}>
+                        {request.start_date ? new Date(request.start_date).toLocaleDateString('it-IT') : 'Data non disponibile'}
+                        {request.end_date && request.end_date !== request.start_date && 
+                          ` - ${new Date(request.end_date).toLocaleDateString('it-IT')}`
+                        }
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-sm font-semibold ${colors.status}`}>
+                        {statusText}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Calendario Festivi - Dipendente */}
+      {user?.role !== 'admin' && (
+        <HolidaysCalendar year={new Date().getFullYear()} />
       )}
 
       {/* Admin Dashboard - Layout a 2 colonne */}
