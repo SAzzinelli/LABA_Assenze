@@ -49,10 +49,27 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
 
   const getUpcomingHolidays = () => {
     const today = new Date();
-    return holidays.filter(holiday => {
+    today.setHours(0, 0, 0, 0);
+    
+    // Filtra tutti i festivi futuri
+    const futureHolidays = holidays.filter(holiday => {
       const holidayDate = new Date(holiday.date);
+      holidayDate.setHours(0, 0, 0, 0);
       return holidayDate >= today;
-    }).slice(0, 3);
+    });
+    
+    // Assicurati di includere almeno alcuni festivi del 2026 se ci sono
+    const holidays2025 = futureHolidays.filter(h => new Date(h.date).getFullYear() === 2025);
+    const holidays2026 = futureHolidays.filter(h => new Date(h.date).getFullYear() === 2026);
+    
+    // Mostra tutti i festivi futuri, ma almeno alcuni del 2026 se ci sono
+    if (holidays2026.length > 0) {
+      // Mostra tutti i festivi del 2025 e almeno i primi 5 del 2026
+      return [...holidays2025, ...holidays2026.slice(0, 5)];
+    }
+    
+    // Se non ci sono festivi del 2026, mostra tutti quelli futuri (max 20 per non sovraccaricare)
+    return futureHolidays.slice(0, 20);
   };
 
   const upcomingHolidays = getUpcomingHolidays();
