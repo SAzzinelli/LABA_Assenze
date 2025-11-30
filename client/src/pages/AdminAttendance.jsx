@@ -13,7 +13,6 @@ import {
   Calendar,
   Filter,
   Search,
-  Download,
   Plus,
   Eye,
   CheckCircle,
@@ -65,7 +64,6 @@ const AdminAttendance = () => {
     notes: ''
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [downloadingReport, setDownloadingReport] = useState(false);
   const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
 
@@ -177,49 +175,6 @@ const AdminAttendance = () => {
       console.error('Error fetching attendance data:', error);
     } finally {
       setDataLoading(false);
-    }
-  };
-
-  const handleDownloadMonthlyReport = async () => {
-    try {
-      setDownloadingReport(true);
-      const response = await apiCall(`/api/admin/reports/monthly-attendance?year=${selectedYear}&month=${selectedMonth}`, {
-        headers: {
-          Accept: 'text/csv'
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Errore nel download del report');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const monthString = String(selectedMonth).padStart(2, '0');
-      link.href = url;
-      link.download = `report-presenze-${selectedYear}-${monthString}.csv`;
-      // Controllo sicurezza: assicurati che document.body esista
-      if (document.body) {
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        // Fallback: usa il root element
-        const root = document.getElementById('root');
-        if (root) {
-          root.appendChild(link);
-          link.click();
-          root.removeChild(link);
-        }
-      }
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Errore nel download del report mensile:', error);
-      window.alert('Errore nel download del report mensile. Riprova più tardi.');
-    } finally {
-      setDownloadingReport(false);
     }
   };
 
@@ -1161,26 +1116,41 @@ const AdminAttendance = () => {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
+              <button
+                onClick={() => setActiveTab('today')}
+                className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                  }`}
+              >
+                <CalendarDays className="h-4 w-4" />
+                Oggi
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
+                  ? 'bg-indigo-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                  }`}
+              >
+                <BarChart3 className="h-4 w-4" />
+                Cronologia
+              </button>
+            </div>
+            {/* Pulsante Esporta report - visibile in entrambe le view */}
             <button
-              onClick={() => setActiveTab('today')}
-              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              type="button"
+              onClick={handleDownloadMonthlyReportExcel}
+              disabled={downloadingExcel}
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingExcel
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-500'
                 }`}
             >
-              <CalendarDays className="h-4 w-4" />
-              Oggi
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
-                ? 'bg-indigo-600 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                }`}
-            >
-              <BarChart3 className="h-4 w-4" />
-              Cronologia
+              <FileText className="h-4 w-4" />
+              {downloadingExcel ? 'Creazione report...' : 'Esporta report'}
             </button>
           </div>
         </div>
@@ -1188,9 +1158,9 @@ const AdminAttendance = () => {
         {/* Filtri */}
         {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-            <div className="flex flex-col md:flex-row md:items-end gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                <div>
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+                <div className="md:col-span-2 lg:col-span-2">
                   <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
                   <div className="relative">
                     <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
@@ -1199,7 +1169,7 @@ const AdminAttendance = () => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Nome o cognome..."
-                      className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full pl-10 pr-3 py-2 h-[42px] bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
@@ -1209,7 +1179,7 @@ const AdminAttendance = () => {
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     {Array.from({ length: 12 }, (_, i) => (
                       <option key={i + 1} value={i + 1}>
@@ -1224,7 +1194,7 @@ const AdminAttendance = () => {
                   <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     {Array.from({ length: 5 }, (_, i) => {
                       const year = new Date().getFullYear() - 2 + i;
@@ -1236,32 +1206,6 @@ const AdminAttendance = () => {
                     })}
                   </select>
                 </div>
-              </div>
-              <div className="flex items-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadMonthlyReport}
-                  disabled={downloadingReport || downloadingExcel}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport || downloadingExcel
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
-                    }`}
-                >
-                  <Download className="h-4 w-4" />
-                  {downloadingReport ? 'Creazione report...' : 'Scarica report CSV'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadMonthlyReportExcel}
-                  disabled={downloadingReport || downloadingExcel}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport || downloadingExcel
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-500'
-                    }`}
-                >
-                  <FileText className="h-4 w-4" />
-                  {downloadingExcel ? 'Creazione Excel...' : 'Scarica Excel'}
-                </button>
               </div>
             </div>
           </div>
