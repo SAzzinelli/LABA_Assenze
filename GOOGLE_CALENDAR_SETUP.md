@@ -29,10 +29,22 @@ Questa guida spiega come configurare l'integrazione con Google Calendar per aggi
 4. Clicca "Create"
 5. Copia il **Client ID** e il **Client Secret**
 
+**⚠️ IMPORTANTE - Aggiungere utenti di test:**
+
+Se l'app è in fase di test (non ancora verificata da Google), devi aggiungere gli utenti che possono autorizzarla:
+
+1. Vai su "APIs & Services" > "OAuth consent screen"
+2. Scorri fino alla sezione **"Test users"** (Utenti di test)
+3. Clicca su **"+ ADD USERS"**
+4. Aggiungi l'email dell'account Google che userai per autorizzare l'app (es. `cianecollazzo@gmail.com`)
+5. Clicca "Add"
+6. **Ripeti per tutti gli account** che devono poter autorizzare l'app
+
 **Nota importante**: 
 - Google Cloud Console non accetta più `urn:ietf:wg:oauth:2.0:oob` come redirect URI
 - L'URL del redirect URI deve corrispondere **esattamente** all'URL del tuo server (incluso `http://` o `https://`)
 - Se il server è su Railway, usa l'URL completo del tuo servizio Railway
+- Se vedi l'errore "Access blocked" o "403: access_denied", significa che l'account non è nella lista degli utenti di test
 
 ### 3. Ottenere il Refresh Token
 
@@ -135,9 +147,27 @@ Quando un admin approva un permesso (permesso normale, ferie, malattia, permesso
 
 ## Troubleshooting
 
+### Errore: "Access blocked" o "403: access_denied"
+**Causa**: L'app OAuth è in fase di test e l'account non è nella lista degli utenti di test.
+
+**Soluzione**:
+1. Vai su Google Cloud Console → "APIs & Services" → "OAuth consent screen"
+2. Scorri fino a "Test users"
+3. Clicca "+ ADD USERS"
+4. Aggiungi l'email dell'account Google che stai usando (es. `cianecollazzo@gmail.com`)
+5. Clicca "Add"
+6. Riprova l'autorizzazione
+
+**Nota**: Se l'app è in produzione (verificata), questo problema non si presenta.
+
 ### Errore: "Invalid grant"
 - Il refresh token potrebbe essere scaduto o revocato
 - Rigenera il refresh token seguendo il passo 3
+
+### Errore: "redirect_uri_mismatch"
+- Verifica che il redirect URI in Google Cloud Console corrisponda **esattamente** a quello nello script
+- Controlla che non ci siano spazi o caratteri extra
+- Assicurati che sia `https://hr.laba.biz` (non `http://`)
 
 ### Errore: "Calendar not found"
 - Verifica che il `GOOGLE_CALENDAR_ID` sia corretto
@@ -145,8 +175,9 @@ Quando un admin approva un permesso (permesso normale, ferie, malattia, permesso
 
 ### Eventi non vengono creati
 - Controlla i log del server per errori
-- Verifica che le credenziali siano corrette nel file `.env`
+- Verifica che le credenziali siano corrette su Railway
 - Assicurati che l'API Google Calendar sia abilitata nel progetto
+- Verifica che il refresh token sia valido
 
 ## Sicurezza
 
