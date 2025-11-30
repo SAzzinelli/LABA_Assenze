@@ -20,15 +20,19 @@ Questa guida spiega come configurare l'integrazione con Google Calendar per aggi
 1. Vai su "APIs & Services" > "Credentials"
 2. Clicca su "Create Credentials" > "OAuth client ID"
 3. Se è la prima volta, configurare la schermata di consenso OAuth:
-   - Tipo applicazione: **"Web application"** (consigliato) o "Desktop app"
+   - Tipo applicazione: **"Web application"** (consigliato)
    - Nome: "HR LABA Calendar Integration"
    - **Authorized redirect URIs**: 
-     - Se usi "Web application": aggiungi `http://localhost` o `http://localhost:3000` (o l'URL del tuo server)
-     - Se usi "Desktop app": non è necessario un redirect URI
+     - **Per server su Railway**: aggiungi l'URL del tuo server Railway (es. `https://your-app-name.railway.app` o il tuo dominio personalizzato)
+     - **Per sviluppo locale**: aggiungi `http://localhost` o `http://localhost:3000`
+     - **Nota**: Puoi aggiungere più redirect URI se vuoi supportare sia sviluppo che produzione
 4. Clicca "Create"
 5. Copia il **Client ID** e il **Client Secret**
 
-**Nota importante**: Google Cloud Console non accetta più `urn:ietf:wg:oauth:2.0:oob` come redirect URI. Usa invece un URL HTTP valido come `http://localhost` o l'URL del tuo server.
+**Nota importante**: 
+- Google Cloud Console non accetta più `urn:ietf:wg:oauth:2.0:oob` come redirect URI
+- L'URL del redirect URI deve corrispondere **esattamente** all'URL del tuo server (incluso `http://` o `https://`)
+- Se il server è su Railway, usa l'URL completo del tuo servizio Railway
 
 ### 3. Ottenere il Refresh Token
 
@@ -40,9 +44,9 @@ const { google } = require('googleapis');
 const readline = require('readline');
 
 // IMPORTANTE: Usa lo stesso redirect URI che hai configurato in Google Cloud Console
-// Se hai usato "Web application" con http://localhost, usa quello
-// Se hai usato "Desktop app", puoi usare http://localhost
-const REDIRECT_URI = 'http://localhost'; // Cambia se hai usato un URL diverso
+// Per server su Railway: usa l'URL completo del tuo server (es. https://your-app.railway.app)
+// Per sviluppo locale: usa http://localhost
+const REDIRECT_URI = 'https://your-app-name.railway.app'; // CAMBIA con il tuo URL Railway!
 
 const oauth2Client = new google.auth.OAuth2(
   'YOUR_CLIENT_ID',
@@ -80,9 +84,12 @@ node get-refresh-token.js
 
 1. Copia l'URL mostrato e aprilo nel browser
 2. Autorizza l'applicazione con il tuo account Google dedicato
-3. Copia il codice di autorizzazione
-4. Incolla il codice nello script
-5. Copia il **Refresh Token** generato
+3. **IMPORTANTE per Railway**: Dopo l'autorizzazione, Google reindirizzerà al tuo redirect URI. Se usi Railway, verrai reindirizzato a `https://your-app.railway.app/?code=...`
+4. Copia il codice dalla URL (il parametro `code=...` dopo il `?`)
+5. Incolla il codice nello script
+6. Copia il **Refresh Token** generato
+
+**Nota per Railway**: Se il redirect URI è il tuo server Railway, dopo l'autorizzazione verrai reindirizzato lì. Puoi copiare il codice direttamente dalla URL del browser.
 
 ### 4. Ottenere l'ID del Calendario
 
@@ -102,10 +109,14 @@ GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REFRESH_TOKEN=your_refresh_token_here
 GOOGLE_CALENDAR_ID=primary
-GOOGLE_REDIRECT_URI=http://localhost
+GOOGLE_REDIRECT_URI=https://your-app-name.railway.app
 ```
 
-**Nota**: `GOOGLE_REDIRECT_URI` è opzionale e di default usa `http://localhost`. Usalo solo se hai configurato un redirect URI diverso in Google Cloud Console.
+**Nota importante per Railway**:
+- `GOOGLE_REDIRECT_URI` deve corrispondere **esattamente** all'URL del tuo server Railway
+- Se il tuo server è su `https://hr-laba.railway.app`, usa quello
+- Se hai un dominio personalizzato (es. `https://hr.laba.biz`), usa quello
+- Il redirect URI nel file `.env` deve essere identico a quello configurato in Google Cloud Console
 
 **Nota:** Se non specifichi `GOOGLE_CALENDAR_ID`, verrà usato il calendario principale (`primary`).
 

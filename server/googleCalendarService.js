@@ -21,10 +21,16 @@ function initializeCalendarClient() {
       return null;
     }
 
-    // Redirect URI: deve corrispondere a quello configurato in Google Cloud Console
-    // Se hai usato "Web application" con http://localhost, usa quello
-    // Se hai usato "Desktop app", puoi usare http://localhost
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost';
+    // Redirect URI: deve corrispondere ESATTAMENTE a quello configurato in Google Cloud Console
+    // Per server su Railway: usa l'URL completo del server (es. https://your-app.railway.app)
+    // Per sviluppo locale: usa http://localhost
+    // IMPORTANTE: Se non specificato, cerca di usare FRONTEND_URL o genera un errore
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || process.env.FRONTEND_URL || 'http://localhost';
+    
+    if (!process.env.GOOGLE_REDIRECT_URI && !process.env.FRONTEND_URL) {
+      console.warn('⚠️ Google Calendar: GOOGLE_REDIRECT_URI non configurato. Usando http://localhost come default.');
+      console.warn('⚠️ Assicurati che questo corrisponda al redirect URI configurato in Google Cloud Console.');
+    }
 
     const oauth2Client = new google.auth.OAuth2(
       clientId,
