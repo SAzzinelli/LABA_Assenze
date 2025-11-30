@@ -9574,10 +9574,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
                         'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
     const monthName = monthNames[monthParam - 1];
 
-    // Recupera tutti i dipendenti attivi
+    // Recupera tutti i dipendenti attivi con data di registrazione
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, first_name, last_name, role, is_active')
+      .select('id, first_name, last_name, role, is_active, created_at, hire_date')
       .neq('role', 'admin')
       .eq('is_active', true)
       .order('last_name');
@@ -9632,6 +9632,23 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     if (!holidaysError && holidays) {
       holidays.forEach(h => {
         holidaysMap[h.date] = h.name;
+      });
+    }
+
+    // Recupera orari di lavoro per calcolare presenze retroattive
+    const { data: workSchedulesData, error: workSchedulesError } = await supabase
+      .from('work_schedules')
+      .select('user_id, day_of_week, is_working_day, start_time, end_time, break_duration')
+      .in('user_id', userIds);
+
+    // Crea mappa degli orari per utente e giorno settimana
+    const workSchedulesMap = {};
+    if (!workSchedulesError && workSchedulesData) {
+      workSchedulesData.forEach(schedule => {
+        if (!workSchedulesMap[schedule.user_id]) {
+          workSchedulesMap[schedule.user_id] = {};
+        }
+        workSchedulesMap[schedule.user_id][schedule.day_of_week] = schedule;
       });
     }
 
