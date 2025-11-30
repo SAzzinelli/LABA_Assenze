@@ -17,6 +17,12 @@ function initializeCalendarClient() {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
+    // Debug: verifica quali variabili sono presenti (senza mostrare i valori completi)
+    console.log('🔍 Google Calendar - Verifica variabili d\'ambiente:');
+    console.log(`   GOOGLE_CLIENT_ID: ${clientId ? '✅ presente (' + clientId.substring(0, 20) + '...)' : '❌ mancante'}`);
+    console.log(`   GOOGLE_CLIENT_SECRET: ${clientSecret ? '✅ presente (' + clientSecret.substring(0, 10) + '...)' : '❌ mancante'}`);
+    console.log(`   GOOGLE_REFRESH_TOKEN: ${refreshToken ? '✅ presente (' + refreshToken.substring(0, 10) + '...)' : '❌ mancante'}`);
+
     if (!clientId || !clientSecret || !refreshToken) {
       console.warn('⚠️ Google Calendar: Credenziali non configurate. L\'integrazione sarà disabilitata.');
       return null;
@@ -49,6 +55,8 @@ function initializeCalendarClient() {
     });
 
     console.log('✅ Google Calendar client inizializzato con successo');
+    console.log(`   Calendar ID: ${process.env.GOOGLE_CALENDAR_ID || 'primary (default)'}`);
+    console.log(`   Redirect URI: ${process.env.GOOGLE_REDIRECT_URI || process.env.FRONTEND_URL || 'http://localhost'}`);
     return calendarClient;
   } catch (error) {
     console.error('❌ Errore inizializzazione Google Calendar:', error);
