@@ -12,6 +12,7 @@ const emailScheduler = require('./emailScheduler');
 const { calculateExpectedHoursForSchedule, calculateRealTimeHours } = require('./utils/hoursCalculation');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
+const { addPermissionEvent, initializeCalendarClient } = require('./googleCalendarService');
 const WebSocketManager = require('./websocket');
 const cron = require('node-cron');
 const XLSX = require('xlsx');
@@ -6490,7 +6491,31 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Se è una richiesta FERIE approvata, aggiorna il bilancio ferie (giorni, non ore)
     // IMPORTANTE: Le ferie NON influenzano la banca ore (balance_hours)
-    if (updatedRequest.type === 'vacation' && status === 'approved') {
+    if (updatedRequest.type === 'vacation' && status === 'approved' && existingRequest.status !== 'approved') {
+      // Aggiungi evento a Google Calendar per ferie
+      try {
+        const { data: employee, error: empError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', updatedRequest.user_id)
+          .single();
+
+        if (!empError && employee) {
+          const userName = `${employee.first_name} ${employee.last_name}`;
+          
+          await addPermissionEvent({
+            userName: userName,
+            startDate: updatedRequest.start_date,
+            endDate: updatedRequest.end_date,
+            hours: 0,
+            type: updatedRequest.type,
+            reason: updatedRequest.reason || notes || ''
+          });
+        }
+      } catch (calendarError) {
+        console.error('❌ Errore aggiunta evento Google Calendar per ferie:', calendarError);
+      }
+
       const requestYear = new Date(updatedRequest.start_date).getFullYear();
       const daysRequested = updatedRequest.days_requested || 0;
 
@@ -6614,7 +6639,30 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     // IMPORTANTE: Le assenze 104 NON influenzano la banca ore (balance_hours)
     // Le assenze 104 sono normalmente auto-approvate, ma gestiamo anche l'approvazione manuale
     const finalStatus = status || updatedRequest.status || existingRequest.status;
-    if (updatedRequest.type === 'permission_104' && finalStatus === 'approved') {
+    if (updatedRequest.type === 'permission_104' && finalStatus === 'approved' && existingRequest.status !== 'approved') {
+      // Aggiungi evento a Google Calendar per permesso 104
+      try {
+        const { data: employee, error: empError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', updatedRequest.user_id)
+          .single();
+
+        if (!empError && employee) {
+          const userName = `${employee.first_name} ${employee.last_name}`;
+          
+          await addPermissionEvent({
+            userName: userName,
+            startDate: updatedRequest.start_date,
+            endDate: updatedRequest.end_date,
+            hours: 0,
+            type: updatedRequest.type,
+            reason: updatedRequest.reason || notes || ''
+          });
+        }
+      } catch (calendarError) {
+        console.error('❌ Errore aggiunta evento Google Calendar per permesso 104:', calendarError);
+      }
       // Aggiorna tutti i record di attendance per le date del permesso 104
       // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
       const startDate = new Date(updatedRequest.start_date);
@@ -6859,6 +6907,34 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
       const permissionDate = updatedRequest.start_date;
       const permissionHours = parseFloat(updatedRequest.hours || 0);
+
+      // Aggiungi evento a Google Calendar
+      try {
+        // Recupera i dati del dipendente per il nome completo
+        const { data: employee, error: empError } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('id', updatedRequest.user_id)
+          .single();
+
+        if (!empError && employee) {
+          const userName = `${employee.first_name} ${employee.last_name}`;
+          
+          await addPermissionEvent({
+            userName: userName,
+            startDate: updatedRequest.start_date,
+            endDate: updatedRequest.end_date,
+            hours: permissionHours,
+            type: updatedRequest.type,
+            reason: updatedRequest.reason || notes || '',
+            entryTime: updatedRequest.entry_time || null,
+            exitTime: updatedRequest.exit_time || null
+          });
+        }
+      } catch (calendarError) {
+        console.error('❌ Errore aggiunta evento Google Calendar:', calendarError);
+        // Non bloccare il processo se Google Calendar fallisce
+      }
 
       if (permissionHours > 0) {
         const dayOfWeek = new Date(permissionDate).getDay();
@@ -12097,12 +12173,20 @@ app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, a
   }
 });
 
+// Inizializza Google Calendar client all'avvio
+initializeCalendarClient();
+
 server.listen(PORT, () => {
   console.log(`🚀 Server HR LABA avviato su porta ${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
   console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REFRESH_TOKEN) {
+    console.log(`📅 Google Calendar: Integrazione attiva`);
+  } else {
+    console.log(`⚠️ Google Calendar: Credenziali non configurate`);
+  }
 
   // Avvia Email Scheduler
   emailScheduler.start();
