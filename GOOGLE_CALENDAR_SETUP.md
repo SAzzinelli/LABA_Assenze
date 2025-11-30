@@ -121,9 +121,20 @@ Aggiungi queste variabili al file `.env`:
 GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REFRESH_TOKEN=your_refresh_token_here
-GOOGLE_CALENDAR_ID=primary
-GOOGLE_REDIRECT_URI=https://your-app-name.railway.app
+GOOGLE_CALENDAR_ID=c_cf07fd28094d0663e4984939afd7a91b5d080c246e136f24e8862e4a930e3b55@group.calendar.google.com
+GOOGLE_REDIRECT_URI=https://hr.laba.biz
 ```
+
+**Esempio concreto:**
+```env
+GOOGLE_CLIENT_ID=your_client_id_from_google_cloud
+GOOGLE_CLIENT_SECRET=your_client_secret_from_google_cloud
+GOOGLE_REFRESH_TOKEN=il_refresh_token_che_otterrai_dallo_script
+GOOGLE_CALENDAR_ID=c_cf07fd28094d0663e4984939afd7a91b5d080c246e136f24e8862e4a930e3b55@group.calendar.google.com
+GOOGLE_REDIRECT_URI=https://hr.laba.biz
+```
+
+**Nota**: Sostituisci `your_client_id_from_google_cloud` e `your_client_secret_from_google_cloud` con le tue credenziali reali da Google Cloud Console.
 
 **Spiegazione variabili:**
 
