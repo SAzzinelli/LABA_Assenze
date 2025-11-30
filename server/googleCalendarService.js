@@ -205,13 +205,24 @@ async function addPermissionEvent(permissionData) {
         calendarId: calendarId
       });
       console.log(`✅ Calendario trovato: ${calendarInfo.data.summary || calendarId}`);
+      console.log(`   Proprietario: ${calendarInfo.data.id || 'N/A'}`);
     } catch (calendarError) {
       console.error(`❌ Errore accesso calendario ${calendarId}:`, calendarError.message);
       console.error(`   Codice errore: ${calendarError.code || 'N/A'}`);
-      console.error(`   Verifica che:`);
-      console.error(`   1. Il Calendar ID sia corretto`);
-      console.error(`   2. L'account Google usato per l'autenticazione abbia accesso al calendario`);
-      console.error(`   3. Il calendario sia condiviso con l'account Google`);
+      
+      if (calendarError.code === 404) {
+        console.error(`\n⚠️ ERRORE 404 - Calendario non trovato o non accessibile`);
+        console.error(`   Possibili cause:`);
+        console.error(`   1. Il Calendar ID potrebbe essere errato`);
+        console.error(`   2. L'account Google usato per l'autenticazione (quello del refresh token) NON ha accesso a questo calendario`);
+        console.error(`   3. Il calendario potrebbe non essere condiviso correttamente`);
+        console.error(`\n   SOLUZIONE:`);
+        console.error(`   - Verifica che l'account Google usato per ottenere il refresh token sia lo stesso che ha accesso al calendario`);
+        console.error(`   - Oppure condividi il calendario con l'account Google usato per l'autenticazione`);
+        console.error(`   - Il calendario è condiviso da: calendari@labafirenze.com`);
+        console.error(`   - Assicurati che l'account del refresh token abbia accesso come "Collaboratore" o "Proprietario"`);
+      }
+      
       throw calendarError;
     }
     
