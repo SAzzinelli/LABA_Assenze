@@ -9706,6 +9706,11 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       const dailyValues = [];
       const annotations = { hasSick: false, hasVacation: false, hasHoliday: false, has104: false };
 
+      // Determina la data di registrazione (usa hire_date se disponibile, altrimenti created_at)
+      const registrationDate = user.hire_date || (user.created_at ? user.created_at.split('T')[0] : null);
+      const october1 = '2025-10-01';
+      const isRegisteredAfterOctober1 = registrationDate && registrationDate > october1;
+
       monthDates.forEach(dateInfo => {
         const dateStr = dateInfo.date;
         const attendance = attendanceMap[user.id]?.[dateStr];
@@ -9757,6 +9762,23 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         if (attendance && attendance.actualHours > 0) {
           dailyValues.push(Math.round(attendance.actualHours));
           return;
+        }
+
+        // Se il dipendente è stato registrato dopo il 1 ottobre e questo giorno è tra il 1 ottobre e la data di registrazione
+        // Considera come presente (presenza retroattiva) se non c'è già un record
+        if (isRegisteredAfterOctober1 && dateStr >= october1 && dateStr < registrationDate) {
+          // Recupera lo schedule per questo giorno per calcolare le ore attese
+          const dayOfWeek = new Date(dateStr).getDay();
+          const schedule = workSchedulesMap[user.id]?.[dayOfWeek];
+          if (schedule && schedule.is_working_day && schedule.start_time && schedule.end_time) {
+            const expectedHours = calculateExpectedHoursForSchedule({
+              start_time: schedule.start_time,
+              end_time: schedule.end_time,
+              break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
+            });
+            dailyValues.push(Math.round(expectedHours));
+            return;
+          }
         }
 
         // Giorno non lavorato
