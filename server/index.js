@@ -12259,6 +12259,27 @@ server.listen(PORT, () => {
   } else {
     console.log(`   ⚠️ Nessuna variabile GOOGLE_* trovata in process.env`);
   }
+  
+  // Debug: verifica anche variabili simili (potrebbero esserci errori di digitazione)
+  const similarVars = Object.keys(process.env).filter(key => 
+    key.toUpperCase().includes('GOOGLE') || 
+    key.toUpperCase().includes('CLIENT_ID') ||
+    (key.includes('google') && key.includes('client'))
+  );
+  if (similarVars.length > 0 && similarVars.some(v => !v.startsWith('GOOGLE_'))) {
+    console.log(`\n⚠️ Trovate variabili simili (potrebbero essere errori di digitazione):`);
+    similarVars.forEach(key => {
+      if (!key.startsWith('GOOGLE_')) {
+        console.log(`   ${key}: ${process.env[key] ? 'presente' : 'vuota'}`);
+      }
+    });
+  }
+  
+  // Debug: verifica direttamente GOOGLE_CLIENT_ID
+  console.log(`\n🔍 Verifica diretta GOOGLE_CLIENT_ID:`);
+  console.log(`   process.env.GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✅ presente (' + process.env.GOOGLE_CLIENT_ID.substring(0, 30) + '...)' : '❌ undefined o null'}`);
+  console.log(`   typeof: ${typeof process.env.GOOGLE_CLIENT_ID}`);
+  console.log(`   length: ${process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID.length : 'N/A'}`);
   console.log(`\n`);
   
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REFRESH_TOKEN) {
