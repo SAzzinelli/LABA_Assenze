@@ -9848,21 +9848,82 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       { wch: 3 }    // Colonna AM: Extra
     ];
 
-    // Applica formattazione alle righe header (grassetto)
+    // Definisci stile per bordi sottili
+    const thinBorder = {
+      style: 'thin',
+      color: { rgb: '000000' }
+    };
+    const borderStyle = {
+      top: thinBorder,
+      bottom: thinBorder,
+      left: thinBorder,
+      right: thinBorder
+    };
+
+    // Funzione helper per applicare stile a una cella
+    const applyStyle = (cellRef, style) => {
+      if (ws[cellRef]) {
+        if (!ws[cellRef].s) ws[cellRef].s = {};
+        Object.assign(ws[cellRef].s, style);
+      }
+    };
+
+    // Applica formattazione alle righe header (grassetto e bordi)
     // Riga 2 (header principale)
-    if (ws['B2']) ws['B2'].s = { font: { bold: true } };
-    if (ws['D2']) ws['D2'].s = { font: { bold: true } };
-    if (ws['AI2']) ws['AI2'].s = { font: { bold: true } }; // TOT. (colonna 35, indice 34)
+    applyStyle('B2', { font: { bold: true }, border: borderStyle });
+    applyStyle('D2', { font: { bold: true }, border: borderStyle });
+    applyStyle('AI2', { font: { bold: true }, border: borderStyle }); // TOT. (colonna 35, indice 34)
     
-    // Riga 4 (header giorni)
-    if (ws['A4']) ws['A4'].s = { font: { bold: true } };
-    // Numeri giorni in grassetto
+    // Riga 4 (header giorni) - grassetto, bordi e centrato
+    applyStyle('A4', { font: { bold: true }, border: borderStyle, alignment: { horizontal: 'center' } });
     monthDates.forEach((_, idx) => {
       const cellRef = XLSX.utils.encode_cell({ r: 3, c: 3 + idx });
-      if (ws[cellRef]) {
-        ws[cellRef].s = { font: { bold: true }, alignment: { horizontal: 'center' } };
-      }
+      applyStyle(cellRef, { 
+        font: { bold: true }, 
+        border: borderStyle,
+        alignment: { horizontal: 'center' } 
+      });
     });
+
+    // Applica bordi a tutte le celle con dati (dalla riga 4 in poi)
+    const totalRows = wsData.length;
+    const totalCols = 37;
+    
+    for (let row = 3; row < totalRows; row++) { // Inizia dalla riga 4 (indice 3)
+      for (let col = 0; col < totalCols; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+        if (ws[cellRef] && ws[cellRef].v !== undefined && ws[cellRef].v !== '') {
+          // Applica bordi a tutte le celle con contenuto
+          applyStyle(cellRef, { border: borderStyle });
+          
+          // Grassetto per le righe principali dei dipendenti (ogni 4 righe, partendo dalla riga 4)
+          // Riga principale dipendente: row % 4 === 0 (righe 4, 8, 12, 16, ...)
+          if ((row - 3) % 4 === 0) {
+            // Prima riga del blocco dipendente (NR, Cognome, O, valori giorni, TOT)
+            if (col === 0 || col === 1 || col === 2 || col === 34) {
+              // NR, Cognome, O, TOT in grassetto
+              applyStyle(cellRef, { font: { bold: true }, border: borderStyle });
+            }
+          }
+        }
+      }
+    }
+
+    // Applica bordi anche alle celle vuote nella tabella principale (per separare visivamente)
+    // Solo per le colonne dei giorni (colonne 3-33) e colonne principali (0-2, 34)
+    for (let row = 3; row < totalRows; row++) {
+      for (let col = 0; col <= 34; col++) { // Colonne A-AL (0-34)
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+        if (!ws[cellRef]) {
+          // Crea cella vuota con bordi
+          ws[cellRef] = { v: '', t: 's' };
+          applyStyle(cellRef, { border: borderStyle });
+        } else {
+          // Assicura che anche le celle esistenti abbiano bordi
+          applyStyle(cellRef, { border: borderStyle });
+        }
+      }
+    }
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
