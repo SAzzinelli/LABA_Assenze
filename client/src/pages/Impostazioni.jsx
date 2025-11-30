@@ -65,11 +65,11 @@ const Settings = () => {
 
   // Stati per Google Calendar Test
   const [calendarTestForm, setCalendarTestForm] = useState({
-    employeeId: '',
+    employeeName: '',
     date: new Date().toISOString().split('T')[0],
     type: 'permission',
     hours: 2,
-    reason: 'Test evento Google Calendar',
+    reason: '',
     entryTime: '',
     exitTime: ''
   });
@@ -635,8 +635,13 @@ const Settings = () => {
   );
 
   const handleCalendarTest = async () => {
-    if (!calendarTestForm.employeeId || !calendarTestForm.date) {
-      setCalendarTestResult({ success: false, message: 'Compila tutti i campi obbligatori' });
+    if (!calendarTestForm.employeeName.trim() || !calendarTestForm.date) {
+      setCalendarTestResult({ success: false, message: 'Compila nome dipendente e data' });
+      return;
+    }
+
+    if (calendarTestForm.type === 'permission' && !calendarTestForm.hours) {
+      setCalendarTestResult({ success: false, message: 'Inserisci le ore per il permesso' });
       return;
     }
 
@@ -647,7 +652,15 @@ const Settings = () => {
       const response = await apiCall('/api/admin/google-calendar/test-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(calendarTestForm)
+        body: JSON.stringify({
+          employeeName: calendarTestForm.employeeName.trim(),
+          date: calendarTestForm.date,
+          type: calendarTestForm.type,
+          hours: calendarTestForm.type === 'permission' ? calendarTestForm.hours : 0,
+          reason: calendarTestForm.reason || undefined,
+          entryTime: calendarTestForm.entryTime || undefined,
+          exitTime: calendarTestForm.exitTime || undefined
+        })
       });
 
       const data = await response.json();
@@ -660,11 +673,11 @@ const Settings = () => {
         });
         // Reset form
         setCalendarTestForm({
-          employeeId: '',
+          employeeName: '',
           date: new Date().toISOString().split('T')[0],
           type: 'permission',
           hours: 2,
-          reason: 'Test evento Google Calendar',
+          reason: '',
           entryTime: '',
           exitTime: ''
         });
@@ -698,105 +711,106 @@ const Settings = () => {
         <div className="bg-slate-800 rounded-lg p-6 space-y-4">
           <h3 className="text-lg font-semibold text-white mb-4">Genera Evento Test</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Dipendente *
-              </label>
-              <select
-                value={calendarTestForm.employeeId}
-                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, employeeId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Seleziona dipendente</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Data *
+                Nome Dipendente *
               </label>
               <input
-                type="date"
-                value={calendarTestForm.date}
-                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, date: e.target.value })}
+                type="text"
+                value={calendarTestForm.employeeName}
+                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, employeeName: e.target.value })}
+                placeholder="Es. Simone Azzinelli"
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Tipo *
-              </label>
-              <select
-                value={calendarTestForm.type}
-                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, type: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="permission">Permesso</option>
-                <option value="permission_104">Permesso 104</option>
-                <option value="vacation">Ferie</option>
-                <option value="sick_leave">Malattia</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Data *
+                </label>
+                <input
+                  type="date"
+                  value={calendarTestForm.date}
+                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, date: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Tipo *
+                </label>
+                <select
+                  value={calendarTestForm.type}
+                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, type: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="permission">Permesso</option>
+                  <option value="permission_104">Permesso 104</option>
+                  <option value="vacation">Ferie</option>
+                  <option value="sick_leave">Malattia</option>
+                </select>
+              </div>
             </div>
 
             {calendarTestForm.type === 'permission' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Ore *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    max="8"
-                    value={calendarTestForm.hours}
-                    onChange={(e) => setCalendarTestForm({ ...calendarTestForm, hours: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Ore *
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  max="8"
+                  value={calendarTestForm.hours}
+                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, hours: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            )}
 
+            {calendarTestForm.type === 'permission' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Ora Entrata (opzionale, es. 10:00)
+                    Entra dopo (opzionale)
                   </label>
                   <input
                     type="time"
                     value={calendarTestForm.entryTime}
                     onChange={(e) => setCalendarTestForm({ ...calendarTestForm, entryTime: e.target.value })}
+                    placeholder="Es. 10:00"
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Ora Uscita (opzionale, es. 12:00)
+                    Esce prima (opzionale)
                   </label>
                   <input
                     type="time"
                     value={calendarTestForm.exitTime}
                     onChange={(e) => setCalendarTestForm({ ...calendarTestForm, exitTime: e.target.value })}
+                    placeholder="Es. 16:00"
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
-              </>
+              </div>
             )}
 
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Motivo
+                Motivo (opzionale)
               </label>
               <input
                 type="text"
                 value={calendarTestForm.reason}
                 onChange={(e) => setCalendarTestForm({ ...calendarTestForm, reason: e.target.value })}
-                placeholder="Motivo del permesso/test"
+                placeholder="Motivo del permesso"
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -805,7 +819,7 @@ const Settings = () => {
           <div className="mt-6">
             <button
               onClick={handleCalendarTest}
-              disabled={calendarTestLoading || !calendarTestForm.employeeId || !calendarTestForm.date}
+              disabled={calendarTestLoading || !calendarTestForm.employeeName.trim() || !calendarTestForm.date}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center"
             >
               <Calendar className="h-5 w-5 mr-2" />

@@ -10299,24 +10299,14 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
 // Endpoint temporaneo per testare Google Calendar senza approvare permessi reali
 app.post('/api/admin/google-calendar/test-event', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { employeeId, date, type, hours, reason, entryTime, exitTime } = req.body;
+    const { employeeName, date, type, hours, reason, entryTime, exitTime } = req.body;
 
-    if (!employeeId || !date) {
-      return res.status(400).json({ error: 'Dipendente e data sono obbligatori' });
+    if (!employeeName || !date) {
+      return res.status(400).json({ error: 'Nome dipendente e data sono obbligatori' });
     }
 
-    // Recupera i dati del dipendente
-    const { data: employee, error: empError } = await supabase
-      .from('users')
-      .select('first_name, last_name')
-      .eq('id', employeeId)
-      .single();
-
-    if (empError || !employee) {
-      return res.status(404).json({ error: 'Dipendente non trovato' });
-    }
-
-    const userName = `${employee.first_name} ${employee.last_name}`;
+    // Usa direttamente il nome fornito (non serve cercare nel database)
+    const userName = employeeName.trim();
 
     // Crea l'evento di test
     const eventData = {
@@ -10325,9 +10315,9 @@ app.post('/api/admin/google-calendar/test-event', authenticateToken, requireAdmi
       endDate: date, // Stessa data per inizio e fine
       hours: type === 'permission' ? (parseFloat(hours) || 0) : 0,
       type: type,
-      reason: reason || 'Test evento Google Calendar',
-      entryTime: entryTime || null,
-      exitTime: exitTime || null
+      reason: reason || undefined, // Non aggiungere motivo di default
+      entryTime: entryTime && entryTime.trim() !== '' ? entryTime : null,
+      exitTime: exitTime && exitTime.trim() !== '' ? exitTime : null
     };
 
     console.log('📅 Tentativo creazione evento test Google Calendar:', eventData);
