@@ -9606,7 +9606,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    // Recupera permessi, ferie, malattie approvate
+    // Recupera permessi, ferie, malattie, permessi 104 approvati
     const { data: leaveData, error: leaveError } = await supabase
       .from('leave_requests')
       .select('user_id, type, start_date, end_date, hours, days_requested')
@@ -9687,7 +9687,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Prepara i dati per ogni dipendente
     const employeeData = users.map((user, index) => {
       const dailyValues = [];
-      const annotations = { hasSick: false, hasVacation: false, hasHoliday: false };
+      const annotations = { hasSick: false, hasVacation: false, hasHoliday: false, has104: false };
 
       monthDates.forEach(dateInfo => {
         const dateStr = dateInfo.date;
@@ -9707,10 +9707,11 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           return;
         }
 
-        // Controlla permessi/ferie/malattie
+        // Controlla permessi/ferie/malattie/104
         const sickLeave = leaves.find(l => l.type === 'sick_leave');
         const vacation = leaves.find(l => l.type === 'vacation');
         const permission = leaves.find(l => l.type === 'permission');
+        const permission104 = leaves.find(l => l.type === 'permission_104');
 
         if (sickLeave) {
           dailyValues.push('M'); // Malattia
@@ -9720,6 +9721,12 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         if (vacation) {
           dailyValues.push('F'); // Ferie
           annotations.hasVacation = true;
+          return;
+        }
+        if (permission104) {
+          // Permesso 104: mostra "104" invece delle ore
+          dailyValues.push('104');
+          annotations.has104 = true;
           return;
         }
         if (permission) {
@@ -9808,7 +9815,8 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
 
     // ========== DATA ROWS ==========
     // Calcola statistiche per ogni dipendente
-    employeeData.forEach(emp => {
+    employeeData.forEach((emp, empIndex) => {
+      const user = users[empIndex];
       let totalWorkedHours = 0;
       let vacationDays = 0;
       let sickDays = 0;
@@ -9816,19 +9824,41 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       let holidayDays = 0;
 
       monthDates.forEach((dateInfo, idx) => {
+        const dateStr = dateInfo.date;
         const value = emp.dailyValues[idx];
-        if (typeof value === 'number' && value > 0) {
-          totalWorkedHours += value;
-        } else if (value === 'F') {
-          vacationDays++;
-        } else if (value === 'M') {
+        const leaves = leaveMap[user.id]?.[dateStr] || [];
+        
+        // Controlla permessi/ferie/malattie/104 dalla mappa leaveMap
+        const sickLeave = leaves.find(l => l.type === 'sick_leave');
+        const vacation = leaves.find(l => l.type === 'vacation');
+        const permission = leaves.find(l => l.type === 'permission');
+        const permission104 = leaves.find(l => l.type === 'permission_104');
+        
+        if (sickLeave) {
           sickDays++;
-        } else if (value === 'FE') {
+        } else if (vacation) {
+          vacationDays++;
+        } else if (permission104) {
+          // Permesso 104: non conta come permesso normale, ma come presenza speciale
+          // Se ci sono ore lavorate, aggiungile
+          if (typeof value === 'number' && value > 0) {
+            totalWorkedHours += value;
+          }
+        } else if (permission) {
+          // Se c'è un permesso, somma le ore del permesso
+          const permHours = parseFloat(permission.hours || 0);
+          permissionHours += permHours;
+          // Se ci sono anche ore lavorate, aggiungile al totale
+          if (typeof value === 'number' && value > 0) {
+            totalWorkedHours += value;
+          }
+        } else if (dateInfo.isHoliday) {
           holidayDays++;
-        } else if (typeof value === 'number' && value < 8 && value > 0) {
-          // Ore parziali potrebbero essere permessi
-          permissionHours += value;
+        } else if (typeof value === 'number' && value > 0) {
+          // Ore lavorate normali (senza permessi)
+          totalWorkedHours += value;
         }
+        // 'D' per domenica non viene contato nelle statistiche
       });
 
       // Riga dati dipendente
@@ -9851,18 +9881,20 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           dataRow[3 + idx] = 'M';
         } else if (value === 'FE') {
           dataRow[3 + idx] = 'FE';
+        } else if (value === '104') {
+          dataRow[3 + idx] = '104';
         } else {
           dataRow[3 + idx] = '';
         }
       });
 
-      // Colonne statistiche
-      dataRow[statsStartCol] = totalWorkedHours;
-      dataRow[statsStartCol + 1] = vacationDays > 0 ? vacationDays : '';
-      dataRow[statsStartCol + 2] = sickDays > 0 ? sickDays : '';
-      dataRow[statsStartCol + 3] = permissionHours > 0 ? permissionHours.toFixed(1) : '';
-      dataRow[statsStartCol + 4] = holidayDays > 0 ? holidayDays : '';
-      dataRow[statsStartCol + 5] = emp.totalHours;
+      // Colonne statistiche - sempre mostrate, anche se 0
+      dataRow[statsStartCol] = Math.round(totalWorkedHours * 100) / 100;
+      dataRow[statsStartCol + 1] = vacationDays;
+      dataRow[statsStartCol + 2] = sickDays;
+      dataRow[statsStartCol + 3] = Math.round(permissionHours * 100) / 100;
+      dataRow[statsStartCol + 4] = holidayDays;
+      dataRow[statsStartCol + 5] = Math.round(emp.totalHours * 100) / 100;
       
       wsData.push(dataRow);
     });
@@ -9871,18 +9903,20 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Riga vuota
     wsData.push(Array(50).fill(''));
     
-    // Riga legenda
+    // Riga legenda - distribuita su più colonne per leggibilità
     const legendRow = Array(50).fill('');
     legendRow[0] = 'LEGENDA:';
     legendRow[1] = 'D = Domenica (giorno non lavorativo)';
-    legendRow[2] = '|';
+    legendRow[2] = '';
     legendRow[3] = 'M = Malattia';
-    legendRow[4] = '|';
+    legendRow[4] = '';
     legendRow[5] = 'F = Ferie';
-    legendRow[6] = '|';
+    legendRow[6] = '';
     legendRow[7] = 'FE = Festa';
-    legendRow[8] = '|';
-    legendRow[9] = 'Numeri = Ore lavorate nel giorno';
+    legendRow[8] = '';
+    legendRow[9] = '104 = Permesso Legge 104';
+    legendRow[10] = '';
+    legendRow[11] = 'Numeri = Ore lavorate nel giorno';
     wsData.push(legendRow);
     
     // Riga note
@@ -9897,10 +9931,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Imposta larghezza colonne ottimizzata per nuovo layout
     const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
     ws['!cols'] = [
-      { wch: 4 },   // Colonna A: N°
+      { wch: 5 },   // Colonna A: N°
       { wch: 20 },  // Colonna B: Cognome
       { wch: 18 },  // Colonna C: Nome
-      ...Array(monthDates.length).fill({ wch: 4 }), // Colonne giorni
+      ...Array(monthDates.length).fill({ wch: 8 }), // Colonne giorni - aumentata per leggere meglio i giorni
       { wch: 12 },  // Ore Lavorate
       { wch: 8 },   // Ferie
       { wch: 8 },   // Malattia
@@ -10033,16 +10067,36 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       }
     }
 
-    // Legenda e note - stile discreto
+    // Legenda e note - stile discreto con celle più larghe
     const legendRowIndex = totalRows - 2;
-    applyStyle(XLSX.utils.encode_cell({ r: legendRowIndex, c: 0 }), {
-      font: { bold: true, italic: true, color: { rgb: '6B7280' } }
-    });
+    // Applica stile a tutte le celle della legenda per renderla più leggibile
+    for (let col = 0; col < 12; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
+      if (col === 0) {
+        applyStyle(cellRef, {
+          font: { bold: true, italic: true, color: { rgb: '6B7280' } }
+        });
+      } else if (ws[cellRef] && ws[cellRef].v) {
+        applyStyle(cellRef, {
+          font: { color: { rgb: '6B7280' }, sz: 10 }
+        });
+      }
+    }
     
     const noteRowIndex = totalRows - 1;
-    applyStyle(XLSX.utils.encode_cell({ r: noteRowIndex, c: 0 }), {
-      font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
-    });
+    // Applica stile a tutte le celle della nota
+    for (let col = 0; col < 50; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: noteRowIndex, c: col });
+      if (col === 0) {
+        applyStyle(cellRef, {
+          font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
+        });
+      } else if (ws[cellRef] && ws[cellRef].v) {
+        applyStyle(cellRef, {
+          font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
+        });
+      }
+    }
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');

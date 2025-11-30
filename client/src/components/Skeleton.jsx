@@ -491,13 +491,13 @@ export const DashboardAdminSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <SkeletonBase className="h-9 w-48 mb-2" />
         <SkeletonBase className="h-5 w-96" />
       </div>
 
       {/* Sezione In Malattia Oggi */}
-      <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-6 w-40" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -508,7 +508,7 @@ export const DashboardAdminSkeleton = () => {
       </div>
 
       {/* Recuperi Imminenti */}
-      <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-6 w-48" />
           <SkeletonBase className="h-4 w-32" />
@@ -517,7 +517,7 @@ export const DashboardAdminSkeleton = () => {
       </div>
 
       {/* Presenti adesso */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
         <div className="flex items-center justify-between mb-6">
           <SkeletonBase className="h-6 w-40" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -530,7 +530,7 @@ export const DashboardAdminSkeleton = () => {
       {/* Grid Richieste Recenti e In programma oggi */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Richieste Recenti */}
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
           <div className="flex items-center justify-between mb-6">
             <SkeletonBase className="h-6 w-40" />
             <SkeletonBase className="h-5 w-5 rounded" />
