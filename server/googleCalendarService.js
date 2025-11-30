@@ -21,10 +21,15 @@ function initializeCalendarClient() {
       return null;
     }
 
+    // Redirect URI: deve corrispondere a quello configurato in Google Cloud Console
+    // Se hai usato "Web application" con http://localhost, usa quello
+    // Se hai usato "Desktop app", puoi usare http://localhost
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost';
+
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
-      'urn:ietf:wg:oauth:2.0:oob' // Redirect URI per applicazioni server-side
+      redirectUri
     );
 
     oauth2Client.setCredentials({

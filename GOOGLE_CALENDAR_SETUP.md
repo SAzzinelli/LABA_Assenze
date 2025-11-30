@@ -20,11 +20,15 @@ Questa guida spiega come configurare l'integrazione con Google Calendar per aggi
 1. Vai su "APIs & Services" > "Credentials"
 2. Clicca su "Create Credentials" > "OAuth client ID"
 3. Se è la prima volta, configurare la schermata di consenso OAuth:
-   - Tipo applicazione: "Desktop app" o "Web application"
+   - Tipo applicazione: **"Web application"** (consigliato) o "Desktop app"
    - Nome: "HR LABA Calendar Integration"
-   - Authorized redirect URIs: `urn:ietf:wg:oauth:2.0:oob` (per applicazioni server-side)
+   - **Authorized redirect URIs**: 
+     - Se usi "Web application": aggiungi `http://localhost` o `http://localhost:3000` (o l'URL del tuo server)
+     - Se usi "Desktop app": non è necessario un redirect URI
 4. Clicca "Create"
 5. Copia il **Client ID** e il **Client Secret**
+
+**Nota importante**: Google Cloud Console non accetta più `urn:ietf:wg:oauth:2.0:oob` come redirect URI. Usa invece un URL HTTP valido come `http://localhost` o l'URL del tuo server.
 
 ### 3. Ottenere il Refresh Token
 
@@ -35,10 +39,15 @@ Per ottenere il refresh token, devi eseguire uno script di autenticazione inizia
 const { google } = require('googleapis');
 const readline = require('readline');
 
+// IMPORTANTE: Usa lo stesso redirect URI che hai configurato in Google Cloud Console
+// Se hai usato "Web application" con http://localhost, usa quello
+// Se hai usato "Desktop app", puoi usare http://localhost
+const REDIRECT_URI = 'http://localhost'; // Cambia se hai usato un URL diverso
+
 const oauth2Client = new google.auth.OAuth2(
   'YOUR_CLIENT_ID',
   'YOUR_CLIENT_SECRET',
-  'urn:ietf:wg:oauth:2.0:oob'
+  REDIRECT_URI
 );
 
 const scopes = ['https://www.googleapis.com/auth/calendar'];
@@ -93,7 +102,10 @@ GOOGLE_CLIENT_ID=your_client_id_here
 GOOGLE_CLIENT_SECRET=your_client_secret_here
 GOOGLE_REFRESH_TOKEN=your_refresh_token_here
 GOOGLE_CALENDAR_ID=primary
+GOOGLE_REDIRECT_URI=http://localhost
 ```
+
+**Nota**: `GOOGLE_REDIRECT_URI` è opzionale e di default usa `http://localhost`. Usalo solo se hai configurato un redirect URI diverso in Google Cloud Console.
 
 **Nota:** Se non specifichi `GOOGLE_CALENDAR_ID`, verrà usato il calendario principale (`primary`).
 
