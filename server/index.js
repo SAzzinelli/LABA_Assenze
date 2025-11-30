@@ -9769,39 +9769,34 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const wsData = [];
 
     // ========== HEADER SECTION ==========
-    // Riga 1: Titolo principale (centrato, grande)
+    // Riga 1: Titolo principale (centrato, grande) - espanso su più colonne
     const titleRow = Array(50).fill('');
     titleRow[0] = `REPORT PRESENZE MENSILE`;
     wsData.push(titleRow);
 
-    // Riga 2: Sottotitolo con mese e anno
+    // Riga 2: Sottotitolo con mese e anno - espanso
     const subtitleRow = Array(50).fill('');
     subtitleRow[0] = `${monthName.toUpperCase()} ${yearParam}`;
     wsData.push(subtitleRow);
 
-    // Riga 3: Informazioni azienda
+    // Riga 3: Informazioni azienda - espanso
     const companyRow = Array(50).fill('');
     companyRow[0] = 'Libera Accademia di Belle Arti';
     wsData.push(companyRow);
-
-    // Riga 4: vuota (separatore)
-    wsData.push(Array(50).fill(''));
 
     // ========== TABLE HEADER ==========
     // Calcola colonna di inizio statistiche (una sola volta)
     const statsStartCol = 3 + monthDates.length;
     
-    // Riga 5: Header principale della tabella
+    // Riga 4: Header principale della tabella (inizia dalla riga 4 come nello screen2)
     const headerRow = Array(50).fill('');
     headerRow[0] = 'N°';
     headerRow[1] = 'Cognome';
     headerRow[2] = 'Nome';
     
-    // Header giorni del mese con giorno della settimana
-    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    // Header giorni del mese - solo numeri in grassetto (senza giorno settimana)
     monthDates.forEach((dateInfo, idx) => {
-      const dayLabel = dayLabels[dateInfo.dayOfWeek];
-      headerRow[3 + idx] = `${dayLabel}\n${dateInfo.dayNumber}`;
+      headerRow[3 + idx] = dateInfo.dayNumber; // Solo il numero, senza giorno settimana
     });
     
     // Colonne statistiche finali
@@ -9823,6 +9818,23 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       let permissionHours = 0;
       let holidayDays = 0;
 
+      // Calcola permessi totali per il mese (tutti i permessi approvati, non solo quelli con ore lavorate)
+      const userLeaves = leaveData?.filter(l => l.user_id === user.id) || [];
+      const monthPermissions = userLeaves.filter(l => 
+        l.type === 'permission' && 
+        l.status === 'approved' &&
+        new Date(l.start_date) >= new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-01`) &&
+        new Date(l.start_date) <= new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-${new Date(yearParam, monthParam, 0).getDate()}`)
+      );
+      
+      // Somma tutte le ore dei permessi approvati nel mese
+      monthPermissions.forEach(perm => {
+        const permHours = parseFloat(perm.hours || 0);
+        if (permHours > 0) {
+          permissionHours += permHours;
+        }
+      });
+
       monthDates.forEach((dateInfo, idx) => {
         const dateStr = dateInfo.date;
         const value = emp.dailyValues[idx];
@@ -9831,7 +9843,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         // Controlla permessi/ferie/malattie/104 dalla mappa leaveMap
         const sickLeave = leaves.find(l => l.type === 'sick_leave');
         const vacation = leaves.find(l => l.type === 'vacation');
-        const permission = leaves.find(l => l.type === 'permission');
         const permission104 = leaves.find(l => l.type === 'permission_104');
         
         if (sickLeave) {
@@ -9844,14 +9855,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           if (typeof value === 'number' && value > 0) {
             totalWorkedHours += value;
           }
-        } else if (permission) {
-          // Se c'è un permesso, somma le ore del permesso
-          const permHours = parseFloat(permission.hours || 0);
-          permissionHours += permHours;
-          // Se ci sono anche ore lavorate, aggiungile al totale
-          if (typeof value === 'number' && value > 0) {
-            totalWorkedHours += value;
-          }
         } else if (dateInfo.isHoliday) {
           holidayDays++;
         } else if (typeof value === 'number' && value > 0) {
@@ -9859,6 +9862,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           totalWorkedHours += value;
         }
         // 'D' per domenica non viene contato nelle statistiche
+        // I permessi sono già contati sopra per tutto il mese
       });
 
       // Riga dati dipendente
@@ -9972,23 +9976,43 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     };
 
     const totalRows = wsData.length;
-    const headerRowIndex = 4; // Riga 5 (indice 4) è l'header
-    const dataStartRow = 5; // Riga 6 (indice 5) inizia i dati
+    const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
+    const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
 
-    // Titolo principale (riga 1)
+    // Titolo principale (riga 1) - espanso su più colonne
+    for (let col = 0; col < 10; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
+      applyStyle(cellRef, {
+        font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      });
+    }
     applyStyle('A1', {
       font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
       alignment: { horizontal: 'center', vertical: 'center' }
     });
-    // Merge celle per titolo (se supportato)
     
-    // Sottotitolo (riga 2)
+    // Sottotitolo (riga 2) - espanso
+    for (let col = 0; col < 10; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
+      applyStyle(cellRef, {
+        font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
+        alignment: { horizontal: 'center' }
+      });
+    }
     applyStyle('A2', {
       font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
       alignment: { horizontal: 'center' }
     });
     
-    // Azienda (riga 3)
+    // Azienda (riga 3) - espanso
+    for (let col = 0; col < 10; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 2, c: col });
+      applyStyle(cellRef, {
+        font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
+        alignment: { horizontal: 'center' }
+      });
+    }
     applyStyle('A3', {
       font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
       alignment: { horizontal: 'center' }
