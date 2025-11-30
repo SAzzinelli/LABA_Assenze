@@ -170,26 +170,30 @@ async function addPermissionEvent(permissionData) {
     if (type === 'permission') {
       // Permesso normale: usa gli orari specifici se disponibili
       if (entryTime && entryTime.trim() !== '' && exitTime && exitTime.trim() !== '') {
-        // Entrambi gli orari specificati: da entryTime a exitTime
+        // Entrambi gli orari specificati: da entryTime a exitTime (durata reale del permesso)
         const [entryHour, entryMin] = entryTime.split(':').map(Number);
         const [exitHour, exitMin] = exitTime.split(':').map(Number);
         
         startDateTime.setHours(entryHour, entryMin, 0, 0);
         endDateTime.setHours(exitHour, exitMin, 0, 0);
       } else if (entryTime && entryTime.trim() !== '') {
-        // Solo entrata: da entryTime a 18:00 (fine giornata lavorativa)
+        // Solo entrata: evento di 1 ora da entryTime (es. entra alle 10 → evento 10:00-11:00)
         const [entryHour, entryMin] = entryTime.split(':').map(Number);
         
         startDateTime.setHours(entryHour, entryMin, 0, 0);
-        endDateTime.setHours(18, 0, 0, 0);
+        // Aggiungi 1 ora
+        endDateTime.setHours(entryHour, entryMin, 0, 0);
+        endDateTime.setHours(endDateTime.getHours() + 1);
       } else if (exitTime && exitTime.trim() !== '') {
-        // Solo uscita: da 9:00 a exitTime
+        // Solo uscita: evento di 1 ora da exitTime (es. esce alle 16 → evento 16:00-17:00)
         const [exitHour, exitMin] = exitTime.split(':').map(Number);
         
-        startDateTime.setHours(9, 0, 0, 0);
+        startDateTime.setHours(exitHour, exitMin, 0, 0);
+        // Aggiungi 1 ora
         endDateTime.setHours(exitHour, exitMin, 0, 0);
+        endDateTime.setHours(endDateTime.getHours() + 1);
       } else {
-        // Nessun orario specifico: default 9:00-18:00
+        // Nessun orario specifico: default 9:00-18:00 (giornata intera)
         startDateTime.setHours(9, 0, 0, 0);
         endDateTime.setHours(18, 0, 0, 0);
       }
