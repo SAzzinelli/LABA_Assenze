@@ -63,18 +63,6 @@ const Settings = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailResult, setEmailResult] = useState(null);
 
-  // Stati per Google Calendar Test
-  const [calendarTestForm, setCalendarTestForm] = useState({
-    employeeName: '',
-    date: new Date().toISOString().split('T')[0],
-    type: 'permission',
-    hours: 2,
-    reason: '',
-    entryTime: '',
-    exitTime: ''
-  });
-  const [calendarTestLoading, setCalendarTestLoading] = useState(false);
-  const [calendarTestResult, setCalendarTestResult] = useState(null);
   const [employees, setEmployees] = useState([]);
 
   // Funzioni per Email Management
@@ -189,22 +177,7 @@ const Settings = () => {
     if (activeTab === 'emailManagement') {
       fetchEmployees();
     }
-    if (activeTab === 'googleCalendarTest') {
-      fetchEmployeesForCalendar();
-    }
   }, [activeTab]);
-
-  const fetchEmployeesForCalendar = async () => {
-    try {
-      const response = await apiCall('/api/employees');
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.employees || data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    }
-  };
 
   const handleSettingChange = (category, setting, value) => {
     setSettings(prev => ({
@@ -252,7 +225,6 @@ const Settings = () => {
     { id: 'notifications', name: 'Notifiche', icon: Bell },
     ...(user?.role === 'admin' ? [
       { id: 'emailManagement', name: 'Email', icon: Mail },
-      { id: 'googleCalendarTest', name: 'Google Calendar Test', icon: Calendar },
     ] : [])
   ];
 
@@ -634,218 +606,6 @@ const Settings = () => {
     </div>
   );
 
-  const handleCalendarTest = async () => {
-    if (!calendarTestForm.employeeName.trim() || !calendarTestForm.date) {
-      setCalendarTestResult({ success: false, message: 'Compila nome dipendente e data' });
-      return;
-    }
-
-    if (calendarTestForm.type === 'permission' && !calendarTestForm.hours) {
-      setCalendarTestResult({ success: false, message: 'Inserisci le ore per il permesso' });
-      return;
-    }
-
-    setCalendarTestLoading(true);
-    setCalendarTestResult(null);
-
-    try {
-      const response = await apiCall('/api/admin/google-calendar/test-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeName: calendarTestForm.employeeName.trim(),
-          date: calendarTestForm.date,
-          type: calendarTestForm.type,
-          hours: calendarTestForm.type === 'permission' ? calendarTestForm.hours : 0,
-          reason: calendarTestForm.reason || undefined,
-          entryTime: calendarTestForm.entryTime || undefined,
-          exitTime: calendarTestForm.exitTime || undefined
-        })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setCalendarTestResult({ 
-          success: true, 
-          message: 'Evento creato con successo!',
-          eventId: data.eventId 
-        });
-        // Reset form
-        setCalendarTestForm({
-          employeeName: '',
-          date: new Date().toISOString().split('T')[0],
-          type: 'permission',
-          hours: 2,
-          reason: '',
-          entryTime: '',
-          exitTime: ''
-        });
-      } else {
-        setCalendarTestResult({ 
-          success: false, 
-          message: data.error || 'Errore nella creazione dell\'evento' 
-        });
-      }
-    } catch (error) {
-      console.error('Error creating test event:', error);
-      setCalendarTestResult({ 
-        success: false, 
-        message: 'Errore di connessione' 
-      });
-    } finally {
-      setCalendarTestLoading(false);
-    }
-  };
-
-  const renderGoogleCalendarTestTab = () => {
-    return (
-      <div className="space-y-6">
-        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
-          <p className="text-yellow-300 text-sm">
-            ⚠️ <strong>Modalità Test:</strong> Questa funzione crea eventi di test su Google Calendar senza approvare permessi reali. 
-            Usa questa funzione solo per testare l'integrazione.
-          </p>
-        </div>
-
-        <div className="bg-slate-800 rounded-lg p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Genera Evento Test</h3>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Nome Dipendente *
-              </label>
-              <input
-                type="text"
-                value={calendarTestForm.employeeName}
-                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, employeeName: e.target.value })}
-                placeholder="Es. Simone Azzinelli"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Data *
-                </label>
-                <input
-                  type="date"
-                  value={calendarTestForm.date}
-                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, date: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Tipo *
-                </label>
-                <select
-                  value={calendarTestForm.type}
-                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, type: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="permission">Permesso</option>
-                  <option value="permission_104">Permesso 104</option>
-                  <option value="vacation">Ferie</option>
-                  <option value="sick_leave">Malattia</option>
-                </select>
-              </div>
-            </div>
-
-            {calendarTestForm.type === 'permission' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Ore *
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  max="8"
-                  value={calendarTestForm.hours}
-                  onChange={(e) => setCalendarTestForm({ ...calendarTestForm, hours: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            )}
-
-            {calendarTestForm.type === 'permission' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Entra dopo (opzionale)
-                  </label>
-                  <input
-                    type="time"
-                    value={calendarTestForm.entryTime}
-                    onChange={(e) => setCalendarTestForm({ ...calendarTestForm, entryTime: e.target.value })}
-                    placeholder="Es. 10:00"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Esce prima (opzionale)
-                  </label>
-                  <input
-                    type="time"
-                    value={calendarTestForm.exitTime}
-                    onChange={(e) => setCalendarTestForm({ ...calendarTestForm, exitTime: e.target.value })}
-                    placeholder="Es. 16:00"
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Motivo (opzionale)
-              </label>
-              <input
-                type="text"
-                value={calendarTestForm.reason}
-                onChange={(e) => setCalendarTestForm({ ...calendarTestForm, reason: e.target.value })}
-                placeholder="Motivo del permesso"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <button
-              onClick={handleCalendarTest}
-              disabled={calendarTestLoading || !calendarTestForm.employeeName.trim() || !calendarTestForm.date}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-            >
-              <Calendar className="h-5 w-5 mr-2" />
-              {calendarTestLoading ? 'Generazione...' : 'Genera Evento Test'}
-            </button>
-          </div>
-
-          {calendarTestResult && (
-            <div className={`mt-4 p-4 rounded-lg ${
-              calendarTestResult.success 
-                ? 'bg-green-900/20 border border-green-500/30' 
-                : 'bg-red-900/20 border border-red-500/30'
-            }`}>
-              <p className={calendarTestResult.success ? 'text-green-300' : 'text-red-300'}>
-                {calendarTestResult.success ? '✅ ' : '❌ '}
-                {calendarTestResult.message}
-                {calendarTestResult.eventId && (
-                  <span className="block text-xs mt-1">Event ID: {calendarTestResult.eventId}</span>
-                )}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const renderEmailManagementTab = () => {
     return (
@@ -966,7 +726,6 @@ const Settings = () => {
       case 'company': return renderCompanyTab();
       case 'notifications': return renderNotificationsTab();
       case 'emailManagement': return renderEmailManagementTab();
-      case 'googleCalendarTest': return renderGoogleCalendarTestTab();
       default: return <div className="text-slate-400">Sezione in sviluppo...</div>;
     }
   };

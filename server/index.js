@@ -10295,60 +10295,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
   }
 });
 
-// ==================== GOOGLE CALENDAR TEST ENDPOINT ====================
-// Endpoint temporaneo per testare Google Calendar senza approvare permessi reali
-app.post('/api/admin/google-calendar/test-event', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { employeeName, date, type, hours, reason, entryTime, exitTime } = req.body;
-
-    if (!employeeName || !date) {
-      return res.status(400).json({ error: 'Nome dipendente e data sono obbligatori' });
-    }
-
-    // Usa direttamente il nome fornito (non serve cercare nel database)
-    const userName = employeeName.trim();
-
-    // Crea l'evento di test
-    const eventData = {
-      userName: userName,
-      startDate: date,
-      endDate: date, // Stessa data per inizio e fine
-      hours: type === 'permission' ? (parseFloat(hours) || 0) : 0,
-      type: type,
-      reason: reason || undefined, // Non aggiungere motivo di default
-      entryTime: entryTime && entryTime.trim() !== '' ? entryTime : null,
-      exitTime: exitTime && exitTime.trim() !== '' ? exitTime : null
-    };
-
-    console.log('📅 Tentativo creazione evento test Google Calendar:', eventData);
-    const event = await addPermissionEvent(eventData);
-
-    if (event) {
-      console.log(`✅ Evento test Google Calendar creato: ${userName} - ${date} (ID: ${event.id})`);
-      res.json({ 
-        success: true, 
-        message: 'Evento creato con successo',
-        eventId: event.id 
-      });
-    } else {
-      console.error('❌ addPermissionEvent ha restituito null - verifica credenziali Google Calendar');
-      res.status(500).json({ 
-        error: 'Errore nella creazione dell\'evento. Verifica le credenziali Google Calendar nelle variabili d\'ambiente.' 
-      });
-    }
-  } catch (error) {
-    console.error('❌ Google Calendar test event error:', error);
-    console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    res.status(500).json({ 
-      error: 'Errore interno del server',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
 
 // ==================== RECOVERY REQUESTS ENDPOINTS ====================
 
