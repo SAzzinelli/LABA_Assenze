@@ -9911,6 +9911,15 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
+    // Unisci celle per header (righe 1-3)
+    if (!ws['!merges']) ws['!merges'] = [];
+    // Riga 1: unisci A1:T1 per titolo
+    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 19 } });
+    // Riga 2: unisci A2:T2 per sottotitolo
+    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 19 } });
+    // Riga 3: unisci A3:T3 per azienda
+    ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 19 } });
+
     // Imposta larghezza colonne ottimizzata per nuovo layout
     const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
     ws['!cols'] = [
