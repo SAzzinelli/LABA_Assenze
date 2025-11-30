@@ -79,6 +79,9 @@ async function addPermissionEvent(permissionData) {
       }
     }
 
+    // Calendar ID: può essere 'primary' (calendario principale) o l'ID di un calendario specifico
+    // Per trovare l'ID di un calendario: Google Calendar → Impostazioni calendario → Integra il calendario → ID calendario
+    // Default: 'primary' = calendario principale dell'account Google usato per l'autenticazione
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
     const { userName, startDate, endDate, hours, type, reason, entryTime, exitTime } = permissionData;
 
