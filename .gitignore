@@ -102,6 +102,5 @@ temp/
 client_secret_*.json
 *client_secret*.json
 
-# Railway/Docker (ma .railwayignore deve essere committato)
-Dockerfile
+# Railway/Docker (ma Dockerfile e .railwayignore devono essere committati)
 *.dockerfile
