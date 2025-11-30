@@ -117,11 +117,26 @@ async function addPermissionEvent(permissionData) {
 
     switch (type) {
       case 'permission':
-        // Permesso normale: solo nome dipendente nel titolo
+        // Permesso normale: "Nome entra dopo" o "Nome esce prima" in base agli orari
         const hoursFormatted = hours > 0
           ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
           : '0h';
-        eventTitle = userName; // Solo nome dipendente
+        
+        // Determina se entra dopo, esce prima, o entrambi
+        if (entryTime && entryTime.trim() !== '' && (!exitTime || exitTime.trim() === '')) {
+          // Solo entrata: "entra dopo"
+          eventTitle = `${userName} entra dopo`;
+        } else if (exitTime && exitTime.trim() !== '' && (!entryTime || entryTime.trim() === '')) {
+          // Solo uscita: "esce prima"
+          eventTitle = `${userName} esce prima`;
+        } else if (entryTime && entryTime.trim() !== '' && exitTime && exitTime.trim() !== '') {
+          // Entrambi: "entra dopo" (priorità all'entrata)
+          eventTitle = `${userName} entra dopo`;
+        } else {
+          // Nessun orario specifico: default "entra dopo"
+          eventTitle = `${userName} entra dopo`;
+        }
+        
         eventDescription = `permesso di ${hoursFormatted}`; // Solo le ore, senza motivo
         break;
 
@@ -152,14 +167,32 @@ async function addPermissionEvent(permissionData) {
     const endDateTime = new Date(endDate);
 
     // Gestione orari in base al tipo di permesso
-    // IMPORTANTE: entryTime e exitTime devono essere stringhe valide (es. "10:00") e non vuote
-    if (type === 'permission' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
-      // Permesso con orari specifici: usa gli orari di entry/exit
-      const [entryHour, entryMin] = entryTime.split(':').map(Number);
-      const [exitHour, exitMin] = exitTime.split(':').map(Number);
-      
-      startDateTime.setHours(entryHour, entryMin, 0, 0);
-      endDateTime.setHours(exitHour, exitMin, 0, 0);
+    if (type === 'permission') {
+      // Permesso normale: usa gli orari specifici se disponibili
+      if (entryTime && entryTime.trim() !== '' && exitTime && exitTime.trim() !== '') {
+        // Entrambi gli orari specificati: da entryTime a exitTime
+        const [entryHour, entryMin] = entryTime.split(':').map(Number);
+        const [exitHour, exitMin] = exitTime.split(':').map(Number);
+        
+        startDateTime.setHours(entryHour, entryMin, 0, 0);
+        endDateTime.setHours(exitHour, exitMin, 0, 0);
+      } else if (entryTime && entryTime.trim() !== '') {
+        // Solo entrata: da entryTime a 18:00 (fine giornata lavorativa)
+        const [entryHour, entryMin] = entryTime.split(':').map(Number);
+        
+        startDateTime.setHours(entryHour, entryMin, 0, 0);
+        endDateTime.setHours(18, 0, 0, 0);
+      } else if (exitTime && exitTime.trim() !== '') {
+        // Solo uscita: da 9:00 a exitTime
+        const [exitHour, exitMin] = exitTime.split(':').map(Number);
+        
+        startDateTime.setHours(9, 0, 0, 0);
+        endDateTime.setHours(exitHour, exitMin, 0, 0);
+      } else {
+        // Nessun orario specifico: default 9:00-18:00
+        startDateTime.setHours(9, 0, 0, 0);
+        endDateTime.setHours(18, 0, 0, 0);
+      }
     } else if (type === 'permission_104' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
       // Permesso 104 con orari specifici
       const [entryHour, entryMin] = entryTime.split(':').map(Number);
@@ -168,7 +201,7 @@ async function addPermissionEvent(permissionData) {
       startDateTime.setHours(entryHour, entryMin, 0, 0);
       endDateTime.setHours(exitHour, exitMin, 0, 0);
     } else {
-      // Giornata intera: dalle 9:00 alle 18:00 (default per tutti i tipi)
+      // Giornata intera: dalle 9:00 alle 18:00 (default per ferie, malattia, 104 senza orari)
       startDateTime.setHours(9, 0, 0, 0);
       endDateTime.setHours(18, 0, 0, 0);
     }
