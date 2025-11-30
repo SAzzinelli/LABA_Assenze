@@ -12246,6 +12246,21 @@ server.listen(PORT, () => {
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
   console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
+  
+  // Debug: mostra tutte le variabili d'ambiente che iniziano con GOOGLE_
+  console.log(`\n🔍 Debug variabili d'ambiente GOOGLE_*:`);
+  const googleEnvVars = Object.keys(process.env).filter(key => key.startsWith('GOOGLE_'));
+  if (googleEnvVars.length > 0) {
+    googleEnvVars.forEach(key => {
+      const value = process.env[key];
+      const preview = value ? (value.length > 20 ? value.substring(0, 20) + '...' : value) : '(vuoto)';
+      console.log(`   ${key}: ${preview}`);
+    });
+  } else {
+    console.log(`   ⚠️ Nessuna variabile GOOGLE_* trovata in process.env`);
+  }
+  console.log(`\n`);
+  
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REFRESH_TOKEN) {
     console.log(`📅 Google Calendar: Integrazione attiva`);
   } else {
