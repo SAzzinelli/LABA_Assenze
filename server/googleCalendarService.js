@@ -117,38 +117,33 @@ async function addPermissionEvent(permissionData) {
 
     switch (type) {
       case 'permission':
-        // Permesso normale: solo nome dipendente
+        // Permesso normale: solo nome dipendente nel titolo
         const hoursFormatted = hours > 0
           ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
           : '0h';
         eventTitle = userName; // Solo nome dipendente
-        eventDescription = `permesso di ${hoursFormatted}`;
-        if (reason) eventDescription += `\nMotivo: ${reason}`;
+        eventDescription = `permesso di ${hoursFormatted}`; // Solo le ore, senza motivo
         break;
 
       case 'vacation':
         eventTitle = userName; // Solo nome dipendente
-        eventDescription = 'Ferie';
-        if (reason) eventDescription += `\nMotivo: ${reason}`;
+        eventDescription = 'Ferie'; // Solo "Ferie", senza motivo
         break;
 
       case 'sick_leave':
         eventTitle = userName; // Solo nome dipendente
-        eventDescription = 'Malattia';
-        if (reason) eventDescription += `\nMotivo: ${reason}`;
+        eventDescription = 'Malattia'; // Solo "Malattia", senza motivo
         break;
 
       case 'permission_104':
-        // Permesso 104: "Nome - Assenza 104"
+        // Permesso 104: "Nome - Assenza 104" nel titolo
         eventTitle = `${userName} - Assenza 104`;
-        eventDescription = 'Assenza Legge 104';
-        if (reason) eventDescription += `\nMotivo: ${reason}`;
+        eventDescription = 'Assenza Legge 104'; // Solo "Assenza Legge 104", senza motivo
         break;
 
       default:
         eventTitle = userName;
         eventDescription = type || 'Assenza';
-        if (reason) eventDescription += `\nMotivo: ${reason}`;
     }
 
     // Prepara le date per l'evento
@@ -157,14 +152,15 @@ async function addPermissionEvent(permissionData) {
     const endDateTime = new Date(endDate);
 
     // Gestione orari in base al tipo di permesso
-    if (type === 'permission' && entryTime && exitTime) {
+    // IMPORTANTE: entryTime e exitTime devono essere stringhe valide (es. "10:00") e non vuote
+    if (type === 'permission' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
       // Permesso con orari specifici: usa gli orari di entry/exit
       const [entryHour, entryMin] = entryTime.split(':').map(Number);
       const [exitHour, exitMin] = exitTime.split(':').map(Number);
       
       startDateTime.setHours(entryHour, entryMin, 0, 0);
       endDateTime.setHours(exitHour, exitMin, 0, 0);
-    } else if (type === 'permission_104' && entryTime && exitTime) {
+    } else if (type === 'permission_104' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
       // Permesso 104 con orari specifici
       const [entryHour, entryMin] = entryTime.split(':').map(Number);
       const [exitHour, exitMin] = exitTime.split(':').map(Number);
@@ -172,7 +168,7 @@ async function addPermissionEvent(permissionData) {
       startDateTime.setHours(entryHour, entryMin, 0, 0);
       endDateTime.setHours(exitHour, exitMin, 0, 0);
     } else {
-      // Giornata intera: dalle 9:00 alle 18:00 (default)
+      // Giornata intera: dalle 9:00 alle 18:00 (default per tutti i tipi)
       startDateTime.setHours(9, 0, 0, 0);
       endDateTime.setHours(18, 0, 0, 0);
     }
