@@ -10016,6 +10016,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const totalRows = wsData.length;
     const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
     const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
+    const legendRowIndex = totalRows - 1; // Ultima riga è la legenda
 
     // Titolo principale (riga 1) - unisci celle A1:J1
     // Nota: XLSX non supporta merge nativo, ma possiamo stilizzare tutte le celle unite
@@ -10158,7 +10159,31 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       }
     }
 
-    // Legenda eliminata - nessuna formattazione necessaria
+    // Legenda - formattazione con celle unite e bold
+    for (let col = 0; col < 20; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
+      const cell = ws[cellRef];
+      if (cell) {
+        if (!cell.s) cell.s = {};
+        cell.s.font = { bold: true, sz: 10, color: { rgb: '374151' } };
+        cell.s.alignment = { horizontal: 'center', vertical: 'center' };
+        cell.s.border = borderStyle;
+      } else {
+        ws[cellRef] = { v: '', t: 's', s: {
+          font: { bold: true, sz: 10, color: { rgb: '374151' } },
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border: borderStyle
+        }};
+      }
+    }
+    // Forza anche la prima cella della legenda (contenuto)
+    const legendCellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: 0 });
+    if (ws[legendCellRef]) {
+      if (!ws[legendCellRef].s) ws[legendCellRef].s = {};
+      ws[legendCellRef].s.font = { bold: true, sz: 10, color: { rgb: '374151' } };
+      ws[legendCellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
+      ws[legendCellRef].s.border = borderStyle;
+    }
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
