@@ -12238,6 +12238,14 @@ app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, a
 });
 
 // Inizializza Google Calendar client all'avvio
+// Nota: le variabili d'ambiente vengono lette da process.env
+// Se non sono disponibili qui, potrebbero non essere state passate correttamente da Railway
+console.log('\n🔍 Verifica variabili GOOGLE_* PRIMA di initializeCalendarClient:');
+console.log(`   GOOGLE_CLIENT_ID in process.env: ${process.env.GOOGLE_CLIENT_ID ? '✅ presente (' + process.env.GOOGLE_CLIENT_ID.substring(0, 30) + '...)' : '❌ mancante/undefined'}`);
+console.log(`   GOOGLE_CLIENT_SECRET in process.env: ${process.env.GOOGLE_CLIENT_SECRET ? '✅ presente' : '❌ mancante'}`);
+console.log(`   GOOGLE_REFRESH_TOKEN in process.env: ${process.env.GOOGLE_REFRESH_TOKEN ? '✅ presente' : '❌ mancante'}`);
+console.log(`   Tutte le chiavi process.env che contengono 'GOOGLE': ${Object.keys(process.env).filter(k => k.includes('GOOGLE')).join(', ') || 'nessuna'}\n`);
+
 initializeCalendarClient();
 
 server.listen(PORT, () => {
