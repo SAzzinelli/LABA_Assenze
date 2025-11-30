@@ -9764,28 +9764,33 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Riga 1: vuota
     wsData.push(Array(37).fill(''));
 
-    // Riga 2: Header principale
+    // Riga 2: Header principale (esattamente come nel file originale)
+    // Struttura: ["","COGNOME                 E NOME","","DITTA : _..._  MESE: _..._  ANNO: _..._","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","TOT.","",""]
     const headerRow2 = Array(37).fill('');
+    headerRow2[0] = ''; // Colonna A vuota
     headerRow2[1] = 'COGNOME                 E NOME';
+    headerRow2[2] = ''; // Colonna C vuota
     headerRow2[3] = `DITTA : _Libera Accademia di Belle Arti______  MESE: _${monthName}___  ANNO: _${yearParam}_`;
-    headerRow2[34] = 'TOT.';
+    headerRow2[34] = 'TOT.'; // Colonna 35 (indice 34)
     wsData.push(headerRow2);
 
     // Riga 3: vuota
     wsData.push(Array(37).fill(''));
 
-    // Riga 4: Header giorni
+    // Riga 4: Header giorni (esattamente come nel file originale)
     const headerRow4 = Array(37).fill('');
     headerRow4[0] = 'NR.';
-    headerRow4[2] = '';
+    headerRow4[1] = ''; // Colonna vuota dopo NR.
+    headerRow4[2] = ''; // Colonna vuota prima dei numeri
     monthDates.forEach((dateInfo, idx) => {
       headerRow4[3 + idx] = dateInfo.dayNumber;
     });
     wsData.push(headerRow4);
 
-    // Per ogni dipendente, aggiungi le righe
+    // Per ogni dipendente, aggiungi le righe (esattamente come nel file originale)
     employeeData.forEach(emp => {
       // Riga principale: NR, Cognome, "O", valori giorni, TOT
+      // Struttura: [NR, Cognome, "O", giorno1, giorno2, ..., giornoN, "", "", TOT, "", ""]
       const mainRow = Array(37).fill('');
       mainRow[0] = emp.number;
       mainRow[1] = emp.lastName;
@@ -9793,24 +9798,26 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       monthDates.forEach((dateInfo, idx) => {
         mainRow[3 + idx] = emp.dailyValues[idx];
       });
+      // TOT. è nella colonna 34 (indice 34)
       mainRow[34] = emp.totalHours;
       wsData.push(mainRow);
 
-      // Riga nome: "", Nome, "S", ...
+      // Riga nome: ["", Nome, "S", ...]
       const nameRow = Array(37).fill('');
       nameRow[1] = emp.firstName;
       nameRow[2] = 'S';
       wsData.push(nameRow);
 
-      // Riga vuota: "", "", "S", ...
+      // Riga vuota: ["", "", "S", ...]
       const emptyRow = Array(37).fill('');
       emptyRow[2] = 'S';
       wsData.push(emptyRow);
 
-      // Riga annotazioni (sempre presente, mostra solo le legende necessarie)
+      // Riga annotazioni: ["ANNOTAZIONI", "", "M= MALATTIA", "F= FERIE", "FE= FESTA", ...]
       const annotationRow = Array(37).fill('');
       annotationRow[0] = 'ANNOTAZIONI';
-      let annotationCol = 2;
+      annotationRow[1] = ''; // Colonna vuota
+      let annotationCol = 2; // Inizia dalla colonna 2 (indice 2)
       if (emp.annotations.hasSick) {
         annotationRow[annotationCol] = 'M= MALATTIA';
         annotationCol++;
@@ -9830,15 +9837,32 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Imposta larghezza colonne (simile al file originale)
+    // Imposta larghezza colonne (esattamente come nel file originale)
     ws['!cols'] = [
-      { wch: 5 },   // NR
-      { wch: 25 },  // Cognome
-      { wch: 3 },   // O/S
-      ...Array(31).fill({ wch: 4 }), // Giorni
-      { wch: 6 },   // TOT
-      { wch: 3 }    // Extra
+      { wch: 5 },   // Colonna A: NR.
+      { wch: 20 },  // Colonna B: Cognome/Nome
+      { wch: 3 },   // Colonna C: O/S
+      { wch: 4 },   // Colonna D: Primo giorno (o DITTA nella riga 2)
+      ...Array(31).fill({ wch: 3 }), // Colonne E-AK: Giorni del mese (31 giorni max)
+      { wch: 6 },   // Colonna AL: TOT.
+      { wch: 3 }    // Colonna AM: Extra
     ];
+
+    // Applica formattazione alle righe header (grassetto)
+    // Riga 2 (header principale)
+    if (ws['B2']) ws['B2'].s = { font: { bold: true } };
+    if (ws['D2']) ws['D2'].s = { font: { bold: true } };
+    if (ws['AI2']) ws['AI2'].s = { font: { bold: true } }; // TOT. (colonna 35, indice 34)
+    
+    // Riga 4 (header giorni)
+    if (ws['A4']) ws['A4'].s = { font: { bold: true } };
+    // Numeri giorni in grassetto
+    monthDates.forEach((_, idx) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 3, c: 3 + idx });
+      if (ws[cellRef]) {
+        ws[cellRef].s = { font: { bold: true }, alignment: { horizontal: 'center' } };
+      }
+    });
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
