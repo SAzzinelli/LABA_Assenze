@@ -86,11 +86,31 @@ Per ottenere il refresh token, usa lo script incluso nel progetto:
 
 ### 4. Ottenere l'ID del Calendario
 
+Per specificare quale calendario usare per gli eventi dei permessi:
+
+**Opzione 1: Usare il calendario principale (default)**
+- Usa `primary` come `GOOGLE_CALENDAR_ID`
+- Gli eventi verranno aggiunti al calendario principale dell'account Google
+
+**Opzione 2: Usare un calendario specifico**
+
 1. Vai su [Google Calendar](https://calendar.google.com/)
-2. Clicca sulle impostazioni del calendario che vuoi usare
-3. Scorri fino a "Integrate calendar"
-4. Copia il **Calendar ID** (solitamente è l'email del calendario, es. `your-email@example.com`)
-   - Oppure usa `primary` per il calendario principale
+2. Nella barra laterale sinistra, trova il calendario che vuoi usare
+3. Clicca sui **tre puntini** (⋮) accanto al nome del calendario
+4. Seleziona **"Impostazioni e condivisione"** (Settings and sharing)
+5. Scorri fino alla sezione **"Integra il calendario"** (Integrate calendar)
+6. Trova **"ID calendario"** (Calendar ID)
+7. Copia l'ID (può essere un'email come `your-email@example.com` o un ID lungo)
+
+**Esempi di Calendar ID:**
+- `primary` - Calendario principale dell'account
+- `your-email@gmail.com` - Calendario personale (se è l'email dell'account)
+- `abc123def456@group.calendar.google.com` - Calendario condiviso o secondario
+
+**Nota**: Se vuoi creare un calendario dedicato solo per i permessi HR:
+1. Crea un nuovo calendario in Google Calendar
+2. Dagli un nome (es. "Permessi HR LABA")
+3. Segui i passi sopra per ottenere il suo Calendar ID
 
 ### 5. Configurare le variabili d'ambiente
 
@@ -105,11 +125,18 @@ GOOGLE_CALENDAR_ID=primary
 GOOGLE_REDIRECT_URI=https://your-app-name.railway.app
 ```
 
-**Nota importante per Railway**:
-- `GOOGLE_REDIRECT_URI` deve corrispondere **esattamente** all'URL del tuo server Railway
-- Se il tuo server è su `https://hr-laba.railway.app`, usa quello
-- Se hai un dominio personalizzato (es. `https://hr.laba.biz`), usa quello
-- Il redirect URI nel file `.env` deve essere identico a quello configurato in Google Cloud Console
+**Spiegazione variabili:**
+
+- **`GOOGLE_CALENDAR_ID`**: 
+  - `primary` = Calendario principale dell'account Google (default)
+  - Oppure l'ID di un calendario specifico (vedi passo 4 per come trovarlo)
+  - Esempio: `hr-permessi@group.calendar.google.com` per un calendario dedicato
+
+- **`GOOGLE_REDIRECT_URI`**: 
+  - Deve corrispondere **esattamente** all'URL del tuo server Railway
+  - Se il tuo server è su `https://hr-laba.railway.app`, usa quello
+  - Se hai un dominio personalizzato (es. `https://hr.laba.biz`), usa quello
+  - Deve essere identico a quello configurato in Google Cloud Console
 
 **Nota:** Se non specifichi `GOOGLE_CALENDAR_ID`, verrà usato il calendario principale (`primary`).
 
