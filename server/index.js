@@ -9818,20 +9818,22 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       let permissionHours = 0;
       let holidayDays = 0;
 
-      // Calcola permessi totali per il mese (tutti i permessi approvati, non solo quelli con ore lavorate)
-      const userLeaves = leaveData?.filter(l => l.user_id === user.id) || [];
-      const monthPermissions = userLeaves.filter(l => 
-        l.type === 'permission' && 
-        l.status === 'approved' &&
-        new Date(l.start_date) >= new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-01`) &&
-        new Date(l.start_date) <= new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-${new Date(yearParam, monthParam, 0).getDate()}`)
-      );
+      // Calcola permessi totali per il mese (tutti i permessi approvati che cadono nel mese)
+      const userLeaves = leaveData?.filter(l => l.user_id === user.id && l.type === 'permission') || [];
       
-      // Somma tutte le ore dei permessi approvati nel mese
-      monthPermissions.forEach(perm => {
-        const permHours = parseFloat(perm.hours || 0);
-        if (permHours > 0) {
-          permissionHours += permHours;
+      // Controlla se ogni permesso cade nel mese (anche se inizia prima o finisce dopo)
+      userLeaves.forEach(perm => {
+        const permStart = new Date(perm.start_date);
+        const permEnd = new Date(perm.end_date);
+        const monthStart = new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-01`);
+        const monthEnd = new Date(yearParam, monthParam, 0); // Ultimo giorno del mese
+        
+        // Se il permesso si sovrappone al mese, conta le ore
+        if (permEnd >= monthStart && permStart <= monthEnd) {
+          const permHours = parseFloat(perm.hours || 0);
+          if (permHours > 0) {
+            permissionHours += permHours;
+          }
         }
       });
 
@@ -9938,7 +9940,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       { wch: 5 },   // Colonna A: N°
       { wch: 20 },  // Colonna B: Cognome
       { wch: 18 },  // Colonna C: Nome
-      ...Array(monthDates.length).fill({ wch: 8 }), // Colonne giorni - aumentata per leggere meglio i giorni
+      ...Array(monthDates.length).fill({ wch: 4 }), // Colonne giorni - ridotte
       { wch: 12 },  // Ore Lavorate
       { wch: 8 },   // Ferie
       { wch: 8 },   // Malattia
@@ -9979,8 +9981,9 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
     const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
 
-    // Titolo principale (riga 1) - espanso su più colonne
-    for (let col = 0; col < 10; col++) {
+    // Titolo principale (riga 1) - unisci celle A1:J1
+    // Nota: XLSX non supporta merge nativo, ma possiamo stilizzare tutte le celle unite
+    for (let col = 0; col < 20; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
       applyStyle(cellRef, {
         font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
@@ -9992,33 +9995,33 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       alignment: { horizontal: 'center', vertical: 'center' }
     });
     
-    // Sottotitolo (riga 2) - espanso
-    for (let col = 0; col < 10; col++) {
+    // Sottotitolo (riga 2) - unisci celle A2:J2
+    for (let col = 0; col < 20; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
       applyStyle(cellRef, {
         font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
-        alignment: { horizontal: 'center' }
+        alignment: { horizontal: 'center', vertical: 'center' }
       });
     }
     applyStyle('A2', {
       font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
-      alignment: { horizontal: 'center' }
+      alignment: { horizontal: 'center', vertical: 'center' }
     });
     
-    // Azienda (riga 3) - espanso
-    for (let col = 0; col < 10; col++) {
+    // Azienda (riga 3) - unisci celle A3:J3
+    for (let col = 0; col < 20; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 2, c: col });
       applyStyle(cellRef, {
         font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
-        alignment: { horizontal: 'center' }
+        alignment: { horizontal: 'center', vertical: 'center' }
       });
     }
     applyStyle('A3', {
       font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
-      alignment: { horizontal: 'center' }
+      alignment: { horizontal: 'center', vertical: 'center' }
     });
 
-    // Header tabella (riga 5) - stile professionale
+    // Header tabella (riga 4) - stile professionale
     // statsStartCol già dichiarato sopra
     for (let col = 0; col < statsStartCol + 6; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
@@ -10027,8 +10030,17 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       // Colori diversi per sezioni
       if (col === 0) bgColor = '1F2937'; // N° più scuro
       else if (col >= 1 && col <= 2) bgColor = '374151'; // Cognome/Nome
-      else if (col >= 3 && col < statsStartCol) bgColor = '4B5563'; // Giorni
-      else bgColor = '2563EB'; // Statistiche in blu
+      else if (col >= 3 && col < statsStartCol) {
+        bgColor = '4B5563'; // Giorni
+        // Numeri giorni in BOLD
+        applyStyle(cellRef, {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          fill: { fgColor: { rgb: bgColor } },
+          border: headerBorderStyle,
+          alignment: { horizontal: 'center', vertical: 'center' }
+        });
+        continue;
+      } else bgColor = '2563EB'; // Statistiche in blu
       
       applyStyle(cellRef, {
         font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
@@ -10039,7 +10051,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     }
 
     // Dati dipendenti - formattazione alternata (zebrato)
-    for (let row = dataStartRow; row < totalRows - 3; row++) { // Escludi righe finali
+    for (let row = dataStartRow; row < totalRows; row++) { // Tutte le righe dati
       const isEven = (row - dataStartRow) % 2 === 0;
       const bgColor = isEven ? 'FFFFFF' : 'F9FAFB';
       
@@ -10091,36 +10103,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       }
     }
 
-    // Legenda e note - stile discreto con celle più larghe
-    const legendRowIndex = totalRows - 2;
-    // Applica stile a tutte le celle della legenda per renderla più leggibile
-    for (let col = 0; col < 12; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
-      if (col === 0) {
-        applyStyle(cellRef, {
-          font: { bold: true, italic: true, color: { rgb: '6B7280' } }
-        });
-      } else if (ws[cellRef] && ws[cellRef].v) {
-        applyStyle(cellRef, {
-          font: { color: { rgb: '6B7280' }, sz: 10 }
-        });
-      }
-    }
-    
-    const noteRowIndex = totalRows - 1;
-    // Applica stile a tutte le celle della nota
-    for (let col = 0; col < 50; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: noteRowIndex, c: col });
-      if (col === 0) {
-        applyStyle(cellRef, {
-          font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
-        });
-      } else if (ws[cellRef] && ws[cellRef].v) {
-        applyStyle(cellRef, {
-          font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
-        });
-      }
-    }
+    // Legenda eliminata - nessuna formattazione necessaria
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
