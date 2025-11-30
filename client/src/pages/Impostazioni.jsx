@@ -14,7 +14,6 @@ import {
   Globe,
   Mail,
   Phone,
-  Calendar,
   FileText,
   Database,
   Network,
