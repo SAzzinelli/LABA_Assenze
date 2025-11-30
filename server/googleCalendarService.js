@@ -122,18 +122,20 @@ async function addPermissionEvent(permissionData) {
           ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
           : '0h';
         
-        // Determina se entra dopo, esce prima, o entrambi
-        if (entryTime && entryTime.trim() !== '' && (!exitTime || exitTime.trim() === '')) {
+        // Determina se entra dopo, esce prima, o assente tutta la giornata
+        if (!entryTime || entryTime.trim() === '') {
+          if (!exitTime || exitTime.trim() === '') {
+            // Nessun orario: permesso a giornata intera
+            eventTitle = `${userName} assente oggi`;
+          } else {
+            // Solo uscita: "esce prima"
+            eventTitle = `${userName} esce prima`;
+          }
+        } else if (!exitTime || exitTime.trim() === '') {
           // Solo entrata: "entra dopo"
           eventTitle = `${userName} entra dopo`;
-        } else if (exitTime && exitTime.trim() !== '' && (!entryTime || entryTime.trim() === '')) {
-          // Solo uscita: "esce prima"
-          eventTitle = `${userName} esce prima`;
-        } else if (entryTime && entryTime.trim() !== '' && exitTime && exitTime.trim() !== '') {
-          // Entrambi: "entra dopo" (priorità all'entrata)
-          eventTitle = `${userName} entra dopo`;
         } else {
-          // Nessun orario specifico: default "entra dopo"
+          // Entrambi gli orari: "entra dopo" (priorità all'entrata)
           eventTitle = `${userName} entra dopo`;
         }
         
@@ -193,7 +195,7 @@ async function addPermissionEvent(permissionData) {
         endDateTime.setHours(exitHour, exitMin, 0, 0);
         endDateTime.setHours(endDateTime.getHours() + 1);
       } else {
-        // Nessun orario specifico: default 9:00-18:00 (giornata intera)
+        // Nessun orario: permesso a giornata intera (9:00-18:00)
         startDateTime.setHours(9, 0, 0, 0);
         endDateTime.setHours(18, 0, 0, 0);
       }
