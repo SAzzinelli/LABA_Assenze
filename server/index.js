@@ -9906,30 +9906,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     });
 
     // ========== FOOTER SECTION ==========
-    // Riga vuota
-    wsData.push(Array(50).fill(''));
-    
-    // Riga legenda - distribuita su più colonne per leggibilità
-    const legendRow = Array(50).fill('');
-    legendRow[0] = 'LEGENDA:';
-    legendRow[1] = 'D = Domenica (giorno non lavorativo)';
-    legendRow[2] = '';
-    legendRow[3] = 'M = Malattia';
-    legendRow[4] = '';
-    legendRow[5] = 'F = Ferie';
-    legendRow[6] = '';
-    legendRow[7] = 'FE = Festa';
-    legendRow[8] = '';
-    legendRow[9] = '104 = Permesso Legge 104';
-    legendRow[10] = '';
-    legendRow[11] = 'Numeri = Ore lavorate nel giorno';
-    wsData.push(legendRow);
-    
-    // Riga note
-    const noteRow = Array(50).fill('');
-    noteRow[0] = 'NOTA:';
-    noteRow[1] = 'Le statistiche mostrano il totale per categoria nel mese selezionato.';
-    wsData.push(noteRow);
+    // Legenda eliminata come richiesto
 
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
