@@ -10068,22 +10068,41 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       else if (col >= 1 && col <= 2) bgColor = '374151'; // Cognome/Nome
       else if (col >= 3 && col < statsStartCol) {
         bgColor = '4B5563'; // Giorni
-        // Numeri giorni in BOLD
-        applyStyle(cellRef, {
-          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-          fill: { fgColor: { rgb: bgColor } },
-          border: headerBorderStyle,
-          alignment: { horizontal: 'center', vertical: 'center' }
-        });
+        // Numeri giorni in BOLD - FORZATO DIRETTAMENTE
+        const cell = ws[cellRef];
+        if (cell) {
+          if (!cell.s) cell.s = {};
+          cell.s.font = { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 };
+          cell.s.fill = { fgColor: { rgb: bgColor } };
+          cell.s.border = headerBorderStyle;
+          cell.s.alignment = { horizontal: 'center', vertical: 'center' };
+        } else {
+          ws[cellRef] = { v: '', t: 's', s: {
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+            fill: { fgColor: { rgb: bgColor } },
+            border: headerBorderStyle,
+            alignment: { horizontal: 'center', vertical: 'center' }
+          }};
+        }
         continue;
       } else bgColor = '2563EB'; // Statistiche in blu
       
-      applyStyle(cellRef, {
-        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
-        fill: { fgColor: { rgb: bgColor } },
-        border: headerBorderStyle,
-        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-      });
+      // FORZATO DIRETTAMENTE per garantire bold
+      const cell = ws[cellRef];
+      if (cell) {
+        if (!cell.s) cell.s = {};
+        cell.s.font = { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 };
+        cell.s.fill = { fgColor: { rgb: bgColor } };
+        cell.s.border = headerBorderStyle;
+        cell.s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+      } else {
+        ws[cellRef] = { v: '', t: 's', s: {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+          fill: { fgColor: { rgb: bgColor } },
+          border: headerBorderStyle,
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+        }};
+      }
     }
 
     // Dati dipendenti - formattazione alternata (zebrato)
@@ -10100,13 +10119,13 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           fill: { fgColor: { rgb: bgColor } }
         };
         
-        // Formattazione per colonne specifiche
+        // Formattazione per colonne specifiche - BOLD FORZATO
         if (col === 0) {
           // N°: centrato, grassetto
           cellStyle.font = { bold: true };
           cellStyle.alignment = { horizontal: 'center' };
         } else if (col >= 1 && col <= 2) {
-          // Cognome/Nome: grassetto
+          // Cognome/Nome: grassetto FORZATO
           cellStyle.font = { bold: true };
         } else if (col >= 3 && col < statsStartCol) {
           // Giorni: centrato, colori per tipo
