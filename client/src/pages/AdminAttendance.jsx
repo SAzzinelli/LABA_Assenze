@@ -1146,62 +1146,61 @@ const AdminAttendance = () => {
         {/* Filtri e Export - Solo in Cronologia */}
         {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                <div className="md:col-span-2 lg:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
-                  <div className="relative">
-                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Nome o cognome..."
-                      className="w-full pl-10 pr-3 py-2 h-[42px] bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
-                  <select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                    className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {Array.from({ length: 5 }, (_, i) => {
-                      const year = new Date().getFullYear() - 2 + i;
-                      return (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      );
-                    })}
-                  </select>
+            <div className="flex flex-col sm:flex-row items-end gap-4">
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Nome o cognome..."
+                    className="w-full pl-10 pr-3 py-2 h-[42px] bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
                 </div>
               </div>
+
+              <div className="w-full sm:w-auto min-w-[140px]">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Mese</label>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(2024, i).toLocaleDateString('it-IT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-full sm:w-auto min-w-[100px]">
+                <label className="block text-sm font-medium text-slate-300 mb-2">Anno</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = new Date().getFullYear() - 2 + i;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
               {/* Pulsante Esporta report - Solo in Cronologia */}
-              <div className="flex items-end">
+              <div className="w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={handleDownloadMonthlyReportExcel}
                   disabled={downloadingExcel}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingExcel
+                  className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 h-[42px] text-sm font-medium transition whitespace-nowrap ${downloadingExcel
                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-500'
                     }`}
