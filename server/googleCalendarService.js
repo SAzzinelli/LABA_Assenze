@@ -13,7 +13,24 @@ let calendarClient = null;
  */
 function initializeCalendarClient() {
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    // Debug: verifica tutte le possibili varianti del nome
+    let clientId = process.env.GOOGLE_CLIENT_ID;
+    
+    // Se non trovato, prova varianti comuni di errori di digitazione
+    if (!clientId) {
+      console.log('⚠️ GOOGLE_CLIENT_ID non trovato, provo varianti...');
+      clientId = process.env['GOOGLE_CLIENT_ID'] || 
+                 process.env['GOOGLE_CLIENTID'] || 
+                 process.env['GOOGLE_CLIENT_ID '] || // con spazio finale
+                 process.env[' GOOGLE_CLIENT_ID'] || // con spazio iniziale
+                 process.env['google_client_id'] || // lowercase
+                 process.env['Google_Client_Id']; // mixed case
+      
+      if (clientId) {
+        console.log(`✅ Trovato GOOGLE_CLIENT_ID con nome alternativo`);
+      }
+    }
+    
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 

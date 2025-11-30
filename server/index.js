@@ -12244,7 +12244,38 @@ console.log('\n🔍 Verifica variabili GOOGLE_* PRIMA di initializeCalendarClien
 console.log(`   GOOGLE_CLIENT_ID in process.env: ${process.env.GOOGLE_CLIENT_ID ? '✅ presente (' + process.env.GOOGLE_CLIENT_ID.substring(0, 30) + '...)' : '❌ mancante/undefined'}`);
 console.log(`   GOOGLE_CLIENT_SECRET in process.env: ${process.env.GOOGLE_CLIENT_SECRET ? '✅ presente' : '❌ mancante'}`);
 console.log(`   GOOGLE_REFRESH_TOKEN in process.env: ${process.env.GOOGLE_REFRESH_TOKEN ? '✅ presente' : '❌ mancante'}`);
-console.log(`   Tutte le chiavi process.env che contengono 'GOOGLE': ${Object.keys(process.env).filter(k => k.includes('GOOGLE')).join(', ') || 'nessuna'}\n`);
+
+// Debug approfondito: cerca tutte le variabili che potrebbero essere GOOGLE_CLIENT_ID
+const allEnvKeys = Object.keys(process.env);
+const googleKeys = allEnvKeys.filter(k => k.includes('GOOGLE'));
+const clientIdKeys = allEnvKeys.filter(k => k.toUpperCase().includes('CLIENT') && k.toUpperCase().includes('ID'));
+console.log(`   Tutte le chiavi process.env che contengono 'GOOGLE': ${googleKeys.join(', ') || 'nessuna'}`);
+console.log(`   Tutte le chiavi che contengono 'CLIENT' e 'ID': ${clientIdKeys.join(', ') || 'nessuna'}`);
+
+// Verifica se c'è una variabile con nome simile ma diverso
+const similarKeys = allEnvKeys.filter(k => 
+  (k.toUpperCase().includes('GOOGLE') && k.toUpperCase().includes('CLIENT')) ||
+  (k.toUpperCase().includes('CLIENT') && k.toUpperCase().includes('ID') && k.toUpperCase().includes('GOOGLE'))
+);
+if (similarKeys.length > 0) {
+  console.log(`   ⚠️ Trovate variabili simili che potrebbero essere GOOGLE_CLIENT_ID:`);
+  similarKeys.forEach(key => {
+    const value = process.env[key];
+    const preview = value ? (value.length > 30 ? value.substring(0, 30) + '...' : value) : '(vuoto)';
+    console.log(`      "${key}": ${preview}`);
+  });
+}
+
+// Verifica il valore esatto se presente
+if (process.env.GOOGLE_CLIENT_ID) {
+  console.log(`   ✅ GOOGLE_CLIENT_ID valore completo: ${process.env.GOOGLE_CLIENT_ID}`);
+  console.log(`   ✅ GOOGLE_CLIENT_ID lunghezza: ${process.env.GOOGLE_CLIENT_ID.length}`);
+} else {
+  console.log(`   ❌ GOOGLE_CLIENT_ID non trovato in process.env`);
+  console.log(`   🔍 Verifica manuale: typeof process.env.GOOGLE_CLIENT_ID = ${typeof process.env.GOOGLE_CLIENT_ID}`);
+  console.log(`   🔍 Verifica manuale: process.env['GOOGLE_CLIENT_ID'] = ${process.env['GOOGLE_CLIENT_ID'] ? 'presente' : 'mancante'}`);
+}
+console.log(`\n`);
 
 initializeCalendarClient();
 
