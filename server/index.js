@@ -10041,10 +10041,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 19 } });
     // Riga 3: unisci A3:T3 per azienda
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 19 } });
-    
-    // Legenda: unisci celle come l'intestazione (dopo 2 righe vuote)
-    const legendRowIndex = wsData.length - 1; // Ultima riga è la legenda
-    ws['!merges'].push({ s: { r: legendRowIndex, c: 0 }, e: { r: legendRowIndex, c: 19 } });
 
     // Imposta larghezza colonne ottimizzata per nuovo layout
     const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
@@ -10093,6 +10089,9 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
     const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
     const legendRowIndex = totalRows - 1; // Ultima riga è la legenda
+    
+    // Legenda: unisci celle come l'intestazione (dopo 2 righe vuote)
+    ws['!merges'].push({ s: { r: legendRowIndex, c: 0 }, e: { r: legendRowIndex, c: 19 } });
 
     // Titolo principale (riga 1) - unisci celle A1:J1
     // Nota: XLSX non supporta merge nativo, ma possiamo stilizzare tutte le celle unite
