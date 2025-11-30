@@ -10277,6 +10277,61 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
   }
 });
 
+// ==================== GOOGLE CALENDAR TEST ENDPOINT ====================
+// Endpoint temporaneo per testare Google Calendar senza approvare permessi reali
+app.post('/api/admin/google-calendar/test-event', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { employeeId, date, type, hours, reason, entryTime, exitTime } = req.body;
+
+    if (!employeeId || !date) {
+      return res.status(400).json({ error: 'Dipendente e data sono obbligatori' });
+    }
+
+    // Recupera i dati del dipendente
+    const { data: employee, error: empError } = await supabase
+      .from('users')
+      .select('first_name, last_name')
+      .eq('id', employeeId)
+      .single();
+
+    if (empError || !employee) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    const userName = `${employee.first_name} ${employee.last_name}`;
+
+    // Crea l'evento di test
+    const eventData = {
+      userName: userName,
+      startDate: date,
+      endDate: date, // Stessa data per inizio e fine
+      hours: type === 'permission' ? (parseFloat(hours) || 0) : 0,
+      type: type,
+      reason: reason || 'Test evento Google Calendar',
+      entryTime: entryTime || null,
+      exitTime: exitTime || null
+    };
+
+    const event = await addPermissionEvent(eventData);
+
+    if (event) {
+      console.log(`✅ Evento test Google Calendar creato: ${userName} - ${date}`);
+      res.json({ 
+        success: true, 
+        message: 'Evento creato con successo',
+        eventId: event.id 
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Errore nella creazione dell\'evento. Verifica le credenziali Google Calendar.' 
+      });
+    }
+  } catch (error) {
+    console.error('Google Calendar test event error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // ==================== RECOVERY REQUESTS ENDPOINTS ====================
 
 // Funzione per processare recuperi completati (chiamata periodicamente o su richiesta)
