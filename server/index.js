@@ -9945,12 +9945,19 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     });
 
     // ========== FOOTER SECTION ==========
-    // Legenda eliminata come richiesto
+    // 2 righe vuote
+    wsData.push(Array(50).fill(''));
+    wsData.push(Array(50).fill(''));
+
+    // Legenda con celle unite
+    const legendRow = Array(50).fill('');
+    legendRow[0] = 'LEGENDA: D = Domenica | F = Ferie | M = Malattia | FE = Festivo | 104 = Permesso 104 | Numeri = Ore lavorate';
+    wsData.push(legendRow);
 
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Unisci celle per header (righe 1-3)
+    // Unisci celle per header (righe 1-3) e legenda
     if (!ws['!merges']) ws['!merges'] = [];
     // Riga 1: unisci A1:T1 per titolo
     ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 19 } });
@@ -9958,6 +9965,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 19 } });
     // Riga 3: unisci A3:T3 per azienda
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 19 } });
+    
+    // Legenda: unisci celle come l'intestazione (dopo 2 righe vuote)
+    const legendRowIndex = wsData.length - 1; // Ultima riga è la legenda
+    ws['!merges'].push({ s: { r: legendRowIndex, c: 0 }, e: { r: legendRowIndex, c: 19 } });
 
     // Imposta larghezza colonne ottimizzata per nuovo layout
     const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
