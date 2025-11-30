@@ -2722,12 +2722,21 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           { user_id: user.id, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
         ];
 
+        // Usa upsert invece di insert per evitare errori se gli schedule esistono già
         const { error: createError } = await supabase
           .from('work_schedules')
-          .insert(defaultSchedules);
+          .upsert(defaultSchedules, {
+            onConflict: 'user_id,day_of_week',
+            ignoreDuplicates: false // Se esistono già, li aggiorna (ma non dovrebbe essere necessario)
+          });
 
         if (createError) {
-          console.error(`❌ [current] Failed to create default schedules for ${user.first_name}:`, createError);
+          // Se l'errore è "duplicate key", ignoralo silenziosamente (gli schedule esistono già)
+          if (createError.code === '23505') {
+            console.log(`ℹ️ [current] Default schedules already exist for ${user.first_name}, skipping...`);
+          } else {
+            console.error(`❌ [current] Failed to create default schedules for ${user.first_name}:`, createError);
+          }
           return {
             user_id: user.id,
             first_name: user.first_name,
@@ -3710,12 +3719,21 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
         { user_id: userId, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }  // Domenica
       ];
 
+      // Usa upsert invece di insert per evitare errori se gli schedule esistono già
       const { error: createError } = await supabase
         .from('work_schedules')
-        .insert(defaultSchedules);
+        .upsert(defaultSchedules, {
+          onConflict: 'user_id,day_of_week',
+          ignoreDuplicates: false
+        });
 
       if (createError) {
-        console.error(`❌ [current-hours] Failed to create default schedules:`, createError);
+        // Se l'errore è "duplicate key", ignoralo silenziosamente (gli schedule esistono già)
+        if (createError.code === '23505') {
+          console.log(`ℹ️ [current-hours] Default schedules already exist for user ${userId}, skipping...`);
+        } else {
+          console.error(`❌ [current-hours] Failed to create default schedules:`, createError);
+        }
         return res.json({
           isWorkingDay: false,
           message: 'Nessun orario di lavoro per oggi'
