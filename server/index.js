@@ -10312,23 +10312,33 @@ app.post('/api/admin/google-calendar/test-event', authenticateToken, requireAdmi
       exitTime: exitTime || null
     };
 
+    console.log('📅 Tentativo creazione evento test Google Calendar:', eventData);
     const event = await addPermissionEvent(eventData);
 
     if (event) {
-      console.log(`✅ Evento test Google Calendar creato: ${userName} - ${date}`);
+      console.log(`✅ Evento test Google Calendar creato: ${userName} - ${date} (ID: ${event.id})`);
       res.json({ 
         success: true, 
         message: 'Evento creato con successo',
         eventId: event.id 
       });
     } else {
+      console.error('❌ addPermissionEvent ha restituito null - verifica credenziali Google Calendar');
       res.status(500).json({ 
-        error: 'Errore nella creazione dell\'evento. Verifica le credenziali Google Calendar.' 
+        error: 'Errore nella creazione dell\'evento. Verifica le credenziali Google Calendar nelle variabili d\'ambiente.' 
       });
     }
   } catch (error) {
-    console.error('Google Calendar test event error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    console.error('❌ Google Calendar test event error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      error: 'Errore interno del server',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

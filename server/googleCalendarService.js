@@ -1,4 +1,5 @@
 const { google } = require('googleapis');
+const { OAuth2Client } = require('google-auth-library');
 
 /**
  * Servizio per l'integrazione con Google Calendar
@@ -32,7 +33,7 @@ function initializeCalendarClient() {
       console.warn('⚠️ Assicurati che questo corrisponda al redirect URI configurato in Google Cloud Console.');
     }
 
-    const oauth2Client = new google.auth.OAuth2(
+    const oauth2Client = new OAuth2Client(
       clientId,
       clientSecret,
       redirectUri
@@ -180,6 +181,12 @@ async function addPermissionEvent(permissionData) {
     return response.data;
   } catch (error) {
     console.error('❌ Errore creazione evento Google Calendar:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      response: error.response?.data,
+      stack: error.stack
+    });
     // Non bloccare il processo se Google Calendar fallisce
     return null;
   }
