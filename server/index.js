@@ -9757,77 +9757,123 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       };
     });
 
-    // Crea il workbook Excel con layout professionale riorganizzato
+    // Crea il workbook Excel con design completamente nuovo e professionale
     const wb = XLSX.utils.book_new();
     const wsData = [];
 
-    // Riga 1: Titolo principale del report
-    const titleRow = Array(37).fill('');
-    titleRow[0] = `REPORT PRESENZE MENSILE - ${monthName.toUpperCase()} ${yearParam}`;
+    // ========== HEADER SECTION ==========
+    // Riga 1: Titolo principale (centrato, grande)
+    const titleRow = Array(50).fill('');
+    titleRow[0] = `REPORT PRESENZE MENSILE`;
     wsData.push(titleRow);
 
-    // Riga 2: Informazioni azienda e periodo
-    const infoRow = Array(37).fill('');
-    infoRow[0] = 'Azienda:';
-    infoRow[1] = 'Libera Accademia di Belle Arti';
-    infoRow[3] = 'Periodo:';
-    infoRow[4] = `${monthName} ${yearParam}`;
-    wsData.push(infoRow);
+    // Riga 2: Sottotitolo con mese e anno
+    const subtitleRow = Array(50).fill('');
+    subtitleRow[0] = `${monthName.toUpperCase()} ${yearParam}`;
+    wsData.push(subtitleRow);
 
-    // Riga 3: vuota (separatore)
-    wsData.push(Array(37).fill(''));
+    // Riga 3: Informazioni azienda
+    const companyRow = Array(50).fill('');
+    companyRow[0] = 'Libera Accademia di Belle Arti';
+    wsData.push(companyRow);
 
-    // Riga 4: Header tabella principale
-    const headerRow = Array(37).fill('');
+    // Riga 4: vuota (separatore)
+    wsData.push(Array(50).fill(''));
+
+    // ========== TABLE HEADER ==========
+    // Riga 5: Header principale della tabella
+    const headerRow = Array(50).fill('');
     headerRow[0] = 'N°';
     headerRow[1] = 'Cognome';
     headerRow[2] = 'Nome';
-    headerRow[3] = 'Cod.'; // Codice O/S
-    // Aggiungi header per ogni giorno del mese
+    
+    // Header giorni del mese con giorno della settimana
+    const dayLabels = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     monthDates.forEach((dateInfo, idx) => {
-      headerRow[4 + idx] = dateInfo.dayNumber;
+      const dayLabel = dayLabels[dateInfo.dayOfWeek];
+      headerRow[3 + idx] = `${dayLabel}\n${dateInfo.dayNumber}`;
     });
-    headerRow[34] = 'Totale Ore'; // Colonna TOT
+    
+    // Colonne statistiche finali
+    const statsStartCol = 3 + monthDates.length;
+    headerRow[statsStartCol] = 'Ore Lavorate';
+    headerRow[statsStartCol + 1] = 'Ferie';
+    headerRow[statsStartCol + 2] = 'Malattia';
+    headerRow[statsStartCol + 3] = 'Permessi';
+    headerRow[statsStartCol + 4] = 'Festivi';
+    headerRow[statsStartCol + 5] = 'Totale';
     wsData.push(headerRow);
 
-    // Per ogni dipendente, aggiungi le righe con layout riorganizzato
+    // ========== DATA ROWS ==========
+    // Calcola statistiche per ogni dipendente
     employeeData.forEach(emp => {
-      // Riga principale: N°, Cognome, Nome, Codice, valori giorni, Totale
-      const mainRow = Array(37).fill('');
-      mainRow[0] = emp.number;
-      mainRow[1] = emp.lastName;
-      mainRow[2] = emp.firstName;
-      mainRow[3] = 'O'; // Codice originale mantenuto
-      monthDates.forEach((dateInfo, idx) => {
-        mainRow[4 + idx] = emp.dailyValues[idx];
-      });
-      mainRow[34] = emp.totalHours; // Totale ore
-      wsData.push(mainRow);
+      let totalWorkedHours = 0;
+      let vacationDays = 0;
+      let sickDays = 0;
+      let permissionHours = 0;
+      let holidayDays = 0;
 
-      // Riga annotazioni (solo se ci sono annotazioni)
-      if (emp.annotations.hasSick || emp.annotations.hasVacation || emp.annotations.hasHoliday) {
-        const annotationRow = Array(37).fill('');
-        annotationRow[0] = ''; // N° vuoto
-        annotationRow[1] = ''; // Cognome vuoto
-        annotationRow[2] = ''; // Nome vuoto
-        annotationRow[3] = 'S'; // Codice S per annotazioni
-        let annotationCol = 4; // Inizia dalla colonna 4 (dopo codice)
-        const annotations = [];
-        if (emp.annotations.hasSick) annotations.push('M = Malattia');
-        if (emp.annotations.hasVacation) annotations.push('F = Ferie');
-        if (emp.annotations.hasHoliday) annotations.push('FE = Festa');
-        if (annotations.length > 0) {
-          annotationRow[annotationCol] = annotations.join(' | ');
+      monthDates.forEach((dateInfo, idx) => {
+        const value = emp.dailyValues[idx];
+        if (typeof value === 'number' && value > 0) {
+          totalWorkedHours += value;
+        } else if (value === 'F') {
+          vacationDays++;
+        } else if (value === 'M') {
+          sickDays++;
+        } else if (value === 'FE') {
+          holidayDays++;
+        } else if (typeof value === 'number' && value < 8 && value > 0) {
+          // Ore parziali potrebbero essere permessi
+          permissionHours += value;
         }
-        wsData.push(annotationRow);
-      }
+      });
+
+      // Riga dati dipendente
+      const dataRow = Array(50).fill('');
+      dataRow[0] = emp.number;
+      dataRow[1] = emp.lastName;
+      dataRow[2] = emp.firstName;
+      
+      // Valori giorni
+      monthDates.forEach((dateInfo, idx) => {
+        const value = emp.dailyValues[idx];
+        // Formatta i valori: numeri come ore, sigle come sono
+        if (typeof value === 'number' && value > 0) {
+          dataRow[3 + idx] = value;
+        } else if (value === 'D') {
+          dataRow[3 + idx] = 'D';
+        } else if (value === 'F') {
+          dataRow[3 + idx] = 'F';
+        } else if (value === 'M') {
+          dataRow[3 + idx] = 'M';
+        } else if (value === 'FE') {
+          dataRow[3 + idx] = 'FE';
+        } else {
+          dataRow[3 + idx] = '';
+        }
+      });
+
+      // Colonne statistiche
+      const statsStartCol = 3 + monthDates.length;
+      dataRow[statsStartCol] = totalWorkedHours;
+      dataRow[statsStartCol + 1] = vacationDays > 0 ? vacationDays : '';
+      dataRow[statsStartCol + 2] = sickDays > 0 ? sickDays : '';
+      dataRow[statsStartCol + 3] = permissionHours > 0 ? permissionHours.toFixed(1) : '';
+      dataRow[statsStartCol + 4] = holidayDays > 0 ? holidayDays : '';
+      dataRow[statsStartCol + 5] = emp.totalHours;
+      
+      wsData.push(dataRow);
     });
 
-    // Riga finale: Legenda
-    wsData.push(Array(37).fill(''));
-    const legendRow = Array(37).fill('');
+    // ========== FOOTER SECTION ==========
+    // Riga vuota
+    wsData.push(Array(50).fill(''));
+    
+    // Riga legenda
+    const legendRow = Array(50).fill('');
     legendRow[0] = 'LEGENDA:';
-    legendRow[1] = 'D = Domenica';
+    legendRow[1] = 'D = Domenica (giorno non lavorativo)';
     legendRow[2] = '|';
     legendRow[3] = 'M = Malattia';
     legendRow[4] = '|';
@@ -9835,32 +9881,45 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     legendRow[6] = '|';
     legendRow[7] = 'FE = Festa';
     legendRow[8] = '|';
-    legendRow[9] = 'Numeri = Ore lavorate';
+    legendRow[9] = 'Numeri = Ore lavorate nel giorno';
     wsData.push(legendRow);
+    
+    // Riga note
+    const noteRow = Array(50).fill('');
+    noteRow[0] = 'NOTA:';
+    noteRow[1] = 'Le statistiche mostrano il totale per categoria nel mese selezionato.';
+    wsData.push(noteRow);
 
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Imposta larghezza colonne ottimizzata
+    // Imposta larghezza colonne ottimizzata per nuovo layout
+    const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
     ws['!cols'] = [
       { wch: 4 },   // Colonna A: N°
-      { wch: 18 },  // Colonna B: Cognome
-      { wch: 15 },  // Colonna C: Nome
-      { wch: 4 },   // Colonna D: Cod.
-      ...Array(31).fill({ wch: 3.5 }), // Colonne E-AK: Giorni del mese
-      { wch: 10 },  // Colonna AL: Totale Ore
-      { wch: 3 }    // Colonna AM: Extra
+      { wch: 20 },  // Colonna B: Cognome
+      { wch: 18 },  // Colonna C: Nome
+      ...Array(monthDates.length).fill({ wch: 4 }), // Colonne giorni
+      { wch: 12 },  // Ore Lavorate
+      { wch: 8 },   // Ferie
+      { wch: 8 },   // Malattia
+      { wch: 10 },  // Permessi
+      { wch: 8 },   // Festivi
+      { wch: 10 }   // Totale
     ];
 
-    // Definisci stili professionali
-    const thinBorder = { style: 'thin', color: { rgb: '000000' } };
-    const mediumBorder = { style: 'medium', color: { rgb: '000000' } };
+    // ========== APPLICA STILI PROFESSIONALI ==========
+    const thinBorder = { style: 'thin', color: { rgb: 'CCCCCC' } };
+    const mediumBorder = { style: 'medium', color: { rgb: '666666' } };
+    const thickBorder = { style: 'thick', color: { rgb: '000000' } };
+    
     const borderStyle = {
       top: thinBorder,
       bottom: thinBorder,
       left: thinBorder,
       right: thinBorder
     };
+    
     const headerBorderStyle = {
       top: mediumBorder,
       bottom: mediumBorder,
@@ -9868,7 +9927,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       right: thinBorder
     };
 
-    // Funzione helper per applicare stile
     const applyStyle = (cellRef, style) => {
       if (ws[cellRef]) {
         if (!ws[cellRef].s) ws[cellRef].s = {};
@@ -9878,94 +9936,112 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       }
     };
 
-    // Applica formattazione al titolo (riga 1)
-    applyStyle('A1', { 
-      font: { bold: true, sz: 16, color: { rgb: '1F2937' } },
+    const totalRows = wsData.length;
+    const headerRowIndex = 4; // Riga 5 (indice 4) è l'header
+    const dataStartRow = 5; // Riga 6 (indice 5) inizia i dati
+
+    // Titolo principale (riga 1)
+    applyStyle('A1', {
+      font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    });
+    // Merge celle per titolo (se supportato)
+    
+    // Sottotitolo (riga 2)
+    applyStyle('A2', {
+      font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
+      alignment: { horizontal: 'center' }
+    });
+    
+    // Azienda (riga 3)
+    applyStyle('A3', {
+      font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
       alignment: { horizontal: 'center' }
     });
 
-    // Applica formattazione alle informazioni (riga 2)
-    applyStyle('A2', { font: { bold: true } });
-    applyStyle('B2', { font: { bold: true } });
-    applyStyle('D2', { font: { bold: true } });
-    applyStyle('E2', { font: { bold: true } });
-
-    // Applica formattazione all'header tabella (riga 4) - grassetto, bordi, sfondo grigio
-    for (let col = 0; col <= 34; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 3, c: col });
+    // Header tabella (riga 5) - stile professionale
+    const statsStartCol = 3 + monthDates.length;
+    for (let col = 0; col < statsStartCol + 6; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
+      let bgColor = '4B5563'; // Grigio scuro default
+      
+      // Colori diversi per sezioni
+      if (col === 0) bgColor = '1F2937'; // N° più scuro
+      else if (col >= 1 && col <= 2) bgColor = '374151'; // Cognome/Nome
+      else if (col >= 3 && col < statsStartCol) bgColor = '4B5563'; // Giorni
+      else bgColor = '2563EB'; // Statistiche in blu
+      
       applyStyle(cellRef, {
-        font: { bold: true, color: { rgb: 'FFFFFF' } },
-        fill: { fgColor: { rgb: '4B5563' } }, // Sfondo grigio scuro
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+        fill: { fgColor: { rgb: bgColor } },
         border: headerBorderStyle,
-        alignment: { horizontal: 'center', vertical: 'center' }
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
       });
     }
 
-    // Applica bordi e formattazione a tutte le celle della tabella dati
-    const totalRows = wsData.length;
-    const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
-    
-    for (let row = dataStartRow; row < totalRows - 2; row++) { // Escludi riga vuota e legenda
-      for (let col = 0; col <= 34; col++) {
+    // Dati dipendenti - formattazione alternata (zebrato)
+    for (let row = dataStartRow; row < totalRows - 3; row++) { // Escludi righe finali
+      const isEven = (row - dataStartRow) % 2 === 0;
+      const bgColor = isEven ? 'FFFFFF' : 'F9FAFB';
+      
+      for (let col = 0; col < statsStartCol + 6; col++) {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
         const cellValue = ws[cellRef]?.v;
         
-        // Applica bordi a tutte le celle
-        applyStyle(cellRef, { border: borderStyle });
+        let cellStyle = {
+          border: borderStyle,
+          fill: { fgColor: { rgb: bgColor } }
+        };
         
-        // Formattazione speciale per colonne specifiche
+        // Formattazione per colonne specifiche
         if (col === 0) {
-          // Colonna N°: centrato, grassetto
-          applyStyle(cellRef, { 
-            font: { bold: true },
-            alignment: { horizontal: 'center' },
-            border: borderStyle
-          });
-        } else if (col === 1 || col === 2) {
-          // Colonne Cognome e Nome: grassetto
-          applyStyle(cellRef, { 
-            font: { bold: true },
-            border: borderStyle
-          });
-        } else if (col === 3) {
-          // Colonna Cod.: centrato
-          applyStyle(cellRef, { 
-            alignment: { horizontal: 'center' },
-            border: borderStyle
-          });
-        } else if (col >= 4 && col < 4 + monthDates.length) {
-          // Colonne giorni: centrato, formato numero se è un numero
-          if (typeof cellValue === 'number') {
-            applyStyle(cellRef, { 
-              alignment: { horizontal: 'center' },
-              border: borderStyle
-            });
-          } else {
-            applyStyle(cellRef, { 
-              alignment: { horizontal: 'center' },
-              border: borderStyle
-            });
+          // N°: centrato, grassetto
+          cellStyle.font = { bold: true };
+          cellStyle.alignment = { horizontal: 'center' };
+        } else if (col >= 1 && col <= 2) {
+          // Cognome/Nome: grassetto
+          cellStyle.font = { bold: true };
+        } else if (col >= 3 && col < statsStartCol) {
+          // Giorni: centrato, colori per tipo
+          cellStyle.alignment = { horizontal: 'center' };
+          if (cellValue === 'D') {
+            cellStyle.font = { color: { rgb: '9CA3AF' }, italic: true }; // Grigio per domenica
+          } else if (cellValue === 'F') {
+            cellStyle.font = { color: { rgb: '3B82F6' }, bold: true }; // Blu per ferie
+            cellStyle.fill = { fgColor: { rgb: 'DBEAFE' } };
+          } else if (cellValue === 'M') {
+            cellStyle.font = { color: { rgb: 'EF4444' }, bold: true }; // Rosso per malattia
+            cellStyle.fill = { fgColor: { rgb: 'FEE2E2' } };
+          } else if (cellValue === 'FE') {
+            cellStyle.font = { color: { rgb: 'F59E0B' }, bold: true }; // Arancione per festa
+            cellStyle.fill = { fgColor: { rgb: 'FEF3C7' } };
+          } else if (typeof cellValue === 'number') {
+            cellStyle.font = { bold: true, color: { rgb: '059669' } }; // Verde per ore
           }
-        } else if (col === 34) {
-          // Colonna Totale: grassetto, centrato, sfondo leggero
-          applyStyle(cellRef, { 
-            font: { bold: true },
-            fill: { fgColor: { rgb: 'F3F4F6' } },
-            alignment: { horizontal: 'center' },
-            border: borderStyle
-          });
+        } else if (col >= statsStartCol) {
+          // Colonne statistiche: centrato, grassetto, sfondo colorato
+          cellStyle.font = { bold: true };
+          cellStyle.alignment = { horizontal: 'center' };
+          if (col === statsStartCol + 5) { // Totale
+            cellStyle.fill = { fgColor: { rgb: 'D1FAE5' } }; // Verde chiaro
+            cellStyle.font.color = { rgb: '047857' };
+          }
         }
+        
+        applyStyle(cellRef, cellStyle);
       }
     }
 
-    // Formattazione legenda (ultima riga)
-    const legendRowIndex = totalRows - 1;
-    for (let col = 0; col <= 9; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
-      if (col === 0) {
-        applyStyle(cellRef, { font: { bold: true, italic: true } });
-      }
-    }
+    // Legenda e note - stile discreto
+    const legendRowIndex = totalRows - 2;
+    applyStyle(XLSX.utils.encode_cell({ r: legendRowIndex, c: 0 }), {
+      font: { bold: true, italic: true, color: { rgb: '6B7280' } }
+    });
+    
+    const noteRowIndex = totalRows - 1;
+    applyStyle(XLSX.utils.encode_cell({ r: noteRowIndex, c: 0 }), {
+      font: { italic: true, color: { rgb: '9CA3AF' }, sz: 9 }
+    });
 
     // Aggiungi il worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
