@@ -36,60 +36,36 @@ Questa guida spiega come configurare l'integrazione con Google Calendar per aggi
 
 ### 3. Ottenere il Refresh Token
 
-Per ottenere il refresh token, devi eseguire uno script di autenticazione iniziale:
+Per ottenere il refresh token, usa lo script incluso nel progetto:
 
-```javascript
-// Script: get-refresh-token.js
-const { google } = require('googleapis');
-const readline = require('readline');
+1. **Aggiungi le credenziali al file `.env` locale** (solo per eseguire lo script, non committare questo file):
+   ```env
+   GOOGLE_CLIENT_ID=your_client_id_here
+   GOOGLE_CLIENT_SECRET=your_client_secret_here
+   GOOGLE_REDIRECT_URI=https://hr.laba.biz
+   ```
+   
+   **Nota**: Sostituisci `your_client_id_here` e `your_client_secret_here` con le tue credenziali reali ottenute da Google Cloud Console.
 
-// IMPORTANTE: Usa lo stesso redirect URI che hai configurato in Google Cloud Console
-// Per server su Railway: usa l'URL completo del tuo server (es. https://your-app.railway.app)
-// Per sviluppo locale: usa http://localhost
-const REDIRECT_URI = 'https://your-app-name.railway.app'; // CAMBIA con il tuo URL Railway!
+2. **Esegui lo script**:
+   ```bash
+   node get-refresh-token.js
+   ```
 
-const oauth2Client = new google.auth.OAuth2(
-  'YOUR_CLIENT_ID',
-  'YOUR_CLIENT_SECRET',
-  REDIRECT_URI
-);
+3. **Segui le istruzioni**:
+   - Lo script mostrerà un URL da aprire nel browser
+   - Autorizza l'applicazione con il tuo account Google dedicato
+   - Dopo l'autorizzazione, Google reindirizzerà a `https://hr.laba.biz/?code=...`
+   - Copia il codice dalla URL (il parametro `code=...` dopo il `?`)
+   - Incolla il codice nello script quando richiesto
+   - Lo script genererà il **Refresh Token**
 
-const scopes = ['https://www.googleapis.com/auth/calendar'];
+4. **Copia il Refresh Token** mostrato dallo script
 
-const authUrl = oauth2Client.generateAuthUrl({
-  access_type: 'offline',
-  scope: scopes
-});
-
-console.log('Autorizza questa app visitando:', authUrl);
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-rl.question('Incolla il codice qui: ', (code) => {
-  oauth2Client.getToken(code, (err, token) => {
-    if (err) return console.error('Errore recupero token:', err);
-    console.log('Refresh Token:', token.refresh_token);
-    rl.close();
-  });
-});
-```
-
-Esegui lo script:
-```bash
-node get-refresh-token.js
-```
-
-1. Copia l'URL mostrato e aprilo nel browser
-2. Autorizza l'applicazione con il tuo account Google dedicato
-3. **IMPORTANTE per Railway**: Dopo l'autorizzazione, Google reindirizzerà al tuo redirect URI. Se usi Railway, verrai reindirizzato a `https://your-app.railway.app/?code=...`
-4. Copia il codice dalla URL (il parametro `code=...` dopo il `?`)
-5. Incolla il codice nello script
-6. Copia il **Refresh Token** generato
-
-**Nota per Railway**: Se il redirect URI è il tuo server Railway, dopo l'autorizzazione verrai reindirizzato lì. Puoi copiare il codice direttamente dalla URL del browser.
+**Nota importante**: 
+- Il file `.env` locale non deve essere committato nel repository
+- Le credenziali sono già configurate nello script, ma vengono lette da `.env` per sicurezza
+- Se il redirect URI è `https://hr.laba.biz`, dopo l'autorizzazione verrai reindirizzato lì e potrai copiare il codice dalla URL
 
 ### 4. Ottenere l'ID del Calendario
 
