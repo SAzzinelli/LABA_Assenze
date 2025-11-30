@@ -9781,6 +9781,9 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     wsData.push(Array(50).fill(''));
 
     // ========== TABLE HEADER ==========
+    // Calcola colonna di inizio statistiche (una sola volta)
+    const statsStartCol = 3 + monthDates.length;
+    
     // Riga 5: Header principale della tabella
     const headerRow = Array(50).fill('');
     headerRow[0] = 'N°';
@@ -9795,7 +9798,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     });
     
     // Colonne statistiche finali
-    const statsStartCol = 3 + monthDates.length;
     headerRow[statsStartCol] = 'Ore Lavorate';
     headerRow[statsStartCol + 1] = 'Ferie';
     headerRow[statsStartCol + 2] = 'Malattia';
@@ -9855,7 +9857,6 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       });
 
       // Colonne statistiche
-      const statsStartCol = 3 + monthDates.length;
       dataRow[statsStartCol] = totalWorkedHours;
       dataRow[statsStartCol + 1] = vacationDays > 0 ? vacationDays : '';
       dataRow[statsStartCol + 2] = sickDays > 0 ? sickDays : '';
@@ -9960,7 +9961,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     });
 
     // Header tabella (riga 5) - stile professionale
-    const statsStartCol = 3 + monthDates.length;
+    // statsStartCol già dichiarato sopra
     for (let col = 0; col < statsStartCol + 6; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
       let bgColor = '4B5563'; // Grigio scuro default
