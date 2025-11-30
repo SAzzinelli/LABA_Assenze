@@ -9757,171 +9757,213 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       };
     });
 
-    // Crea il workbook Excel
+    // Crea il workbook Excel con layout professionale riorganizzato
     const wb = XLSX.utils.book_new();
     const wsData = [];
 
-    // Riga 1: vuota
+    // Riga 1: Titolo principale del report
+    const titleRow = Array(37).fill('');
+    titleRow[0] = `REPORT PRESENZE MENSILE - ${monthName.toUpperCase()} ${yearParam}`;
+    wsData.push(titleRow);
+
+    // Riga 2: Informazioni azienda e periodo
+    const infoRow = Array(37).fill('');
+    infoRow[0] = 'Azienda:';
+    infoRow[1] = 'Libera Accademia di Belle Arti';
+    infoRow[3] = 'Periodo:';
+    infoRow[4] = `${monthName} ${yearParam}`;
+    wsData.push(infoRow);
+
+    // Riga 3: vuota (separatore)
     wsData.push(Array(37).fill(''));
 
-    // Riga 2: Header principale (esattamente come nel file originale)
-    // Struttura: ["","COGNOME                 E NOME","","DITTA : _..._  MESE: _..._  ANNO: _..._","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","TOT.","",""]
-    const headerRow2 = Array(37).fill('');
-    headerRow2[0] = ''; // Colonna A vuota
-    headerRow2[1] = 'COGNOME                 E NOME';
-    headerRow2[2] = ''; // Colonna C vuota
-    headerRow2[3] = `DITTA : _Libera Accademia di Belle Arti______  MESE: _${monthName}___  ANNO: _${yearParam}_`;
-    headerRow2[34] = 'TOT.'; // Colonna 35 (indice 34)
-    wsData.push(headerRow2);
-
-    // Riga 3: vuota
-    wsData.push(Array(37).fill(''));
-
-    // Riga 4: Header giorni (esattamente come nel file originale)
-    const headerRow4 = Array(37).fill('');
-    headerRow4[0] = 'NR.';
-    headerRow4[1] = ''; // Colonna vuota dopo NR.
-    headerRow4[2] = ''; // Colonna vuota prima dei numeri
+    // Riga 4: Header tabella principale
+    const headerRow = Array(37).fill('');
+    headerRow[0] = 'N°';
+    headerRow[1] = 'Cognome';
+    headerRow[2] = 'Nome';
+    headerRow[3] = 'Cod.'; // Codice O/S
+    // Aggiungi header per ogni giorno del mese
     monthDates.forEach((dateInfo, idx) => {
-      headerRow4[3 + idx] = dateInfo.dayNumber;
+      headerRow[4 + idx] = dateInfo.dayNumber;
     });
-    wsData.push(headerRow4);
+    headerRow[34] = 'Totale Ore'; // Colonna TOT
+    wsData.push(headerRow);
 
-    // Per ogni dipendente, aggiungi le righe (esattamente come nel file originale)
+    // Per ogni dipendente, aggiungi le righe con layout riorganizzato
     employeeData.forEach(emp => {
-      // Riga principale: NR, Cognome, "O", valori giorni, TOT
-      // Struttura: [NR, Cognome, "O", giorno1, giorno2, ..., giornoN, "", "", TOT, "", ""]
+      // Riga principale: N°, Cognome, Nome, Codice, valori giorni, Totale
       const mainRow = Array(37).fill('');
       mainRow[0] = emp.number;
       mainRow[1] = emp.lastName;
-      mainRow[2] = 'O';
+      mainRow[2] = emp.firstName;
+      mainRow[3] = 'O'; // Codice originale mantenuto
       monthDates.forEach((dateInfo, idx) => {
-        mainRow[3 + idx] = emp.dailyValues[idx];
+        mainRow[4 + idx] = emp.dailyValues[idx];
       });
-      // TOT. è nella colonna 34 (indice 34)
-      mainRow[34] = emp.totalHours;
+      mainRow[34] = emp.totalHours; // Totale ore
       wsData.push(mainRow);
 
-      // Riga nome: ["", Nome, "S", ...]
-      const nameRow = Array(37).fill('');
-      nameRow[1] = emp.firstName;
-      nameRow[2] = 'S';
-      wsData.push(nameRow);
-
-      // Riga vuota: ["", "", "S", ...]
-      const emptyRow = Array(37).fill('');
-      emptyRow[2] = 'S';
-      wsData.push(emptyRow);
-
-      // Riga annotazioni: ["ANNOTAZIONI", "", "M= MALATTIA", "F= FERIE", "FE= FESTA", ...]
-      const annotationRow = Array(37).fill('');
-      annotationRow[0] = 'ANNOTAZIONI';
-      annotationRow[1] = ''; // Colonna vuota
-      let annotationCol = 2; // Inizia dalla colonna 2 (indice 2)
-      if (emp.annotations.hasSick) {
-        annotationRow[annotationCol] = 'M= MALATTIA';
-        annotationCol++;
+      // Riga annotazioni (solo se ci sono annotazioni)
+      if (emp.annotations.hasSick || emp.annotations.hasVacation || emp.annotations.hasHoliday) {
+        const annotationRow = Array(37).fill('');
+        annotationRow[0] = ''; // N° vuoto
+        annotationRow[1] = ''; // Cognome vuoto
+        annotationRow[2] = ''; // Nome vuoto
+        annotationRow[3] = 'S'; // Codice S per annotazioni
+        let annotationCol = 4; // Inizia dalla colonna 4 (dopo codice)
+        const annotations = [];
+        if (emp.annotations.hasSick) annotations.push('M = Malattia');
+        if (emp.annotations.hasVacation) annotations.push('F = Ferie');
+        if (emp.annotations.hasHoliday) annotations.push('FE = Festa');
+        if (annotations.length > 0) {
+          annotationRow[annotationCol] = annotations.join(' | ');
+        }
+        wsData.push(annotationRow);
       }
-      if (emp.annotations.hasVacation) {
-        annotationRow[annotationCol] = 'F= FERIE';
-        annotationCol++;
-      }
-      if (emp.annotations.hasHoliday) {
-        annotationRow[annotationCol] = 'FE= FESTA';
-        annotationCol++;
-      }
-      // La riga annotazioni è sempre presente, anche se vuota
-      wsData.push(annotationRow);
     });
+
+    // Riga finale: Legenda
+    wsData.push(Array(37).fill(''));
+    const legendRow = Array(37).fill('');
+    legendRow[0] = 'LEGENDA:';
+    legendRow[1] = 'D = Domenica';
+    legendRow[2] = '|';
+    legendRow[3] = 'M = Malattia';
+    legendRow[4] = '|';
+    legendRow[5] = 'F = Ferie';
+    legendRow[6] = '|';
+    legendRow[7] = 'FE = Festa';
+    legendRow[8] = '|';
+    legendRow[9] = 'Numeri = Ore lavorate';
+    wsData.push(legendRow);
 
     // Crea il worksheet
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // Imposta larghezza colonne (esattamente come nel file originale)
+    // Imposta larghezza colonne ottimizzata
     ws['!cols'] = [
-      { wch: 5 },   // Colonna A: NR.
-      { wch: 20 },  // Colonna B: Cognome/Nome
-      { wch: 3 },   // Colonna C: O/S
-      { wch: 4 },   // Colonna D: Primo giorno (o DITTA nella riga 2)
-      ...Array(31).fill({ wch: 3 }), // Colonne E-AK: Giorni del mese (31 giorni max)
-      { wch: 6 },   // Colonna AL: TOT.
+      { wch: 4 },   // Colonna A: N°
+      { wch: 18 },  // Colonna B: Cognome
+      { wch: 15 },  // Colonna C: Nome
+      { wch: 4 },   // Colonna D: Cod.
+      ...Array(31).fill({ wch: 3.5 }), // Colonne E-AK: Giorni del mese
+      { wch: 10 },  // Colonna AL: Totale Ore
       { wch: 3 }    // Colonna AM: Extra
     ];
 
-    // Definisci stile per bordi sottili
-    const thinBorder = {
-      style: 'thin',
-      color: { rgb: '000000' }
-    };
+    // Definisci stili professionali
+    const thinBorder = { style: 'thin', color: { rgb: '000000' } };
+    const mediumBorder = { style: 'medium', color: { rgb: '000000' } };
     const borderStyle = {
       top: thinBorder,
       bottom: thinBorder,
       left: thinBorder,
       right: thinBorder
     };
+    const headerBorderStyle = {
+      top: mediumBorder,
+      bottom: mediumBorder,
+      left: thinBorder,
+      right: thinBorder
+    };
 
-    // Funzione helper per applicare stile a una cella
+    // Funzione helper per applicare stile
     const applyStyle = (cellRef, style) => {
       if (ws[cellRef]) {
         if (!ws[cellRef].s) ws[cellRef].s = {};
         Object.assign(ws[cellRef].s, style);
+      } else {
+        ws[cellRef] = { v: '', t: 's', s: style };
       }
     };
 
-    // Applica formattazione alle righe header (grassetto e bordi)
-    // Riga 2 (header principale)
-    applyStyle('B2', { font: { bold: true }, border: borderStyle });
-    applyStyle('D2', { font: { bold: true }, border: borderStyle });
-    applyStyle('AI2', { font: { bold: true }, border: borderStyle }); // TOT. (colonna 35, indice 34)
-    
-    // Riga 4 (header giorni) - grassetto, bordi e centrato
-    applyStyle('A4', { font: { bold: true }, border: borderStyle, alignment: { horizontal: 'center' } });
-    monthDates.forEach((_, idx) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 3, c: 3 + idx });
-      applyStyle(cellRef, { 
-        font: { bold: true }, 
-        border: borderStyle,
-        alignment: { horizontal: 'center' } 
-      });
+    // Applica formattazione al titolo (riga 1)
+    applyStyle('A1', { 
+      font: { bold: true, sz: 16, color: { rgb: '1F2937' } },
+      alignment: { horizontal: 'center' }
     });
 
-    // Applica bordi a tutte le celle con dati (dalla riga 4 in poi)
+    // Applica formattazione alle informazioni (riga 2)
+    applyStyle('A2', { font: { bold: true } });
+    applyStyle('B2', { font: { bold: true } });
+    applyStyle('D2', { font: { bold: true } });
+    applyStyle('E2', { font: { bold: true } });
+
+    // Applica formattazione all'header tabella (riga 4) - grassetto, bordi, sfondo grigio
+    for (let col = 0; col <= 34; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 3, c: col });
+      applyStyle(cellRef, {
+        font: { bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '4B5563' } }, // Sfondo grigio scuro
+        border: headerBorderStyle,
+        alignment: { horizontal: 'center', vertical: 'center' }
+      });
+    }
+
+    // Applica bordi e formattazione a tutte le celle della tabella dati
     const totalRows = wsData.length;
-    const totalCols = 37;
+    const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
     
-    for (let row = 3; row < totalRows; row++) { // Inizia dalla riga 4 (indice 3)
-      for (let col = 0; col < totalCols; col++) {
+    for (let row = dataStartRow; row < totalRows - 2; row++) { // Escludi riga vuota e legenda
+      for (let col = 0; col <= 34; col++) {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-        if (ws[cellRef] && ws[cellRef].v !== undefined && ws[cellRef].v !== '') {
-          // Applica bordi a tutte le celle con contenuto
-          applyStyle(cellRef, { border: borderStyle });
-          
-          // Grassetto per le righe principali dei dipendenti (ogni 4 righe, partendo dalla riga 4)
-          // Riga principale dipendente: row % 4 === 0 (righe 4, 8, 12, 16, ...)
-          if ((row - 3) % 4 === 0) {
-            // Prima riga del blocco dipendente (NR, Cognome, O, valori giorni, TOT)
-            if (col === 0 || col === 1 || col === 2 || col === 34) {
-              // NR, Cognome, O, TOT in grassetto
-              applyStyle(cellRef, { font: { bold: true }, border: borderStyle });
-            }
+        const cellValue = ws[cellRef]?.v;
+        
+        // Applica bordi a tutte le celle
+        applyStyle(cellRef, { border: borderStyle });
+        
+        // Formattazione speciale per colonne specifiche
+        if (col === 0) {
+          // Colonna N°: centrato, grassetto
+          applyStyle(cellRef, { 
+            font: { bold: true },
+            alignment: { horizontal: 'center' },
+            border: borderStyle
+          });
+        } else if (col === 1 || col === 2) {
+          // Colonne Cognome e Nome: grassetto
+          applyStyle(cellRef, { 
+            font: { bold: true },
+            border: borderStyle
+          });
+        } else if (col === 3) {
+          // Colonna Cod.: centrato
+          applyStyle(cellRef, { 
+            alignment: { horizontal: 'center' },
+            border: borderStyle
+          });
+        } else if (col >= 4 && col < 4 + monthDates.length) {
+          // Colonne giorni: centrato, formato numero se è un numero
+          if (typeof cellValue === 'number') {
+            applyStyle(cellRef, { 
+              alignment: { horizontal: 'center' },
+              border: borderStyle
+            });
+          } else {
+            applyStyle(cellRef, { 
+              alignment: { horizontal: 'center' },
+              border: borderStyle
+            });
           }
+        } else if (col === 34) {
+          // Colonna Totale: grassetto, centrato, sfondo leggero
+          applyStyle(cellRef, { 
+            font: { bold: true },
+            fill: { fgColor: { rgb: 'F3F4F6' } },
+            alignment: { horizontal: 'center' },
+            border: borderStyle
+          });
         }
       }
     }
 
-    // Applica bordi anche alle celle vuote nella tabella principale (per separare visivamente)
-    // Solo per le colonne dei giorni (colonne 3-33) e colonne principali (0-2, 34)
-    for (let row = 3; row < totalRows; row++) {
-      for (let col = 0; col <= 34; col++) { // Colonne A-AL (0-34)
-        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-        if (!ws[cellRef]) {
-          // Crea cella vuota con bordi
-          ws[cellRef] = { v: '', t: 's' };
-          applyStyle(cellRef, { border: borderStyle });
-        } else {
-          // Assicura che anche le celle esistenti abbiano bordi
-          applyStyle(cellRef, { border: borderStyle });
-        }
+    // Formattazione legenda (ultima riga)
+    const legendRowIndex = totalRows - 1;
+    for (let col = 0; col <= 9; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
+      if (col === 0) {
+        applyStyle(cellRef, { font: { bold: true, italic: true } });
       }
     }
 

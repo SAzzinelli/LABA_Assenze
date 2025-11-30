@@ -181,7 +181,10 @@ const AdminAttendance = () => {
   const handleDownloadMonthlyReportExcel = async () => {
     try {
       setDownloadingExcel(true);
-      const response = await apiCall(`/api/admin/reports/monthly-attendance-excel?year=${selectedYear}&month=${selectedMonth}`, {
+      // Usa il mese e anno selezionati, o quelli correnti se non in cronologia
+      const month = activeTab === 'history' ? selectedMonth : new Date().getMonth() + 1;
+      const year = activeTab === 'history' ? selectedYear : new Date().getFullYear();
+      const response = await apiCall(`/api/admin/reports/monthly-attendance-excel?year=${year}&month=${month}`, {
         headers: {
           Accept: 'application/vnd.ms-excel'
         }
@@ -1116,46 +1119,31 @@ const AdminAttendance = () => {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
-              <button
-                onClick={() => setActiveTab('today')}
-                className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
-                  ? 'bg-indigo-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                  }`}
-              >
-                <CalendarDays className="h-4 w-4" />
-                Oggi
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
-                  ? 'bg-indigo-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                  }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                Cronologia
-              </button>
-            </div>
-            {/* Pulsante Esporta report - visibile in entrambe le view */}
+          <div className="flex space-x-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
             <button
-              type="button"
-              onClick={handleDownloadMonthlyReportExcel}
-              disabled={downloadingExcel}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingExcel
-                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-500'
+              onClick={() => setActiveTab('today')}
+              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
                 }`}
             >
-              <FileText className="h-4 w-4" />
-              {downloadingExcel ? 'Creazione report...' : 'Esporta report'}
+              <CalendarDays className="h-4 w-4" />
+              Oggi
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Cronologia
             </button>
           </div>
         </div>
 
-        {/* Filtri */}
+        {/* Filtri e Export - Solo in Cronologia */}
         {activeTab === 'history' && (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
             <div className="flex flex-col lg:flex-row lg:items-end gap-4">
@@ -1206,6 +1194,21 @@ const AdminAttendance = () => {
                     })}
                   </select>
                 </div>
+              </div>
+              {/* Pulsante Esporta report - Solo in Cronologia */}
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={handleDownloadMonthlyReportExcel}
+                  disabled={downloadingExcel}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingExcel
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-500'
+                    }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  {downloadingExcel ? 'Creazione report...' : 'Esporta report'}
+                </button>
               </div>
             </div>
           </div>
