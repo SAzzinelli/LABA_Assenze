@@ -17,15 +17,19 @@ const readline = require('readline');
 // Credenziali da variabili d'ambiente o file .env
 require('dotenv').config();
 
+// Puoi passare le credenziali come variabili d'ambiente inline:
+// GOOGLE_CLIENT_ID=xxx GOOGLE_CLIENT_SECRET=yyy GOOGLE_REDIRECT_URI=https://hr.laba.biz node get-refresh-token.js
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'https://hr.laba.biz';
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
-  console.error('❌ Errore: GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET devono essere configurati nel file .env');
-  console.error('\nAggiungi al file .env:');
-  console.error('GOOGLE_CLIENT_ID=your_client_id');
-  console.error('GOOGLE_CLIENT_SECRET=your_client_secret');
+  console.error('❌ Errore: GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET devono essere configurati');
+  console.error('\nOpzione 1: Passa le variabili inline al comando:');
+  console.error('GOOGLE_CLIENT_ID=750075008732-xxx GOOGLE_CLIENT_SECRET=GOCSPX-xxx GOOGLE_REDIRECT_URI=https://hr.laba.biz node get-refresh-token.js');
+  console.error('\nOpzione 2: Crea un file .env temporaneo con:');
+  console.error('GOOGLE_CLIENT_ID=750075008732-xxx');
+  console.error('GOOGLE_CLIENT_SECRET=GOCSPX-xxx');
   console.error('GOOGLE_REDIRECT_URI=https://hr.laba.biz');
   process.exit(1);
 }

@@ -38,16 +38,21 @@ Questa guida spiega come configurare l'integrazione con Google Calendar per aggi
 
 Per ottenere il refresh token, usa lo script incluso nel progetto:
 
-1. **Aggiungi le credenziali al file `.env` locale** (solo per eseguire lo script, non committare questo file):
+1. **Esegui lo script con le credenziali inline** (non serve creare file .env):
+   ```bash
+   GOOGLE_CLIENT_ID=your_client_id GOOGLE_CLIENT_SECRET=your_client_secret GOOGLE_REDIRECT_URI=https://hr.laba.biz node get-refresh-token.js
+   ```
+   
+   **Oppure** crea un file `.env` temporaneo solo per questo script (non committarlo):
    ```env
-   GOOGLE_CLIENT_ID=your_client_id_here
-   GOOGLE_CLIENT_SECRET=your_client_secret_here
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
    GOOGLE_REDIRECT_URI=https://hr.laba.biz
    ```
    
-   **Nota**: Sostituisci `your_client_id_here` e `your_client_secret_here` con le tue credenziali reali ottenute da Google Cloud Console.
-
-2. **Esegui lo script**:
+   **Nota**: Sostituisci `your_client_id` e `your_client_secret` con le tue credenziali reali da Google Cloud Console.
+   
+   Poi esegui:
    ```bash
    node get-refresh-token.js
    ```
