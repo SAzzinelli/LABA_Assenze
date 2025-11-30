@@ -197,6 +197,24 @@ async function addPermissionEvent(permissionData) {
     };
 
     // Aggiungi l'evento al calendario
+    console.log(`📅 Tentativo inserimento evento nel calendario: ${calendarId}`);
+    
+    // Verifica prima se il calendario esiste e se abbiamo accesso
+    try {
+      const calendarInfo = await calendarClient.calendars.get({
+        calendarId: calendarId
+      });
+      console.log(`✅ Calendario trovato: ${calendarInfo.data.summary || calendarId}`);
+    } catch (calendarError) {
+      console.error(`❌ Errore accesso calendario ${calendarId}:`, calendarError.message);
+      console.error(`   Codice errore: ${calendarError.code || 'N/A'}`);
+      console.error(`   Verifica che:`);
+      console.error(`   1. Il Calendar ID sia corretto`);
+      console.error(`   2. L'account Google usato per l'autenticazione abbia accesso al calendario`);
+      console.error(`   3. Il calendario sia condiviso con l'account Google`);
+      throw calendarError;
+    }
+    
     const response = await calendarClient.events.insert({
       calendarId: calendarId,
       resource: event
