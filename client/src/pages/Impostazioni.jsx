@@ -185,9 +185,12 @@ const Settings = () => {
   }, [apiCall]);
 
   // Carica dati Email Management quando si apre il tab
-  React.  useEffect(() => {
-    if (activeTab === 'emailManagement' || activeTab === 'googleCalendarTest') {
+  React.useEffect(() => {
+    if (activeTab === 'emailManagement') {
       fetchEmployees();
+    }
+    if (activeTab === 'googleCalendarTest') {
+      fetchEmployeesForCalendar();
     }
   }, [activeTab]);
 
