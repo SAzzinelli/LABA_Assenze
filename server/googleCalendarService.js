@@ -91,37 +91,36 @@ async function addPermissionEvent(permissionData) {
 
     switch (type) {
       case 'permission':
-        // Permesso normale: mostra ore
+        // Permesso normale: solo nome dipendente
         const hoursFormatted = hours > 0
           ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
           : '0h';
-        eventTitle = `Permesso - ${userName} (${hoursFormatted})`;
-        eventDescription = `Permesso di ${hoursFormatted}`;
-        if (entryTime) eventDescription += `\nEntrata: ${entryTime}`;
-        if (exitTime) eventDescription += `\nUscita: ${exitTime}`;
+        eventTitle = userName; // Solo nome dipendente
+        eventDescription = `permesso di ${hoursFormatted}`;
         if (reason) eventDescription += `\nMotivo: ${reason}`;
         break;
 
       case 'vacation':
-        eventTitle = `Ferie - ${userName}`;
-        eventDescription = 'Giornata di ferie';
+        eventTitle = userName; // Solo nome dipendente
+        eventDescription = 'Ferie';
         if (reason) eventDescription += `\nMotivo: ${reason}`;
         break;
 
       case 'sick_leave':
-        eventTitle = `Malattia - ${userName}`;
-        eventDescription = 'Assenza per malattia';
+        eventTitle = userName; // Solo nome dipendente
+        eventDescription = 'Malattia';
         if (reason) eventDescription += `\nMotivo: ${reason}`;
         break;
 
       case 'permission_104':
-        eventTitle = `Permesso 104 - ${userName}`;
-        eventDescription = 'Permesso Legge 104';
+        // Permesso 104: "Nome - Assenza 104"
+        eventTitle = `${userName} - Assenza 104`;
+        eventDescription = 'Assenza Legge 104';
         if (reason) eventDescription += `\nMotivo: ${reason}`;
         break;
 
       default:
-        eventTitle = `Assenza - ${userName}`;
+        eventTitle = userName;
         eventDescription = type || 'Assenza';
         if (reason) eventDescription += `\nMotivo: ${reason}`;
     }
@@ -129,18 +128,27 @@ async function addPermissionEvent(permissionData) {
     // Prepara le date per l'evento
     // Google Calendar richiede date in formato ISO 8601 con timezone
     const startDateTime = new Date(startDate);
-    startDateTime.setHours(9, 0, 0, 0); // Inizio giornata lavorativa (9:00)
-    
     const endDateTime = new Date(endDate);
-    endDateTime.setHours(18, 0, 0, 0); // Fine giornata lavorativa (18:00)
 
-    // Se è un permesso con ore specifiche, calcola l'orario preciso
+    // Gestione orari in base al tipo di permesso
     if (type === 'permission' && entryTime && exitTime) {
+      // Permesso con orari specifici: usa gli orari di entry/exit
       const [entryHour, entryMin] = entryTime.split(':').map(Number);
       const [exitHour, exitMin] = exitTime.split(':').map(Number);
       
       startDateTime.setHours(entryHour, entryMin, 0, 0);
       endDateTime.setHours(exitHour, exitMin, 0, 0);
+    } else if (type === 'permission_104' && entryTime && exitTime) {
+      // Permesso 104 con orari specifici
+      const [entryHour, entryMin] = entryTime.split(':').map(Number);
+      const [exitHour, exitMin] = exitTime.split(':').map(Number);
+      
+      startDateTime.setHours(entryHour, entryMin, 0, 0);
+      endDateTime.setHours(exitHour, exitMin, 0, 0);
+    } else {
+      // Giornata intera: dalle 9:00 alle 18:00 (default)
+      startDateTime.setHours(9, 0, 0, 0);
+      endDateTime.setHours(18, 0, 0, 0);
     }
 
     // Crea l'evento
