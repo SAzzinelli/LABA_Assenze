@@ -66,6 +66,7 @@ const AdminAttendance = () => {
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [downloadingExcel, setDownloadingExcel] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
 
   // Stati per generazione presenze
@@ -219,6 +220,51 @@ const AdminAttendance = () => {
       window.alert('Errore nel download del report mensile. Riprova più tardi.');
     } finally {
       setDownloadingReport(false);
+    }
+  };
+
+  const handleDownloadMonthlyReportExcel = async () => {
+    try {
+      setDownloadingExcel(true);
+      const response = await apiCall(`/api/admin/reports/monthly-attendance-excel?year=${selectedYear}&month=${selectedMonth}`, {
+        headers: {
+          Accept: 'application/vnd.ms-excel'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Errore nel download del report Excel');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 
+                          'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+      const monthName = monthNames[selectedMonth - 1];
+      link.href = url;
+      link.download = `foglio presenze dip ${monthName} ${selectedYear}.xls`;
+      // Controllo sicurezza: assicurati che document.body esista
+      if (document.body) {
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Fallback: usa il root element
+        const root = document.getElementById('root');
+        if (root) {
+          root.appendChild(link);
+          link.click();
+          root.removeChild(link);
+        }
+      }
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Errore nel download del report Excel:', error);
+      window.alert('Errore nel download del report Excel. Riprova più tardi.');
+    } finally {
+      setDownloadingExcel(false);
     }
   };
 
@@ -1191,18 +1237,30 @@ const AdminAttendance = () => {
                   </select>
                 </div>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
                 <button
                   type="button"
                   onClick={handleDownloadMonthlyReport}
-                  disabled={downloadingReport}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport
+                  disabled={downloadingReport || downloadingExcel}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport || downloadingExcel
                     ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                     : 'bg-indigo-600 text-white hover:bg-indigo-500'
                     }`}
                 >
                   <Download className="h-4 w-4" />
                   {downloadingReport ? 'Creazione report...' : 'Scarica report CSV'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadMonthlyReportExcel}
+                  disabled={downloadingReport || downloadingExcel}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition whitespace-nowrap ${downloadingReport || downloadingExcel
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-500'
+                    }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  {downloadingExcel ? 'Creazione Excel...' : 'Scarica Excel'}
                 </button>
               </div>
             </div>

@@ -14,6 +14,7 @@ const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const WebSocketManager = require('./websocket');
 const cron = require('node-cron');
+const XLSX = require('xlsx');
 require('dotenv').config();
 
 // Rate limiting rimosso per facilitare i test
@@ -30,6 +31,154 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here_change_in_production';
+
+// Funzione per generare presenze retroattive dal 1 ottobre 2025 per nuovi dipendenti
+async function generateRetroactiveAttendance(userId, registrationDate) {
+  try {
+    const startDate = new Date('2025-10-01');
+    const regDate = new Date(registrationDate);
+    
+    // Se la registrazione è prima del 1 ottobre 2025, non fare nulla
+    if (regDate <= startDate) {
+      console.log(`⏭️ Dipendente ${userId} registrato prima del 1 ottobre 2025, nessuna presenza retroattiva necessaria`);
+      return;
+    }
+
+    // Calcola il giorno prima della registrazione
+    const endDate = new Date(regDate);
+    endDate.setDate(endDate.getDate() - 1);
+    
+    console.log(`📅 Generazione presenze retroattive per dipendente ${userId} dal ${startDate.toISOString().split('T')[0]} al ${endDate.toISOString().split('T')[0]}`);
+
+    // Recupera gli orari di lavoro del dipendente
+    const { data: workSchedules, error: scheduleError } = await supabase
+      .from('work_schedules')
+      .select('day_of_week, is_working_day, start_time, end_time, break_duration')
+      .eq('user_id', userId);
+
+    if (scheduleError || !workSchedules || workSchedules.length === 0) {
+      console.log(`⚠️ Nessun orario di lavoro trovato per dipendente ${userId}, salto generazione retroattiva`);
+      return;
+    }
+
+    // Crea una mappa per accedere rapidamente agli orari per giorno della settimana
+    // Gestisce sia formato numerico (0-6) che stringa ('monday', 'tuesday', etc.)
+    const scheduleMap = {};
+    const dayNameToNumber = {
+      'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+      'thursday': 4, 'friday': 5, 'saturday': 6
+    };
+    
+    workSchedules.forEach(schedule => {
+      let dayNum = schedule.day_of_week;
+      // Se è una stringa, convertila in numero
+      if (typeof dayNum === 'string') {
+        dayNum = dayNameToNumber[dayNum.toLowerCase()];
+        if (dayNum === undefined) {
+          console.warn(`⚠️ Giorno non riconosciuto: ${schedule.day_of_week}`);
+          return;
+        }
+      }
+      scheduleMap[dayNum] = schedule;
+    });
+
+    // Recupera eventuali permessi/ferie/malattie già registrati per questo periodo
+    const { data: existingLeaves, error: leavesError } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date, type, status')
+      .eq('user_id', userId)
+      .eq('status', 'approved')
+      .lte('start_date', endDate.toISOString().split('T')[0])
+      .gte('end_date', startDate.toISOString().split('T')[0]);
+
+    // Crea un set di date con permessi/ferie/malattie
+    const leaveDates = new Set();
+    if (!leavesError && existingLeaves) {
+      existingLeaves.forEach(leave => {
+        const leaveStart = new Date(leave.start_date);
+        const leaveEnd = new Date(leave.end_date);
+        for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
+          const dateStr = d.toISOString().split('T')[0];
+          if (dateStr >= startDate.toISOString().split('T')[0] && dateStr <= endDate.toISOString().split('T')[0]) {
+            leaveDates.add(dateStr);
+          }
+        }
+      });
+    }
+
+    // Recupera giorni festivi
+    const { data: holidays, error: holidaysError } = await supabase
+      .from('holidays')
+      .select('date')
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0]);
+
+    const holidayDates = new Set();
+    if (!holidaysError && holidays) {
+      holidays.forEach(holiday => {
+        holidayDates.add(holiday.date);
+      });
+    }
+
+    // Genera presenze per ogni giorno dal 1 ottobre 2025 al giorno prima della registrazione
+    const attendanceRecords = [];
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      const dayOfWeek = d.getDay(); // 0 = domenica, 1 = lunedì, etc.
+
+      // Salta se è un giorno festivo
+      if (holidayDates.has(dateStr)) {
+        continue;
+      }
+
+      // Salta se c'è un permesso/ferie/malattia
+      if (leaveDates.has(dateStr)) {
+        continue;
+      }
+
+      // Verifica se è un giorno lavorativo
+      const schedule = scheduleMap[dayOfWeek];
+      // Gestisce sia is_working_day che is_working (per compatibilità)
+      const isWorking = schedule?.is_working_day !== undefined ? schedule.is_working_day : schedule?.is_working;
+      if (!schedule || !isWorking || !schedule.start_time || !schedule.end_time) {
+        continue;
+      }
+
+      // Calcola le ore attese
+      const expectedHours = calculateExpectedHoursForSchedule(schedule);
+
+      // Crea il record di attendance (presenza completa: actual_hours = expected_hours)
+      attendanceRecords.push({
+        user_id: userId,
+        date: dateStr,
+        actual_hours: expectedHours,
+        expected_hours: expectedHours,
+        balance_hours: 0, // Presenza completa = balance 0
+        status: 'completed',
+        notes: 'Presenza retroattiva generata automaticamente'
+      });
+    }
+
+    // Inserisci tutte le presenze in batch
+    if (attendanceRecords.length > 0) {
+      const { error: insertError } = await supabase
+        .from('attendance')
+        .insert(attendanceRecords);
+
+      if (insertError) {
+        console.error(`❌ Errore inserimento presenze retroattive per dipendente ${userId}:`, insertError);
+        throw insertError;
+      }
+
+      console.log(`✅ Generate ${attendanceRecords.length} presenze retroattive per dipendente ${userId}`);
+    } else {
+      console.log(`ℹ️ Nessuna presenza retroattiva da generare per dipendente ${userId} (tutti i giorni erano festivi/permessi)`);
+    }
+  } catch (error) {
+    console.error(`❌ Errore generazione presenze retroattive per dipendente ${userId}:`, error);
+    throw error;
+  }
+}
 
 // Helper function per ottenere data/ora corrente
 async function getCurrentDateTime() {
@@ -548,6 +697,14 @@ app.post('/api/auth/register', async (req, res) => {
       console.log(`✅ Orari di lavoro creati per ${newUser.email} (${workSchedules ? 'personalizzati' : 'default'})`);
     }
 
+    // Genera presenze retroattive dal 1 ottobre 2025 se il dipendente è stato registrato dopo quella data
+    try {
+      await generateRetroactiveAttendance(newUser.id, finalHireDate);
+    } catch (retroError) {
+      console.error('Errore nella generazione presenze retroattive:', retroError);
+      // Non bloccare la registrazione se fallisce la generazione retroattiva
+    }
+
     // Invia notifica agli admin per nuovo dipendente
     try {
       const { data: admins } = await supabase
@@ -1043,14 +1200,37 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
 
     // Crea work_schedules se forniti
     if (workSchedules) {
-      const scheduleEntries = Object.entries(workSchedules).map(([day, schedule]) => ({
-        user_id: newUser.id,
-        day_of_week: day,
-        is_working: schedule.isWorking,
-        start_time: schedule.startTime,
-        end_time: schedule.endTime,
-        break_duration: schedule.breakDuration
-      }));
+      const dayMapping = {
+        monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+        friday: 5, saturday: 6, sunday: 0
+      };
+      
+      const scheduleEntries = Object.entries(workSchedules).map(([day, schedule]) => {
+        // Calcola automaticamente break_start_time a metà della giornata lavorativa
+        let breakStartTime = null;
+        if (schedule.isWorking && schedule.breakDuration > 0) {
+          const [startH, startM] = schedule.startTime.split(':').map(Number);
+          const [endH, endM] = schedule.endTime.split(':').map(Number);
+          const totalMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+          const workMinutes = totalMinutes - schedule.breakDuration;
+          const halfWorkMinutes = workMinutes / 2;
+          const breakStartMinutes = (startH * 60 + startM) + halfWorkMinutes;
+          const breakStartH = Math.floor(breakStartMinutes / 60);
+          const breakStartM = Math.round(breakStartMinutes % 60);
+          breakStartTime = `${breakStartH.toString().padStart(2, '0')}:${breakStartM.toString().padStart(2, '0')}`;
+        }
+
+        return {
+          user_id: newUser.id,
+          day_of_week: dayMapping[day] !== undefined ? dayMapping[day] : day,
+          is_working_day: schedule.isWorking,
+          work_type: 'full_day',
+          start_time: schedule.isWorking ? schedule.startTime : null,
+          end_time: schedule.isWorking ? schedule.endTime : null,
+          break_duration: schedule.isWorking ? schedule.breakDuration : 0,
+          break_start_time: breakStartTime
+        };
+      });
 
       const { error: scheduleError } = await supabase
         .from('work_schedules')
@@ -1062,15 +1242,15 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         console.log('⚠️ Dipendente creato ma orari non salvati');
       }
     } else {
-      // Crea orari di default se non forniti
+      // Crea orari di default se non forniti (usa formato numerico: 0=domenica, 1=lunedì, etc.)
       const defaultSchedules = [
-        { user_id: newUser.id, day_of_week: 'monday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'tuesday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'wednesday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'thursday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'friday', is_working: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'saturday', is_working: false, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-        { user_id: newUser.id, day_of_week: 'sunday', is_working: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
+        { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+        { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+        { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+        { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+        { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+        { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null },
+        { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null }
       ];
 
       const { error: defaultScheduleError } = await supabase
@@ -1081,6 +1261,14 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         console.error('Default work schedule creation error:', defaultScheduleError);
         console.log('⚠️ Dipendente creato ma orari di default non salvati');
       }
+    }
+
+    // Genera presenze retroattive dal 1 ottobre 2025 se il dipendente è stato registrato dopo quella data
+    try {
+      await generateRetroactiveAttendance(newUser.id, finalHireDate);
+    } catch (retroError) {
+      console.error('Errore nella generazione presenze retroattive:', retroError);
+      // Non bloccare la creazione del dipendente se fallisce la generazione retroattiva
     }
 
     res.status(201).json({
@@ -9363,6 +9551,309 @@ app.get('/api/admin/reports/monthly-attendance', authenticateToken, requireAdmin
   } catch (error) {
     console.error('Monthly report error:', error);
     res.status(500).json({ error: 'Errore nella generazione del report' });
+  }
+});
+
+// Monthly attendance report Excel export (admin only) - Stile identico al file Excel fornito
+app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const monthParam = parseInt(req.query.month, 10);
+    const yearParam = parseInt(req.query.year, 10);
+
+    if (!monthParam || monthParam < 1 || monthParam > 12 || !yearParam || yearParam < 2000) {
+      return res.status(400).json({ error: 'Parametri mese/anno non validi' });
+    }
+
+    const startDate = new Date(Date.UTC(yearParam, monthParam - 1, 1));
+    const endDate = new Date(Date.UTC(yearParam, monthParam, 0));
+    const startISO = startDate.toISOString().split('T')[0];
+    const endISO = endDate.toISOString().split('T')[0];
+
+    // Nome del mese in italiano
+    const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 
+                        'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+    const monthName = monthNames[monthParam - 1];
+
+    // Recupera tutti i dipendenti attivi
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, role, is_active')
+      .neq('role', 'admin')
+      .eq('is_active', true)
+      .order('last_name');
+
+    if (usersError) {
+      console.error('Monthly report users error:', usersError);
+      return res.status(500).json({ error: 'Errore nel recupero dei dipendenti' });
+    }
+
+    if (!users || users.length === 0) {
+      return res.status(400).json({ error: 'Nessun dipendente trovato' });
+    }
+
+    const userIds = users.map(u => u.id);
+
+    // Recupera presenze per il mese
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('user_id, date, actual_hours, expected_hours')
+      .in('user_id', userIds)
+      .gte('date', startISO)
+      .lte('date', endISO);
+
+    if (attendanceError) {
+      console.error('Monthly report attendance error:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
+    }
+
+    // Recupera permessi, ferie, malattie approvate
+    const { data: leaveData, error: leaveError } = await supabase
+      .from('leave_requests')
+      .select('user_id, type, start_date, end_date, hours, days_requested')
+      .in('user_id', userIds)
+      .eq('status', 'approved')
+      .lte('start_date', endISO)
+      .gte('end_date', startISO);
+
+    if (leaveError) {
+      console.error('Monthly report leave error:', leaveError);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    // Recupera giorni festivi
+    const { data: holidays, error: holidaysError } = await supabase
+      .from('holidays')
+      .select('date, name')
+      .gte('date', startISO)
+      .lte('date', endISO);
+
+    // Crea mappa delle feste
+    const holidaysMap = {};
+    if (!holidaysError && holidays) {
+      holidays.forEach(h => {
+        holidaysMap[h.date] = h.name;
+      });
+    }
+
+    // Genera tutte le date del mese
+    const monthDates = [];
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      const dayOfWeek = d.getUTCDay();
+      const dayNumber = d.getUTCDate();
+      monthDates.push({
+        date: dateStr,
+        dayOfWeek: dayOfWeek,
+        dayNumber: dayNumber,
+        isSunday: dayOfWeek === 0,
+        isHoliday: !!holidaysMap[dateStr]
+      });
+    }
+
+    // Crea mappa delle presenze per data e utente
+    const attendanceMap = {};
+    (attendanceData || []).forEach(record => {
+      if (!attendanceMap[record.user_id]) {
+        attendanceMap[record.user_id] = {};
+      }
+      attendanceMap[record.user_id][record.date] = {
+        actualHours: Number(record.actual_hours || 0),
+        expectedHours: Number(record.expected_hours || 0)
+      };
+    });
+
+    // Crea mappa dei permessi/ferie/malattie per data e utente
+    const leaveMap = {};
+    (leaveData || []).forEach(request => {
+      if (!leaveMap[request.user_id]) {
+        leaveMap[request.user_id] = {};
+      }
+      const requestStart = new Date(request.start_date);
+      const requestEnd = new Date(request.end_date);
+      for (let d = new Date(requestStart); d <= requestEnd; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        if (dateStr >= startISO && dateStr <= endISO) {
+          if (!leaveMap[request.user_id][dateStr]) {
+            leaveMap[request.user_id][dateStr] = [];
+          }
+          leaveMap[request.user_id][dateStr].push({
+            type: request.type,
+            hours: request.hours || 0
+          });
+        }
+      }
+    });
+
+    // Prepara i dati per ogni dipendente
+    const employeeData = users.map((user, index) => {
+      const dailyValues = [];
+      const annotations = { hasSick: false, hasVacation: false, hasHoliday: false };
+
+      monthDates.forEach(dateInfo => {
+        const dateStr = dateInfo.date;
+        const attendance = attendanceMap[user.id]?.[dateStr];
+        const leaves = leaveMap[user.id]?.[dateStr] || [];
+
+        // Se è domenica, mostra "D"
+        if (dateInfo.isSunday) {
+          dailyValues.push('D');
+          return;
+        }
+
+        // Se è festa, mostra "FE"
+        if (dateInfo.isHoliday) {
+          dailyValues.push('FE');
+          annotations.hasHoliday = true;
+          return;
+        }
+
+        // Controlla permessi/ferie/malattie
+        const sickLeave = leaves.find(l => l.type === 'sick_leave');
+        const vacation = leaves.find(l => l.type === 'vacation');
+        const permission = leaves.find(l => l.type === 'permission');
+
+        if (sickLeave) {
+          dailyValues.push('M'); // Malattia
+          annotations.hasSick = true;
+          return;
+        }
+        if (vacation) {
+          dailyValues.push('F'); // Ferie
+          annotations.hasVacation = true;
+          return;
+        }
+        if (permission) {
+          // Se c'è un permesso, mostra le ore lavorate (se presenti) o 0
+          const hours = attendance?.actualHours || 0;
+          dailyValues.push(hours > 0 ? Math.round(hours) : '');
+          return;
+        }
+
+        // Se c'è presenza, mostra le ore lavorate
+        if (attendance && attendance.actualHours > 0) {
+          dailyValues.push(Math.round(attendance.actualHours));
+          return;
+        }
+
+        // Giorno non lavorato
+        dailyValues.push('');
+      });
+
+      // Calcola totale ore del mese (solo numeri, escludi codici)
+      const totalHours = dailyValues.reduce((sum, val) => {
+        if (typeof val === 'number' && val > 0) {
+          return sum + val;
+        }
+        return sum;
+      }, 0);
+
+      return {
+        number: index + 1,
+        lastName: user.last_name || '',
+        firstName: user.first_name || '',
+        dailyValues: dailyValues,
+        totalHours: totalHours,
+        annotations: annotations
+      };
+    });
+
+    // Crea il workbook Excel
+    const wb = XLSX.utils.book_new();
+    const wsData = [];
+
+    // Riga 1: vuota
+    wsData.push(Array(37).fill(''));
+
+    // Riga 2: Header principale
+    const headerRow2 = Array(37).fill('');
+    headerRow2[1] = 'COGNOME                 E NOME';
+    headerRow2[3] = `DITTA : _Libera Accademia di Belle Arti______  MESE: _${monthName}___  ANNO: _${yearParam}_`;
+    headerRow2[34] = 'TOT.';
+    wsData.push(headerRow2);
+
+    // Riga 3: vuota
+    wsData.push(Array(37).fill(''));
+
+    // Riga 4: Header giorni
+    const headerRow4 = Array(37).fill('');
+    headerRow4[0] = 'NR.';
+    headerRow4[2] = '';
+    monthDates.forEach((dateInfo, idx) => {
+      headerRow4[3 + idx] = dateInfo.dayNumber;
+    });
+    wsData.push(headerRow4);
+
+    // Per ogni dipendente, aggiungi le righe
+    employeeData.forEach(emp => {
+      // Riga principale: NR, Cognome, "O", valori giorni, TOT
+      const mainRow = Array(37).fill('');
+      mainRow[0] = emp.number;
+      mainRow[1] = emp.lastName;
+      mainRow[2] = 'O';
+      monthDates.forEach((dateInfo, idx) => {
+        mainRow[3 + idx] = emp.dailyValues[idx];
+      });
+      mainRow[34] = emp.totalHours;
+      wsData.push(mainRow);
+
+      // Riga nome: "", Nome, "S", ...
+      const nameRow = Array(37).fill('');
+      nameRow[1] = emp.firstName;
+      nameRow[2] = 'S';
+      wsData.push(nameRow);
+
+      // Riga vuota: "", "", "S", ...
+      const emptyRow = Array(37).fill('');
+      emptyRow[2] = 'S';
+      wsData.push(emptyRow);
+
+      // Riga annotazioni (sempre presente, mostra solo le legende necessarie)
+      const annotationRow = Array(37).fill('');
+      annotationRow[0] = 'ANNOTAZIONI';
+      let annotationCol = 2;
+      if (emp.annotations.hasSick) {
+        annotationRow[annotationCol] = 'M= MALATTIA';
+        annotationCol++;
+      }
+      if (emp.annotations.hasVacation) {
+        annotationRow[annotationCol] = 'F= FERIE';
+        annotationCol++;
+      }
+      if (emp.annotations.hasHoliday) {
+        annotationRow[annotationCol] = 'FE= FESTA';
+        annotationCol++;
+      }
+      // La riga annotazioni è sempre presente, anche se vuota
+      wsData.push(annotationRow);
+    });
+
+    // Crea il worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Imposta larghezza colonne (simile al file originale)
+    ws['!cols'] = [
+      { wch: 5 },   // NR
+      { wch: 25 },  // Cognome
+      { wch: 3 },   // O/S
+      ...Array(31).fill({ wch: 4 }), // Giorni
+      { wch: 6 },   // TOT
+      { wch: 3 }    // Extra
+    ];
+
+    // Aggiungi il worksheet al workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
+
+    // Genera il buffer Excel
+    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xls' });
+
+    // Invia il file
+    const monthString = String(monthParam).padStart(2, '0');
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.setHeader('Content-Disposition', `attachment; filename="foglio presenze dip ${monthName} ${yearParam}.xls"`);
+    res.status(200).send(excelBuffer);
+  } catch (error) {
+    console.error('Monthly Excel report error:', error);
+    res.status(500).json({ error: 'Errore nella generazione del report Excel' });
   }
 });
 
