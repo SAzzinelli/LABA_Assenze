@@ -685,10 +685,37 @@ const AdminAttendance = () => {
         };
       }
 
-      // Se la giornata lavorativa è già conclusa E ci sono dati nel database, usa quelli
+      // Se la DATA del record è passata (non è oggi), usa sempre i dati del database
+      const recordDate = new Date(record.date);
+      recordDate.setHours(0, 0, 0, 0);
+      const isRecordDatePast = recordDate < todayDate;
+      
+      if (isRecordDatePast) {
+        // Data passata: usa sempre i dati del database
+        const expected = record.expected_hours || 0;
+        const actual = record.actual_hours || 0;
+        const balance = record.balance_hours !== undefined ? record.balance_hours : (actual - expected);
+        
+        // Determina status in base ai dati
+        let status = 'completed';
+        if (actual === 0 && expected > 0) status = 'absent';
+        if (record.notes && record.notes.includes('Malattia')) status = 'sick_leave';
+        if (record.notes && record.notes.includes('Ferie')) status = 'holiday';
+        if (expected === 0) status = 'non_working_day';
+        
+        return {
+          expectedHours: expected,
+          actualHours: actual,
+          balanceHours: balance,
+          status: status,
+          isPresent: false
+        };
+      }
+      
+      // Se è OGGI ma la giornata lavorativa è già conclusa E ci sono dati nel database, usa quelli
       if (workSchedule.end_time && record.actual_hours > 0) {
         const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
-        const endTime = new Date(now);
+        const endTime = new Date(todayDate);
         endTime.setHours(endHour, endMin, 0, 0);
         
         // Se l'orario di fine è già passato, usa i dati del database
@@ -1052,6 +1079,12 @@ const AdminAttendance = () => {
 
       // Logica specifica per ogni tab
       if (activeTab === 'today') {
+        // IMPORTANTE: mostra solo le presenze di OGGI, non di ieri
+        const today = new Date().toISOString().split('T')[0];
+        if (record.date !== today) {
+          return false; // Escludi date passate o future dalla tab "Oggi"
+        }
+        
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
         // O ha già completato la giornata (actual_hours > 0 nel database)
         const realTimeData = calculateRealTimeHoursForRecord(record);
