@@ -6423,6 +6423,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         updateData.days_requested = days_requested;
       }
     }
+    
+    // Gestione modifica data per permessi normali
+    if (existingRequest.type === 'permission' && start_date !== undefined) {
+      updateData.start_date = start_date;
+      // Per permessi di un giorno, start_date = end_date
+      if (end_date !== undefined) {
+        updateData.end_date = end_date;
+      } else {
+        updateData.end_date = start_date;
+      }
+    }
 
     // Se viene fornito status, aggiorna lo status
     if (status && ['approved', 'rejected', 'cancelled'].includes(status)) {
@@ -6438,8 +6449,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       updateData.notes = notes || '';
     }
 
-    // Se viene fornito entryTime o exitTime, calcola automaticamente le ore
-    if ((entryTime !== undefined || exitTime !== undefined) && existingRequest.type === 'permission') {
+    // Se viene fornito entryTime, exitTime o start_date, calcola automaticamente le ore
+    if ((entryTime !== undefined || exitTime !== undefined || start_date !== undefined) && existingRequest.type === 'permission') {
       if (entryTime !== undefined) {
         updateData.entry_time = entryTime || null;
       }
@@ -6448,7 +6459,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       }
 
       // Calcola automaticamente le ore basandosi sull'orario di lavoro
-      const permissionDate = existingRequest.start_date;
+      // Usa la nuova data se è stata modificata, altrimenti usa quella esistente
+      const permissionDate = start_date !== undefined ? start_date : existingRequest.start_date;
       const dayOfWeek = new Date(permissionDate).getDay();
 
       // Recupera l'orario di lavoro per quel giorno

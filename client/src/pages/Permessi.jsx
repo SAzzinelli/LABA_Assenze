@@ -78,6 +78,7 @@ const LeaveRequests = () => {
     requestedChanges: ''
   });
   const [editFormData, setEditFormData] = useState({
+    permissionDate: '',
     entryTime: '',
     exitTime: '',
     hours: ''
@@ -280,14 +281,18 @@ const LeaveRequests = () => {
   const openEditDialog = async (request) => {
     setSelectedRequest(request);
     setSelectedRequestId(request.id);
+    
+    // Recupera la data del permesso
+    const permissionDate = request.permissionDate || request.startDate || request.start_date;
+    
     setEditFormData({
+      permissionDate: permissionDate ? permissionDate.split('T')[0] : '',
       entryTime: request.entryTime || request.entry_time || '',
       exitTime: request.exitTime || request.exit_time || '',
       hours: request.hours || ''
     });
     
     // Recupera l'orario di lavoro per la data del permesso
-    const permissionDate = request.permissionDate || request.startDate || request.start_date;
     if (permissionDate) {
       try {
         const date = new Date(permissionDate);
@@ -411,6 +416,15 @@ const LeaveRequests = () => {
       const currentExitTime = selectedRequest.exitTime || selectedRequest.exit_time || '';
       if (editFormData.exitTime !== currentExitTime) {
         payload.exitTime = editFormData.exitTime;
+        hasChanges = true;
+      }
+      
+      // Controlla se la data è cambiata
+      const currentDate = selectedRequest.permissionDate || selectedRequest.startDate || selectedRequest.start_date;
+      const currentDateStr = currentDate ? currentDate.split('T')[0] : '';
+      if (editFormData.permissionDate && editFormData.permissionDate !== currentDateStr) {
+        payload.startDate = editFormData.permissionDate;
+        payload.endDate = editFormData.permissionDate; // Per permessi di un giorno, startDate = endDate
         hasChanges = true;
       }
 
@@ -1792,6 +1806,57 @@ const LeaveRequests = () => {
             </p>
             
             <div className="space-y-4">
+              {/* Campo Data */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Data del Permesso *
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.permissionDate}
+                  onChange={async (e) => {
+                    const newDate = e.target.value;
+                    setEditFormData({ ...editFormData, permissionDate: newDate });
+                    
+                    // Recupera l'orario di lavoro per la nuova data
+                    if (newDate) {
+                      try {
+                        const date = new Date(newDate);
+                        const dayOfWeek = date.getDay();
+                        const userId = selectedRequest.userId || selectedRequest.user_id;
+                        
+                        if (userId) {
+                          const response = await apiCall(`/api/work-schedules/${userId}`);
+                          if (response.ok) {
+                            const schedules = await response.json();
+                            const schedule = schedules.find(s => 
+                              s.day_of_week === dayOfWeek && s.is_working_day
+                            );
+                            if (schedule) {
+                              setEditWorkSchedule({
+                                start_time: schedule.start_time,
+                                end_time: schedule.end_time,
+                                break_duration: schedule.break_duration || 60
+                              });
+                              // Ricalcola le ore con il nuovo orario
+                              setTimeout(() => {
+                                calculateEditHours(editFormData.entryTime, editFormData.exitTime, selectedRequest);
+                              }, 100);
+                            }
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Error fetching work schedule for new date:', error);
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-slate-400 text-xs mt-1">
+                  Data attuale: {selectedRequest.permissionDate || selectedRequest.startDate || selectedRequest.start_date || 'Non impostata'}
+                </p>
+              </div>
+
               {(selectedRequest.permissionType === 'entrata_posticipata' || selectedRequest.permissionType === 'late_entry' || selectedRequest.entryTime) && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
