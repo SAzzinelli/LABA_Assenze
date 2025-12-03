@@ -7201,6 +7201,106 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       }
     }
 
+    // Se un permesso già approvato viene modificato (senza cambiare status), invia notifica al dipendente
+    if (existingRequest.status === 'approved' && 
+        existingRequest.type === 'permission' && 
+        (!status || status === 'approved') && 
+        Object.keys(updateData).length > 0) {
+      
+      // Verifica se ci sono modifiche effettive (non solo ricalcolo ore)
+      const hasRealChanges = 
+        (entryTime !== undefined && entryTime !== existingRequest.entry_time) ||
+        (exitTime !== undefined && exitTime !== existingRequest.exit_time) ||
+        (start_date !== undefined && start_date !== existingRequest.start_date);
+      
+      if (hasRealChanges) {
+        try {
+          // Recupera dati dipendente
+          const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('email, first_name, last_name')
+            .eq('id', updatedRequest.user_id)
+            .single();
+
+          if (!userError && user) {
+            // Formatta la data
+            const permissionDate = updatedRequest.start_date || existingRequest.start_date;
+            const formattedDate = new Date(permissionDate).toLocaleDateString('it-IT', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+              timeZone: 'Europe/Rome'
+            });
+
+            // Formatta le ore
+            const hours = updatedRequest.hours || existingRequest.hours || 0;
+            const hoursFormatted = hours > 0
+              ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+              : '0h';
+
+            // Costruisci messaggio con dettagli delle modifiche
+            let messageText = `Il tuo permesso approvato per il ${formattedDate} (${hoursFormatted}) è stato modificato dall'amministratore.\n\n`;
+            
+            if (start_date !== undefined && start_date !== existingRequest.start_date) {
+              const oldDate = new Date(existingRequest.start_date).toLocaleDateString('it-IT', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'Europe/Rome'
+              });
+              messageText += `📅 Data: ${oldDate} → ${formattedDate}\n`;
+            }
+            
+            if (entryTime !== undefined && entryTime !== existingRequest.entry_time) {
+              const oldEntry = existingRequest.entry_time || 'Non impostato';
+              messageText += `🕐 Orario entrata: ${oldEntry} → ${entryTime || 'Non impostato'}\n`;
+            }
+            
+            if (exitTime !== undefined && exitTime !== existingRequest.exit_time) {
+              const oldExit = existingRequest.exit_time || 'Non impostato';
+              messageText += `🕐 Orario uscita: ${oldExit} → ${exitTime || 'Non impostato'}\n`;
+            }
+            
+            if (updatedRequest.hours !== existingRequest.hours) {
+              const oldHours = existingRequest.hours || 0;
+              const oldHoursFormatted = oldHours > 0
+                ? `${Math.floor(oldHours)}h${Math.round((oldHours - Math.floor(oldHours)) * 60) > 0 ? ` ${Math.round((oldHours - Math.floor(oldHours)) * 60)}min` : ''}`
+                : '0h';
+              messageText += `⏱️ Ore: ${oldHoursFormatted} → ${hoursFormatted}\n`;
+            }
+
+            // Crea notifica in-app
+            await supabase
+              .from('notifications')
+              .insert([{
+                user_id: updatedRequest.user_id,
+                title: 'Permesso Modificato',
+                message: messageText,
+                type: 'permission_modified',
+                request_id: updatedRequest.id,
+                request_type: 'permission',
+                is_read: false,
+                created_at: new Date().toISOString()
+              }]);
+
+            // Invia email
+            if (isRealEmail(user.email)) {
+              await sendEmail(user.email, 'permissionModified', [
+                user.first_name,
+                formattedDate,
+                hoursFormatted,
+                updatedRequest.id
+              ]);
+              console.log(`✅ Notifica e email inviate a ${user.email} per modifica permesso`);
+            }
+          }
+        } catch (modificationError) {
+          console.error('Errore invio notifica modifica permesso:', modificationError);
+          // Non bloccare l'aggiornamento se la notifica fallisce
+        }
+      }
+    }
+
     const statusMessages = {
       'approved': 'approvata',
       'rejected': 'rifiutata',

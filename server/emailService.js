@@ -720,6 +720,78 @@ const emailTemplates = {
     };
   },
 
+  // Notifica modifica permesso
+  permissionModified: (userName, date, hours, requestId) => {
+    const dateFormatted = formatDateExtended(date);
+    const hoursFormatted = hours > 0
+      ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+      : '0h';
+    const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
+    return {
+      subject: `Permesso Modificato - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Permesso Modificato</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h3 { margin-top: 0; color: #1E40AF; font-size: 18px; }
+            .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #DBEAFE; }
+            .info-row:last-child { border-bottom: none; }
+            .info-label { font-weight: 600; color: #1E40AF; }
+            .btn { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #2563EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Permesso Modificato</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>Il tuo permesso approvato è stato modificato dall'amministratore.</p>
+              
+              <div class="info-box">
+                <h3>Dettagli Permesso</h3>
+                <div class="info-row">
+                  <span class="info-label">Data:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore:</span> ${hoursFormatted}
+                </div>
+              </div>
+              
+              <p style="color: #6B7280; font-size: 14px;">Accedi al sistema per visualizzare tutti i dettagli delle modifiche apportate al tuo permesso.</p>
+              
+              <div style="text-align: center;">
+                <a href="${baseUrl}/permessi" class="btn">
+                  Visualizza Permesso
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
   // Reset password email
   resetPassword: (userName, newPassword) => ({
     subject: `Reset Password - Gestione personale LABA`,
