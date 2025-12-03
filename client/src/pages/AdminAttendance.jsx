@@ -1383,7 +1383,8 @@ const AdminAttendance = () => {
                           finalActualHours = record.actual_hours || 0;
                           finalExpectedHours = realTimeData.expectedHours; // Usa il valore ricalcolato dallo schedule (non DB)
                           finalBalanceHours = finalActualHours - finalExpectedHours; // Ricalcola il balance
-                          finalStatus = finalActualHours > 0 ? 'present' : 'absent';
+                          // Usa lo status calcolato da realTimeData (che include 'completed' per giornate concluse)
+                          finalStatus = realTimeData.status;
                         } else {
                           // Fallback
                           finalStatus = realTimeData.status;
