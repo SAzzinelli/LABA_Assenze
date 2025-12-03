@@ -159,10 +159,19 @@ const AdminAttendance = () => {
     }
   }, [workSchedules]);
 
+  // Helper per ottenere la data di oggi in formato locale (non UTC)
+  const getTodayLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const fetchAttendanceData = async () => {
     try {
       setDataLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocal();
       console.log('🔍 Fetching attendance data for today:', today);
       const response = await apiCall(`/api/attendance?date=${today}`);
       if (response.ok) {
@@ -405,7 +414,7 @@ const AdminAttendance = () => {
   const fetchPermissionHoursForEmployeesList = async (employeesList) => {
     try {
       const employees = employeesList || allEmployees;
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocal();
       console.log('🔄 Fetching permission hours for all employees...');
       console.log('📊 Total employees to check:', employees.length);
 
@@ -597,7 +606,7 @@ const AdminAttendance = () => {
   // Calcola le ore real-time per un record
   const calculateRealTimeHoursForRecord = (record) => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = getTodayLocal();
     const recordDate = record.date;
 
     // Converti le date in oggetti Date per confronto corretto
@@ -686,9 +695,9 @@ const AdminAttendance = () => {
       }
 
       // Se la DATA del record è passata (non è oggi), usa sempre i dati del database
-      const recordDate = new Date(record.date);
-      recordDate.setHours(0, 0, 0, 0);
-      const isRecordDatePast = recordDate < todayDate;
+      const recordDate = new Date(record.date + 'T00:00:00');
+      const todayLocal = getTodayLocal();
+      const isRecordDatePast = record.date < todayLocal;
       
       if (isRecordDatePast) {
         // Data passata: usa sempre i dati del database
@@ -989,11 +998,12 @@ const AdminAttendance = () => {
     let data = [];
     if (activeTab === 'today') {
       // Per "Oggi" combina dati database + real-time
-      data = attendance;
+      // IMPORTANTE: filtra solo le presenze di OGGI, escludi quelle di ieri
+      const today = getTodayLocal();
+      data = attendance.filter(record => record.date === today);
 
       // Aggiungi dati real-time se non ci sono record per oggi nel database
-      const today = new Date().toISOString().split('T')[0];
-      const hasTodayInDatabase = attendance.some(record => record.date === today);
+      const hasTodayInDatabase = data.length > 0;
 
       if (!hasTodayInDatabase && allEmployees.length > 0) {
         // Calcola dati real-time per tutti i dipendenti che hanno lavorato oggi
@@ -1023,7 +1033,7 @@ const AdminAttendance = () => {
       }
     } else {
       // Per "Cronologia" usa attendanceHistory (già filtrato dal backend per mese/anno/userId)
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocal();
 
       // Ottieni il mese/anno corrente
       const currentMonth = new Date().getMonth() + 1;
@@ -1080,7 +1090,7 @@ const AdminAttendance = () => {
       // Logica specifica per ogni tab
       if (activeTab === 'today') {
         // IMPORTANTE: mostra solo le presenze di OGGI, non di ieri
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayLocal();
         if (record.date !== today) {
           return false; // Escludi date passate o future dalla tab "Oggi"
         }
@@ -1383,13 +1393,13 @@ const AdminAttendance = () => {
 
                         // Usa i dati del database per giorni passati, real-time per oggi
                         const now = new Date();
-                        const today = now.toISOString().split('T')[0];
+                        const today = getTodayLocal();
                         const recordDate = record.date;
 
                         // Converti le date in oggetti Date per confronto corretto
-                        const todayDate = new Date(today);
-                        const recordDateObj = new Date(recordDate);
-                        const isPast = recordDateObj < todayDate;
+                        const todayDate = new Date(today + 'T00:00:00');
+                        const recordDateObj = new Date(recordDate + 'T00:00:00');
+                        const isPast = recordDate < today;
                         const isToday = recordDate === today;
 
                         // Determina status in base ai dati: 
