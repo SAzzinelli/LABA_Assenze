@@ -12,8 +12,8 @@
     "clsx": "^2.0.0",
     "lucide-react": "^0.263.1",
     "postcss": "^8.4.27",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-router-dom": "^6.8.1",
     "recharts": "^2.8.0",
     "socket.io-client": "^4.8.1",
@@ -22,8 +22,8 @@
     "zustand": "^4.4.1"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.0.3",
     "sharp": "^0.34.5",
     "vite": "^4.4.5"
