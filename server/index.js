@@ -7280,12 +7280,25 @@ app.post('/api/leave-requests/request-modification', authenticateToken, async (r
       ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
       : '0h';
 
-    // Costruisci il messaggio della notifica
+    // Costruisci il messaggio della notifica con struttura gerarchica
     const employeeName = leaveRequest.users ? `${leaveRequest.users.first_name} ${leaveRequest.users.last_name}` : 'Dipendente';
-    let messageText = `${employeeName} ha richiesto una modifica al permesso approvato per il ${formattedDate} (${hoursFormatted}).\n\n`;
-    messageText += `Motivo: ${reason}`;
+    
+    // Messaggio principale (generato dal sistema)
+    let messageText = `${employeeName} ha richiesto una modifica al permesso approvato.\n\n`;
+    
+    // Sezione: Informazioni del permesso (generato dal sistema)
+    messageText += `📅 Permesso originale:\n`;
+    messageText += `   Data: ${formattedDate}\n`;
+    messageText += `   Ore: ${hoursFormatted}\n\n`;
+    
+    // Sezione: Motivo (inserito dall'utente)
+    messageText += `💬 Motivo della richiesta:\n`;
+    messageText += `   ${reason}\n\n`;
+    
+    // Sezione: Modifiche richieste (inserito dall'utente)
     if (requestedChanges && requestedChanges.trim()) {
-      messageText += `\n\nModifiche richieste: ${requestedChanges}`;
+      messageText += `✏️ Modifiche richieste:\n`;
+      messageText += `   ${requestedChanges}\n`;
     }
 
     // Crea notifiche per tutti gli admin

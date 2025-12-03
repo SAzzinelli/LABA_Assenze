@@ -479,13 +479,70 @@ const Layout = ({ children }) => {
                                       <p className="text-sm font-semibold text-white mb-1">
                                         {notification.title}
                                       </p>
-                                      <p className="text-sm text-slate-300 mb-2" dangerouslySetInnerHTML={{
+                                      <div className="text-sm text-slate-300 mb-2 space-y-3" dangerouslySetInnerHTML={{
                                         __html: (() => {
                                           let msg = notification.message;
-                                          // Formatta date in formato anglosassone (YYYY-MM-DD) in italiano
-                                          // Parse as local time to avoid UTC timezone issues
+                                          
+                                          // Per notifiche di modifica permesso, formatta in modo speciale
+                                          if (notification.type === 'permission_modification_request') {
+                                            // Prima formatta i nomi e le date
+                                            msg = msg.replace(
+                                              /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
+                                              '<strong class="font-bold text-white">$1</strong>'
+                                            );
+                                            
+                                            msg = msg.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, year, month, day) => {
+                                              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                              return date.toLocaleDateString('it-IT', { 
+                                                day: '2-digit', 
+                                                month: 'long', 
+                                                year: 'numeric',
+                                                timeZone: 'Europe/Rome'
+                                              });
+                                            });
+                                            
+                                            // Dividi il messaggio in righe
+                                            const lines = msg.split('\n');
+                                            let html = '';
+                                            let currentSection = null;
+                                            
+                                            lines.forEach((line, index) => {
+                                              line = line.trim();
+                                              if (!line) return; // Salta righe vuote
+                                              
+                                              // Rileva sezioni con emoji
+                                              if (line.match(/^📅 .+:$/)) {
+                                                currentSection = 'info';
+                                                const title = line.replace(/^📅 (.+):$/, '$1');
+                                                html += `<div class="mt-3 first:mt-0"><p class="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-2 flex items-center gap-2"><span>📅</span> ${title}</p>`;
+                                              } else if (line.match(/^💬 .+:$/)) {
+                                                currentSection = 'reason';
+                                                const title = line.replace(/^💬 (.+):$/, '$1');
+                                                html += `<div class="mt-3"><p class="text-xs font-semibold text-yellow-400 uppercase tracking-wide mb-2 flex items-center gap-2"><span>💬</span> ${title}</p>`;
+                                              } else if (line.match(/^✏️ .+:$/)) {
+                                                currentSection = 'changes';
+                                                const title = line.replace(/^✏️ (.+):$/, '$1');
+                                                html += `<div class="mt-3"><p class="text-xs font-semibold text-green-400 uppercase tracking-wide mb-2 flex items-center gap-2"><span>✏️</span> ${title}</p>`;
+                                              } else if (line.startsWith('   ')) {
+                                                // Riga indentata (dettaglio di una sezione)
+                                                const content = line.substring(3);
+                                                html += `<p class="text-slate-300 ml-4 mb-1.5">${content}</p>`;
+                                              } else {
+                                                // Riga normale (testo principale)
+                                                html += `<p class="text-slate-300 mb-1.5">${line}</p>`;
+                                              }
+                                            });
+                                            
+                                            // Chiudi eventuali sezioni aperte
+                                            if (currentSection) {
+                                              html += '</div>';
+                                            }
+                                            
+                                            return html;
+                                          }
+                                          
+                                          // Formattazione standard per altre notifiche
                                           msg = msg.replace(/(\d{4})-(\d{2})-(\d{2})/g, (match, year, month, day) => {
-                                            // Parse as local date (year, month-1, day) to avoid UTC issues
                                             const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                                             return date.toLocaleDateString('it-IT', { 
                                               day: '2-digit', 
@@ -494,11 +551,11 @@ const Layout = ({ children }) => {
                                               timeZone: 'Europe/Rome'
                                             });
                                           });
-                                          // Metti in bold i nomi (Nome Cognome)
                                           msg = msg.replace(
                                             /(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g,
                                             '<strong class="font-bold text-white">$1</strong>'
                                           );
+                                          msg = msg.replace(/\n/g, '<br>');
                                           return msg;
                                         })()
                                       }} />
