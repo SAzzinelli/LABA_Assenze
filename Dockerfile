@@ -8,7 +8,7 @@ COPY client/package*.json ./client/
 
 # Installa dipendenze
 RUN npm install
-RUN cd client && npm install --include=dev
+RUN cd client && npm install --include=dev --legacy-peer-deps
 
 # Copia tutto il codice
 COPY . .
