@@ -423,8 +423,8 @@ const LeaveRequests = () => {
       const currentDate = selectedRequest.permissionDate || selectedRequest.startDate || selectedRequest.start_date;
       const currentDateStr = currentDate ? currentDate.split('T')[0] : '';
       if (editFormData.permissionDate && editFormData.permissionDate !== currentDateStr) {
-        payload.startDate = editFormData.permissionDate;
-        payload.endDate = editFormData.permissionDate; // Per permessi di un giorno, startDate = endDate
+        payload.start_date = editFormData.permissionDate;
+        payload.end_date = editFormData.permissionDate; // Per permessi di un giorno, start_date = end_date
         hasChanges = true;
       }
 
