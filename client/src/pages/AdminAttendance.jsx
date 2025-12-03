@@ -685,6 +685,28 @@ const AdminAttendance = () => {
         };
       }
 
+      // Se la giornata lavorativa è già conclusa E ci sono dati nel database, usa quelli
+      if (workSchedule.end_time && record.actual_hours > 0) {
+        const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
+        const endTime = new Date(now);
+        endTime.setHours(endHour, endMin, 0, 0);
+        
+        // Se l'orario di fine è già passato, usa i dati del database
+        if (now > endTime) {
+          const expected = record.expected_hours || 0;
+          const actual = record.actual_hours || 0;
+          const balance = record.balance_hours || (actual - expected);
+          
+          return {
+            expectedHours: expected,
+            actualHours: actual,
+            balanceHours: balance,
+            status: 'completed',
+            isPresent: false
+          };
+        }
+      }
+
       // Check permissions (early exit / late entry)
       const permissionData = permissionsHoursToday[record.user_id];
       let utilityPermissionData = null;
