@@ -1031,8 +1031,15 @@ const AdminAttendance = () => {
       // Logica specifica per ogni tab
       if (activeTab === 'today') {
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
+        // O ha già completato la giornata (actual_hours > 0 nel database)
         const realTimeData = calculateRealTimeHoursForRecord(record);
-        return realTimeData.actualHours > 0 || realTimeData.status === 'sick_leave' || realTimeData.status === 'holiday' || realTimeData.status === 'permission_104';
+        const hasCompletedDay = (record.actual_hours || 0) > 0;
+        const actualHoursToCheck = hasCompletedDay ? record.actual_hours : realTimeData.actualHours;
+        return actualHoursToCheck > 0 || 
+               realTimeData.status === 'sick_leave' || 
+               realTimeData.status === 'holiday' || 
+               realTimeData.status === 'permission_104' ||
+               realTimeData.status === 'completed';
       }
 
       return true;
