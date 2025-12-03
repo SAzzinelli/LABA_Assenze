@@ -720,6 +720,93 @@ const emailTemplates = {
     };
   },
 
+  // Richiesta modifica permesso (dipendente → admin)
+  permissionModificationRequest: (employeeName, date, hours, reason, requestedChanges, requestId) => {
+    const dateFormatted = formatDateExtended(date);
+    const hoursFormatted = hours > 0
+      ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
+      : '0h';
+    const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
+    
+    return {
+      subject: `Richiesta Modifica Permesso - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Richiesta Modifica Permesso</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h3 { margin-top: 0; color: #92400E; font-size: 18px; }
+            .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #FDE68A; }
+            .info-row:last-child { border-bottom: none; }
+            .info-label { font-weight: 600; color: #92400E; }
+            .reason-box { background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .reason-box h3 { margin-top: 0; color: #1E40AF; font-size: 18px; }
+            .changes-box { background: #F0FDF4; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .changes-box h3 { margin-top: 0; color: #065F46; font-size: 18px; }
+            .btn { display: inline-block; background: #F59E0B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #D97706; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Richiesta Modifica Permesso</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;"><strong>${employeeName}</strong> ha richiesto una modifica al permesso approvato.</p>
+              
+              <div class="info-box">
+                <h3>📅 Permesso Originale</h3>
+                <div class="info-row">
+                  <span class="info-label">Data:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore:</span> ${hoursFormatted}
+                </div>
+              </div>
+              
+              <div class="reason-box">
+                <h3>💬 Motivo della Richiesta</h3>
+                <p style="margin: 0; color: #1E40AF;">${reason}</p>
+              </div>
+              
+              ${requestedChanges ? `
+              <div class="changes-box">
+                <h3>✏️ Modifiche Richieste</h3>
+                <p style="margin: 0; color: #065F46;">${requestedChanges}</p>
+              </div>
+              ` : ''}
+              
+              <p style="color: #6B7280; font-size: 14px;">Accedi al sistema per visualizzare i dettagli e gestire la richiesta di modifica.</p>
+              
+              <div style="text-align: center;">
+                <a href="${baseUrl}/permessi" class="btn">
+                  Visualizza Richiesta
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
   // Notifica modifica permesso
   permissionModified: (userName, date, hours, requestId) => {
     const dateFormatted = formatDateExtended(date);
