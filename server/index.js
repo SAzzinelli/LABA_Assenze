@@ -10615,6 +10615,255 @@ async function processCompletedRecoveries() {
   }
 }
 
+// =====================================================
+// ENDPOINT: Aggiungi ore a credito manualmente (admin only)
+// IMPORTANTE: Deve essere PRIMA di /api/recovery-requests per evitare conflitti di routing
+// =====================================================
+app.post('/api/recovery-requests/add-credit-hours', (req, res, next) => {
+  console.log('🔴 [ROUTE] POST /api/recovery-requests/add-credit-hours - Richiesta ricevuta');
+  console.log('🔴 [ROUTE] Request body:', JSON.stringify(req.body));
+  console.log('🔴 [ROUTE] Request headers:', JSON.stringify(req.headers));
+  next();
+}, authenticateToken, async (req, res) => {
+  console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato dopo middleware');
+  try {
+    console.log('🔵 [ADD-CREDIT-HOURS] Request body:', JSON.stringify(req.body));
+    
+    if (req.user.role !== 'admin') {
+      console.log('🔵 [ADD-CREDIT-HOURS] Accesso negato - ruolo:', req.user.role);
+      return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono aggiungere ore a credito.' });
+    }
+
+    const { userId, hours, date, reason, notes } = req.body;
+    console.log('🔵 [ADD-CREDIT-HOURS] Parametri:', { userId, hours, date, reason, notes });
+
+    // Validazione
+    if (!userId) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: userId mancante');
+      return res.status(400).json({ error: 'userId è obbligatorio' });
+    }
+
+    if (!hours || parseFloat(hours) <= 0) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: ore non valide:', hours);
+      return res.status(400).json({ error: 'Le ore devono essere un numero positivo maggiore di 0' });
+    }
+
+    if (!date) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: data mancante');
+      return res.status(400).json({ error: 'La data è obbligatoria' });
+    }
+
+    // Verifica che l'utente esista
+    console.log('🔵 [ADD-CREDIT-HOURS] Verifica utente:', userId);
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email')
+      .eq('id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (userError || !user) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore utente non trovato:', userError);
+      return res.status(404).json({ error: 'Dipendente non trovato o non attivo' });
+    }
+
+    console.log('🔵 [ADD-CREDIT-HOURS] Utente trovato:', user.first_name, user.last_name);
+    const creditHours = parseFloat(hours);
+    console.log('🔵 [ADD-CREDIT-HOURS] Ore da aggiungere:', creditHours);
+
+    // Verifica se esiste già un record di presenza per quella data
+    console.log('🔵 [ADD-CREDIT-HOURS] Verifica presenza esistente per data:', date);
+    const { data: existingAttendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('date', date)
+      .single();
+
+    if (attendanceError && attendanceError.code !== 'PGRST116') {
+      // PGRST116 = nessun record trovato (normale se non esiste)
+      console.error('🔵 [ADD-CREDIT-HOURS] Errore controllo presenza:', attendanceError);
+      return res.status(500).json({ error: 'Errore nel controllo presenza esistente' });
+    }
+
+    console.log('🔵 [ADD-CREDIT-HOURS] Presenza esistente:', existingAttendance ? 'Sì' : 'No');
+
+    // IMPORTANTE: Verifica se ci sono permessi approvati per questa data
+    // Se il dipendente ha un permesso approvato ma rientra prima, le ore di permesso dovrebbero essere ridotte
+    // invece di aggiungere crediti ore manualmente
+    const { data: approvedPermissions, error: permError } = await supabase
+      .from('leave_requests')
+      .select('id, type, hours, permission_type, entry_time, exit_time, start_date, end_date')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', date)
+      .gte('end_date', date);
+
+    if (!permError && approvedPermissions && approvedPermissions.length > 0) {
+      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ ATTENZIONE: Trovati permessi approvati per questa data:', approvedPermissions.length);
+      approvedPermissions.forEach(perm => {
+        console.log(`🔵 [ADD-CREDIT-HOURS]   - Permesso: ${perm.permission_type}, ore: ${perm.hours}, entry: ${perm.entry_time}, exit: ${perm.exit_time}`);
+      });
+      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ Se il dipendente è rientrato prima, considera di modificare il permesso invece di aggiungere crediti ore');
+    }
+
+    if (existingAttendance) {
+      // IMPORTANTE: Se ci sono permessi approvati, verifica se le ore a credito sono dovute
+      // a un rientro anticipato rispetto al permesso. In quel caso, ricalcola le ore di permesso
+      // invece di aggiungere crediti ore manualmente.
+      let shouldRecalculatePermission = false;
+      let actualPermissionHoursUsed = 0;
+      
+      if (approvedPermissions && approvedPermissions.length > 0) {
+        const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+        const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
+        const newActualHours = oldActualHours + creditHours;
+        
+        // Recupera le ore contrattuali per questo giorno
+        const dayOfWeek = new Date(date).getDay();
+        const { data: schedule } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, break_duration')
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (schedule) {
+          const { calculateExpectedHoursForSchedule } = require('./utils/hoursCalculation');
+          const contractHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
+          });
+          
+          const expectedWithPermission = contractHours - totalPermissionHours;
+          
+          // Se dopo aver aggiunto le ore a credito, le ore effettive superano quelle previste dal permesso,
+          // significa che il dipendente è rientrato prima e le ore di permesso devono essere ricalcolate
+          if (newActualHours > expectedWithPermission) {
+            shouldRecalculatePermission = true;
+            actualPermissionHoursUsed = contractHours - newActualHours;
+            console.log(`🔄 [ADD-CREDIT-HOURS] RILEVATO: Dipendente rientrato prima del permesso!`);
+            console.log(`   Permesso approvato: ${totalPermissionHours}h`);
+            console.log(`   Ore effettive dopo credito: ${newActualHours}h`);
+            console.log(`   Ore contrattuali: ${contractHours}h`);
+            console.log(`   Ore permesso effettivamente utilizzate: ${actualPermissionHoursUsed.toFixed(2)}h`);
+            console.log(`   ⚠️ CONSIGLIO: Modifica il permesso invece di aggiungere crediti ore manualmente`);
+          }
+        }
+      }
+      
+      // Aggiorna il record esistente aggiungendo le ore a credito
+      // IMPORTANTE: Le ore a credito aumentano sia actual_hours che balance_hours
+      // perché rappresentano ore effettivamente lavorate che vanno aggiunte al saldo
+      const oldBalanceHours = parseFloat(existingAttendance.balance_hours || 0);
+      const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
+      const newActualHours = oldActualHours + creditHours;
+      
+      // Se c'è un permesso approvato e il dipendente è rientrato prima, ricalcola il balance
+      let newBalanceHours;
+      if (shouldRecalculatePermission) {
+        // Balance negativo solo per le ore di permesso effettivamente utilizzate
+        newBalanceHours = -actualPermissionHoursUsed;
+        console.log(`💰 [ADD-CREDIT-HOURS] Balance ricalcolato: ${oldBalanceHours}h → ${newBalanceHours.toFixed(2)}h (permesso ricalcolato)`);
+      } else {
+        // Comportamento normale: aggiungi le ore a credito al balance
+        newBalanceHours = oldBalanceHours + creditHours;
+        console.log(`💰 [ADD-CREDIT-HOURS] Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
+      }
+
+      console.log('🔵 [ADD-CREDIT-HOURS] Tentativo aggiornamento attendance record:', existingAttendance.id);
+      const { data: updatedRecord, error: updateError } = await supabase
+        .from('attendance')
+        .update({
+          actual_hours: newActualHours,
+          balance_hours: newBalanceHours,
+          notes: (existingAttendance.notes || '') + `\n[Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}]`
+        })
+        .eq('id', existingAttendance.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('🔵 [ADD-CREDIT-HOURS] Errore aggiornamento attendance:', updateError);
+        return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
+      }
+
+      console.log('🔵 [ADD-CREDIT-HOURS] Record aggiornato con successo:', JSON.stringify(updatedRecord, null, 2));
+      console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date} (balance: ${oldBalanceHours}h → ${newBalanceHours}h)`);
+    } else {
+      // Crea un nuovo record di presenza con solo le ore a credito
+      // expected_hours = 0 perché non è una giornata lavorativa normale
+      const { error: insertError } = await supabase
+        .from('attendance')
+        .insert({
+          user_id: userId,
+          date: date,
+          expected_hours: 0,
+          actual_hours: creditHours,
+          balance_hours: creditHours,
+          notes: `Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}${notes ? ` - ${notes}` : ''}`
+        });
+
+      if (insertError) {
+        console.error('Error inserting attendance:', insertError);
+        return res.status(500).json({ error: 'Errore nella creazione del record di presenza' });
+      }
+
+      console.log(`✅ Credit hours added as new attendance record: +${creditHours}h for user ${userId} on ${date}`);
+    }
+
+    // Crea una notifica per il dipendente
+    try {
+      const formattedDate = new Date(date).toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
+      });
+
+      const hoursFormatted = (() => {
+        const h = Math.floor(creditHours);
+        const m = Math.round((creditHours - h) * 60);
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}min`;
+      })();
+
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: userId,
+          title: 'Ore a Credito Aggiunte',
+          message: `L'amministratore ti ha aggiunto ${hoursFormatted} a credito nella tua banca ore per il ${formattedDate}. ${reason ? `Motivo: ${reason}` : ''}`,
+          type: 'credit_hours',
+          is_read: false,
+          created_at: new Date().toISOString()
+        }]);
+
+      console.log(`✅ Notifica creata per dipendente ${user.first_name} ${user.last_name}`);
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+      // Non bloccare l'operazione se la notifica fallisce
+    }
+
+    res.json({
+      success: true,
+      message: `${creditHours} ore a credito aggiunte con successo`,
+      hours: creditHours,
+      date: date,
+      employee: {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`
+      }
+    });
+  } catch (error) {
+    console.error('Add credit hours error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Crea richiesta recupero ore (dipendente con debito o proposta admin)
 app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
@@ -11370,252 +11619,6 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Recovery request update error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Endpoint per aggiungere ore a credito direttamente (admin)
-app.post('/api/recovery-requests/add-credit-hours', (req, res, next) => {
-  console.log('🔴 [ROUTE] POST /api/recovery-requests/add-credit-hours - Richiesta ricevuta');
-  console.log('🔴 [ROUTE] Request body:', JSON.stringify(req.body));
-  console.log('🔴 [ROUTE] Request headers:', JSON.stringify(req.headers));
-  next();
-}, authenticateToken, async (req, res) => {
-  console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato dopo middleware');
-  try {
-    console.log('🔵 [ADD-CREDIT-HOURS] Request body:', JSON.stringify(req.body));
-    
-    if (req.user.role !== 'admin') {
-      console.log('🔵 [ADD-CREDIT-HOURS] Accesso negato - ruolo:', req.user.role);
-      return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono aggiungere ore a credito.' });
-    }
-
-    const { userId, hours, date, reason, notes } = req.body;
-    console.log('🔵 [ADD-CREDIT-HOURS] Parametri:', { userId, hours, date, reason, notes });
-
-    // Validazione
-    if (!userId) {
-      console.log('🔵 [ADD-CREDIT-HOURS] Errore: userId mancante');
-      return res.status(400).json({ error: 'userId è obbligatorio' });
-    }
-
-    if (!hours || parseFloat(hours) <= 0) {
-      console.log('🔵 [ADD-CREDIT-HOURS] Errore: ore non valide:', hours);
-      return res.status(400).json({ error: 'Le ore devono essere un numero positivo maggiore di 0' });
-    }
-
-    if (!date) {
-      console.log('🔵 [ADD-CREDIT-HOURS] Errore: data mancante');
-      return res.status(400).json({ error: 'La data è obbligatoria' });
-    }
-
-    // Verifica che l'utente esista
-    console.log('🔵 [ADD-CREDIT-HOURS] Verifica utente:', userId);
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name, email')
-      .eq('id', userId)
-      .eq('is_active', true)
-      .single();
-
-    if (userError || !user) {
-      console.log('🔵 [ADD-CREDIT-HOURS] Errore utente non trovato:', userError);
-      return res.status(404).json({ error: 'Dipendente non trovato o non attivo' });
-    }
-
-    console.log('🔵 [ADD-CREDIT-HOURS] Utente trovato:', user.first_name, user.last_name);
-    const creditHours = parseFloat(hours);
-    console.log('🔵 [ADD-CREDIT-HOURS] Ore da aggiungere:', creditHours);
-
-    // Verifica se esiste già un record di presenza per quella data
-    console.log('🔵 [ADD-CREDIT-HOURS] Verifica presenza esistente per data:', date);
-    const { data: existingAttendance, error: attendanceError } = await supabase
-      .from('attendance')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('date', date)
-      .single();
-
-    if (attendanceError && attendanceError.code !== 'PGRST116') {
-      // PGRST116 = nessun record trovato (normale se non esiste)
-      console.error('🔵 [ADD-CREDIT-HOURS] Errore controllo presenza:', attendanceError);
-      return res.status(500).json({ error: 'Errore nel controllo presenza esistente' });
-    }
-
-    console.log('🔵 [ADD-CREDIT-HOURS] Presenza esistente:', existingAttendance ? 'Sì' : 'No');
-
-    // IMPORTANTE: Verifica se ci sono permessi approvati per questa data
-    // Se il dipendente ha un permesso approvato ma rientra prima, le ore di permesso dovrebbero essere ridotte
-    // invece di aggiungere crediti ore manualmente
-    const { data: approvedPermissions, error: permError } = await supabase
-      .from('leave_requests')
-      .select('id, type, hours, permission_type, entry_time, exit_time, start_date, end_date')
-      .eq('user_id', userId)
-      .eq('type', 'permission')
-      .eq('status', 'approved')
-      .lte('start_date', date)
-      .gte('end_date', date);
-
-    if (!permError && approvedPermissions && approvedPermissions.length > 0) {
-      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ ATTENZIONE: Trovati permessi approvati per questa data:', approvedPermissions.length);
-      approvedPermissions.forEach(perm => {
-        console.log(`🔵 [ADD-CREDIT-HOURS]   - Permesso: ${perm.permission_type}, ore: ${perm.hours}, entry: ${perm.entry_time}, exit: ${perm.exit_time}`);
-      });
-      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ Se il dipendente è rientrato prima, considera di modificare il permesso invece di aggiungere crediti ore');
-    }
-
-    if (existingAttendance) {
-      // IMPORTANTE: Se ci sono permessi approvati, verifica se le ore a credito sono dovute
-      // a un rientro anticipato rispetto al permesso. In quel caso, ricalcola le ore di permesso
-      // invece di aggiungere crediti ore manualmente.
-      let shouldRecalculatePermission = false;
-      let actualPermissionHoursUsed = 0;
-      
-      if (approvedPermissions && approvedPermissions.length > 0) {
-        const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-        const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
-        const newActualHours = oldActualHours + creditHours;
-        
-        // Recupera le ore contrattuali per questo giorno
-        const dayOfWeek = new Date(date).getDay();
-        const { data: schedule } = await supabase
-          .from('work_schedules')
-          .select('start_time, end_time, break_duration')
-          .eq('user_id', userId)
-          .eq('day_of_week', dayOfWeek)
-          .eq('is_working_day', true)
-          .single();
-        
-        if (schedule) {
-          const { calculateExpectedHoursForSchedule } = require('./utils/hoursCalculation');
-          const contractHours = calculateExpectedHoursForSchedule({
-            start_time: schedule.start_time,
-            end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
-          });
-          
-          const expectedWithPermission = contractHours - totalPermissionHours;
-          
-          // Se dopo aver aggiunto le ore a credito, le ore effettive superano quelle previste dal permesso,
-          // significa che il dipendente è rientrato prima e le ore di permesso devono essere ricalcolate
-          if (newActualHours > expectedWithPermission) {
-            shouldRecalculatePermission = true;
-            actualPermissionHoursUsed = contractHours - newActualHours;
-            console.log(`🔄 [ADD-CREDIT-HOURS] RILEVATO: Dipendente rientrato prima del permesso!`);
-            console.log(`   Permesso approvato: ${totalPermissionHours}h`);
-            console.log(`   Ore effettive dopo credito: ${newActualHours}h`);
-            console.log(`   Ore contrattuali: ${contractHours}h`);
-            console.log(`   Ore permesso effettivamente utilizzate: ${actualPermissionHoursUsed.toFixed(2)}h`);
-            console.log(`   ⚠️ CONSIGLIO: Modifica il permesso invece di aggiungere crediti ore manualmente`);
-          }
-        }
-      }
-      
-      // Aggiorna il record esistente aggiungendo le ore a credito
-      // IMPORTANTE: Le ore a credito aumentano sia actual_hours che balance_hours
-      // perché rappresentano ore effettivamente lavorate che vanno aggiunte al saldo
-      const oldBalanceHours = parseFloat(existingAttendance.balance_hours || 0);
-      const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
-      const newActualHours = oldActualHours + creditHours;
-      
-      // Se c'è un permesso approvato e il dipendente è rientrato prima, ricalcola il balance
-      let newBalanceHours;
-      if (shouldRecalculatePermission) {
-        // Balance negativo solo per le ore di permesso effettivamente utilizzate
-        newBalanceHours = -actualPermissionHoursUsed;
-        console.log(`💰 [ADD-CREDIT-HOURS] Balance ricalcolato: ${oldBalanceHours}h → ${newBalanceHours.toFixed(2)}h (permesso ricalcolato)`);
-      } else {
-        // Comportamento normale: aggiungi le ore a credito al balance
-        newBalanceHours = oldBalanceHours + creditHours;
-        console.log(`💰 [ADD-CREDIT-HOURS] Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
-      }
-
-      console.log('🔵 [ADD-CREDIT-HOURS] Tentativo aggiornamento attendance record:', existingAttendance.id);
-      const { data: updatedRecord, error: updateError } = await supabase
-        .from('attendance')
-        .update({
-          actual_hours: newActualHours,
-          balance_hours: newBalanceHours,
-          notes: (existingAttendance.notes || '') + `\n[Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}]`
-        })
-        .eq('id', existingAttendance.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('🔵 [ADD-CREDIT-HOURS] Errore aggiornamento attendance:', updateError);
-        return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
-      }
-
-      console.log('🔵 [ADD-CREDIT-HOURS] Record aggiornato con successo:', JSON.stringify(updatedRecord, null, 2));
-      console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date} (balance: ${oldBalanceHours}h → ${newBalanceHours}h)`);
-    } else {
-      // Crea un nuovo record di presenza con solo le ore a credito
-      // expected_hours = 0 perché non è una giornata lavorativa normale
-      const { error: insertError } = await supabase
-        .from('attendance')
-        .insert({
-          user_id: userId,
-          date: date,
-          expected_hours: 0,
-          actual_hours: creditHours,
-          balance_hours: creditHours,
-          notes: `Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}${notes ? ` - ${notes}` : ''}`
-        });
-
-      if (insertError) {
-        console.error('Error inserting attendance:', insertError);
-        return res.status(500).json({ error: 'Errore nella creazione del record di presenza' });
-      }
-
-      console.log(`✅ Credit hours added as new attendance record: +${creditHours}h for user ${userId} on ${date}`);
-    }
-
-    // Crea una notifica per il dipendente
-    try {
-      const formattedDate = new Date(date).toLocaleDateString('it-IT', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'Europe/Rome'
-      });
-
-      const hoursFormatted = (() => {
-        const h = Math.floor(creditHours);
-        const m = Math.round((creditHours - h) * 60);
-        if (m === 0) return `${h}h`;
-        return `${h}h ${m}min`;
-      })();
-
-      await supabase
-        .from('notifications')
-        .insert([{
-          user_id: userId,
-          title: 'Ore a Credito Aggiunte',
-          message: `L'amministratore ti ha aggiunto ${hoursFormatted} a credito nella tua banca ore per il ${formattedDate}. ${reason ? `Motivo: ${reason}` : ''}`,
-          type: 'credit_hours',
-          is_read: false,
-          created_at: new Date().toISOString()
-        }]);
-
-      console.log(`✅ Notifica creata per dipendente ${user.first_name} ${user.last_name}`);
-    } catch (notifError) {
-      console.error('Error creating notification:', notifError);
-      // Non bloccare l'operazione se la notifica fallisce
-    }
-
-    res.json({
-      success: true,
-      message: `${creditHours} ore a credito aggiunte con successo`,
-      hours: creditHours,
-      date: date,
-      employee: {
-        id: user.id,
-        name: `${user.first_name} ${user.last_name}`
-      }
-    });
-  } catch (error) {
-    console.error('Add credit hours error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
