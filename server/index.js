@@ -11334,27 +11334,36 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
 
 // Endpoint per aggiungere ore a credito direttamente (admin)
 app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (req, res) => {
+  console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato');
   try {
+    console.log('🔵 [ADD-CREDIT-HOURS] Request body:', JSON.stringify(req.body));
+    
     if (req.user.role !== 'admin') {
+      console.log('🔵 [ADD-CREDIT-HOURS] Accesso negato - ruolo:', req.user.role);
       return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono aggiungere ore a credito.' });
     }
 
     const { userId, hours, date, reason, notes } = req.body;
+    console.log('🔵 [ADD-CREDIT-HOURS] Parametri:', { userId, hours, date, reason, notes });
 
     // Validazione
     if (!userId) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: userId mancante');
       return res.status(400).json({ error: 'userId è obbligatorio' });
     }
 
     if (!hours || parseFloat(hours) <= 0) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: ore non valide:', hours);
       return res.status(400).json({ error: 'Le ore devono essere un numero positivo maggiore di 0' });
     }
 
     if (!date) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore: data mancante');
       return res.status(400).json({ error: 'La data è obbligatoria' });
     }
 
     // Verifica che l'utente esista
+    console.log('🔵 [ADD-CREDIT-HOURS] Verifica utente:', userId);
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, first_name, last_name, email')
@@ -11363,12 +11372,16 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       .single();
 
     if (userError || !user) {
+      console.log('🔵 [ADD-CREDIT-HOURS] Errore utente non trovato:', userError);
       return res.status(404).json({ error: 'Dipendente non trovato o non attivo' });
     }
 
+    console.log('🔵 [ADD-CREDIT-HOURS] Utente trovato:', user.first_name, user.last_name);
     const creditHours = parseFloat(hours);
+    console.log('🔵 [ADD-CREDIT-HOURS] Ore da aggiungere:', creditHours);
 
     // Verifica se esiste già un record di presenza per quella data
+    console.log('🔵 [ADD-CREDIT-HOURS] Verifica presenza esistente per data:', date);
     const { data: existingAttendance, error: attendanceError } = await supabase
       .from('attendance')
       .select('*')
@@ -11378,9 +11391,11 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     if (attendanceError && attendanceError.code !== 'PGRST116') {
       // PGRST116 = nessun record trovato (normale se non esiste)
-      console.error('Error checking existing attendance:', attendanceError);
+      console.error('🔵 [ADD-CREDIT-HOURS] Errore controllo presenza:', attendanceError);
       return res.status(500).json({ error: 'Errore nel controllo presenza esistente' });
     }
+
+    console.log('🔵 [ADD-CREDIT-HOURS] Presenza esistente:', existingAttendance ? 'Sì' : 'No');
 
     if (existingAttendance) {
       // Aggiorna il record esistente aggiungendo le ore a credito
