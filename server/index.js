@@ -10884,7 +10884,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
     // Costruisci note dettagliate per audit trail
     let auditNote = '';
     if (permissionRecalculated) {
-      const oldTotalPermHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours || 0), 0), 0);
+      const oldTotalPermHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
       const { data: updatedPerms } = await supabase
         .from('leave_requests')
         .select('hours')
