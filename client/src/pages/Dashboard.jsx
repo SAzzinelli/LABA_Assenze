@@ -110,6 +110,7 @@ const Dashboard = () => {
           if (user?.role === 'employee') {
             console.log('🔄 Refreshing employee data...');
             fetchAttendanceData(); // Questo chiamerà updateKPIsWithBalance
+            fetchOvertimeBalance(); // Aggiorna anche il balance banca ore
           } else if (user?.role === 'admin') {
             console.log('🔄 Refreshing admin data...');
             fetchEmployees();
@@ -413,7 +414,8 @@ const Dashboard = () => {
       if (user?.role !== 'employee') return;
       
       const currentYear = new Date().getFullYear();
-      const response = await apiCall(`/api/hours/overtime-balance?year=${currentYear}`);
+      // Aggiungi timestamp per evitare cache
+      const response = await apiCall(`/api/hours/overtime-balance?year=${currentYear}&_t=${Date.now()}`);
       if (response.ok) {
         const data = await response.json();
         setOvertimeBalance(data);

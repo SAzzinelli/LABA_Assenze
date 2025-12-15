@@ -64,7 +64,8 @@ const MonteOre = () => {
       setLoading(true);
       
       // Fetch current balance usando l'endpoint centralizzato (coerente con tutta l'app)
-      const balanceResponse = await apiCall(`/api/hours/overtime-balance?year=${filters.year}`);
+      // Aggiungi timestamp per evitare cache
+      const balanceResponse = await apiCall(`/api/hours/overtime-balance?year=${filters.year}&_t=${Date.now()}`);
       
       // Fetch dettagli del ledger (total_accrued, total_used, pending_requests)
       const ledgerResponse = await apiCall(`/api/hours/current-balances?year=${filters.year}`);
