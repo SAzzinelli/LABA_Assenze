@@ -410,37 +410,98 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
               return balance !== 0;
             }).map((record, index) => {
               const formattedRecordBalance = formatHoursValue(record.balance_hours || 0);
+              
+              // Estrai informazioni dalle note per audit trail
+              const notes = record.notes || '';
+              const hasManualCredit = notes.includes('Aggiunta manuale ore') || notes.includes('Ricarica banca ore');
+              const hasPermissionReduction = notes.includes('Riduzione permesso');
+              
+              // Estrai dettagli dalle note se presenti
+              let manualCreditInfo = null;
+              let permissionReductionInfo = null;
+              
+              if (hasManualCredit) {
+                const creditMatch = notes.match(/Aggiunta manuale ore: \+([\d.]+)h/);
+                if (creditMatch) {
+                  manualCreditInfo = parseFloat(creditMatch[1]);
+                } else {
+                  // Fallback per formato "Ricarica banca ore"
+                  const creditMatch2 = notes.match(/Ricarica banca ore: \+([\d.]+)h/);
+                  if (creditMatch2) {
+                    manualCreditInfo = parseFloat(creditMatch2[1]);
+                  }
+                }
+              }
+              
+              if (hasPermissionReduction) {
+                const permMatch = notes.match(/Riduzione permesso: ([\d.]+)h → ([\d.]+)h \(([\d.]+)h recuperate\)/);
+                if (permMatch) {
+                  permissionReductionInfo = {
+                    old: parseFloat(permMatch[1]),
+                    new: parseFloat(permMatch[2]),
+                    recovered: parseFloat(permMatch[3])
+                  };
+                }
+              }
+              
               return (
-                <div key={index} className="bg-slate-600 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 text-slate-400 mr-3" />
-                    <div>
-                      <p className="text-white font-medium">
-                        {new Date(record.date).toLocaleDateString('it-IT', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
+                <div key={index} className="bg-slate-600 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-slate-400 mr-3" />
+                      <div>
+                        <p className="text-white font-medium">
+                          {new Date(record.date).toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-slate-400 text-sm">
+                          Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-lg font-bold ${record.balance_hours > 0
+                          ? 'text-green-400'
+                          : record.balance_hours < 0
+                            ? 'text-red-400'
+                            : 'text-slate-400'
+                        }`}>
+                        {formattedRecordBalance.sign}
+                        {formattedRecordBalance.hours}h {formattedRecordBalance.minutes}m
                       </p>
-                      <p className="text-slate-400 text-sm">
-                        Ore attese: {Math.floor(record.expected_hours || 0)}h {Math.round(((record.expected_hours || 0) % 1) * 60)}m
+                      <p className="text-slate-400 text-xs mt-1">
+                        Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-lg font-bold ${record.balance_hours > 0
-                        ? 'text-green-400'
-                        : record.balance_hours < 0
-                          ? 'text-red-400'
-                          : 'text-slate-400'
-                      }`}>
-                      {formattedRecordBalance.sign}
-                      {formattedRecordBalance.hours}h {formattedRecordBalance.minutes}m
-                    </p>
-                    <p className="text-slate-400 text-xs mt-1">
-                      Effettive: {Math.floor(record.actual_hours || 0)}h {Math.round(((record.actual_hours || 0) % 1) * 60)}m
-                    </p>
-                  </div>
+                  
+                  {/* Mostra audit trail per aggiunte manuali */}
+                  {hasManualCredit && (
+                    <div className="mt-3 pt-3 border-t border-slate-500">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          {hasPermissionReduction && permissionReductionInfo ? (
+                            <>
+                              <p className="text-xs text-amber-300 font-semibold mb-1">
+                                💰 Aggiunta manuale: +{manualCreditInfo?.toFixed(2) || '0'}h
+                              </p>
+                              <p className="text-xs text-blue-300">
+                                🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h 
+                                <span className="text-green-300"> ({permissionReductionInfo.recovered.toFixed(2)}h recuperate)</span>
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-xs text-amber-300">
+                              💰 Ricarica banca ore: +{manualCreditInfo?.toFixed(2) || '0'}h
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
