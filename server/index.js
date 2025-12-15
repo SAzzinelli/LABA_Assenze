@@ -11125,14 +11125,20 @@ async function calculateOvertimeBalance(userId, year = null) {
         if (record.date === today) {
           if (hasApprovedPermissionToday) {
             const balance = parseFloat(record.balance_hours || 0);
+            console.log(`📅 Record di oggi incluso nel balance: ${balance}h (ha permesso approvato)`);
             return sum + balance;
           }
+          console.log(`📅 Record di oggi ESCLUSO dal balance: ${parseFloat(record.balance_hours || 0)}h (nessun permesso approvato)`);
           return sum; // Escludi se non c'è permesso approvato
         }
         const balance = parseFloat(record.balance_hours || 0);
         // Log per debug: verifica se ci sono crediti ore
         if (balance > 0 && record.notes && (record.notes.includes('credito') || record.notes.includes('Credito') || record.notes.includes('recupero') || record.notes.includes('Recupero'))) {
           console.log(`💰 Credit hours found for ${record.date}: +${balance}h`);
+        }
+        // Log per debug: verifica se ci sono ricariche banca ore
+        if (record.notes && (record.notes.includes('Ricarica') || record.notes.includes('ricarica'))) {
+          console.log(`💰 Ricarica banca ore trovata per ${record.date}: balance=${balance}h`);
         }
         return sum + balance;
       }, 0)
