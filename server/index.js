@@ -11465,15 +11465,70 @@ app.post('/api/recovery-requests/add-credit-hours', (req, res, next) => {
     }
 
     if (existingAttendance) {
+      // IMPORTANTE: Se ci sono permessi approvati, verifica se le ore a credito sono dovute
+      // a un rientro anticipato rispetto al permesso. In quel caso, ricalcola le ore di permesso
+      // invece di aggiungere crediti ore manualmente.
+      let shouldRecalculatePermission = false;
+      let actualPermissionHoursUsed = 0;
+      
+      if (approvedPermissions && approvedPermissions.length > 0) {
+        const totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+        const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
+        const newActualHours = oldActualHours + creditHours;
+        
+        // Recupera le ore contrattuali per questo giorno
+        const dayOfWeek = new Date(date).getDay();
+        const { data: schedule } = await supabase
+          .from('work_schedules')
+          .select('start_time, end_time, break_duration')
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek)
+          .eq('is_working_day', true)
+          .single();
+        
+        if (schedule) {
+          const { calculateExpectedHoursForSchedule } = require('./utils/hoursCalculation');
+          const contractHours = calculateExpectedHoursForSchedule({
+            start_time: schedule.start_time,
+            end_time: schedule.end_time,
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
+          });
+          
+          const expectedWithPermission = contractHours - totalPermissionHours;
+          
+          // Se dopo aver aggiunto le ore a credito, le ore effettive superano quelle previste dal permesso,
+          // significa che il dipendente è rientrato prima e le ore di permesso devono essere ricalcolate
+          if (newActualHours > expectedWithPermission) {
+            shouldRecalculatePermission = true;
+            actualPermissionHoursUsed = contractHours - newActualHours;
+            console.log(`🔄 [ADD-CREDIT-HOURS] RILEVATO: Dipendente rientrato prima del permesso!`);
+            console.log(`   Permesso approvato: ${totalPermissionHours}h`);
+            console.log(`   Ore effettive dopo credito: ${newActualHours}h`);
+            console.log(`   Ore contrattuali: ${contractHours}h`);
+            console.log(`   Ore permesso effettivamente utilizzate: ${actualPermissionHoursUsed.toFixed(2)}h`);
+            console.log(`   ⚠️ CONSIGLIO: Modifica il permesso invece di aggiungere crediti ore manualmente`);
+          }
+        }
+      }
+      
       // Aggiorna il record esistente aggiungendo le ore a credito
       // IMPORTANTE: Le ore a credito aumentano sia actual_hours che balance_hours
       // perché rappresentano ore effettivamente lavorate che vanno aggiunte al saldo
       const oldBalanceHours = parseFloat(existingAttendance.balance_hours || 0);
-      const newBalanceHours = oldBalanceHours + creditHours;
       const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
       const newActualHours = oldActualHours + creditHours;
-
-      console.log(`💰 Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
+      
+      // Se c'è un permesso approvato e il dipendente è rientrato prima, ricalcola il balance
+      let newBalanceHours;
+      if (shouldRecalculatePermission) {
+        // Balance negativo solo per le ore di permesso effettivamente utilizzate
+        newBalanceHours = -actualPermissionHoursUsed;
+        console.log(`💰 [ADD-CREDIT-HOURS] Balance ricalcolato: ${oldBalanceHours}h → ${newBalanceHours.toFixed(2)}h (permesso ricalcolato)`);
+      } else {
+        // Comportamento normale: aggiungi le ore a credito al balance
+        newBalanceHours = oldBalanceHours + creditHours;
+        console.log(`💰 [ADD-CREDIT-HOURS] Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
+      }
 
       console.log('🔵 [ADD-CREDIT-HOURS] Tentativo aggiornamento attendance record:', existingAttendance.id);
       const { data: updatedRecord, error: updateError } = await supabase
