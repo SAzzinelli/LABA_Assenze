@@ -360,14 +360,22 @@ const RecuperiOre = () => {
         const hoursText = hoursNum > 0 ? `${hoursNum}h` : '';
         const minutesText = minutesNum > 0 ? `${minutesNum}min` : '';
         const totalText = [hoursText, minutesText].filter(Boolean).join(' ');
-        alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}`);
         
-        // Ricarica i dati
-        await fetchAllEmployees();
-        await fetchDebtSummary();
-        if (selectedEmployeeForAddHours.id === user?.id) {
-          refetchBalance();
-        }
+        console.log('✅ Ore aggiunte con successo:', data);
+        console.log('💰 Nuovo balance:', data.newBalance);
+        
+        // Forza refresh completo con delay per assicurarsi che il database sia aggiornato
+        setTimeout(async () => {
+          console.log('🔄 Ricarica dati dopo aggiunta ore...');
+          await fetchAllEmployees();
+          await fetchDebtSummary();
+          if (selectedEmployeeForAddHours.id === user?.id) {
+            await refetchBalance();
+          }
+          console.log('✅ Dati ricaricati');
+        }, 500);
+        
+        alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}${data.newBalance !== undefined ? `\nNuovo saldo: ${data.newBalance.toFixed(2)}h` : ''}`);
         
         // Chiudi modal e resetta form
         setShowAddHoursModal(false);
