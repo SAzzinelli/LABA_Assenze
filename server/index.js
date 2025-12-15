@@ -11190,17 +11190,24 @@ async function calculateOvertimeBalance(userId, year = null) {
     const totalBalanceWithRecovery = totalBalance - todayPermissionHours - pendingRecoveryHours;
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
-    // Log per debug
+    // Log dettagliato per debug
+    console.log(`═══════════════════════════════════════════════════════════`);
+    console.log(`💰 [BALANCE CALCULATION] User ${userId}, Year ${currentYear}`);
+    console.log(`═══════════════════════════════════════════════════════════`);
+    console.log(`📊 Total attendance records: ${attendance?.length || 0}`);
     if (todayRecord) {
       const todayBalance = parseFloat(todayRecord.balance_hours || 0);
-      if (hasApprovedPermissionToday) {
-        console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h (including today with approved permission: ${todayBalance.toFixed(2)}h), Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
-      } else {
-        console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h (excluding today: ${todayBalance.toFixed(2)}h), Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
-      }
+      console.log(`📅 Today record (${today}): ${todayBalance.toFixed(2)}h`);
+      console.log(`   Has approved permission: ${hasApprovedPermissionToday ? 'Sì' : 'No'}`);
+      console.log(`   Included in balance: ${hasApprovedPermissionToday ? 'Sì' : 'No'}`);
     } else {
-      console.log(`💰 Balance for user ${userId}: Attendance=${totalBalance.toFixed(2)}h, Today permission not in attendance=${todayPermissionHours.toFixed(2)}h, Pending recovery=${pendingRecoveryHours.toFixed(2)}h, Total=${roundedBalance.toFixed(2)}h`);
+      console.log(`📅 Today record: Nessuno`);
     }
+    console.log(`💰 Attendance balance: ${totalBalance.toFixed(2)}h`);
+    console.log(`🔐 Today permission (not in attendance): ${todayPermissionHours.toFixed(2)}h`);
+    console.log(`⏳ Pending recovery hours: ${pendingRecoveryHours.toFixed(2)}h`);
+    console.log(`💰 FINAL BALANCE: ${roundedBalance.toFixed(2)}h`);
+    console.log(`═══════════════════════════════════════════════════════════`);
 
     // Determina lo status
     let status, debtHours, creditHours;
