@@ -10880,9 +10880,27 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     // 9. AGGIORNA RECORD
     console.log(`🔄 Aggiornamento record...`);
+    
+    // Costruisci note dettagliate per audit trail
+    let auditNote = '';
+    if (permissionRecalculated) {
+      const oldTotalPermHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours || 0), 0), 0);
+      const { data: updatedPerms } = await supabase
+        .from('leave_requests')
+        .select('hours')
+        .in('id', approvedPermissions.map(p => p.id))
+        .eq('status', 'approved');
+      const newTotalPermHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
+      const permReduction = oldTotalPermHours - newTotalPermHours;
+      
+      auditNote = `\n[💰 Aggiunta manuale ore: +${creditHours}h | 🔐 Riduzione permesso: ${oldTotalPermHours.toFixed(2)}h → ${newTotalPermHours.toFixed(2)}h (${permReduction.toFixed(2)}h recuperate) | Motivo: ${reason || 'Nessun motivo'}]`;
+    } else {
+      auditNote = `\n[💰 Ricarica banca ore: +${creditHours}h | Motivo: ${reason || 'Nessun motivo'}]`;
+    }
+    
     const updateData = {
       balance_hours: finalBalanceHours,
-      notes: (existingAttendance.notes || '') + `\n[Ricarica banca ore: +${creditHours}h - ${reason || 'Nessun motivo'}]`
+      notes: (existingAttendance.notes || '') + auditNote
     };
 
     if (permissionRecalculated) {
