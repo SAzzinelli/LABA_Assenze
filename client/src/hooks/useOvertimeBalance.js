@@ -39,6 +39,9 @@ export function useOvertimeBalance({ userId, year, autoFetch = true } = {}) {
         url += `&userId=${userId}`;
       }
 
+      // Aggiungi timestamp per evitare cache
+      url += `&_t=${Date.now()}`;
+
       const response = await apiCall(url);
       
       if (response.ok) {
