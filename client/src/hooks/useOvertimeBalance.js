@@ -46,6 +46,14 @@ export function useOvertimeBalance({ userId, year, autoFetch = true } = {}) {
       
       if (response.ok) {
         const data = await response.json();
+        console.log(`💰 [useOvertimeBalance] Balance ricevuto:`, {
+          balance: data.balance,
+          status: data.status,
+          debtHours: data.debtHours,
+          creditHours: data.creditHours,
+          userId: userId || 'current',
+          year: currentYear
+        });
         setBalance(data.balance || 0);
         setStatus(data.status || 'zero');
         setDebtHours(data.debtHours || 0);
