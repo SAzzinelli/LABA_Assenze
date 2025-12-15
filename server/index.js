@@ -336,6 +336,8 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email e password sono obbligatorie' });
     }
 
+    console.log(`🔐 Tentativo login per email: ${email}`);
+
     // Trova l'utente nel database
     const { data: user, error } = await supabase
       .from('users')
@@ -344,13 +346,56 @@ app.post('/api/auth/login', async (req, res) => {
       .eq('is_active', true)
       .single();
 
-    if (error || !user) {
+    if (error) {
+      console.error('❌ Errore Supabase durante login:', error);
+      console.error('❌ Tipo errore:', typeof error);
+      console.error('❌ Messaggio errore:', error.message);
+      console.error('❌ Codice errore:', error.code);
+      
+      // Controlla se l'errore contiene HTML (segno che Cloudflare è down)
+      const errorString = JSON.stringify(error);
+      const isCloudflareDown = errorString.includes('<html>') || 
+                                errorString.includes('cloudflare') || 
+                                errorString.includes('500 Internal Server Error') ||
+                                (error.message && error.message.includes('<html>'));
+      
+      if (isCloudflareDown) {
+        console.error('❌ Cloudflare è down - Supabase non raggiungibile');
+        return res.status(503).json({ 
+          error: 'Servizio temporaneamente non disponibile. Cloudflare è attualmente offline. Riprova tra qualche minuto.',
+          code: 'CLOUDFLARE_DOWN'
+        });
+      }
+      
+      // Se l'errore è un problema di connessione
+      if (error.message && (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('ECONNREFUSED'))) {
+        console.error('❌ Errore di connessione a Supabase');
+        return res.status(503).json({ 
+          error: 'Errore di connessione al database. Il servizio potrebbe essere temporaneamente non disponibile.',
+          code: 'DATABASE_CONNECTION_ERROR'
+        });
+      }
+      
+      // Se l'errore è "PGRST116" significa che non è stato trovato nessun record
+      if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+        console.log(`⚠️ Utente non trovato: ${email}`);
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
+      
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+
+    if (!user) {
+      console.log(`⚠️ Utente non trovato o non attivo: ${email}`);
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+
+    console.log(`✅ Utente trovato: ${user.email}, ruolo: ${user.role}`);
 
     // Verifica password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log(`❌ Password non valida per: ${email}`);
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
@@ -7307,6 +7352,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       'cancelled': 'annullata'
     };
 
+    // Restituisci sempre successo se l'operazione principale è andata a buon fine
+    // Gli errori nelle notifiche/email non devono bloccare la risposta
     res.json({
       success: true,
       message: `Richiesta ${statusMessages[status] || 'aggiornata'} con successo`,
@@ -7314,7 +7361,19 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     });
   } catch (error) {
     console.error('Leave request update error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    // Se l'errore è nelle notifiche/email, restituisci comunque successo se la richiesta è stata aggiornata
+    // Controlla se updatedRequest esiste (significa che l'operazione principale è andata a buon fine)
+    if (typeof updatedRequest !== 'undefined' && updatedRequest) {
+      console.warn('⚠️ Errore nelle notifiche/email ma operazione principale completata:', error.message);
+      res.json({
+        success: true,
+        message: `Richiesta aggiornata con successo (alcune notifiche potrebbero non essere state inviate)`,
+        request: updatedRequest,
+        warning: 'Alcune notifiche potrebbero non essere state inviate'
+      });
+    } else {
+      res.status(500).json({ error: 'Errore interno del server' });
+    }
   }
 });
 
@@ -10741,6 +10800,10 @@ async function calculateOvertimeBalance(userId, year = null) {
           return sum; // Escludi se non c'è permesso approvato
         }
         const balance = parseFloat(record.balance_hours || 0);
+        // Log per debug: verifica se ci sono crediti ore
+        if (balance > 0 && record.notes && (record.notes.includes('credito') || record.notes.includes('Credito') || record.notes.includes('recupero') || record.notes.includes('Recupero'))) {
+          console.log(`💰 Credit hours found for ${record.date}: +${balance}h`);
+        }
         return sum + balance;
       }, 0)
       : 0;
@@ -11321,8 +11384,14 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     if (existingAttendance) {
       // Aggiorna il record esistente aggiungendo le ore a credito
-      const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + creditHours;
-      const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + creditHours;
+      // IMPORTANTE: Le ore a credito aumentano sia actual_hours che balance_hours
+      // perché rappresentano ore effettivamente lavorate che vanno aggiunte al saldo
+      const oldBalanceHours = parseFloat(existingAttendance.balance_hours || 0);
+      const newBalanceHours = oldBalanceHours + creditHours;
+      const oldActualHours = parseFloat(existingAttendance.actual_hours || 0);
+      const newActualHours = oldActualHours + creditHours;
+
+      console.log(`💰 Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
 
       const { error: updateError } = await supabase
         .from('attendance')
@@ -11338,7 +11407,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
       }
 
-      console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date}`);
+      console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date} (balance: ${oldBalanceHours}h → ${newBalanceHours}h)`);
     } else {
       // Crea un nuovo record di presenza con solo le ore a credito
       // expected_hours = 0 perché non è una giornata lavorativa normale
@@ -11622,6 +11691,7 @@ async function saveHourlyAttendance() {
 
   try {
     // Ottieni tutti i dipendenti (non admin)
+    console.log('🔍 Tentativo recupero dipendenti da Supabase...');
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select('id, first_name, last_name, role')
@@ -11629,6 +11699,26 @@ async function saveHourlyAttendance() {
 
     if (usersError) {
       console.error('❌ Errore nel recupero dipendenti:', usersError);
+      
+      // Controlla se Cloudflare è down
+      const errorString = JSON.stringify(usersError);
+      const isCloudflareDown = errorString.includes('<html>') || 
+                                errorString.includes('cloudflare') || 
+                                errorString.includes('500 Internal Server Error') ||
+                                (usersError.message && usersError.message.includes('<html>'));
+      
+      if (isCloudflareDown) {
+        console.error('❌ Cloudflare è down - impossibile recuperare dipendenti');
+        return;
+      }
+      
+      // Se l'errore è un problema di connessione, logga più dettagli
+      if (usersError.message) {
+        console.error('❌ Dettagli errore:', usersError.message);
+      }
+      if (usersError.status) {
+        console.error('❌ Status errore:', usersError.status);
+      }
       return;
     }
 

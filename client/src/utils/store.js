@@ -41,11 +41,19 @@ export const useAuthStore = create(
             return { success: true };
           } else {
             set({ loading: false });
+            // Se Cloudflare è down, mostra un messaggio più chiaro
+            if (data.code === 'CLOUDFLARE_DOWN' || data.code === 'DATABASE_CONNECTION_ERROR') {
+              return { success: false, error: data.error || 'Servizio temporaneamente non disponibile' };
+            }
             return { success: false, error: data.error };
           }
         } catch (error) {
           console.error('Login error:', error);
           set({ loading: false });
+          // Se la risposta è 503, probabilmente è un problema di servizio
+          if (error.response?.status === 503) {
+            return { success: false, error: 'Servizio temporaneamente non disponibile. Riprova tra qualche minuto.' };
+          }
           return { success: false, error: 'Errore di connessione' };
         }
       },
