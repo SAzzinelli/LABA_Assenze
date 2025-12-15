@@ -4019,9 +4019,33 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
 
     if (permissionsToday && permissionsToday.length > 0) {
       const totalPermissionHours = permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-      finalExpectedHours = contractHours - totalPermissionHours; // Expected = contract - permesso
-      finalBalanceHours = -totalPermissionHours; // Balance = -permesso_hours (sempre)
-      console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
+      const expectedWithPermission = contractHours - totalPermissionHours; // Expected = contract - permesso
+      
+      // IMPORTANTE: Se il dipendente ha lavorato più del previsto dal permesso (rientrato prima),
+      // ricalcola le ore di permesso effettive basandosi sulle ore lavorate
+      if (actualHours > expectedWithPermission && status === 'completed') {
+        // Il dipendente ha lavorato più del previsto: ha rientrato prima del permesso
+        const actualPermissionHoursUsed = contractHours - actualHours;
+        const permissionHoursSaved = totalPermissionHours - actualPermissionHoursUsed;
+        
+        console.log(`🔄 RICALCOLO PERMESSO: Dipendente rientrato prima del previsto!`);
+        console.log(`   Permesso approvato: ${totalPermissionHours}h`);
+        console.log(`   Ore effettivamente lavorate: ${actualHours.toFixed(2)}h`);
+        console.log(`   Ore permesso effettivamente utilizzate: ${actualPermissionHoursUsed.toFixed(2)}h`);
+        console.log(`   Ore permesso risparmiate: ${permissionHoursSaved.toFixed(2)}h`);
+        
+        // Le ore attese diventano le ore contrattuali (ha lavorato tutto il giorno)
+        finalExpectedHours = contractHours;
+        // Il balance è negativo solo per le ore di permesso effettivamente utilizzate
+        finalBalanceHours = -actualPermissionHoursUsed;
+        
+        console.log(`   ✅ Ricalcolato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
+      } else {
+        // Comportamento normale: usa le ore del permesso approvato
+        finalExpectedHours = expectedWithPermission;
+        finalBalanceHours = -totalPermissionHours; // Balance = -permesso_hours (sempre)
+        console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
+      }
     }
 
     console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h, status=${status}`);
