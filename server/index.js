@@ -10746,7 +10746,9 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
     let permissionRecalculated = false;
 
     // 8. SCENARIO 2: Verifica rientro anticipato da permesso
-    if (hasPermissions && oldActualHours > 0) {
+    // LOGICA: Se ci sono permessi approvati E si aggiungono ore manuali,
+    // queste ore rappresentano ore recuperate dal permesso
+    if (hasPermissions) {
       console.log(`🔐 Trovati ${approvedPermissions.length} permessi approvati`);
       
       // Recupera schedule per calcolare ore contrattuali
@@ -10774,11 +10776,13 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         console.log(`📐 Ore permesso: ${totalPermissionHours}h`);
         console.log(`📐 Expected con permesso: ${expectedWithPermission}h`);
         console.log(`📐 Actual lavorate: ${oldActualHours}h`);
+        console.log(`💰 Ore manuali da aggiungere: ${creditHours}h`);
 
-        // Se actual > expected_with_permission → rientro anticipato
+        // CASO A: Se actual > expected_with_permission → rientro anticipato automatico
+        // (dipendente ha lavorato più ore del previsto con permesso)
         if (oldActualHours > expectedWithPermission) {
           const hoursRecovered = oldActualHours - expectedWithPermission;
-          console.log(`🔄 RILEVATO: Rientro anticipato! Ore recuperate: ${hoursRecovered.toFixed(2)}h`);
+          console.log(`🔄 RILEVATO: Rientro anticipato automatico! Ore recuperate: ${hoursRecovered.toFixed(2)}h`);
 
           // Aggiorna permessi: riduci le ore
           for (const perm of approvedPermissions) {
@@ -10807,19 +10811,71 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
           finalExpectedHours = contractHours - newTotalPermissionHours;
           
-          // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti
+          // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
           finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
           permissionRecalculated = true;
 
           console.log(`💰 Balance ricalcolato:`);
           console.log(`   Expected: ${oldExpectedHours}h → ${finalExpectedHours.toFixed(2)}h`);
           console.log(`   Balance: ${oldBalanceHours}h → ${finalBalanceHours.toFixed(2)}h`);
+        }
+        // CASO B: Se si aggiungono ore manuali con permesso approvato,
+        // queste ore rappresentano ore recuperate dal permesso
+        // (admin aggiunge manualmente le ore recuperate)
+        else if (creditHours > 0) {
+          console.log(`🔄 RILEVATO: Ore manuali aggiunte con permesso approvato`);
+          console.log(`   Le ${creditHours}h aggiunte rappresentano ore recuperate dal permesso`);
+
+          // Riduci il permesso delle ore aggiunte manualmente
+          const hoursToReduceFromPermission = Math.min(creditHours, totalPermissionHours);
+          console.log(`   Ore da ridurre dal permesso: ${hoursToReduceFromPermission.toFixed(2)}h`);
+
+          // Aggiorna permessi: riduci le ore proporzionalmente
+          for (const perm of approvedPermissions) {
+            const oldPermHours = parseFloat(perm.hours || 0);
+            const reductionRatio = oldPermHours / totalPermissionHours; // Proporzione di questo permesso
+            const reductionForThisPerm = hoursToReduceFromPermission * reductionRatio;
+            const newPermHours = Math.max(0, oldPermHours - reductionForThisPerm);
+            
+            if (newPermHours !== oldPermHours) {
+              const { error: updatePermError } = await supabase
+                .from('leave_requests')
+                .update({ hours: newPermHours.toFixed(2) })
+                .eq('id', perm.id);
+              
+              if (!updatePermError) {
+                console.log(`✅ Permesso ${perm.id}: ${oldPermHours}h → ${newPermHours.toFixed(2)}h (riduzione: ${reductionForThisPerm.toFixed(2)}h)`);
+              } else {
+                console.error(`❌ Errore aggiornamento permesso ${perm.id}:`, updatePermError);
+              }
+            }
+          }
+
+          // Ricalcola expected con permesso aggiornato
+          const { data: updatedPerms } = await supabase
+            .from('leave_requests')
+            .select('hours')
+            .in('id', approvedPermissions.map(p => p.id))
+            .eq('status', 'approved');
+
+          const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
+          finalExpectedHours = contractHours - newTotalPermissionHours;
+          
+          // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
+          // Le ore aggiunte manualmente sono già incluse nel calcolo perché riducono il permesso
+          finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
+          permissionRecalculated = true;
+
+          console.log(`💰 Balance ricalcolato:`);
+          console.log(`   Expected: ${oldExpectedHours}h → ${finalExpectedHours.toFixed(2)}h`);
+          console.log(`   Balance: ${oldBalanceHours}h → ${finalBalanceHours.toFixed(2)}h`);
+          console.log(`   Ore permesso ridotte: ${totalPermissionHours}h → ${newTotalPermissionHours.toFixed(2)}h`);
         } else {
           console.log(`✅ Nessun rientro anticipato, solo ricarica`);
         }
       }
     } else {
-      console.log(`✅ Nessun permesso o actual_hours = 0, solo ricarica`);
+      console.log(`✅ Nessun permesso, solo ricarica banca ore`);
     }
 
     // 9. AGGIORNA RECORD
