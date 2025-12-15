@@ -169,12 +169,16 @@ const RecuperiOre = () => {
         const activeEmployees = data.filter(emp => emp.isActive !== false);
         
         // Carica il saldo banca ore per ogni dipendente
+        // Aggiungi timestamp per forzare refresh cache
+        const timestamp = Date.now();
         const employeesWithBalance = await Promise.all(
           activeEmployees.map(async (emp) => {
             try {
-              const balanceResponse = await apiCall(`/api/hours/overtime-balance?userId=${emp.id}`);
+              // Aggiungi timestamp per evitare cache
+              const balanceResponse = await apiCall(`/api/hours/overtime-balance?userId=${emp.id}&_t=${timestamp}`);
               if (balanceResponse.ok) {
                 const balanceData = await balanceResponse.json();
+                console.log(`💰 Balance ${emp.firstName || emp.first_name}: ${balanceData.balance}h`);
                 return {
                   ...emp,
                   balance: balanceData.balance || 0,
