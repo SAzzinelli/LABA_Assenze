@@ -296,10 +296,18 @@ app.get('/health', (req, res) => {
 
 // Auth middleware
 const authenticateToken = async (req, res, next) => {
+  // Log solo per endpoint specifici per debug
+  if (req.path === '/api/recovery-requests/add-credit-hours') {
+    console.log('🔵 [AUTH] Middleware authenticateToken chiamato per add-credit-hours');
+  }
+  
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    if (req.path === '/api/recovery-requests/add-credit-hours') {
+      console.log('🔵 [AUTH] Token mancante');
+    }
     return res.status(401).json({ error: 'Token di accesso richiesto' });
   }
 
@@ -315,12 +323,22 @@ const authenticateToken = async (req, res, next) => {
       .single();
 
     if (error || !user) {
+      if (req.path === '/api/recovery-requests/add-credit-hours') {
+        console.log('🔵 [AUTH] Utente non trovato o non attivo:', error);
+      }
       return res.status(401).json({ error: 'Token non valido' });
+    }
+
+    if (req.path === '/api/recovery-requests/add-credit-hours') {
+      console.log('🔵 [AUTH] Utente autenticato:', user.email, 'ruolo:', user.role);
     }
 
     req.user = user;
     next();
   } catch (error) {
+    if (req.path === '/api/recovery-requests/add-credit-hours') {
+      console.log('🔵 [AUTH] Errore verifica token:', error.message);
+    }
     return res.status(401).json({ error: 'Token non valido' });
   }
 };
