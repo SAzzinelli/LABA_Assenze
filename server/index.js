@@ -11351,8 +11351,13 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
 });
 
 // Endpoint per aggiungere ore a credito direttamente (admin)
-app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (req, res) => {
-  console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato');
+app.post('/api/recovery-requests/add-credit-hours', (req, res, next) => {
+  console.log('🔴 [ROUTE] POST /api/recovery-requests/add-credit-hours - Richiesta ricevuta');
+  console.log('🔴 [ROUTE] Request body:', JSON.stringify(req.body));
+  console.log('🔴 [ROUTE] Request headers:', JSON.stringify(req.headers));
+  next();
+}, authenticateToken, async (req, res) => {
+  console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato dopo middleware');
   try {
     console.log('🔵 [ADD-CREDIT-HOURS] Request body:', JSON.stringify(req.body));
     
