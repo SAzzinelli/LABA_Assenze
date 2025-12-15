@@ -365,15 +365,25 @@ const RecuperiOre = () => {
         console.log('💰 Nuovo balance:', data.newBalance);
         
         // Forza refresh completo con delay per assicurarsi che il database sia aggiornato
+        // Refresh multiplo per essere sicuri che i dati vengano aggiornati
         setTimeout(async () => {
-          console.log('🔄 Ricarica dati dopo aggiunta ore...');
+          console.log('🔄 Ricarica dati dopo aggiunta ore (tentativo 1)...');
+          await fetchAllEmployees();
+          await fetchDebtSummary();
+          if (selectedEmployeeForAddHours.id === user?.id) {
+            await refetchBalance();
+          }
+        }, 300);
+        
+        setTimeout(async () => {
+          console.log('🔄 Ricarica dati dopo aggiunta ore (tentativo 2)...');
           await fetchAllEmployees();
           await fetchDebtSummary();
           if (selectedEmployeeForAddHours.id === user?.id) {
             await refetchBalance();
           }
           console.log('✅ Dati ricaricati');
-        }, 500);
+        }, 1000);
         
         alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}${data.newBalance !== undefined ? `\nNuovo saldo: ${data.newBalance.toFixed(2)}h` : ''}`);
         
