@@ -57,7 +57,20 @@ const MonteOre = () => {
 
   useEffect(() => {
     fetchOvertimeData();
-  }, [filters]);
+
+    // Polling automatico per dipendenti: aggiorna balance ogni 30 secondi
+    // così vedono subito quando l'admin aggiunge crediti ore
+    if (user?.role === 'employee') {
+      const balancePollingInterval = setInterval(() => {
+        console.log('🔄 Polling automatico balance MonteOre per dipendente...');
+        fetchOvertimeData();
+      }, 30000); // Ogni 30 secondi
+
+      return () => {
+        clearInterval(balancePollingInterval);
+      };
+    }
+  }, [filters, user?.role]);
 
   const fetchOvertimeData = async () => {
     try {
