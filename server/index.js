@@ -11420,6 +11420,26 @@ app.post('/api/recovery-requests/add-credit-hours', (req, res, next) => {
 
     console.log('🔵 [ADD-CREDIT-HOURS] Presenza esistente:', existingAttendance ? 'Sì' : 'No');
 
+    // IMPORTANTE: Verifica se ci sono permessi approvati per questa data
+    // Se il dipendente ha un permesso approvato ma rientra prima, le ore di permesso dovrebbero essere ridotte
+    // invece di aggiungere crediti ore manualmente
+    const { data: approvedPermissions, error: permError } = await supabase
+      .from('leave_requests')
+      .select('id, type, hours, permission_type, entry_time, exit_time, start_date, end_date')
+      .eq('user_id', userId)
+      .eq('type', 'permission')
+      .eq('status', 'approved')
+      .lte('start_date', date)
+      .gte('end_date', date);
+
+    if (!permError && approvedPermissions && approvedPermissions.length > 0) {
+      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ ATTENZIONE: Trovati permessi approvati per questa data:', approvedPermissions.length);
+      approvedPermissions.forEach(perm => {
+        console.log(`🔵 [ADD-CREDIT-HOURS]   - Permesso: ${perm.permission_type}, ore: ${perm.hours}, entry: ${perm.entry_time}, exit: ${perm.exit_time}`);
+      });
+      console.log('🔵 [ADD-CREDIT-HOURS] ⚠️ Se il dipendente è rientrato prima, considera di modificare il permesso invece di aggiungere crediti ore');
+    }
+
     if (existingAttendance) {
       // Aggiorna il record esistente aggiungendo le ore a credito
       // IMPORTANTE: Le ore a credito aumentano sia actual_hours che balance_hours
