@@ -11426,20 +11426,24 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
       console.log(`💰 Adding credit hours: ${oldBalanceHours}h → ${newBalanceHours}h (balance), ${oldActualHours}h → ${newActualHours}h (actual)`);
 
-      const { error: updateError } = await supabase
+      console.log('🔵 [ADD-CREDIT-HOURS] Tentativo aggiornamento attendance record:', existingAttendance.id);
+      const { data: updatedRecord, error: updateError } = await supabase
         .from('attendance')
         .update({
           actual_hours: newActualHours,
           balance_hours: newBalanceHours,
           notes: (existingAttendance.notes || '') + `\n[Ore a credito aggiunte manualmente: +${creditHours}h - ${reason || 'Nessun motivo specificato'}]`
         })
-        .eq('id', existingAttendance.id);
+        .eq('id', existingAttendance.id)
+        .select()
+        .single();
 
       if (updateError) {
-        console.error('Error updating attendance:', updateError);
+        console.error('🔵 [ADD-CREDIT-HOURS] Errore aggiornamento attendance:', updateError);
         return res.status(500).json({ error: 'Errore nell\'aggiornamento della presenza' });
       }
 
+      console.log('🔵 [ADD-CREDIT-HOURS] Record aggiornato con successo:', JSON.stringify(updatedRecord, null, 2));
       console.log(`✅ Credit hours added to existing attendance: +${creditHours}h for user ${userId} on ${date} (balance: ${oldBalanceHours}h → ${newBalanceHours}h)`);
     } else {
       // Crea un nuovo record di presenza con solo le ore a credito
