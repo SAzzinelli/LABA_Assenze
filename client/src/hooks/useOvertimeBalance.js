@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../utils/store';
 
 /**
@@ -76,7 +76,17 @@ export function useOvertimeBalance({ userId, year, autoFetch = true } = {}) {
     if (autoFetch) {
       fetchBalance();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, year, autoFetch]);
+
+  // Usa useRef per mantenere la funzione fetchBalance stabile
+  const fetchBalanceRef = useRef(fetchBalance);
+  fetchBalanceRef.current = fetchBalance;
+
+  // Usa useCallback per stabilizzare la funzione refetch
+  const refetch = useCallback(() => {
+    fetchBalanceRef.current();
+  }, []); // Nessuna dipendenza, la funzione è stabile
 
   return {
     balance,
@@ -85,7 +95,7 @@ export function useOvertimeBalance({ userId, year, autoFetch = true } = {}) {
     creditHours,
     loading,
     error,
-    refetch: fetchBalance
+    refetch
   };
 }
 

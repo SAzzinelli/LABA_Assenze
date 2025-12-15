@@ -95,17 +95,20 @@ const RecuperiOre = () => {
 
     // Polling automatico per dipendenti: aggiorna balance ogni 30 secondi
     // così vedono subito quando l'admin aggiunge crediti ore
+    let balancePollingInterval = null;
     if (user?.role === 'employee') {
-      const balancePollingInterval = setInterval(() => {
+      balancePollingInterval = setInterval(() => {
         console.log('🔄 Polling automatico balance per dipendente...');
         refetchBalance();
       }, 30000); // Ogni 30 secondi
-
-      return () => {
-        clearInterval(balancePollingInterval);
-      };
     }
-  }, [user, refetchBalance]);
+
+    return () => {
+      if (balancePollingInterval) {
+        clearInterval(balancePollingInterval);
+      }
+    };
+  }, [user]); // Rimuovo refetchBalance dalle dipendenze per evitare loop infinito
 
   // Fetch richieste recupero ore
   const fetchRecoveryRequests = async () => {
