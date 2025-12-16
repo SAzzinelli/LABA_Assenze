@@ -7602,6 +7602,57 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ==================== CRON ENDPOINTS (prima dei file statici) ====================
+
+// Endpoint di test per verificare che i cron endpoint siano raggiungibili
+app.get('/api/cron/test', async (req, res) => {
+  console.log('✅ Endpoint cron test raggiunto');
+  res.json({ 
+    success: true, 
+    message: 'Endpoint cron raggiungibile',
+    timestamp: new Date().toISOString(),
+    path: '/api/cron/test'
+  });
+});
+
+// Endpoint per salvataggio orario (chiamabile da servizi esterni come cron-job.org)
+app.post('/api/cron/hourly-save', async (req, res) => {
+  try {
+    console.log('🕘 Salvataggio orario richiesto via API...');
+    console.log('📋 Request details:', {
+      method: req.method,
+      path: req.path,
+      headers: req.headers,
+      body: req.body
+    });
+    await saveHourlyAttendance();
+    res.json({ success: true, message: 'Salvataggio orario completato' });
+  } catch (error) {
+    console.error('❌ Errore salvataggio orario API:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Errore nel salvataggio orario', details: error.message });
+  }
+});
+
+// Endpoint per finalizzazione giornaliera
+app.post('/api/cron/daily-finalize', async (req, res) => {
+  try {
+    console.log('🌙 Finalizzazione giornaliera richiesta via API...');
+    console.log('📋 Request details:', {
+      method: req.method,
+      path: req.path,
+      headers: req.headers,
+      body: req.body
+    });
+    await finalizeDailyAttendance();
+    res.json({ success: true, message: 'Finalizzazione giornaliera completata' });
+  } catch (error) {
+    console.error('❌ Errore finalizzazione API:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Errore nella finalizzazione giornaliera', details: error.message });
+  }
+});
+
 // ==================== STATIC FILES ====================
 
 // Serve static files from client/dist (only in production, after API routes)
@@ -11881,18 +11932,7 @@ app.get('*', (req, res) => {
 });
 
 // ==================== SISTEMA SALVATAGGIO AUTOMATICO PRESENZE ====================
-
-// Endpoint per salvataggio orario (chiamabile da servizi esterni come cron-job.org)
-app.post('/api/cron/hourly-save', async (req, res) => {
-  try {
-    console.log('🕘 Salvataggio orario richiesto via API...');
-    await saveHourlyAttendance();
-    res.json({ success: true, message: 'Salvataggio orario completato' });
-  } catch (error) {
-    console.error('❌ Errore salvataggio orario API:', error);
-    res.status(500).json({ error: 'Errore nel salvataggio orario' });
-  }
-});
+// Nota: Gli endpoint cron sono stati spostati prima dei file statici per garantire che siano raggiungibili
 
 // Endpoint di debug per vedere i log della funzione saveHourlyAttendance
 app.get('/api/debug/cron-logs', async (req, res) => {
@@ -11972,18 +12012,6 @@ app.post('/api/test/create-attendance-record', async (req, res) => {
   } catch (error) {
     console.error('❌ Errore endpoint test:', error);
     res.status(500).json({ error: 'Errore interno del server' });
-  }
-});
-
-// Endpoint per finalizzazione giornaliera
-app.post('/api/cron/daily-finalize', async (req, res) => {
-  try {
-    console.log('🌙 Finalizzazione giornaliera richiesta via API...');
-    await finalizeDailyAttendance();
-    res.json({ success: true, message: 'Finalizzazione giornaliera completata' });
-  } catch (error) {
-    console.error('❌ Errore finalizzazione API:', error);
-    res.status(500).json({ error: 'Errore nella finalizzazione giornaliera' });
   }
 });
 
