@@ -6048,51 +6048,57 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     // Calcola le ore effettive per i permessi con orari specifici (NON per ferie)
     // PER FERIE: non calcolare ore, sono giorni interi
     let calculatedHours = null;
-    if (type === 'permission' && (exitTime || entryTime) && permissionType) {
-      calculatedHours = hours;
-      try {
-        // Ottieni il work_schedule del dipendente per il giorno specifico
-        const permissionDate = new Date(startDate);
-        const dayOfWeek = permissionDate.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
+    if (type === 'permission' && permissionType) {
+      // Per permessi full_day, usa direttamente le ore passate dal client (già calcolate)
+      if (permissionType === 'full_day' && hours) {
+        calculatedHours = parseFloat(hours);
+        console.log(`🕐 Permesso giornata intera: usando ore calcolate dal client: ${calculatedHours}h`);
+      } else if ((exitTime || entryTime) && permissionType) {
+        calculatedHours = hours;
+        try {
+          // Ottieni il work_schedule del dipendente per il giorno specifico
+          const permissionDate = new Date(startDate);
+          const dayOfWeek = permissionDate.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
 
-        const { data: workSchedule, error: scheduleError } = await supabase
-          .from('work_schedules')
-          .select('start_time, end_time, is_working_day')
-          .eq('user_id', userId)
-          .eq('day_of_week', dayOfWeek)
-          .single();
+          const { data: workSchedule, error: scheduleError } = await supabase
+            .from('work_schedules')
+            .select('start_time, end_time, is_working_day')
+            .eq('user_id', userId)
+            .eq('day_of_week', dayOfWeek)
+            .single();
 
-        if (!scheduleError && workSchedule && workSchedule.is_working_day) {
-          // Funzione helper per convertire HH:MM in minuti
-          const timeToMinutes = (timeStr) => {
-            const [hours, minutes] = timeStr.split(':').map(Number);
-            return hours * 60 + minutes;
-          };
+          if (!scheduleError && workSchedule && workSchedule.is_working_day) {
+            // Funzione helper per convertire HH:MM in minuti
+            const timeToMinutes = (timeStr) => {
+              const [hours, minutes] = timeStr.split(':').map(Number);
+              return hours * 60 + minutes;
+            };
 
-          const standardStartMinutes = timeToMinutes(workSchedule.start_time);
-          const standardEndMinutes = timeToMinutes(workSchedule.end_time);
+            const standardStartMinutes = timeToMinutes(workSchedule.start_time);
+            const standardEndMinutes = timeToMinutes(workSchedule.end_time);
 
-          if (permissionType === 'early_exit' && exitTime) {
-            // Uscita anticipata: calcola da exitTime alla fine standard
-            const exitMinutes = timeToMinutes(exitTime);
-            const minutesDiff = standardEndMinutes - exitMinutes;
-            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
-            console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} = ${calculatedHours} ore`);
-          } else if (permissionType === 'late_entry' && entryTime) {
-            // Entrata posticipata: calcola dall'inizio standard a entryTime
-            const entryMinutes = timeToMinutes(entryTime);
-            const minutesDiff = entryMinutes - standardStartMinutes;
-            calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
-            console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} = ${calculatedHours} ore`);
+            if (permissionType === 'early_exit' && exitTime) {
+              // Uscita anticipata: calcola da exitTime alla fine standard
+              const exitMinutes = timeToMinutes(exitTime);
+              const minutesDiff = standardEndMinutes - exitMinutes;
+              calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+              console.log(`🕐 Uscita anticipata calcolata: ${exitTime} -> ${workSchedule.end_time} = ${calculatedHours} ore`);
+            } else if (permissionType === 'late_entry' && entryTime) {
+              // Entrata posticipata: calcola dall'inizio standard a entryTime
+              const entryMinutes = timeToMinutes(entryTime);
+              const minutesDiff = entryMinutes - standardStartMinutes;
+              calculatedHours = parseFloat((minutesDiff / 60).toFixed(2));
+              console.log(`🕐 Entrata posticipata calcolata: ${workSchedule.start_time} -> ${entryTime} = ${calculatedHours} ore`);
+            }
+          } else {
+            console.warn('⚠️ Orario di lavoro non trovato per questo giorno, usando ore passate o 0');
+            calculatedHours = hours || 0;
           }
-        } else {
-          console.warn('⚠️ Orario di lavoro non trovato per questo giorno, usando 0 ore');
-          calculatedHours = 0;
+        } catch (calcError) {
+          console.error('❌ Errore nel calcolo delle ore:', calcError);
+          // Se c'è un errore, mantieni il valore passato o usa 0
+          calculatedHours = hours || 0;
         }
-      } catch (calcError) {
-        console.error('❌ Errore nel calcolo delle ore:', calcError);
-        // Se c'è un errore, mantieni il valore passato o usa 0
-        calculatedHours = hours || 0;
       }
     }
 
@@ -6252,12 +6258,19 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     }
 
     // Se admin crea permesso normale approvato direttamente, aggiorna attendance
-    if (type === 'permission' && insertData.status === 'approved' && calculatedHours && calculatedHours > 0) {
+    // Modificato: supporta anche permessi full_day anche se calculatedHours è null (verrà calcolato dopo)
+    if (type === 'permission' && insertData.status === 'approved') {
       const permissionDate = startDate;
-      const permissionHours = parseFloat(calculatedHours);
+      // Usa calculatedHours se disponibile, altrimenti usa hours dal payload
+      const permissionHours = calculatedHours !== null && calculatedHours !== undefined 
+        ? parseFloat(calculatedHours) 
+        : (hours ? parseFloat(hours) : null);
 
-      setTimeout(async () => {
-        const dayOfWeek = new Date(permissionDate).getDay();
+      // Solo procedi se abbiamo delle ore valide
+      if (permissionHours !== null && permissionHours > 0) {
+        setTimeout(async () => {
+          try {
+            const dayOfWeek = new Date(permissionDate).getDay();
 
         // Recupera l'orario di lavoro per quel giorno
         const { data: schedule, error: scheduleError } = await supabase
@@ -6343,10 +6356,16 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           } else if (attError) {
             console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
           }
-        } else {
-          console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
-        }
-      }, 100);
+          } else {
+            console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
+          }
+          } catch (error) {
+            console.error(`❌ Errore imprevisto nell'aggiornamento attendance per permesso passato ${permissionDate}:`, error);
+          }
+        }, 100);
+      } else {
+        console.warn(`⚠️ Ore permesso non valide (${permissionHours}), impossibile aggiornare attendance per ${permissionDate}`);
+      }
     }
 
     const normalizedExitTime = normalizeTime(exitTime);
@@ -6473,8 +6492,23 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       request: newRequest
     });
   } catch (error) {
-    console.error('Admin leave request creation error:', error);
-    res.status(500).json({ error: 'Errore interno del server' });
+    console.error('❌ Admin leave request creation error:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Se è un errore di database, fornisci più dettagli
+    if (error.code || error.message) {
+      return res.status(500).json({ 
+        error: 'Errore nella creazione della richiesta',
+        details: error.message || 'Errore sconosciuto',
+        code: error.code
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Errore interno del server',
+      details: error.message || 'Errore sconosciuto'
+    });
   }
 });
 
