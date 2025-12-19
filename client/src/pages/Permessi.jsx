@@ -62,7 +62,7 @@ const LeaveRequests = () => {
   // Tab per admin
   const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
   // Sotto-tab per "Imminenti" per separare pending da approved
-  const [imminentiSubTab, setImminentiSubTab] = useState('in_approvazione'); // 'in_approvazione' | 'approvate'
+  const [imminentiSubTab, setImminentiSubTab] = useState('approvate'); // 'in_approvazione' | 'approvate'
   
   // Stati per dialog di approvazione/rifiuto/annullamento/modifica
   const [showApproveDialog, setShowApproveDialog] = useState(false);
