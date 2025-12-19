@@ -4377,7 +4377,7 @@ app.post('/api/admin/fix-104-attendance', authenticateToken, requireAdmin, async
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
           });
 
           // Aggiorna il record di attendance con balance_hours = 0
@@ -6233,7 +6233,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             const expectedHours = calculateExpectedHoursForSchedule({
               start_time: schedule.start_time,
               end_time: schedule.end_time,
-              break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+              break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
             });
 
             // Aggiorna o crea il record di attendance con balance_hours = 0
@@ -6286,7 +6286,7 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           const originalExpectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
           });
 
           // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
@@ -6863,7 +6863,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
           });
 
           // Aggiorna o crea il record di attendance con balance_hours = 0
@@ -7014,7 +7014,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
           });
 
           // Recupera permessi APPROVATI per questa data (escludendo quello appena cancellato)
@@ -7076,13 +7076,15 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Se un PERMESSO viene APPROVATO, aggiorna l'attendance per ridurre le expected_hours
     if (updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved') {
-      console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
-
-      const permissionDate = updatedRequest.start_date;
-      const permissionHours = parseFloat(updatedRequest.hours || 0);
-
-      // Aggiungi evento a Google Calendar
+      // Tutto il codice di approvazione permesso è dentro un try-catch per evitare errori 500
       try {
+        console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
+
+        const permissionDate = updatedRequest.start_date;
+        const permissionHours = parseFloat(updatedRequest.hours || 0);
+
+        // Aggiungi evento a Google Calendar
+        try {
         console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
         // Recupera i dati del dipendente per il nome completo
         const { data: employee, error: empError } = await supabase
@@ -7121,102 +7123,166 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       }
 
       if (permissionHours > 0) {
-        const dayOfWeek = new Date(permissionDate).getDay();
-
-        // Recupera l'orario di lavoro per quel giorno
-        const { data: schedule, error: scheduleError } = await supabase
-          .from('work_schedules')
-          .select('start_time, end_time, break_duration')
-          .eq('user_id', updatedRequest.user_id)
-          .eq('day_of_week', dayOfWeek)
-          .eq('is_working_day', true)
-          .single();
-
-        if (!scheduleError && schedule) {
-          // Calcola le ore attese originali (senza permessi)
-          const originalExpectedHours = calculateExpectedHoursForSchedule({
-            start_time: schedule.start_time,
-            end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
-          });
-
-          // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
-          const { data: approvedPermissions, error: permError } = await supabase
-            .from('leave_requests')
-            .select('hours')
-            .eq('user_id', updatedRequest.user_id)
-            .eq('type', 'permission')
-            .eq('status', 'approved')
-            .lte('start_date', permissionDate)
-            .gte('end_date', permissionDate);
-
-          let totalPermissionHours = 0;
-          if (!permError && approvedPermissions) {
-            totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-          }
-
-          // Ore attese finali = ore originali - ore permessi approvati
-          const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
-
-          // Recupera o crea la presenza per questa data
-          const { data: attendanceRecord, error: attError } = await supabase
-            .from('attendance')
-            .select('*')
-            .eq('user_id', updatedRequest.user_id)
-            .eq('date', permissionDate)
-            .single();
-
-          if (!attError && attendanceRecord) {
-            // Aggiorna la presenza con le nuove ore attese
-            // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
-            // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-            // Questo tiene conto di tutti i permessi approvati per quel giorno
-            const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
-            const newBalanceHours = actualHours - finalExpectedHours;
-
-            const { error: updateAttError } = await supabase
-              .from('attendance')
-              .update({
-                expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                balance_hours: Math.round(newBalanceHours * 100) / 100,
-                notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
-              })
+        // Validazione: permissionDate deve essere una data valida
+        if (!permissionDate || typeof permissionDate !== 'string') {
+          console.error(`❌ [APPROVAZIONE PERMESSO] Data permesso non valida: ${permissionDate}`);
+          // Non bloccare l'approvazione, ma loggare l'errore
+        } else {
+          const dayOfWeek = new Date(permissionDate).getDay();
+          
+          // Validazione: dayOfWeek deve essere un numero valido (0-6)
+          if (isNaN(dayOfWeek)) {
+            console.error(`❌ [APPROVAZIONE PERMESSO] Impossibile calcolare giorno della settimana per data: ${permissionDate}`);
+          } else {
+            // Recupera l'orario di lavoro per quel giorno
+            const { data: schedule, error: scheduleError } = await supabase
+              .from('work_schedules')
+              .select('start_time, end_time, break_duration')
               .eq('user_id', updatedRequest.user_id)
-              .eq('date', permissionDate);
+              .eq('day_of_week', dayOfWeek)
+              .eq('is_working_day', true)
+              .single();
 
-            if (updateAttError) {
-              console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+            if (scheduleError) {
+              console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero orario di lavoro:`, scheduleError);
+            } else if (!schedule) {
+              console.warn(`⚠️ [APPROVAZIONE PERMESSO] Orario di lavoro non trovato per ${permissionDate} (giorno ${dayOfWeek}), impossibile aggiornare attendance`);
+            } else if (!schedule.start_time || !schedule.end_time) {
+              console.error(`❌ [APPROVAZIONE PERMESSO] Orario di lavoro incompleto: start_time=${schedule.start_time}, end_time=${schedule.end_time}`);
             } else {
-              console.log(`✅ Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
-            }
-          } else if (attError && attError.code === 'PGRST116') {
-            // Nessun record di attendance, creane uno nuovo
-            // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-            // Se non ha ancora lavorato, actual_hours = 0, quindi balance = -expected_hours = -totalPermissionHours
-            const actualHours = 0; // Non ha ancora lavorato
-            const newBalanceHours = actualHours - finalExpectedHours;
+              // Validazione: break_duration deve essere un numero valido
+              const breakDuration = (schedule.break_duration !== null && schedule.break_duration !== undefined && !isNaN(schedule.break_duration)) 
+                ? schedule.break_duration 
+                : 60;
 
-            const { error: createAttError } = await supabase
-              .from('attendance')
-              .insert({
-                user_id: updatedRequest.user_id,
-                date: permissionDate,
-                actual_hours: actualHours,
-                expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                balance_hours: Math.round(newBalanceHours * 100) / 100,
-                notes: `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+              // Calcola le ore attese originali (senza permessi)
+              const originalExpectedHours = calculateExpectedHoursForSchedule({
+                start_time: schedule.start_time,
+                end_time: schedule.end_time,
+                break_duration: breakDuration
               });
 
-            if (createAttError) {
-              console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
-            } else {
-              console.log(`✅ Attendance ${permissionDate} creata: ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+              // Validazione: originalExpectedHours deve essere un numero valido
+              if (isNaN(originalExpectedHours) || originalExpectedHours < 0) {
+                console.error(`❌ [APPROVAZIONE PERMESSO] Ore attese calcolate non valide: ${originalExpectedHours}`);
+              } else {
+
+                // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
+                const { data: approvedPermissions, error: permError } = await supabase
+                  .from('leave_requests')
+                  .select('hours')
+                  .eq('user_id', updatedRequest.user_id)
+                  .eq('type', 'permission')
+                  .eq('status', 'approved')
+                  .lte('start_date', permissionDate)
+                  .gte('end_date', permissionDate);
+
+                let totalPermissionHours = 0;
+                if (permError) {
+                  console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero permessi approvati:`, permError);
+                } else if (approvedPermissions && Array.isArray(approvedPermissions)) {
+                  totalPermissionHours = approvedPermissions.reduce((sum, p) => {
+                    const hours = parseFloat(p.hours);
+                    return sum + (isNaN(hours) ? 0 : hours);
+                  }, 0);
+                }
+
+                // Validazione: totalPermissionHours deve essere un numero valido
+                if (isNaN(totalPermissionHours)) {
+                  console.error(`❌ [APPROVAZIONE PERMESSO] Totale ore permessi non valido: ${totalPermissionHours}`);
+                  totalPermissionHours = 0;
+                }
+
+                // Ore attese finali = ore originali - ore permessi approvati
+                const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
+
+                // Validazione: finalExpectedHours deve essere un numero valido
+                if (isNaN(finalExpectedHours)) {
+                  console.error(`❌ [APPROVAZIONE PERMESSO] Ore attese finali non valide: ${finalExpectedHours}`);
+                  // Non aggiorniamo l'attendance se i calcoli non sono validi
+                  // Ma non blocchiamo l'approvazione del permesso
+                } else {
+
+                // Recupera o crea la presenza per questa data
+                const { data: attendanceRecord, error: attError } = await supabase
+                  .from('attendance')
+                  .select('*')
+                  .eq('user_id', updatedRequest.user_id)
+                  .eq('date', permissionDate)
+                  .single();
+
+                if (attError && attError.code === 'PGRST116') {
+                  // Nessun record di attendance, creane uno nuovo
+                  // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
+                  // Se non ha ancora lavorato, actual_hours = 0, quindi balance = -expected_hours = -totalPermissionHours
+                  const actualHours = 0; // Non ha ancora lavorato
+                  const newBalanceHours = actualHours - finalExpectedHours;
+
+                  // Validazione: newBalanceHours deve essere un numero valido
+                  if (isNaN(newBalanceHours)) {
+                    console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
+                    // Non creiamo l'attendance se i calcoli non sono validi
+                  } else {
+                    const { error: createAttError } = await supabase
+                    .from('attendance')
+                    .insert({
+                      user_id: updatedRequest.user_id,
+                      date: permissionDate,
+                      actual_hours: actualHours,
+                      expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                      balance_hours: Math.round(newBalanceHours * 100) / 100,
+                      notes: `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+                    });
+
+                    if (createAttError) {
+                      console.error(`❌ [APPROVAZIONE PERMESSO] Errore creazione presenza per ${permissionDate}:`, createAttError);
+                    } else {
+                      console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                    }
+                  }
+                } else if (attError) {
+                  console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero presenza per ${permissionDate}:`, attError);
+                  // Non bloccare l'approvazione, ma loggare l'errore
+                } else if (attendanceRecord) {
+                  // Aggiorna la presenza con le nuove ore attese
+                  // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
+                  // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
+                  // Questo tiene conto di tutti i permessi approvati per quel giorno
+                  const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+                  
+                  // Validazione: actualHours deve essere un numero valido
+                  if (isNaN(actualHours)) {
+                    console.error(`❌ [APPROVAZIONE PERMESSO] Actual hours non valido: ${attendanceRecord.actual_hours}`);
+                    // Non aggiorniamo l'attendance se i valori non sono validi
+                  } else {
+                    const newBalanceHours = actualHours - finalExpectedHours;
+
+                    // Validazione: newBalanceHours deve essere un numero valido
+                    if (isNaN(newBalanceHours)) {
+                      console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
+                      // Non aggiorniamo l'attendance se i calcoli non sono validi
+                    } else {
+                      const { error: updateAttError } = await supabase
+                        .from('attendance')
+                        .update({
+                          expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                          balance_hours: Math.round(newBalanceHours * 100) / 100,
+                          notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+                        })
+                        .eq('user_id', updatedRequest.user_id)
+                        .eq('date', permissionDate);
+
+                      if (updateAttError) {
+                        console.error(`❌ [APPROVAZIONE PERMESSO] Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+                      } else {
+                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                      }
+                    }
+                  }
+                }
+              }
             }
-          } else if (attError) {
-            console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
           }
-        } else {
-          console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
         }
       }
     }
@@ -8500,7 +8566,7 @@ app.post('/api/admin/generate-historical-attendance', authenticateToken, require
           const expectedHours = calculateExpectedHoursForSchedule({
             start_time: schedule.start_time,
             end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && break_duration !== undefined ? break_duration : 60
+            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
           });
 
           if (!expectedHours || expectedHours <= 0) {
@@ -12758,7 +12824,7 @@ app.post('/api/admin/fix/silvia-lunch-break', authenticateToken, requireAdmin, a
         break_duration: s.break_duration,
         break_end: (() => {
           const [hour, min] = s.break_start_time.split(':').map(Number);
-          const endMin = min + (s.break_duration !== null && break_duration !== undefined ? break_duration : 60);
+          const endMin = min + (s.break_duration !== null && s.break_duration !== undefined ? s.break_duration : 60);
           const endHour = hour + Math.floor(endMin / 60);
           const endMinFinal = endMin % 60;
           return `${String(endHour).padStart(2, '0')}:${String(endMinFinal).padStart(2, '0')}`;
