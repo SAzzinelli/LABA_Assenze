@@ -1140,15 +1140,19 @@ const LeaveRequests = () => {
         )}
       </div>
 
-      {/* Desktop: Header tradizionale */}
-      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
-        <div className="flex flex-row items-center justify-between gap-4">
+      {/* Desktop: Header migliorato con migliore UX */}
+      <div className="hidden lg:block bg-slate-800 rounded-xl p-6 shadow-xl border border-slate-700/50">
+        <div className="flex flex-row items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-white flex items-center">
-              <FileText className="h-8 w-8 mr-3 text-indigo-400 flex-shrink-0" />
-              <span className="truncate">{user?.role === 'admin' ? 'Gestione Permessi' : 'I Miei Permessi'}</span>
-            </h1>
-            <p className="text-slate-400 mt-2 text-base">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2.5 bg-indigo-500/20 rounded-xl">
+                <FileText className="h-7 w-7 text-indigo-400 flex-shrink-0" />
+              </div>
+              <h1 className="text-3xl font-bold text-white">
+                {user?.role === 'admin' ? 'Gestione Permessi' : 'I Miei Permessi'}
+              </h1>
+            </div>
+            <p className="text-slate-400 text-base ml-14">
               {user?.role === 'admin' 
                 ? 'Visualizza e gestisci tutte le richieste di permessi dei dipendenti'
                 : 'Gestisci le tue richieste di permessi e visualizza lo storico'
@@ -1156,61 +1160,67 @@ const LeaveRequests = () => {
             </p>
           </div>
           
-          {/* Tab e Pulsante per Admin - Desktop */}
+          {/* Tab e Pulsante per Admin - Desktop con migliore layout */}
           {user?.role === 'admin' && (
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <div className="flex flex-row items-center gap-4">
-                <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex flex-col items-end gap-3 flex-shrink-0">
+              <div className="flex flex-row items-center gap-3">
+                {/* Tab principali con icone */}
+                <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
                   <button
                     onClick={() => setActiveTab('imminenti')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                       activeTab === 'imminenti'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
                     }`}
                   >
+                    <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
                     Imminenti
                   </button>
                   <button
                     onClick={() => setActiveTab('cronologia')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
                       activeTab === 'cronologia'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
                     }`}
                   >
+                    <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
                     Cronologia
                   </button>
                 </div>
+                {/* Bottone Aggiungi con gradiente */}
                 <button
                   onClick={() => setShowAdminCreateModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 font-semibold"
                 >
-                  <UserPlus className="h-5 w-5 mr-2" />
+                  <UserPlus className="h-5 w-5" />
                   Aggiungi
                 </button>
               </div>
-              {/* Sotto-tab per Imminenti - Desktop */}
+              {/* Sotto-tab per Imminenti - Desktop con migliore connessione visiva */}
               {activeTab === 'imminenti' && (
-                <div className="flex bg-slate-700/50 rounded-lg p-1">
+                <div className="flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
                   <button
                     onClick={() => setImminentiSubTab('in_approvazione')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
                       imminentiSubTab === 'in_approvazione'
-                        ? 'bg-yellow-600 text-white'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
                     }`}
                   >
+                    <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
                     In Approvazione
                   </button>
                   <button
                     onClick={() => setImminentiSubTab('approvate')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
                       imminentiSubTab === 'approvate'
-                        ? 'bg-green-600 text-white'
-                        : 'text-slate-400 hover:text-white'
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
                     }`}
                   >
+                    <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
                     Approvate
                   </button>
                 </div>
@@ -1220,9 +1230,9 @@ const LeaveRequests = () => {
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+              className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25 font-semibold"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="h-5 w-5" />
               Aggiungi
             </button>
           )}
