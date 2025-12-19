@@ -6599,12 +6599,33 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
         // Calcola le ore in base al tipo di permesso
         if (finalEntryTime && (existingRequest.permission_type === 'late_entry' || existingRequest.permission_type === 'entrata_posticipata')) {
-          // Entrata posticipata: ore = (entryTime - start_time) / 60
+          // Entrata posticipata: ore = (entryTime - start_time) - break_duration se la pausa è nel periodo
           const startMinutes = schedule.start_time ?
             (parseInt(schedule.start_time.split(':')[0]) * 60 + parseInt(schedule.start_time.split(':')[1])) : 0;
           const entryMinutes = finalEntryTime ?
             (parseInt(finalEntryTime.split(':')[0]) * 60 + parseInt(finalEntryTime.split(':')[1])) : 0;
-          const hoursDiff = Math.max(0, (entryMinutes - startMinutes) / 60);
+          
+          // Calcola la differenza totale in minuti
+          const totalMinutesDiff = entryMinutes - startMinutes;
+          
+          // Se c'è una pausa pranzo e il periodo di permesso include la pausa, sottraila
+          let breakMinutesToSubtract = 0;
+          if (schedule.break_duration && schedule.break_duration > 0) {
+            // Verifica se la pausa è nel periodo di permesso (da start_time a entryTime)
+            // Assumiamo che la pausa sia normalmente intorno a mezzogiorno/pranzo
+            // Se entryTime è dopo l'inizio della pausa, la pausa è inclusa nel permesso
+            const breakStartMinutes = schedule.break_start_time ? 
+              (parseInt(schedule.break_start_time.split(':')[0]) * 60 + parseInt(schedule.break_start_time.split(':')[1])) :
+              (13 * 60); // Default: 13:00
+            
+            // Se entryTime è dopo l'inizio della pausa, la pausa è inclusa nel permesso
+            if (entryMinutes > breakStartMinutes) {
+              breakMinutesToSubtract = schedule.break_duration;
+            }
+          }
+          
+          const workMinutesDiff = Math.max(0, totalMinutesDiff - breakMinutesToSubtract);
+          const hoursDiff = workMinutesDiff / 60;
           updateData.hours = parseFloat(hoursDiff.toFixed(2));
         } else if (finalExitTime && (existingRequest.permission_type === 'early_exit' || existingRequest.permission_type === 'uscita_anticipata')) {
           // Uscita anticipata: ore = (end_time - exitTime) / 60
