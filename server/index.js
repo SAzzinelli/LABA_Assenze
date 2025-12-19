@@ -7097,14 +7097,21 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       console.log(`✅ Ricalcolo presenze completato per permesso cancellato`);
     }
 
-    // Se un PERMESSO viene APPROVATO, aggiorna l'attendance per ridurre le expected_hours
-    if (updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved') {
-      console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
+    // Se un PERMESSO viene APPROVATO O MODIFICATO (ore cambiate), aggiorna l'attendance per ridurre le expected_hours
+    const permissionApproved = updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved';
+    const permissionHoursModified = updatedRequest.type === 'permission' && 
+      updatedRequest.status === 'approved' && 
+      existingRequest.status === 'approved' &&
+      (updateData.hours !== undefined && updatedRequest.hours !== existingRequest.hours);
+    
+    if (permissionApproved || permissionHoursModified) {
+      const actionType = permissionApproved ? 'approvato' : 'modificato (ore cambiate)';
+      console.log(`🔄 Permesso ${actionType} - aggiorno attendance per ${updatedRequest.start_date}...`);
 
       const permissionDate = updatedRequest.start_date;
       const permissionHours = parseFloat(updatedRequest.hours || 0);
 
-      // Aggiungi evento a Google Calendar
+      // Aggiungi evento a Google Calendar (solo se è una nuova approvazione, non una modifica)
       try {
         console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
         // Recupera i dati del dipendente per il nome completo
