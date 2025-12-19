@@ -7076,15 +7076,13 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Se un PERMESSO viene APPROVATO, aggiorna l'attendance per ridurre le expected_hours
     if (updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved') {
-      // Tutto il codice di approvazione permesso è dentro un try-catch per evitare errori 500
+      console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
+
+      const permissionDate = updatedRequest.start_date;
+      const permissionHours = parseFloat(updatedRequest.hours || 0);
+
+      // Aggiungi evento a Google Calendar
       try {
-        console.log(`🔄 Permesso approvato - aggiorno attendance per ${updatedRequest.start_date}...`);
-
-        const permissionDate = updatedRequest.start_date;
-        const permissionHours = parseFloat(updatedRequest.hours || 0);
-
-        // Aggiungi evento a Google Calendar
-        try {
         console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
         // Recupera i dati del dipendente per il nome completo
         const { data: employee, error: empError } = await supabase
@@ -7283,6 +7281,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               }
             }
           }
+        }
         }
       }
     }
