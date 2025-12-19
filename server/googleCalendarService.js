@@ -180,10 +180,63 @@ async function addPermissionEvent(permissionData) {
         eventDescription = type || 'Assenza';
     }
 
+    // Helper function per calcolare l'offset del timezone Europe/Rome per una data specifica
+    // Gestisce automaticamente l'ora legale (CET vs CEST)
+    const getRomeTimezoneOffset = (dateStr) => {
+      // Crea una data UTC di riferimento per questa data (mezzogiorno UTC)
+      const utcRef = new Date(`${dateStr}T12:00:00Z`);
+      
+      // Ottieni la stessa data nel timezone Europe/Rome usando Intl
+      // Formattiamo come ISO string per confrontare facilmente
+      const romeFormatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Rome',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const utcFormatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const romeStr = romeFormatter.format(utcRef);
+      const utcStr = utcFormatter.format(utcRef);
+      
+      // Calcola l'offset confrontando le ore
+      const romeHour = parseInt(romeStr.split('T')[1].split(':')[0]);
+      const utcHour = parseInt(utcStr.split('T')[1].split(':')[0]);
+      const offsetHours = Math.abs(romeHour - utcHour);
+      const offsetSign = romeHour >= utcHour ? '+' : '-';
+      
+      return { offsetSign, offsetHours };
+    };
+
+    // Helper function per creare una data ISO nel timezone Europe/Rome
+    // Evita problemi di conversione UTC che causano spostamenti di 1 ora
+    const createDateTimeISO = (dateStr, hour, minute) => {
+      // Calcola l'offset del timezone Europe/Rome per questa data
+      const { offsetSign, offsetHours } = getRomeTimezoneOffset(dateStr);
+      
+      // Crea la stringa ISO con il timezone corretto
+      // Google Calendar interpreterà questa come ora locale Europe/Rome grazie a timeZone: 'Europe/Rome'
+      return `${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00${offsetSign}${String(offsetHours).padStart(2, '0')}:00`;
+    };
+
     // Prepara le date per l'evento
     // Google Calendar richiede date in formato ISO 8601 con timezone
-    const startDateTime = new Date(startDate);
-    const endDateTime = new Date(endDate);
+    let startDateTimeISO;
+    let endDateTimeISO;
 
     // Gestione orari in base al tipo di permesso
     if (type === 'permission') {
@@ -193,40 +246,44 @@ async function addPermissionEvent(permissionData) {
         const [entryHour, entryMin] = entryTime.split(':').map(Number);
         const [exitHour, exitMin] = exitTime.split(':').map(Number);
         
-        startDateTime.setHours(entryHour, entryMin, 0, 0);
-        endDateTime.setHours(exitHour, exitMin, 0, 0);
+        startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
+        endDateTimeISO = createDateTimeISO(endDate, exitHour, exitMin);
       } else if (entryTime && entryTime.trim() !== '') {
         // Solo entrata: evento di 1 ora da entryTime (es. entra alle 10 → evento 10:00-11:00)
         const [entryHour, entryMin] = entryTime.split(':').map(Number);
         
-        startDateTime.setHours(entryHour, entryMin, 0, 0);
+        startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
         // Aggiungi 1 ora
-        endDateTime.setHours(entryHour, entryMin, 0, 0);
-        endDateTime.setHours(endDateTime.getHours() + 1);
+        const endHour = entryMin === 59 ? (entryHour + 1) % 24 : entryHour + 1;
+        const endMin = entryMin === 59 ? 0 : entryMin;
+        endDateTimeISO = createDateTimeISO(endDate, endHour, endMin);
       } else if (exitTime && exitTime.trim() !== '') {
         // Solo uscita: evento di 1 ora da exitTime (es. esce alle 16 → evento 16:00-17:00)
         const [exitHour, exitMin] = exitTime.split(':').map(Number);
         
-        startDateTime.setHours(exitHour, exitMin, 0, 0);
+        startDateTimeISO = createDateTimeISO(startDate, exitHour, exitMin);
         // Aggiungi 1 ora
-        endDateTime.setHours(exitHour, exitMin, 0, 0);
-        endDateTime.setHours(endDateTime.getHours() + 1);
+        const tempDate = new Date(`${startDate}T${String(exitHour).padStart(2, '0')}:${String(exitMin).padStart(2, '0')}:00`);
+        tempDate.setHours(tempDate.getHours() + 1);
+        const endHourFinal = tempDate.getHours();
+        const endMinFinal = tempDate.getMinutes();
+        endDateTimeISO = createDateTimeISO(endDate, endHourFinal, endMinFinal);
       } else {
         // Nessun orario: permesso a giornata intera (9:00-18:00)
-        startDateTime.setHours(9, 0, 0, 0);
-        endDateTime.setHours(18, 0, 0, 0);
+        startDateTimeISO = createDateTimeISO(startDate, 9, 0);
+        endDateTimeISO = createDateTimeISO(endDate, 18, 0);
       }
     } else if (type === 'permission_104' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
       // Permesso 104 con orari specifici
       const [entryHour, entryMin] = entryTime.split(':').map(Number);
       const [exitHour, exitMin] = exitTime.split(':').map(Number);
       
-      startDateTime.setHours(entryHour, entryMin, 0, 0);
-      endDateTime.setHours(exitHour, exitMin, 0, 0);
+      startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
+      endDateTimeISO = createDateTimeISO(endDate, exitHour, exitMin);
     } else {
       // Giornata intera: dalle 9:00 alle 18:00 (default per ferie, malattia, 104 senza orari)
-      startDateTime.setHours(9, 0, 0, 0);
-      endDateTime.setHours(18, 0, 0, 0);
+      startDateTimeISO = createDateTimeISO(startDate, 9, 0);
+      endDateTimeISO = createDateTimeISO(endDate, 18, 0);
     }
 
     // Crea l'evento
@@ -234,11 +291,11 @@ async function addPermissionEvent(permissionData) {
       summary: eventTitle,
       description: eventDescription,
       start: {
-        dateTime: startDateTime.toISOString(),
+        dateTime: startDateTimeISO,
         timeZone: 'Europe/Rome'
       },
       end: {
-        dateTime: endDateTime.toISOString(),
+        dateTime: endDateTimeISO,
         timeZone: 'Europe/Rome'
       },
       colorId: getColorIdForType(type), // Colore in base al tipo
