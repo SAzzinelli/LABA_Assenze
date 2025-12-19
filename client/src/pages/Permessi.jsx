@@ -316,7 +316,9 @@ const LeaveRequests = () => {
                 const schedule = daySchedule[1];
                 setEditWorkSchedule({
                   start_time: schedule.startTime || schedule.start_time,
-                  end_time: schedule.endTime || schedule.end_time
+                  end_time: schedule.endTime || schedule.end_time,
+                  break_duration: schedule.breakDuration !== null && schedule.breakDuration !== undefined ? schedule.breakDuration : (schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60),
+                  break_start_time: schedule.breakStartTime || schedule.break_start_time || null
                 });
               }
             }
@@ -332,7 +334,9 @@ const LeaveRequests = () => {
             if (schedule) {
               setEditWorkSchedule({
                 start_time: schedule.start_time,
-                end_time: schedule.end_time
+                end_time: schedule.end_time,
+                break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60,
+                break_start_time: schedule.break_start_time || null
               });
             }
           }
