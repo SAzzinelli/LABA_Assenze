@@ -1054,17 +1054,19 @@ const LeaveRequests = () => {
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header Mobile-First: Design completamente diverso su mobile */}
       {/* Mobile: Header compatto con titolo e icona */}
-      <div className="lg:hidden bg-slate-800 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
-        <div className="flex items-center justify-between mb-3">
+      <div className="lg:hidden bg-slate-800 rounded-xl p-4 sticky top-16 z-20 shadow-xl border border-slate-700/50">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <FileText className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+            <div className="p-2 bg-indigo-500/20 rounded-lg">
+              <FileText className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+            </div>
             <h1 className="text-lg font-bold text-white truncate">
               {user?.role === 'admin' ? 'Permessi' : 'I Miei Permessi'}
             </h1>
           </div>
           <button
             onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg"
+            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-2.5 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg shadow-green-500/25 active:scale-95"
             aria-label="Aggiungi permesso"
           >
             <Plus className="h-5 w-5" />
@@ -1073,51 +1075,64 @@ const LeaveRequests = () => {
         
         {/* Tab per admin - Full width su mobile */}
         {user?.role === 'admin' && (
-          <div className="space-y-2">
-            <div className="flex bg-slate-700 rounded-lg p-1">
+          <div className="space-y-3">
+            {/* Tab principali con migliore gerarchia visiva */}
+            <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
               <button
                 onClick={() => setActiveTab('imminenti')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] relative ${
                   activeTab === 'imminenti'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
-                Imminenti
+                <span className="relative z-10 flex items-center justify-center gap-1.5">
+                  <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
+                  Imminenti
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab('cronologia')}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] ${
                   activeTab === 'cronologia'
-                    ? 'bg-purple-600 text-white'
-                    : 'text-slate-400'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
-                Cronologia
+                <span className="flex items-center justify-center gap-1.5">
+                  <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
+                  Cronologia
+                </span>
               </button>
             </div>
-            {/* Sotto-tab per Imminenti */}
+            {/* Sotto-tab per Imminenti con migliore connessione visiva */}
             {activeTab === 'imminenti' && (
-              <div className="flex bg-slate-700/50 rounded-lg p-1">
+              <div className="ml-2 mr-2 flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
                 <button
                   onClick={() => setImminentiSubTab('in_approvazione')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors touch-manipulation min-h-[36px] ${
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] relative ${
                     imminentiSubTab === 'in_approvazione'
-                      ? 'bg-yellow-600 text-white'
-                      : 'text-slate-400'
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  In Approvazione
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
+                    In Approvazione
+                  </span>
                 </button>
                 <button
                   onClick={() => setImminentiSubTab('approvate')}
-                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors touch-manipulation min-h-[36px] ${
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] ${
                     imminentiSubTab === 'approvate'
-                      ? 'bg-green-600 text-white'
-                      : 'text-slate-400'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
+                      : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Approvate
+                  <span className="flex items-center justify-center gap-1.5">
+                    <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
+                    Approvate
+                  </span>
                 </button>
               </div>
             )}
