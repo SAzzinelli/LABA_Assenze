@@ -263,11 +263,9 @@ async function addPermissionEvent(permissionData) {
         
         startDateTimeISO = createDateTimeISO(startDate, exitHour, exitMin);
         // Aggiungi 1 ora
-        const tempDate = new Date(`${startDate}T${String(exitHour).padStart(2, '0')}:${String(exitMin).padStart(2, '0')}:00`);
-        tempDate.setHours(tempDate.getHours() + 1);
-        const endHourFinal = tempDate.getHours();
-        const endMinFinal = tempDate.getMinutes();
-        endDateTimeISO = createDateTimeISO(endDate, endHourFinal, endMinFinal);
+        const endHour = exitMin === 59 ? (exitHour + 1) % 24 : exitHour + 1;
+        const endMin = exitMin === 59 ? 0 : exitMin;
+        endDateTimeISO = createDateTimeISO(endDate, endHour, endMin);
       } else {
         // Nessun orario: permesso a giornata intera (9:00-18:00)
         startDateTimeISO = createDateTimeISO(startDate, 9, 0);
