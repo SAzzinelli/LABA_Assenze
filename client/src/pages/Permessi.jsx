@@ -1960,7 +1960,8 @@ const LeaveRequests = () => {
                               setEditWorkSchedule({
                                 start_time: schedule.start_time,
                                 end_time: schedule.end_time,
-                                break_duration: schedule.break_duration || 60
+                                break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60,
+                                break_start_time: schedule.break_start_time || null
                               });
                               // Ricalcola le ore con il nuovo orario
                               setTimeout(() => {
