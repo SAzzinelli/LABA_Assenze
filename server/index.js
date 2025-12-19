@@ -6653,7 +6653,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          const userName = employee.first_name; // Solo nome, senza cognome
           console.log(`📅 [APPROVAZIONE FERIE] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
@@ -6812,7 +6812,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          const userName = employee.first_name; // Solo nome, senza cognome
           console.log(`📅 [APPROVAZIONE PERMESSO 104] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
@@ -7094,7 +7094,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          const userName = employee.first_name; // Solo nome, senza cognome
           console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
