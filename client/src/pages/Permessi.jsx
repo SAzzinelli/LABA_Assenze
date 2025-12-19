@@ -61,6 +61,8 @@ const LeaveRequests = () => {
   
   // Tab per admin
   const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
+  // Sotto-tab per "Imminenti" per separare pending da approved
+  const [imminentiSubTab, setImminentiSubTab] = useState('in_approvazione'); // 'in_approvazione' | 'approvate'
   
   // Stati per dialog di approvazione/rifiuto/annullamento/modifica
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -839,22 +841,29 @@ const LeaveRequests = () => {
       if (activeTab === 'imminenti') {
         filtered = filtered
           .filter(request => {
-            if (request.status === 'pending') return true;
-            if (request.status !== 'approved') return false;
+            // Filtra in base alla sotto-tab
+            if (imminentiSubTab === 'in_approvazione') {
+              // Solo richieste pending
+              return request.status === 'pending';
+            } else if (imminentiSubTab === 'approvate') {
+              // Solo richieste approved con date future
+              if (request.status !== 'approved') return false;
 
-            const requestDate = parseRequestDate(request);
-            if (!requestDate) return false;
+              const requestDate = parseRequestDate(request);
+              if (!requestDate) return false;
 
-            if (requestDate > todayStart) {
-              return true;
+              if (requestDate > todayStart) {
+                return true;
+              }
+
+              if (requestDate < todayStart) {
+                return false;
+              }
+
+              const requestMoment = parseRequestDate(request, true);
+              return requestMoment ? requestMoment > now : false;
             }
-
-            if (requestDate < todayStart) {
-              return false;
-            }
-
-            const requestMoment = parseRequestDate(request, true);
-            return requestMoment ? requestMoment > now : false;
+            return false;
           })
           .sort((a, b) => {
             const dateA = parseRequestDate(a, true)?.getTime() || 0;
@@ -1064,27 +1073,54 @@ const LeaveRequests = () => {
         
         {/* Tab per admin - Full width su mobile */}
         {user?.role === 'admin' && (
-          <div className="flex bg-slate-700 rounded-lg p-1">
-            <button
-              onClick={() => setActiveTab('imminenti')}
-              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
-                activeTab === 'imminenti'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-400'
-              }`}
-            >
-              Imminenti
-            </button>
-            <button
-              onClick={() => setActiveTab('cronologia')}
-              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
-                activeTab === 'cronologia'
-                  ? 'bg-purple-600 text-white'
-                  : 'text-slate-400'
-              }`}
-            >
-              Cronologia
-            </button>
+          <div className="space-y-2">
+            <div className="flex bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setActiveTab('imminenti')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                  activeTab === 'imminenti'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400'
+                }`}
+              >
+                Imminenti
+              </button>
+              <button
+                onClick={() => setActiveTab('cronologia')}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors touch-manipulation min-h-[44px] ${
+                  activeTab === 'cronologia'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400'
+                }`}
+              >
+                Cronologia
+              </button>
+            </div>
+            {/* Sotto-tab per Imminenti */}
+            {activeTab === 'imminenti' && (
+              <div className="flex bg-slate-700/50 rounded-lg p-1">
+                <button
+                  onClick={() => setImminentiSubTab('in_approvazione')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors touch-manipulation min-h-[36px] ${
+                    imminentiSubTab === 'in_approvazione'
+                      ? 'bg-yellow-600 text-white'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  In Approvazione
+                </button>
+                <button
+                  onClick={() => setImminentiSubTab('approvate')}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors touch-manipulation min-h-[36px] ${
+                    imminentiSubTab === 'approvate'
+                      ? 'bg-green-600 text-white'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  Approvate
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1107,36 +1143,63 @@ const LeaveRequests = () => {
           
           {/* Tab e Pulsante per Admin - Desktop */}
           {user?.role === 'admin' && (
-            <div className="flex flex-row items-center gap-4 flex-shrink-0">
-              <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <div className="flex flex-row items-center gap-4">
+                <div className="flex bg-slate-700 rounded-lg p-1">
+                  <button
+                    onClick={() => setActiveTab('imminenti')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === 'imminenti'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Imminenti
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('cronologia')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeTab === 'cronologia'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Cronologia
+                  </button>
+                </div>
                 <button
-                  onClick={() => setActiveTab('imminenti')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'imminenti'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  onClick={() => setShowAdminCreateModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
                 >
-                  Imminenti
-                </button>
-                <button
-                  onClick={() => setActiveTab('cronologia')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'cronologia'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Cronologia
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Aggiungi
                 </button>
               </div>
-              <button
-                onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
-              >
-                <UserPlus className="h-5 w-5 mr-2" />
-                Aggiungi
-              </button>
+              {/* Sotto-tab per Imminenti - Desktop */}
+              {activeTab === 'imminenti' && (
+                <div className="flex bg-slate-700/50 rounded-lg p-1">
+                  <button
+                    onClick={() => setImminentiSubTab('in_approvazione')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      imminentiSubTab === 'in_approvazione'
+                        ? 'bg-yellow-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    In Approvazione
+                  </button>
+                  <button
+                    onClick={() => setImminentiSubTab('approvate')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      imminentiSubTab === 'approvate'
+                        ? 'bg-green-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Approvate
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {user?.role !== 'admin' && (
@@ -1424,7 +1487,9 @@ const LeaveRequests = () => {
               <p className="text-slate-400 text-lg">
                 {user?.role === 'admin' 
                   ? (activeTab === 'imminenti' 
-                      ? 'Nessuna richiesta imminente'
+                      ? (imminentiSubTab === 'in_approvazione' 
+                          ? 'Nessuna richiesta in approvazione'
+                          : 'Nessuna richiesta approvata imminente')
                       : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
                   : 'Nessuna richiesta di permesso presente'
                 }
@@ -1432,7 +1497,9 @@ const LeaveRequests = () => {
               <p className="text-slate-500 text-sm mt-2">
                 {user?.role === 'admin' 
                   ? (activeTab === 'imminenti'
-                      ? 'Le richieste approvate con date future appariranno qui'
+                      ? (imminentiSubTab === 'in_approvazione'
+                          ? 'Le richieste in attesa di approvazione appariranno qui'
+                          : 'Le richieste approvate con date future appariranno qui')
                       : 'Prova a cambiare mese o aggiungere nuove richieste')
                   : 'Clicca su "Nuova Richiesta" per iniziare'
                 }
@@ -1473,12 +1540,12 @@ const LeaveRequests = () => {
                   
                   {/* LATO ADMIN: Dipendente in evidenza */}
                   {user?.role === 'admin' && (
-                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-2.5 py-1">
-                      <div className="flex items-center gap-1.5">
-                        <User className="h-3.5 w-3.5 text-indigo-400" />
+                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-indigo-400" />
                         <div>
                           <p className="text-xs text-indigo-300">Dipendente</p>
-                          <p className="text-xs font-bold text-indigo-200">{request.submittedBy}</p>
+                          <p className="text-base font-bold text-indigo-200">{request.submittedBy}</p>
                         </div>
                       </div>
                     </div>
@@ -1495,12 +1562,12 @@ const LeaveRequests = () => {
                     </div>
                     <p className="text-base font-bold text-white">{permissionDate}</p>
                     {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
-                      <p className="text-xs text-orange-400 mt-0.5 font-medium">
+                      <p className="text-sm text-orange-400 mt-1 font-semibold">
                         Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}
                       </p>
                     )}
                     {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
-                      <p className="text-xs text-blue-400 mt-0.5 font-medium">
+                      <p className="text-sm text-blue-400 mt-1 font-semibold">
                         Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}
                       </p>
                     )}
