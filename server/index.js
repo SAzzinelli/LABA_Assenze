@@ -6599,7 +6599,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
         // Calcola le ore in base al tipo di permesso
         if (finalEntryTime && (existingRequest.permission_type === 'late_entry' || existingRequest.permission_type === 'entrata_posticipata')) {
-          // Entrata posticipata: ore = (entryTime - start_time) - break_duration se la pausa è nel periodo
+          // Entrata posticipata: ore = (entryTime - start_time) - break_duration se la pausa è completamente inclusa nel periodo
           const startMinutes = schedule.start_time ?
             (parseInt(schedule.start_time.split(':')[0]) * 60 + parseInt(schedule.start_time.split(':')[1])) : 0;
           const entryMinutes = finalEntryTime ?
@@ -6608,18 +6608,20 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           // Calcola la differenza totale in minuti
           const totalMinutesDiff = entryMinutes - startMinutes;
           
-          // Se c'è una pausa pranzo e il periodo di permesso include la pausa, sottraila
+          // Se c'è una pausa pranzo e il periodo di permesso include completamente la pausa, sottraila
           let breakMinutesToSubtract = 0;
           if (schedule.break_duration && schedule.break_duration > 0) {
-            // Verifica se la pausa è nel periodo di permesso (da start_time a entryTime)
-            // Assumiamo che la pausa sia normalmente intorno a mezzogiorno/pranzo
-            // Se entryTime è dopo l'inizio della pausa, la pausa è inclusa nel permesso
+            // Calcola l'inizio e la fine della pausa
             const breakStartMinutes = schedule.break_start_time ? 
               (parseInt(schedule.break_start_time.split(':')[0]) * 60 + parseInt(schedule.break_start_time.split(':')[1])) :
               (13 * 60); // Default: 13:00
+            const breakEndMinutes = breakStartMinutes + schedule.break_duration;
             
-            // Se entryTime è dopo l'inizio della pausa, la pausa è inclusa nel permesso
-            if (entryMinutes > breakStartMinutes) {
+            // La pausa è completamente inclusa nel permesso se:
+            // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (startMinutes)
+            // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
+            // Questo significa che tutta la pausa cade nel periodo di permesso
+            if (breakStartMinutes >= startMinutes && breakEndMinutes <= entryMinutes) {
               breakMinutesToSubtract = schedule.break_duration;
             }
           }
