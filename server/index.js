@@ -6645,6 +6645,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     if (updatedRequest.type === 'vacation' && status === 'approved' && existingRequest.status !== 'approved') {
       // Aggiungi evento a Google Calendar per ferie
       try {
+        console.log('📅 [APPROVAZIONE FERIE] Tentativo aggiunta evento Google Calendar...');
         const { data: employee, error: empError } = await supabase
           .from('users')
           .select('first_name, last_name')
@@ -6653,8 +6654,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
         if (!empError && employee) {
           const userName = `${employee.first_name} ${employee.last_name}`;
+          console.log(`📅 [APPROVAZIONE FERIE] Chiamata addPermissionEvent per ${userName}`);
           
-          await addPermissionEvent({
+          const calendarResult = await addPermissionEvent({
             userName: userName,
             startDate: updatedRequest.start_date,
             endDate: updatedRequest.end_date,
@@ -6662,9 +6664,18 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             type: updatedRequest.type,
             reason: updatedRequest.reason || notes || ''
           });
+          
+          if (calendarResult) {
+            console.log(`✅ [APPROVAZIONE FERIE] Evento Google Calendar creato con successo`);
+          } else {
+            console.log(`⚠️ [APPROVAZIONE FERIE] addPermissionEvent ha restituito null (evento non creato)`);
+          }
+        } else {
+          console.error(`❌ [APPROVAZIONE FERIE] Errore recupero dipendente:`, empError);
         }
       } catch (calendarError) {
-        console.error('❌ Errore aggiunta evento Google Calendar per ferie:', calendarError);
+        console.error('❌ [APPROVAZIONE FERIE] Errore aggiunta evento Google Calendar:', calendarError);
+        console.error('❌ [APPROVAZIONE FERIE] Stack:', calendarError.stack);
       }
 
       const requestYear = new Date(updatedRequest.start_date).getFullYear();
@@ -6793,6 +6804,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     if (updatedRequest.type === 'permission_104' && finalStatus === 'approved' && existingRequest.status !== 'approved') {
       // Aggiungi evento a Google Calendar per permesso 104
       try {
+        console.log('📅 [APPROVAZIONE PERMESSO 104] Tentativo aggiunta evento Google Calendar...');
         const { data: employee, error: empError } = await supabase
           .from('users')
           .select('first_name, last_name')
@@ -6801,8 +6813,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
         if (!empError && employee) {
           const userName = `${employee.first_name} ${employee.last_name}`;
+          console.log(`📅 [APPROVAZIONE PERMESSO 104] Chiamata addPermissionEvent per ${userName}`);
           
-          await addPermissionEvent({
+          const calendarResult = await addPermissionEvent({
             userName: userName,
             startDate: updatedRequest.start_date,
             endDate: updatedRequest.end_date,
@@ -6810,9 +6823,18 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             type: updatedRequest.type,
             reason: updatedRequest.reason || notes || ''
           });
+          
+          if (calendarResult) {
+            console.log(`✅ [APPROVAZIONE PERMESSO 104] Evento Google Calendar creato con successo`);
+          } else {
+            console.log(`⚠️ [APPROVAZIONE PERMESSO 104] addPermissionEvent ha restituito null (evento non creato)`);
+          }
+        } else {
+          console.error(`❌ [APPROVAZIONE PERMESSO 104] Errore recupero dipendente:`, empError);
         }
       } catch (calendarError) {
-        console.error('❌ Errore aggiunta evento Google Calendar per permesso 104:', calendarError);
+        console.error('❌ [APPROVAZIONE PERMESSO 104] Errore aggiunta evento Google Calendar:', calendarError);
+        console.error('❌ [APPROVAZIONE PERMESSO 104] Stack:', calendarError.stack);
       }
       // Aggiorna tutti i record di attendance per le date del permesso 104
       // imposta balance_hours = 0 e actual_hours = expected_hours (giornata completa)
@@ -7061,6 +7083,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
       // Aggiungi evento a Google Calendar
       try {
+        console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
         // Recupera i dati del dipendente per il nome completo
         const { data: employee, error: empError } = await supabase
           .from('users')
@@ -7070,8 +7093,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
         if (!empError && employee) {
           const userName = `${employee.first_name} ${employee.last_name}`;
+          console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
           
-          await addPermissionEvent({
+          const calendarResult = await addPermissionEvent({
             userName: userName,
             startDate: updatedRequest.start_date,
             endDate: updatedRequest.end_date,
@@ -7081,9 +7105,18 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             entryTime: updatedRequest.entry_time || null,
             exitTime: updatedRequest.exit_time || null
           });
+          
+          if (calendarResult) {
+            console.log(`✅ [APPROVAZIONE PERMESSO] Evento Google Calendar creato con successo`);
+          } else {
+            console.log(`⚠️ [APPROVAZIONE PERMESSO] addPermissionEvent ha restituito null (evento non creato)`);
+          }
+        } else {
+          console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero dipendente:`, empError);
         }
       } catch (calendarError) {
-        console.error('❌ Errore aggiunta evento Google Calendar:', calendarError);
+        console.error('❌ [APPROVAZIONE PERMESSO] Errore aggiunta evento Google Calendar:', calendarError);
+        console.error('❌ [APPROVAZIONE PERMESSO] Stack:', calendarError.stack);
         // Non bloccare il processo se Google Calendar fallisce
       }
 

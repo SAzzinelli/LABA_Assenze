@@ -13,12 +13,13 @@ let calendarClient = null;
  */
 function initializeCalendarClient() {
   try {
+    console.log('🔧 [Google Calendar] Inizio inizializzazione client...');
     // Debug: verifica tutte le possibili varianti del nome
     let clientId = process.env.GOOGLE_CLIENT_ID;
     
     // Se non trovato, prova varianti comuni di errori di digitazione
     if (!clientId) {
-      console.log('⚠️ GOOGLE_CLIENT_ID non trovato, provo varianti...');
+      console.log('⚠️ [Google Calendar] GOOGLE_CLIENT_ID non trovato, provo varianti...');
       clientId = process.env['GOOGLE_CLIENT_ID'] || 
                  process.env['GOOGLE_CLIENTID'] || 
                  process.env['GOOGLE_CLIENT_ID '] || // con spazio finale
@@ -27,7 +28,7 @@ function initializeCalendarClient() {
                  process.env['Google_Client_Id']; // mixed case
       
       if (clientId) {
-        console.log(`✅ Trovato GOOGLE_CLIENT_ID con nome alternativo`);
+        console.log(`✅ [Google Calendar] Trovato GOOGLE_CLIENT_ID con nome alternativo`);
       }
     }
     
@@ -35,13 +36,17 @@ function initializeCalendarClient() {
     const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
 
     // Debug: verifica quali variabili sono presenti (senza mostrare i valori completi)
-    console.log('🔍 Google Calendar - Verifica variabili d\'ambiente:');
+    console.log('🔍 [Google Calendar] Verifica variabili d\'ambiente:');
     console.log(`   GOOGLE_CLIENT_ID: ${clientId ? '✅ presente (' + clientId.substring(0, 20) + '...)' : '❌ mancante'}`);
     console.log(`   GOOGLE_CLIENT_SECRET: ${clientSecret ? '✅ presente (' + clientSecret.substring(0, 10) + '...)' : '❌ mancante'}`);
     console.log(`   GOOGLE_REFRESH_TOKEN: ${refreshToken ? '✅ presente (' + refreshToken.substring(0, 10) + '...)' : '❌ mancante'}`);
 
     if (!clientId || !clientSecret || !refreshToken) {
-      console.warn('⚠️ Google Calendar: Credenziali non configurate. L\'integrazione sarà disabilitata.');
+      console.warn('⚠️ [Google Calendar] Credenziali non configurate. L\'integrazione sarà disabilitata.');
+      console.warn('⚠️ [Google Calendar] Verifica che le variabili siano configurate su Railway:');
+      console.warn('   - GOOGLE_CLIENT_ID');
+      console.warn('   - GOOGLE_CLIENT_SECRET');
+      console.warn('   - GOOGLE_REFRESH_TOKEN');
       return null;
     }
 
@@ -71,12 +76,14 @@ function initializeCalendarClient() {
       auth: oauth2Client
     });
 
-    console.log('✅ Google Calendar client inizializzato con successo');
+    console.log('✅ [Google Calendar] Client inizializzato con successo');
     console.log(`   Calendar ID: ${process.env.GOOGLE_CALENDAR_ID || 'primary (default)'}`);
     console.log(`   Redirect URI: ${process.env.GOOGLE_REDIRECT_URI || process.env.FRONTEND_URL || 'http://localhost'}`);
+    console.log(`✅ [Google Calendar] Pronto per creare eventi`);
     return calendarClient;
   } catch (error) {
-    console.error('❌ Errore inizializzazione Google Calendar:', error);
+    console.error('❌ [Google Calendar] Errore inizializzazione:', error);
+    console.error('❌ [Google Calendar] Stack:', error.stack);
     return null;
   }
 }
@@ -96,13 +103,23 @@ function initializeCalendarClient() {
  */
 async function addPermissionEvent(permissionData) {
   try {
+    console.log('📅 [Google Calendar] Tentativo creazione evento:', {
+      userName: permissionData.userName,
+      type: permissionData.type,
+      startDate: permissionData.startDate,
+      endDate: permissionData.endDate
+    });
+
     // Inizializza il client se non è già inizializzato
     if (!calendarClient) {
+      console.log('📅 [Google Calendar] Client non inizializzato, tentativo inizializzazione...');
       calendarClient = initializeCalendarClient();
       if (!calendarClient) {
-        console.warn('⚠️ Google Calendar: Client non disponibile, evento non aggiunto');
+        console.error('❌ [Google Calendar] Client non disponibile dopo inizializzazione');
+        console.error('   Verifica che le credenziali siano configurate correttamente su Railway');
         return null;
       }
+      console.log('✅ [Google Calendar] Client inizializzato con successo');
     }
 
     // Calendar ID: può essere 'primary' (calendario principale) o l'ID di un calendario specifico
@@ -232,21 +249,30 @@ async function addPermissionEvent(permissionData) {
     };
 
     // Aggiungi l'evento al calendario
-    console.log(`📅 Tentativo inserimento evento nel calendario: ${calendarId}`);
+    console.log(`📅 [Google Calendar] Tentativo inserimento evento nel calendario: ${calendarId}`);
+    console.log(`📅 [Google Calendar] Dettagli evento:`, {
+      title: eventTitle,
+      description: eventDescription,
+      start: event.start.dateTime,
+      end: event.end.dateTime,
+      colorId: event.colorId
+    });
     
     // Verifica prima se il calendario esiste e se abbiamo accesso
     try {
+      console.log(`📅 [Google Calendar] Verifica accesso calendario...`);
       const calendarInfo = await calendarClient.calendars.get({
         calendarId: calendarId
       });
-      console.log(`✅ Calendario trovato: ${calendarInfo.data.summary || calendarId}`);
+      console.log(`✅ [Google Calendar] Calendario trovato: ${calendarInfo.data.summary || calendarId}`);
       console.log(`   Proprietario: ${calendarInfo.data.id || 'N/A'}`);
     } catch (calendarError) {
-      console.error(`❌ Errore accesso calendario ${calendarId}:`, calendarError.message);
+      console.error(`❌ [Google Calendar] Errore accesso calendario ${calendarId}:`, calendarError.message);
       console.error(`   Codice errore: ${calendarError.code || 'N/A'}`);
+      console.error(`   Dettagli completi:`, JSON.stringify(calendarError.response?.data || calendarError, null, 2));
       
       if (calendarError.code === 404) {
-        console.error(`\n⚠️ ERRORE 404 - Calendario non trovato o non accessibile`);
+        console.error(`\n⚠️ [Google Calendar] ERRORE 404 - Calendario non trovato o non accessibile`);
         console.error(`   Possibili cause:`);
         console.error(`   1. Il Calendar ID potrebbe essere errato`);
         console.error(`   2. L'account Google usato per l'autenticazione (quello del refresh token) NON ha accesso a questo calendario`);
@@ -256,26 +282,45 @@ async function addPermissionEvent(permissionData) {
         console.error(`   - Oppure condividi il calendario con l'account Google usato per l'autenticazione`);
         console.error(`   - Il calendario è condiviso da: calendari@labafirenze.com`);
         console.error(`   - Assicurati che l'account del refresh token abbia accesso come "Collaboratore" o "Proprietario"`);
+      } else if (calendarError.code === 403) {
+        console.error(`\n⚠️ [Google Calendar] ERRORE 403 - Accesso negato`);
+        console.error(`   L'account non ha i permessi necessari per accedere a questo calendario`);
       }
       
       throw calendarError;
     }
     
+    console.log(`📅 [Google Calendar] Creazione evento in corso...`);
     const response = await calendarClient.events.insert({
       calendarId: calendarId,
       resource: event
     });
 
-    console.log(`✅ Evento Google Calendar creato: ${eventTitle} (${response.data.id})`);
+    console.log(`✅ [Google Calendar] Evento creato con successo: ${eventTitle}`);
+    console.log(`   Event ID: ${response.data.id}`);
+    console.log(`   Link: ${response.data.htmlLink || 'N/A'}`);
     return response.data;
   } catch (error) {
-    console.error('❌ Errore creazione evento Google Calendar:', error);
-    console.error('❌ Error details:', {
+    console.error('❌ [Google Calendar] Errore creazione evento:', error.message);
+    console.error('❌ [Google Calendar] Error details:', {
       message: error.message,
       code: error.code,
       response: error.response?.data,
-      stack: error.stack
+      stack: error.stack?.split('\n').slice(0, 5).join('\n')
     });
+    
+    // Log più dettagliato per errori comuni
+    if (error.message?.includes('invalid_grant')) {
+      console.error('⚠️ [Google Calendar] Refresh token scaduto o revocato!');
+      console.error('   SOLUZIONE: Rigenera il refresh token usando get-refresh-token.js');
+    } else if (error.message?.includes('redirect_uri_mismatch')) {
+      console.error('⚠️ [Google Calendar] Redirect URI non corrisponde!');
+      console.error('   Verifica che GOOGLE_REDIRECT_URI corrisponda esattamente a quello in Google Cloud Console');
+    } else if (error.code === 401) {
+      console.error('⚠️ [Google Calendar] Errore autenticazione!');
+      console.error('   Verifica che le credenziali siano corrette e che il refresh token sia valido');
+    }
+    
     // Non bloccare il processo se Google Calendar fallisce
     return null;
   }
