@@ -8,13 +8,18 @@ import {
   XCircle, 
   AlertCircle,
   Users,
-  Clock
+  Clock,
+  X,
+  UserCheck
 } from 'lucide-react';
 
 const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [modalDate, setModalDate] = useState(null);
+  const [modalRequests, setModalRequests] = useState([]);
 
   const monthNames = [
     'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -76,7 +81,8 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
         date: new Date(currentDate),
         isCurrentMonth,
         isToday,
-        requests: dayRequests
+        requests: dayRequests,
+        hasAdminCreated: hasAdminCreatedVacations(dayRequests)
       });
     }
 
@@ -136,6 +142,27 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
     }
   };
 
+  // Verifica se una richiesta è stata creata da admin
+  const isAdminCreated = (request) => {
+    return request.notes && (
+      request.notes.includes('[Creato dall\'admin]') || 
+      request.notes.includes('[Creato automaticamente') ||
+      request.approvedBy !== null
+    );
+  };
+
+  // Verifica se un giorno ha ferie create da admin
+  const hasAdminCreatedVacations = (dayRequests) => {
+    return dayRequests.some(req => isAdminCreated(req));
+  };
+
+  // Apri modale dettagli
+  const openDetailsModal = (date, requests) => {
+    setModalDate(date);
+    setModalRequests(requests);
+    setShowDetailsModal(true);
+  };
+
   // Genera lista giorni del mese (per vista mobile)
   const generateMonthDaysList = () => {
     const firstDay = new Date(currentYear, currentMonth, 1);
@@ -158,7 +185,8 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
       days.push({
         date: new Date(currentDate),
         isToday,
-        requests: dayRequests
+        requests: dayRequests,
+        hasAdminCreated: hasAdminCreatedVacations(dayRequests)
       });
     }
 
@@ -257,8 +285,11 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               onDateClick?.(day.date, day.requests);
             }}
             className={`
-              bg-slate-700 rounded-lg p-3 cursor-pointer transition-colors
-              ${day.isToday ? 'ring-2 ring-blue-500 bg-slate-600' : 'hover:bg-slate-600'}
+              rounded-lg p-3 cursor-pointer transition-colors border
+              ${day.hasAdminCreated 
+                ? 'bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/50' 
+                : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}
+              ${day.isToday ? 'ring-2 ring-blue-500' : ''}
               ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600/20 ring-2 ring-blue-500' : ''}
             `}
           >
@@ -320,9 +351,15 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
                   </div>
                 ))}
                 {day.requests.length > 3 && (
-                  <div className="text-xs text-slate-400 text-center py-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDetailsModal(day.date, day.requests);
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300 text-center py-1 w-full cursor-pointer hover:underline"
+                  >
                     + {day.requests.length - 3} altra/e richiesta/e
-                  </div>
+                  </button>
                 )}
               </div>
             )}
@@ -347,8 +384,12 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             <div
               key={index}
               className={`
-                min-h-[80px] p-2 border border-slate-600 rounded cursor-pointer transition-colors
-                ${day.isCurrentMonth ? 'bg-slate-800 hover:bg-slate-600' : 'bg-slate-900 text-slate-500'}
+                min-h-[80px] p-2 border rounded cursor-pointer transition-colors
+                ${day.isCurrentMonth 
+                  ? day.hasAdminCreated 
+                    ? 'bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/50' 
+                    : 'bg-slate-800 border-slate-600 hover:bg-slate-600'
+                  : 'bg-slate-900 text-slate-500 border-slate-600'}
                 ${day.isToday ? 'ring-2 ring-blue-500' : ''}
                 ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600' : ''}
               `}
@@ -379,9 +420,15 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
                   </div>
                 ))}
                 {day.requests.length > 3 && (
-                  <div className="text-xs text-slate-400 text-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openDetailsModal(day.date, day.requests);
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300 text-center w-full cursor-pointer hover:underline"
+                  >
                     +{day.requests.length - 3} altre
-                  </div>
+                  </button>
                 )}
               </div>
             </div>
@@ -404,8 +451,135 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             <div className="w-3 h-3 bg-red-500 rounded flex-shrink-0"></div>
           <span className="text-slate-300">Rifiutate</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded flex-shrink-0 border border-purple-400"></div>
+          <span className="text-slate-300">Ferie Admin</span>
+          </div>
         </div>
       </div>
+
+      {/* Modale Dettagli Richieste */}
+      {showDetailsModal && modalDate && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowDetailsModal(false);
+            }
+          }}
+        >
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white flex items-center">
+                  <Calendar className="h-6 w-6 mr-2 text-blue-400" />
+                  Dettagli Ferie
+                </h2>
+                <p className="text-slate-400 mt-1">
+                  {modalDate.toLocaleDateString('it-IT', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {modalRequests.map((request, idx) => (
+                <div
+                  key={idx}
+                  className={`
+                    bg-slate-700 rounded-lg p-4 border
+                    ${getStatusColor(request.status)} border-opacity-30
+                  `}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(request.status)}
+                      <div>
+                        <h3 className="text-white font-semibold">
+                          {request.submittedBy || 'Dipendente sconosciuto'}
+                        </h3>
+                        {isAdminCreated(request) && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <UserCheck className="h-3 w-3 text-purple-400" />
+                            <span className="text-xs text-purple-300">Creata da Admin</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`
+                      px-2 py-1 rounded text-xs font-medium
+                      ${request.status === 'approved' ? 'bg-green-500/20 text-green-300' :
+                        request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
+                        'bg-red-500/20 text-red-300'}
+                    `}>
+                      {request.status === 'approved' ? 'Approvata' :
+                       request.status === 'pending' ? 'In attesa' : 'Rifiutata'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      <span>
+                        Dal {new Date(request.startDate).toLocaleDateString('it-IT')} al {new Date(request.endDate).toLocaleDateString('it-IT')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      <span>
+                        {request.days_requested || Math.ceil((new Date(request.endDate) - new Date(request.startDate)) / (1000 * 60 * 60 * 24)) + 1} giorni
+                      </span>
+                    </div>
+                    {request.submittedAt && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-slate-400" />
+                        <span>
+                          Richiesta: {new Date(request.submittedAt).toLocaleString('it-IT')}
+                        </span>
+                      </div>
+                    )}
+                    {request.approvedAt && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-slate-400" />
+                        <span>
+                          Approvata: {new Date(request.approvedAt).toLocaleString('it-IT')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {request.notes && (
+                    <div className="mt-3 pt-3 border-t border-slate-600">
+                      <p className="text-sm text-slate-300">
+                        <strong className="text-slate-200">Note:</strong> {request.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

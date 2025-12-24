@@ -4013,39 +4013,21 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       permissionData
     );
 
-    // Se ci sono permessi approvati, usa expectedHours (già ridotte) e balance = -permesso_hours
-    let finalExpectedHours = expectedHours;
+    // IMPORTANTE: Le ore attese rimangono sempre quelle contrattuali (8h), non vengono ridotte dal permesso
+    // Il permesso influisce solo sulle ore effettive e sul balance
+    let finalExpectedHours = contractHours; // Sempre le ore contrattuali
     let finalBalanceHours = balanceHours;
 
     if (permissionsToday && permissionsToday.length > 0) {
       const totalPermissionHours = permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-      const expectedWithPermission = contractHours - totalPermissionHours; // Expected = contract - permesso
       
-      // IMPORTANTE: Se il dipendente ha lavorato più del previsto dal permesso (rientrato prima),
-      // ricalcola le ore di permesso effettive basandosi sulle ore lavorate
-      if (actualHours > expectedWithPermission && status === 'completed') {
-        // Il dipendente ha lavorato più del previsto: ha rientrato prima del permesso
-        const actualPermissionHoursUsed = contractHours - actualHours;
-        const permissionHoursSaved = totalPermissionHours - actualPermissionHoursUsed;
-        
-        console.log(`🔄 RICALCOLO PERMESSO: Dipendente rientrato prima del previsto!`);
-        console.log(`   Permesso approvato: ${totalPermissionHours}h`);
-        console.log(`   Ore effettivamente lavorate: ${actualHours.toFixed(2)}h`);
-        console.log(`   Ore permesso effettivamente utilizzate: ${actualPermissionHoursUsed.toFixed(2)}h`);
-        console.log(`   Ore permesso risparmiate: ${permissionHoursSaved.toFixed(2)}h`);
-        
-        // Le ore attese diventano le ore contrattuali (ha lavorato tutto il giorno)
-        finalExpectedHours = contractHours;
-        // Il balance è negativo solo per le ore di permesso effettivamente utilizzate
-        finalBalanceHours = -actualPermissionHoursUsed;
-        
-        console.log(`   ✅ Ricalcolato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
-      } else {
-        // Comportamento normale: usa le ore del permesso approvato
-        finalExpectedHours = expectedWithPermission;
-        finalBalanceHours = -totalPermissionHours; // Balance = -permesso_hours (sempre)
-        console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
-      }
+      // IMPORTANTE: Le ore attese rimangono sempre quelle contrattuali (8h)
+      // Il permesso influisce solo sul balance: balance = actual_hours - expected_hours
+      // Se actual_hours = 6 (perché ha permesso di 2h), balance = 6 - 8 = -2
+      finalExpectedHours = contractHours; // Sempre 8h, indipendentemente dal permesso
+      finalBalanceHours = actualHours - contractHours; // Balance = actual - expected
+      
+      console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h (sempre contrattuali), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
     }
 
     console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h, status=${status}`);
@@ -6304,8 +6286,9 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
           }
 
-          // Ore attese finali = ore originali - ore permessi approvati
-          const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
+          // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dal permesso
+          // Il permesso influisce solo sulle ore effettive e sul balance
+          const finalExpectedHours = originalExpectedHours;
 
           // Recupera o crea la presenza per questa data
           const { data: attendanceRecord, error: attError } = await supabase
@@ -6316,8 +6299,10 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             .single();
 
           if (!attError && attendanceRecord) {
-            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
-            const newBalanceHours = -permissionHours;
+            // Calcola balance: actual_hours - expected_hours
+            // Se actual_hours non è ancora stato impostato, usa 0
+            const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+            const newBalanceHours = actualHours - finalExpectedHours;
 
             const { error: updateAttError } = await supabase
               .from('attendance')
@@ -6332,26 +6317,29 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             if (updateAttError) {
               console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
             } else {
-              console.log(`✅ Attendance ${permissionDate} aggiornata da admin: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${newBalanceHours.toFixed(2)}h`);
+              console.log(`✅ Attendance ${permissionDate} aggiornata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
             }
           } else if (attError && attError.code === 'PGRST116') {
             // Nessun record di attendance, creane uno nuovo
-            // IMPORTANTE: Il balance_hours per un permesso è sempre -permesso_hours
+            // Le ore attese rimangono quelle originali (8h)
+            const actualHours = 0; // Non ha ancora lavorato
+            const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
+
             const { error: createAttError } = await supabase
               .from('attendance')
               .insert({
                 user_id: userId,
                 date: permissionDate,
-                actual_hours: 0, // Non ha ancora lavorato
+                actual_hours: actualHours,
                 expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                balance_hours: Math.round(-permissionHours * 100) / 100,
+                balance_hours: Math.round(newBalanceHours * 100) / 100,
                 notes: `[Permesso creato dall'admin: -${permissionHours}h]`
               });
 
             if (createAttError) {
               console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
             } else {
-              console.log(`✅ Attendance ${permissionDate} creata da admin: ${finalExpectedHours}h attese (permesso: -${permissionHours}h), balance: ${-permissionHours.toFixed(2)}h`);
+              console.log(`✅ Attendance ${permissionDate} creata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
             }
           } else if (attError) {
             console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
@@ -7056,8 +7044,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             permissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
           }
 
-          // Ore attese finali = ore originali - ore permessi approvati rimanenti
-          const finalExpectedHours = Math.max(0, expectedHours - permissionHours);
+          // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dai permessi
+          // Il permesso influisce solo sulle ore effettive e sul balance
+          const finalExpectedHours = expectedHours;
 
           // Recupera la presenza per questa data
           const { data: attendanceRecord, error: attError } = await supabase
@@ -7068,15 +7057,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .single();
 
           if (!attError && attendanceRecord) {
-            // Aggiorna la presenza con le nuove ore attese
-            const newActualHours = Math.max(0, finalExpectedHours); // Le ore effettive diventano uguali alle attese (presenza completa)
-            const newBalanceHours = newActualHours - finalExpectedHours; // Dovrebbe essere 0
+            // IMPORTANTE: Le ore attese rimangono sempre quelle contrattuali (8h)
+            // Quando viene cancellato un permesso, le ore attese tornano a essere quelle originali
+            // Le actual_hours rimangono quelle già registrate
+            const finalExpectedHours = expectedHours; // Ore contrattuali originali (8h)
+            const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+            const newBalanceHours = actualHours - finalExpectedHours; // Balance = actual - expected
 
             const { error: updateAttError } = await supabase
               .from('attendance')
               .update({
                 expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                actual_hours: Math.round(newActualHours * 100) / 100,
                 balance_hours: Math.round(newBalanceHours * 100) / 100,
                 notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Ore ricalcolate dopo cancellazione permesso]` : '[Ore ricalcolate dopo cancellazione permesso]'
               })
@@ -7086,7 +7077,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             if (updateAttError) {
               console.error(`❌ Errore aggiornamento presenza per ${dateStr}:`, updateAttError);
             } else {
-              console.log(`✅ Presenza ${dateStr} aggiornata: ${finalExpectedHours}h attese (${expectedHours}h - ${permissionHours}h permessi)`);
+              console.log(`✅ Presenza ${dateStr} aggiornata: ${finalExpectedHours}h attese (ore contrattuali), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
             }
           } else if (attError && attError.code !== 'PGRST116') {
             console.error(`❌ Errore recupero presenza per ${dateStr}:`, attError);
@@ -7112,8 +7103,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       const permissionHours = parseFloat(updatedRequest.hours || 0);
 
       // Aggiungi evento a Google Calendar (solo se è una nuova approvazione, non una modifica)
-      try {
-        console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
+      if (permissionApproved) {
+        try {
+          console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
         // Recupera i dati del dipendente per il nome completo
         const { data: employee, error: empError } = await supabase
           .from('users')
@@ -7144,10 +7136,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         } else {
           console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero dipendente:`, empError);
         }
-      } catch (calendarError) {
-        console.error('❌ [APPROVAZIONE PERMESSO] Errore aggiunta evento Google Calendar:', calendarError);
-        console.error('❌ [APPROVAZIONE PERMESSO] Stack:', calendarError.stack);
-        // Non bloccare il processo se Google Calendar fallisce
+        } catch (calendarError) {
+          console.error('❌ [APPROVAZIONE PERMESSO] Errore aggiunta evento Google Calendar:', calendarError);
+          console.error('❌ [APPROVAZIONE PERMESSO] Stack:', calendarError.stack);
+          // Non bloccare il processo se Google Calendar fallisce
+        }
       }
 
       if (permissionHours > 0) {
@@ -7221,8 +7214,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   totalPermissionHours = 0;
                 }
 
-                // Ore attese finali = ore originali - ore permessi approvati
-                const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
+                // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dal permesso
+                // Il permesso influisce solo sulle ore effettive e sul balance
+                const finalExpectedHours = originalExpectedHours;
 
                 // Validazione: finalExpectedHours deve essere un numero valido
                 if (isNaN(finalExpectedHours)) {
@@ -7241,10 +7235,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
                 if (attError && attError.code === 'PGRST116') {
                   // Nessun record di attendance, creane uno nuovo
-                  // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-                  // Se non ha ancora lavorato, actual_hours = 0, quindi balance = -expected_hours = -totalPermissionHours
+                  // Le ore attese rimangono quelle originali (8h)
                   const actualHours = 0; // Non ha ancora lavorato
-                  const newBalanceHours = actualHours - finalExpectedHours;
+                  const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
 
                   // Validazione: newBalanceHours deve essere un numero valido
                   if (isNaN(newBalanceHours)) {
@@ -7265,7 +7258,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                     if (createAttError) {
                       console.error(`❌ [APPROVAZIONE PERMESSO] Errore creazione presenza per ${permissionDate}:`, createAttError);
                     } else {
-                      console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                      console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
                     }
                   }
                 } else if (attError) {
@@ -7275,7 +7268,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   // Aggiorna la presenza con le nuove ore attese
                   // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
                   // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-                  // Questo tiene conto di tutti i permessi approvati per quel giorno
+                  // Le ore attese rimangono sempre quelle originali (8h)
                   const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
                   
                   // Validazione: actualHours deve essere un numero valido
@@ -7303,7 +7296,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                       if (updateAttError) {
                         console.error(`❌ [APPROVAZIONE PERMESSO] Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
                       } else {
-                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h → ${finalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
                       }
                     }
                   }
