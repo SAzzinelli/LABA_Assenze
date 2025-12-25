@@ -1511,9 +1511,21 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       // Filtra le leave requests che si sovrappongono al periodo richiesto
       // Una leave request si sovrappone se: start_date <= endDate AND end_date >= startDate
       leaveQuery = leaveQuery.lte('start_date', endDate).gte('end_date', startDate);
+      console.log(`🔍 [ATTENDANCE] Filtro leave requests per mese ${month}/${year}: startDate=${startDate}, endDate=${endDate}`);
     }
 
     const { data: leaveRequests, error: leaveError } = await leaveQuery;
+    
+    if (month && year) {
+      console.log(`📋 [ATTENDANCE] Leave requests trovate per ${month}/${year}:`, leaveRequests?.length || 0);
+      if (leaveRequests && leaveRequests.length > 0) {
+        const vacationRequests = leaveRequests.filter(lr => lr.type === 'vacation');
+        console.log(`🏖️ [ATTENDANCE] Ferie trovate:`, vacationRequests.length);
+        vacationRequests.forEach(vac => {
+          console.log(`   - User ${vac.user_id}: ${vac.start_date} → ${vac.end_date}`);
+        });
+      }
+    }
 
     if (leaveError) {
       console.error('Leave requests fetch error:', leaveError);
@@ -1585,22 +1597,40 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       // Per ogni utente con ferie, crea record virtuali per i giorni di ferie
       userVacations.forEach((vacations, userId) => {
         vacations.forEach(vacation => {
-          const start = new Date(vacation.start_date);
-          const end = new Date(vacation.end_date);
+          // Usa le date direttamente come stringhe per evitare problemi di fuso orario
+          const startDateStr = vacation.start_date;
+          const endDateStr = vacation.end_date;
+          
+          // Converti in oggetti Date per il loop, ma usa le stringhe per il confronto
+          const start = new Date(startDateStr + 'T00:00:00');
+          const end = new Date(endDateStr + 'T00:00:00');
           
           // Genera date per il periodo di ferie
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
+            // Usa getFullYear, getMonth, getDate per costruire la stringa data in modo locale
+            const dateYear = d.getFullYear();
+            const dateMonth = String(d.getMonth() + 1).padStart(2, '0');
+            const dateDay = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
             
             // Filtra per data se specificato
             if (date && dateStr !== date) continue;
             
-            // Filtra per mese/anno se specificato
+            // Filtra per mese/anno se specificato (usa i valori dalla data locale)
             if (month && year) {
               const monthNum = parseInt(month, 10);
               const yearNum = parseInt(year, 10);
-              const dateObj = new Date(dateStr);
-              if (dateObj.getMonth() + 1 !== monthNum || dateObj.getFullYear() !== yearNum) continue;
+              const dMonth = d.getMonth() + 1;
+              const dYear = d.getFullYear();
+              if (dMonth !== monthNum || dYear !== yearNum) {
+                if (dateStr === '2025-12-24') {
+                  console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dMonth=${dMonth}, monthNum=${monthNum}, dYear=${dYear}, yearNum=${yearNum}`);
+                }
+                continue;
+              }
+              if (dateStr === '2025-12-24') {
+                console.log(`✅ [ATTENDANCE] 24/12/2025 incluso nel filtro, creando record virtuale per user ${userId}`);
+              }
             }
             
             // Verifica se esiste già un record di presenza per questa data
