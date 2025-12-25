@@ -1601,29 +1601,35 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
           const startDateStr = vacation.start_date;
           const endDateStr = vacation.end_date;
           
-          // Converti in oggetti Date per il loop, ma usa le stringhe per il confronto
-          const start = new Date(startDateStr + 'T00:00:00');
-          const end = new Date(endDateStr + 'T00:00:00');
+          console.log(`🔄 [ATTENDANCE] Processando ferie per user ${userId}: ${startDateStr} → ${endDateStr}`);
           
-          // Genera date per il periodo di ferie
           // Parsa le date direttamente come stringhe per evitare problemi di fuso orario
           const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
           const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
           
-          // Crea date iniziale e finale
-          let currentDate = new Date(startYear, startMonth - 1, startDay);
-          const finalDate = new Date(endYear, endMonth - 1, endDay);
+          // Crea date iniziale e finale usando UTC per evitare problemi di fuso orario
+          let currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+          const finalDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
           
+          let dayCount = 0;
           while (currentDate <= finalDate) {
-            // Estrai anno, mese, giorno direttamente dalla data locale
-            const dateYear = currentDate.getFullYear();
-            const dateMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
-            const dateDay = String(currentDate.getDate()).padStart(2, '0');
+            dayCount++;
+            // Estrai anno, mese, giorno usando UTC per evitare problemi di fuso orario
+            const dateYear = currentDate.getUTCFullYear();
+            const dateMonth = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+            const dateDay = String(currentDate.getUTCDate()).padStart(2, '0');
             const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
+            
+            if (dayCount === 1) {
+              console.log(`   📅 Primo giorno processato: ${dateStr} (user ${userId})`);
+            }
+            if (dateStr === '2025-12-24') {
+              console.log(`   🎯 [ATTENDANCE] Processando 24/12/2025 per user ${userId}`);
+            }
             
             // Filtra per data se specificato
             if (date && dateStr !== date) {
-              currentDate.setDate(currentDate.getDate() + 1);
+              currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
               continue;
             }
             
@@ -1637,7 +1643,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 if (dateStr === '2025-12-24') {
                   console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dateStrMonth=${dateStrMonth}, monthNum=${monthNum}, dateStrYear=${dateStrYear}, yearNum=${yearNum}`);
                 }
-                currentDate.setDate(currentDate.getDate() + 1);
+                currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
                 continue;
               }
               if (dateStr === '2025-12-24') {
@@ -1677,9 +1683,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
               });
             }
             
-            // Incrementa la data per il prossimo giorno
-            currentDate.setDate(currentDate.getDate() + 1);
+            // Incrementa la data per il prossimo giorno (usa UTC per evitare problemi di fuso orario)
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
           }
+          
+          console.log(`   ✅ [ATTENDANCE] Completato processing ferie per user ${userId}: ${dayCount} giorni processati`);
         });
       });
     }
