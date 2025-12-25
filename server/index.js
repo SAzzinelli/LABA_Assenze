@@ -1719,6 +1719,18 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     // Combina record di presenza con record virtuali di ferie
     const allRecords = [...attendanceWithLeaves, ...vacationRecords];
     
+    // Ordina i record per data (crescente) e poi per nome dipendente
+    allRecords.sort((a, b) => {
+      // Prima ordina per data
+      if (a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      // Se la data è uguale, ordina per nome dipendente
+      const nameA = a.users ? `${a.users.first_name} ${a.users.last_name}` : '';
+      const nameB = b.users ? `${b.users.first_name} ${b.users.last_name}` : '';
+      return nameA.localeCompare(nameB);
+    });
+    
     // Log per debug
     if (month && year) {
       const records24Dec = allRecords.filter(r => r.date === '2025-12-24');
@@ -1743,9 +1755,10 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       }
       
       if (records24Dec.length > 0) {
-        console.log(`   📋 Record finali per 24/12/2025:`);
+        console.log(`   📋 Record finali per 24/12/2025 (dopo ordinamento):`);
         records24Dec.forEach(r => {
-          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, date: ${r.date}, id: ${r.id}`);
+          const userName = r.users ? `${r.users.first_name} ${r.users.last_name}` : 'N/A';
+          console.log(`      - ${userName} (${r.user_id}), is_vacation: ${r.is_vacation}, date: ${r.date}, id: ${r.id}`);
         });
       }
     }
@@ -6360,18 +6373,26 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
         }
 
         // Elimina tutte le presenze per i giorni di ferie
+        let deletedCount = 0;
         for (const dateStr of vacationDates) {
-          const { error: deleteError } = await supabase
+          const { error: deleteError, count } = await supabase
             .from('attendance')
             .delete()
             .eq('user_id', userId)
-            .eq('date', dateStr);
+            .eq('date', dateStr)
+            .select('*', { count: 'exact', head: true });
 
           if (deleteError) {
             console.error(`❌ [CREAZIONE FERIE ADMIN] Errore eliminazione presenza per ${dateStr}:`, deleteError);
           } else {
-            console.log(`✅ [CREAZIONE FERIE ADMIN] Presenza eliminata per ${dateStr} (giorno di ferie)`);
+            if (count && count > 0) {
+              console.log(`✅ [CREAZIONE FERIE ADMIN] Presenza eliminata per ${dateStr} (giorno di ferie)`);
+              deletedCount++;
+            }
           }
+        }
+        if (deletedCount > 0) {
+          console.log(`✅ [CREAZIONE FERIE ADMIN] Totale presenze eliminate: ${deletedCount} su ${vacationDates.length} giorni`);
         }
       }, 100);
     }
