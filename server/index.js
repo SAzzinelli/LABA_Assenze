@@ -1508,7 +1508,9 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       const monthStr = String(monthNum).padStart(2, '0');
       const startDate = `${yearNum}-${monthStr}-01`;
       const endDate = new Date(yearNum, monthNum, 0).toISOString().split('T')[0];
-      leaveQuery = leaveQuery.gte('start_date', startDate).lte('end_date', endDate);
+      // Filtra le leave requests che si sovrappongono al periodo richiesto
+      // Una leave request si sovrappone se: start_date <= endDate AND end_date >= startDate
+      leaveQuery = leaveQuery.lte('start_date', endDate).gte('end_date', startDate);
     }
 
     const { data: leaveRequests, error: leaveError } = await leaveQuery;
@@ -5261,7 +5263,9 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
     if (month && year) {
       const startDate = new Date(year, month - 1, 1).toISOString();
       const endDate = new Date(year, month, 0).toISOString();
-      query = query.gte('start_date', startDate).lte('end_date', endDate);
+      // Filtra le leave requests che si sovrappongono al periodo richiesto
+      // Una leave request si sovrappone se: start_date <= endDate AND end_date >= startDate
+      query = query.lte('start_date', endDate).gte('end_date', startDate);
     }
 
     // If not admin, only show user's own requests
