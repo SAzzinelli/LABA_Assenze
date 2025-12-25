@@ -1639,6 +1639,12 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
               const yearNum = parseInt(year, 10);
               // Parsa dalla stringa data invece di usare getMonth/getFullYear
               const [dateStrYear, dateStrMonth] = dateStr.split('-').map(Number);
+              
+              if (dateStr === '2025-12-24') {
+                console.log(`🔍 [ATTENDANCE] Debug filtro 24/12/2025: dateStr=${dateStr}, dateStrMonth=${dateStrMonth} (type: ${typeof dateStrMonth}), monthNum=${monthNum} (type: ${typeof monthNum}), dateStrYear=${dateStrYear} (type: ${typeof dateStrYear}), yearNum=${yearNum} (type: ${typeof yearNum})`);
+                console.log(`🔍 [ATTENDANCE] Confronto: dateStrMonth !== monthNum = ${dateStrMonth !== monthNum}, dateStrYear !== yearNum = ${dateStrYear !== yearNum}`);
+              }
+              
               if (dateStrMonth !== monthNum || dateStrYear !== yearNum) {
                 if (dateStr === '2025-12-24') {
                   console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dateStrMonth=${dateStrMonth}, monthNum=${monthNum}, dateStrYear=${dateStrYear}, yearNum=${yearNum}`);
@@ -1667,6 +1673,9 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 userData = usersMap.get(userId);
               }
               
+              if (dateStr === '2025-12-24') {
+                console.log(`   ➕ [ATTENDANCE] Creando record virtuale per 24/12/2025, user ${userId}`);
+              }
               vacationRecords.push({
                 id: `vacation-${userId}-${dateStr}`,
                 user_id: userId,
@@ -1694,6 +1703,18 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 
     // Combina record di presenza con record virtuali di ferie
     const allRecords = [...attendanceWithLeaves, ...vacationRecords];
+    
+    // Log per debug
+    if (month && year) {
+      const records24Dec = allRecords.filter(r => r.date === '2025-12-24');
+      console.log(`📊 [ATTENDANCE] Record totali per ${month}/${year}: ${allRecords.length} (attendance: ${attendanceWithLeaves.length}, vacation: ${vacationRecords.length})`);
+      console.log(`📊 [ATTENDANCE] Record per 24/12/2025: ${records24Dec.length}`);
+      if (records24Dec.length > 0) {
+        records24Dec.forEach(r => {
+          console.log(`   - User ${r.user_id}, is_vacation: ${r.is_vacation}, date: ${r.date}`);
+        });
+      }
+    }
 
     res.json(allRecords);
   } catch (error) {
