@@ -1606,26 +1606,38 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
           const end = new Date(endDateStr + 'T00:00:00');
           
           // Genera date per il periodo di ferie
-          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            // Usa getFullYear, getMonth, getDate per costruire la stringa data in modo locale
-            const dateYear = d.getFullYear();
-            const dateMonth = String(d.getMonth() + 1).padStart(2, '0');
-            const dateDay = String(d.getDate()).padStart(2, '0');
+          // Parsa le date direttamente come stringhe per evitare problemi di fuso orario
+          const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
+          const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
+          
+          // Crea date iniziale e finale
+          let currentDate = new Date(startYear, startMonth - 1, startDay);
+          const finalDate = new Date(endYear, endMonth - 1, endDay);
+          
+          while (currentDate <= finalDate) {
+            // Estrai anno, mese, giorno direttamente dalla data locale
+            const dateYear = currentDate.getFullYear();
+            const dateMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const dateDay = String(currentDate.getDate()).padStart(2, '0');
             const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
             
             // Filtra per data se specificato
-            if (date && dateStr !== date) continue;
+            if (date && dateStr !== date) {
+              currentDate.setDate(currentDate.getDate() + 1);
+              continue;
+            }
             
-            // Filtra per mese/anno se specificato (usa i valori dalla data locale)
+            // Filtra per mese/anno se specificato (parsa direttamente dalla stringa data)
             if (month && year) {
               const monthNum = parseInt(month, 10);
               const yearNum = parseInt(year, 10);
-              const dMonth = d.getMonth() + 1;
-              const dYear = d.getFullYear();
-              if (dMonth !== monthNum || dYear !== yearNum) {
+              // Parsa dalla stringa data invece di usare getMonth/getFullYear
+              const [dateStrYear, dateStrMonth] = dateStr.split('-').map(Number);
+              if (dateStrMonth !== monthNum || dateStrYear !== yearNum) {
                 if (dateStr === '2025-12-24') {
-                  console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dMonth=${dMonth}, monthNum=${monthNum}, dYear=${dYear}, yearNum=${yearNum}`);
+                  console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dateStrMonth=${dateStrMonth}, monthNum=${monthNum}, dateStrYear=${dateStrYear}, yearNum=${yearNum}`);
                 }
+                currentDate.setDate(currentDate.getDate() + 1);
                 continue;
               }
               if (dateStr === '2025-12-24') {
@@ -1664,6 +1676,9 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 is_vacation: true // Flag per identificare record virtuale di ferie
               });
             }
+            
+            // Incrementa la data per il prossimo giorno
+            currentDate.setDate(currentDate.getDate() + 1);
           }
         });
       });
