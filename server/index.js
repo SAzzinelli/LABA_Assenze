@@ -1662,6 +1662,13 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
               r.user_id === userId && r.date === dateStr
             );
             
+            if (dateStr === '2025-12-24') {
+              console.log(`   🔍 [ATTENDANCE] 24/12/2025 - existingRecord per user ${userId}:`, existingRecord ? 'TROVATO' : 'NON TROVATO');
+              if (existingRecord) {
+                console.log(`      - existingRecord.id: ${existingRecord.id}, is_vacation: ${existingRecord.is_vacation}`);
+              }
+            }
+            
             // Se non esiste un record di presenza, crea un record virtuale per le ferie
             if (!existingRecord) {
               // Recupera i dati dell'utente (cerca prima nei record esistenti, altrimenti dalla mappa)
@@ -1676,7 +1683,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
               if (dateStr === '2025-12-24') {
                 console.log(`   ➕ [ATTENDANCE] Creando record virtuale per 24/12/2025, user ${userId}`);
               }
-              vacationRecords.push({
+              const vacationRecord = {
                 id: `vacation-${userId}-${dateStr}`,
                 user_id: userId,
                 date: dateStr,
@@ -1689,7 +1696,15 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 leave_reason: vacation.reason,
                 users: userData,
                 is_vacation: true // Flag per identificare record virtuale di ferie
-              });
+              };
+              
+              if (dateStr === '2025-12-24') {
+                console.log(`   ✅ [ATTENDANCE] Record virtuale creato per 24/12/2025, user ${userId}, is_vacation: ${vacationRecord.is_vacation}`);
+              }
+              
+              vacationRecords.push(vacationRecord);
+            } else if (dateStr === '2025-12-24') {
+              console.log(`   ⚠️ [ATTENDANCE] 24/12/2025 - NON creato record virtuale per user ${userId} perché esiste già un record di presenza`);
             }
             
             // Incrementa la data per il prossimo giorno (usa UTC per evitare problemi di fuso orario)
@@ -1707,11 +1722,30 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     // Log per debug
     if (month && year) {
       const records24Dec = allRecords.filter(r => r.date === '2025-12-24');
+      const vacationRecords24Dec = vacationRecords.filter(r => r.date === '2025-12-24');
+      const attendanceRecords24Dec = attendanceWithLeaves.filter(r => r.date === '2025-12-24');
+      
       console.log(`📊 [ATTENDANCE] Record totali per ${month}/${year}: ${allRecords.length} (attendance: ${attendanceWithLeaves.length}, vacation: ${vacationRecords.length})`);
-      console.log(`📊 [ATTENDANCE] Record per 24/12/2025: ${records24Dec.length}`);
+      console.log(`📊 [ATTENDANCE] Record per 24/12/2025: ${records24Dec.length} (attendance: ${attendanceRecords24Dec.length}, vacation: ${vacationRecords24Dec.length})`);
+      
+      if (vacationRecords24Dec.length > 0) {
+        console.log(`   📋 Record virtuali ferie per 24/12/2025:`);
+        vacationRecords24Dec.forEach(r => {
+          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, id: ${r.id}`);
+        });
+      }
+      
+      if (attendanceRecords24Dec.length > 0) {
+        console.log(`   📋 Record presenza esistenti per 24/12/2025:`);
+        attendanceRecords24Dec.forEach(r => {
+          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, id: ${r.id}`);
+        });
+      }
+      
       if (records24Dec.length > 0) {
+        console.log(`   📋 Record finali per 24/12/2025:`);
         records24Dec.forEach(r => {
-          console.log(`   - User ${r.user_id}, is_vacation: ${r.is_vacation}, date: ${r.date}`);
+          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, date: ${r.date}, id: ${r.id}`);
         });
       }
     }
