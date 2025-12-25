@@ -1719,11 +1719,17 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     // Combina record di presenza con record virtuali di ferie
     const allRecords = [...attendanceWithLeaves, ...vacationRecords];
     
-    // Ordina i record per data (crescente) e poi per nome dipendente
-    allRecords.sort((a, b) => {
-      // Prima ordina per data
+    // Filtra i record futuri (solo fino a oggi)
+    const today = new Date().toISOString().split('T')[0];
+    const filteredRecords = allRecords.filter(record => {
+      return record.date <= today;
+    });
+    
+    // Ordina i record per data (decrescente - più recenti prima) e poi per nome dipendente
+    filteredRecords.sort((a, b) => {
+      // Prima ordina per data (decrescente)
       if (a.date !== b.date) {
-        return a.date.localeCompare(b.date);
+        return b.date.localeCompare(a.date); // Invertito per avere i più recenti prima
       }
       // Se la data è uguale, ordina per nome dipendente
       const nameA = a.users ? `${a.users.first_name} ${a.users.last_name}` : '';
@@ -1733,24 +1739,24 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     
     // Log per debug
     if (month && year) {
-      const records24Dec = allRecords.filter(r => r.date === '2025-12-24');
+      const records24Dec = filteredRecords.filter(r => r.date === '2025-12-24');
       const vacationRecords24Dec = vacationRecords.filter(r => r.date === '2025-12-24');
       const attendanceRecords24Dec = attendanceWithLeaves.filter(r => r.date === '2025-12-24');
       
-      console.log(`📊 [ATTENDANCE] Record totali per ${month}/${year}: ${allRecords.length} (attendance: ${attendanceWithLeaves.length}, vacation: ${vacationRecords.length})`);
+      console.log(`📊 [ATTENDANCE] Record totali per ${month}/${year}: ${filteredRecords.length} (attendance: ${attendanceWithLeaves.length}, vacation: ${vacationRecords.length}, filtrati futuri: ${allRecords.length - filteredRecords.length})`);
       console.log(`📊 [ATTENDANCE] Record per 24/12/2025: ${records24Dec.length} (attendance: ${attendanceRecords24Dec.length}, vacation: ${vacationRecords24Dec.length})`);
       
       if (vacationRecords24Dec.length > 0) {
         console.log(`   📋 Record virtuali ferie per 24/12/2025:`);
         vacationRecords24Dec.forEach(r => {
-          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, id: ${r.id}`);
+          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, leave_type: ${r.leave_type}, id: ${r.id}`);
         });
       }
       
       if (attendanceRecords24Dec.length > 0) {
         console.log(`   📋 Record presenza esistenti per 24/12/2025:`);
         attendanceRecords24Dec.forEach(r => {
-          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, id: ${r.id}`);
+          console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, leave_type: ${r.leave_type}, id: ${r.id}`);
         });
       }
       
@@ -1758,12 +1764,12 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
         console.log(`   📋 Record finali per 24/12/2025 (dopo ordinamento):`);
         records24Dec.forEach(r => {
           const userName = r.users ? `${r.users.first_name} ${r.users.last_name}` : 'N/A';
-          console.log(`      - ${userName} (${r.user_id}), is_vacation: ${r.is_vacation}, date: ${r.date}, id: ${r.id}`);
+          console.log(`      - ${userName} (${r.user_id}), is_vacation: ${r.is_vacation}, leave_type: ${r.leave_type}, date: ${r.date}, id: ${r.id}`);
         });
       }
     }
 
-    res.json(allRecords);
+    res.json(filteredRecords);
   } catch (error) {
     console.error('Attendance fetch error:', error);
     res.status(500).json({ error: 'Errore interno del server' });

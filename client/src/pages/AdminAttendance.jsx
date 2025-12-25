@@ -766,9 +766,9 @@ const AdminAttendance = () => {
         const balance = record.balance_hours !== undefined ? record.balance_hours : (actual - expected);
         
         // Determina status in base ai dati
-        // IMPORTANTE: Controlla prima se c'è una ferie approvata (leave_type)
+        // IMPORTANTE: Controlla prima se c'è una ferie approvata (is_vacation o leave_type)
         let status = 'completed';
-        if (record.leave_type === 'vacation') {
+        if (record.is_vacation || record.leave_type === 'vacation') {
           status = 'vacation';
         } else if (actual === 0 && expected > 0) {
           status = 'absent';
@@ -864,11 +864,19 @@ const AdminAttendance = () => {
       const balance = actual - expectedHoursFromSchedule;
 
       // Determine status
+      // IMPORTANTE: Controlla prima se è una ferie (is_vacation o leave_type)
       let status = 'completed';
-      if (actual === 0 && expectedHoursFromSchedule > 0) status = 'absent';
-      if (record.notes && record.notes.includes('Malattia')) status = 'sick_leave';
-      if (record.notes && record.notes.includes('Ferie')) status = 'holiday';
-      if (expectedHoursFromSchedule === 0) status = 'non_working_day';
+      if (record.is_vacation || record.leave_type === 'vacation') {
+        status = 'vacation';
+      } else if (actual === 0 && expectedHoursFromSchedule > 0) {
+        status = 'absent';
+      } else if (record.notes && record.notes.includes('Malattia')) {
+        status = 'sick_leave';
+      } else if (record.notes && record.notes.includes('Ferie')) {
+        status = 'vacation'; // Cambiato da 'holiday' a 'vacation'
+      } else if (expectedHoursFromSchedule === 0) {
+        status = 'non_working_day';
+      }
 
       return {
         expectedHours: expectedHoursFromSchedule,
