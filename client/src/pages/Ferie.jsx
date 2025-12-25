@@ -66,7 +66,7 @@ const Vacation = () => {
   const [vacationRequests, setVacationRequests] = useState([]);
 
   // Vista attiva (calendar o list)
-  const [activeView, setActiveView] = useState('list');
+  const [activeView, setActiveView] = useState('calendar');
   
   // Gestione periodi ferie (solo admin)
   const [showPeriodsManagement, setShowPeriodsManagement] = useState(false);
@@ -802,7 +802,7 @@ const Vacation = () => {
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
               >
                 <UserPlus className="h-5 w-5 mr-2" />
-                Aggiungi per Dipendente
+                Aggiungi manualmente
               </button>
               </>
             ) : (
@@ -1499,7 +1499,8 @@ const Vacation = () => {
         </div>
       )}
 
-      {/* Filtri Collassabili */}
+      {/* Filtri Collassabili - Solo nella vista lista */}
+      {activeView === 'list' && (
       <div className="bg-slate-800 rounded-lg overflow-hidden">
         <button
           onClick={() => setFiltersCollapsed(!filtersCollapsed)}
@@ -1573,6 +1574,7 @@ const Vacation = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Vista Calendario */}
       {activeView === 'calendar' && (
@@ -1624,6 +1626,14 @@ const Vacation = () => {
                         {getStatusText(request.status)}
                       </span>
                     </div>
+                    {user?.role === 'admin' && request.submittedBy && (
+                      <div className="mb-3">
+                        <div className="flex items-center text-sm text-slate-300">
+                          <Users className="h-4 w-4 mr-2 text-slate-400" />
+                          <span className="font-medium text-white">{request.submittedBy}</span>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-slate-400" />
