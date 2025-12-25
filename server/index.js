@@ -1549,7 +1549,98 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       };
     });
 
-    res.json(attendanceWithLeaves);
+    // IMPORTANTE: Aggiungi record virtuali per i giorni di ferie che non hanno presenze
+    // Le ferie devono essere mostrate anche se non ci sono record di presenza
+    const vacationRecords = [];
+    if (leaveRequests && leaveRequests.length > 0) {
+      // Raggruppa per user_id per evitare duplicati
+      const userVacations = new Map();
+      
+      leaveRequests.forEach(leave => {
+        if (leave.type === 'vacation') {
+          const userId = leave.user_id;
+          if (!userVacations.has(userId)) {
+            userVacations.set(userId, []);
+          }
+          userVacations.get(userId).push(leave);
+        }
+      });
+
+      // Recupera tutti gli utenti necessari in una volta (ottimizzazione)
+      const userIdsToFetch = Array.from(userVacations.keys());
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email')
+        .in('id', userIdsToFetch);
+      
+      const usersMap = new Map();
+      if (usersData) {
+        usersData.forEach(user => {
+          usersMap.set(user.id, user);
+        });
+      }
+
+      // Per ogni utente con ferie, crea record virtuali per i giorni di ferie
+      userVacations.forEach((vacations, userId) => {
+        vacations.forEach(vacation => {
+          const start = new Date(vacation.start_date);
+          const end = new Date(vacation.end_date);
+          
+          // Genera date per il periodo di ferie
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            
+            // Filtra per data se specificato
+            if (date && dateStr !== date) continue;
+            
+            // Filtra per mese/anno se specificato
+            if (month && year) {
+              const monthNum = parseInt(month, 10);
+              const yearNum = parseInt(year, 10);
+              const dateObj = new Date(dateStr);
+              if (dateObj.getMonth() + 1 !== monthNum || dateObj.getFullYear() !== yearNum) continue;
+            }
+            
+            // Verifica se esiste già un record di presenza per questa data
+            const existingRecord = attendanceWithLeaves.find(r => 
+              r.user_id === userId && r.date === dateStr
+            );
+            
+            // Se non esiste un record di presenza, crea un record virtuale per le ferie
+            if (!existingRecord) {
+              // Recupera i dati dell'utente (cerca prima nei record esistenti, altrimenti dalla mappa)
+              let userData = null;
+              const userRecord = attendanceWithLeaves.find(r => r.user_id === userId);
+              if (userRecord?.users) {
+                userData = userRecord.users;
+              } else if (usersMap.has(userId)) {
+                userData = usersMap.get(userId);
+              }
+              
+              vacationRecords.push({
+                id: `vacation-${userId}-${dateStr}`,
+                user_id: userId,
+                date: dateStr,
+                actual_hours: 0,
+                expected_hours: 0,
+                balance_hours: 0,
+                notes: `Ferie: ${vacation.reason || ''}`,
+                is_justified_absence: true,
+                leave_type: 'vacation',
+                leave_reason: vacation.reason,
+                users: userData,
+                is_vacation: true // Flag per identificare record virtuale di ferie
+              });
+            }
+          }
+        });
+      });
+    }
+
+    // Combina record di presenza con record virtuali di ferie
+    const allRecords = [...attendanceWithLeaves, ...vacationRecords];
+
+    res.json(allRecords);
   } catch (error) {
     console.error('Attendance fetch error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
@@ -6146,6 +6237,30 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
             updated_at: new Date().toISOString()
           }).eq('id', balance.id);
         }
+
+        // IMPORTANTE: Elimina le presenze esistenti per i giorni di ferie
+        // Le ferie non sono presenze, sono giorni di assenza giustificata
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const vacationDates = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          vacationDates.push(d.toISOString().split('T')[0]);
+        }
+
+        // Elimina tutte le presenze per i giorni di ferie
+        for (const dateStr of vacationDates) {
+          const { error: deleteError } = await supabase
+            .from('attendance')
+            .delete()
+            .eq('user_id', userId)
+            .eq('date', dateStr);
+
+          if (deleteError) {
+            console.error(`❌ [CREAZIONE FERIE ADMIN] Errore eliminazione presenza per ${dateStr}:`, deleteError);
+          } else {
+            console.log(`✅ [CREAZIONE FERIE ADMIN] Presenza eliminata per ${dateStr} (giorno di ferie)`);
+          }
+        }
       }, 100);
     }
 
@@ -6740,6 +6855,30 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           } else {
             console.log(`✅ Bilancio ferie aggiornato: +${daysRequested} giorni (totale utilizzati: ${newUsedDays})`);
           }
+        }
+      }
+
+      // IMPORTANTE: Elimina le presenze esistenti per i giorni di ferie
+      // Le ferie non sono presenze, sono giorni di assenza giustificata
+      const start = new Date(updatedRequest.start_date);
+      const end = new Date(updatedRequest.end_date);
+      const vacationDates = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        vacationDates.push(d.toISOString().split('T')[0]);
+      }
+
+      // Elimina tutte le presenze per i giorni di ferie
+      for (const dateStr of vacationDates) {
+        const { error: deleteError } = await supabase
+          .from('attendance')
+          .delete()
+          .eq('user_id', updatedRequest.user_id)
+          .eq('date', dateStr);
+
+        if (deleteError) {
+          console.error(`❌ [APPROVAZIONE FERIE] Errore eliminazione presenza per ${dateStr}:`, deleteError);
+        } else {
+          console.log(`✅ [APPROVAZIONE FERIE] Presenza eliminata per ${dateStr} (giorno di ferie)`);
         }
       }
     }

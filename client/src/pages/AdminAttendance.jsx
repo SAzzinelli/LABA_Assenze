@@ -85,6 +85,9 @@ const AdminAttendance = () => {
   // Malattie di oggi
   const [sickToday, setSickToday] = useState([]);
 
+  // Ferie di oggi
+  const [vacationsToday, setVacationsToday] = useState([]);
+
   // Permessi 104 di oggi
   const [permissions104Today, setPermissions104Today] = useState([]);
 
@@ -117,6 +120,7 @@ const AdminAttendance = () => {
         fetchAllEmployees(),  // Questo ora carica anche i permessi internamente
         fetchWorkSchedules(),
         fetchSickToday(),
+        fetchVacationsToday(),
         fetch104Today(),
         fetchStats()
       ]);
@@ -133,6 +137,7 @@ const AdminAttendance = () => {
       // Dati dinamici
       fetchAttendanceData();
       fetchSickToday();
+      fetchVacationsToday();
       fetch104Today();
       fetchStats();
       // Evita di ricaricare ad ogni tick liste relativamente statiche
@@ -411,6 +416,42 @@ const AdminAttendance = () => {
     }
   };
 
+  const fetchVacationsToday = async () => {
+    try {
+      const { user } = useAuthStore.getState();
+      if (user?.role !== 'admin') {
+        console.log('⚠️ Access denied to vacations-today (expected for non-admin)');
+        return;
+      }
+
+      console.log('🔄 Fetching vacation requests for today...');
+      const today = getTodayLocal();
+      const response = await apiCall(`/api/leave-requests?type=vacation&status=approved`);
+      if (response.ok) {
+        const data = await response.json();
+        // Filtra solo le ferie che includono oggi
+        const todayVacations = data.filter(vacation => {
+          const start = new Date(vacation.startDate || vacation.start_date);
+          const end = new Date(vacation.endDate || vacation.end_date);
+          const todayDate = new Date(today);
+          return todayDate >= start && todayDate <= end;
+        });
+        console.log('🏖️ Vacation requests for today:', todayVacations);
+        setVacationsToday(todayVacations);
+      } else if (response.status === 403) {
+        console.log('⚠️ Access denied to vacations-today (expected for non-admin)');
+      } else {
+        console.error('❌ Failed to fetch vacation requests:', response.status, response.statusText);
+      }
+    } catch (error) {
+      if (error.message?.includes('403') || error.message?.includes('Accesso negato')) {
+        console.log('⚠️ Access denied to vacations-today (expected for non-admin)');
+        return;
+      }
+      console.error('❌ Error fetching vacation requests:', error);
+    }
+  };
+
   const fetchPermissionHoursForEmployeesList = async (employeesList) => {
     try {
       const employees = employeesList || allEmployees;
@@ -547,6 +588,7 @@ const AdminAttendance = () => {
       case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';
+      case 'vacation': return 'bg-purple-900 text-purple-100 border-purple-700';
       case 'permission_104': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -562,6 +604,7 @@ const AdminAttendance = () => {
       case 'not_started': return 'Non iniziato';
       case 'absent': return 'Assente';
       case 'sick_leave': return 'In malattia';
+      case 'vacation': return 'In Ferie';
       case 'permission_104': return 'Permesso 104';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
@@ -620,7 +663,7 @@ const AdminAttendance = () => {
     const isToday = recordDate === today;
     const isFuture = recordDateObj > todayDate;
 
-    // Se è oggi, controlla prima se è in malattia (PRIORITÀ MASSIMA)
+    // Se è oggi, controlla prima se è in malattia o ferie (PRIORITÀ MASSIMA)
     if (isToday) {
       // Check sick leave
       const isSickToday = sickToday.some(sickRequest =>
@@ -635,6 +678,23 @@ const AdminAttendance = () => {
           actualHours: 0,
           balanceHours: 0,
           status: 'sick_leave',
+          isPresent: false
+        };
+      }
+
+      // Check vacation
+      const isVacationToday = vacationsToday.some(vacation =>
+        vacation.user_id === record.user_id &&
+        new Date(vacation.startDate || vacation.start_date) <= new Date(today) &&
+        new Date(vacation.endDate || vacation.end_date) >= new Date(today)
+      );
+
+      if (isVacationToday) {
+        return {
+          expectedHours: 0,
+          actualHours: 0,
+          balanceHours: 0,
+          status: 'vacation',
           isPresent: false
         };
       }
@@ -706,11 +766,19 @@ const AdminAttendance = () => {
         const balance = record.balance_hours !== undefined ? record.balance_hours : (actual - expected);
         
         // Determina status in base ai dati
+        // IMPORTANTE: Controlla prima se c'è una ferie approvata (leave_type)
         let status = 'completed';
-        if (actual === 0 && expected > 0) status = 'absent';
-        if (record.notes && record.notes.includes('Malattia')) status = 'sick_leave';
-        if (record.notes && record.notes.includes('Ferie')) status = 'holiday';
-        if (expected === 0) status = 'non_working_day';
+        if (record.leave_type === 'vacation') {
+          status = 'vacation';
+        } else if (actual === 0 && expected > 0) {
+          status = 'absent';
+        } else if (record.notes && record.notes.includes('Malattia')) {
+          status = 'sick_leave';
+        } else if (record.notes && record.notes.includes('Ferie')) {
+          status = 'vacation';
+        } else if (expected === 0) {
+          status = 'non_working_day';
+        }
         
         return {
           expectedHours: expected,
@@ -1332,7 +1400,7 @@ const AdminAttendance = () => {
                     >
                       Dettagli
                     </button>
-                    {!record.is_realtime && (
+                    {!record.is_realtime && !record.is_vacation && (
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
@@ -1493,12 +1561,12 @@ const AdminAttendance = () => {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleEditRecord(record)}
-                                disabled={record.is_realtime}
-                                className={`p-2 rounded-lg transition-colors ${record.is_realtime
+                                disabled={record.is_realtime || record.is_vacation}
+                                className={`p-2 rounded-lg transition-colors ${record.is_realtime || record.is_vacation
                                   ? 'text-slate-500 cursor-not-allowed opacity-50'
                                   : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20'
                                   }`}
-                                title={record.is_realtime ? "Dati real-time non modificabili" : "Modifica record"}
+                                title={record.is_realtime ? "Dati real-time non modificabili" : record.is_vacation ? "Giorno di ferie non modificabile" : "Modifica record"}
                               >
                                 <Edit3 className="h-4 w-4" />
                               </button>
@@ -1507,12 +1575,12 @@ const AdminAttendance = () => {
                                   setRecordToDelete(record);
                                   setShowDeleteConfirm(true);
                                 }}
-                                disabled={record.is_realtime}
-                                className={`p-2 rounded-lg transition-colors ${record.is_realtime
+                                disabled={record.is_realtime || record.is_vacation}
+                                className={`p-2 rounded-lg transition-colors ${record.is_realtime || record.is_vacation
                                   ? 'text-slate-500 cursor-not-allowed opacity-50'
                                   : 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
                                   }`}
-                                title={record.is_realtime ? "Dati real-time non eliminabili" : "Elimina record"}
+                                title={record.is_realtime ? "Dati real-time non eliminabili" : record.is_vacation ? "Giorno di ferie non eliminabile" : "Elimina record"}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>
