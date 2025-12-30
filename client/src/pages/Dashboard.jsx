@@ -291,11 +291,23 @@ const Dashboard = () => {
   const calculateAdminRealTimeData = () => {
     console.log('🔄 Admin dashboard calculating real-time data...');
     console.log('🔍 Current attendance state:', currentAttendance);
+    console.log('🔍 Current attendance length:', currentAttendance?.length || 0);
     
     if (!currentAttendance || currentAttendance.length === 0) {
       console.log('⚠️ No data available for admin real-time calculation');
+      setAdminRealTimeData([]);
       return;
     }
+    
+    // Log status breakdown prima del processing
+    const statusBreakdown = {
+      vacation: currentAttendance.filter(e => e.status === 'vacation').length,
+      working: currentAttendance.filter(e => e.status === 'working').length,
+      sick_leave: currentAttendance.filter(e => e.status === 'sick_leave').length,
+      permission_104: currentAttendance.filter(e => e.status === 'permission_104').length,
+      other: currentAttendance.filter(e => !['vacation', 'working', 'sick_leave', 'permission_104'].includes(e.status)).length
+    };
+    console.log('🔍 Status breakdown BEFORE processing:', statusBreakdown);
 
     const now = new Date();
     const currentHour = now.getHours();
@@ -348,7 +360,16 @@ const Dashboard = () => {
       };
     });
     
+    // Log status breakdown dopo il processing
+    const finalStatusBreakdown = {
+      vacation: realTimeData.filter(e => e.status === 'vacation').length,
+      working: realTimeData.filter(e => e.status === 'working').length,
+      sick_leave: realTimeData.filter(e => e.status === 'sick_leave').length,
+      permission_104: realTimeData.filter(e => e.status === 'permission_104').length,
+      other: realTimeData.filter(e => !['vacation', 'working', 'sick_leave', 'permission_104'].includes(e.status)).length
+    };
     console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
+    console.log('🔍 Status breakdown AFTER processing:', finalStatusBreakdown);
     setAdminRealTimeData(realTimeData);
   };
 
