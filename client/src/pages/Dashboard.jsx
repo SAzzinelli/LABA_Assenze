@@ -1137,9 +1137,15 @@ const Dashboard = () => {
             </div>
           
           {!presentNowCollapsed && (() => {
-            // Filtra solo quelli che sono effettivamente presenti (escludi ferie, malattia, permessi 104, non lavorativi)
+            // Includi tutti i dipendenti con status rilevanti (lavoro, pausa, ferie, malattia, permessi 104)
+            // Escludi solo quelli con status 'non_working_day' o 'absent' senza giustificazione
             const presentNow = adminRealTimeData.filter(person => 
-              person.status === 'working' || person.status === 'on_break'
+              person.status === 'working' || 
+              person.status === 'on_break' || 
+              person.status === 'vacation' ||
+              person.status === 'sick_leave' ||
+              person.status === 'permission_104' ||
+              person.status === 'completed'
             );
             
             return presentNow.length > 0 ? (
