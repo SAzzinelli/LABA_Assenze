@@ -858,15 +858,25 @@ const Attendance = () => {
 
 
   function computeStatusInfo(record = {}) {
-    const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0 } = record;
+    const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0, is_vacation } = record;
     const hasWorked = actual_hours > 0;
 
     const badgeClasses = {
       green: 'bg-green-500/20 text-green-300 border border-green-400/30',
       yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
       red: 'bg-red-500/20 text-red-300 border border-red-400/30',
-      gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+      gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30',
+      purple: 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
     };
+
+    // Controlla prima se è in ferie (is_vacation o leave_type === 'vacation')
+    if (is_vacation || leave_type === 'vacation') {
+      return {
+        text: 'In Ferie',
+        colorClass: 'text-purple-400',
+        badgeClass: badgeClasses.purple
+      };
+    }
 
     if (is_justified_absence && leave_type === 'permission' && hasWorked) {
       return {

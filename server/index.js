@@ -2884,6 +2884,25 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     }
     console.log(`🔵 Permessi 104 oggi:`, Object.keys(perm104Map).length);
 
+    // Recupera ferie approvate per oggi (SEMPRE da leave_requests - dati reali)
+    const { data: vacationToday, error: vacationError } = await supabase
+      .from('leave_requests')
+      .select('user_id, start_date, end_date')
+      .eq('type', 'vacation')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today);
+
+    // Crea mappa user_id -> date per ferie
+    const vacationMap = {};
+    if (vacationToday && !vacationError) {
+      vacationToday.forEach(v => {
+        if (!vacationMap[v.user_id]) vacationMap[v.user_id] = [];
+        vacationMap[v.user_id].push({ start: v.start_date, end: v.end_date });
+      });
+    }
+    console.log(`🏖️ Ferie oggi:`, Object.keys(vacationMap).length);
+
     // Recupera permessi approvati per oggi per tutti gli utenti (SEMPRE da leave_requests - dati reali)
     const { data: permissionsToday, error: permError } = await supabase
       .from('leave_requests')
@@ -2977,6 +2996,27 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           actual_hours: 0, // Con permesso 104, NON ha lavorato (è assente giustificata)
           expected_hours: expectedHours, // Ore complete della giornata lavorativa
           balance_hours: 0, // Non influenzano la banca ore
+          permission_end_time: null
+        };
+      }
+
+      // Controlla se è in ferie (usa la data dell'utente se in test mode)
+      const userVacation = vacationMap[user.id]?.some(v =>
+        userToday >= v.start && userToday <= v.end
+      );
+      if (userVacation) {
+        console.log(`🏖️ ${user.first_name} è in ferie oggi`);
+        return {
+          user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: true,
+          status: 'vacation',
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0,
           permission_end_time: null
         };
       }
@@ -4046,6 +4086,37 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
     }
 
     console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
+
+    // Controlla se l'utente è in ferie approvate per oggi
+    const { data: vacationToday, error: vacationError } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date')
+      .eq('user_id', userId)
+      .eq('type', 'vacation')
+      .eq('status', 'approved')
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .single();
+
+    if (vacationToday && !vacationError) {
+      console.log(`🏖️ [current-hours] User is on vacation today`);
+      return res.json({
+        isWorkingDay: true,
+        schedule: {
+          start_time: schedule.start_time,
+          end_time: schedule.end_time,
+          break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
+        },
+        currentTime,
+        expectedHours: 0,
+        contractHours: 0,
+        actualHours: 0,
+        balanceHours: 0,
+        remainingHours: 0,
+        status: 'vacation',
+        progress: 0
+      });
+    }
 
     // Controlla se l'utente ha un permesso 104 approvato per oggi
     const { data: perm104Today, error: perm104Error } = await supabase

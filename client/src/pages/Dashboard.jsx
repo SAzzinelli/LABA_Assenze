@@ -607,11 +607,13 @@ const Dashboard = () => {
             const todayContractHours = currentHoursData.contractHours ?? currentHoursData.expectedHours ?? 0;
             const remainingTodayHours = currentHoursData.remainingHours ?? Math.max(0, (currentHoursData.expectedHours || 0) - todayHours);
             
-            // Se c'è un permesso 104, mostra "Permesso 104" invece delle ore
+            // Se c'è un permesso 104 o è in ferie, mostra lo status invece delle ore
             const workedTodayDisplay = currentHoursData.status === 'permission_104' 
               ? 'Permesso 104' 
+              : currentHoursData.status === 'vacation'
+              ? 'In Ferie'
               : formatHours(todayHours);
-            const remainingTodayDisplay = currentHoursData.status === 'permission_104' 
+            const remainingTodayDisplay = currentHoursData.status === 'permission_104' || currentHoursData.status === 'vacation'
               ? '0h 0m' 
               : formatHours(remainingTodayHours);
             
@@ -1135,6 +1137,7 @@ const Dashboard = () => {
             </div>
           
           {!presentNowCollapsed && (() => {
+            // Filtra solo quelli che sono effettivamente presenti (escludi ferie, malattia, permessi 104, non lavorativi)
             const presentNow = adminRealTimeData.filter(person => 
               person.status === 'working' || person.status === 'on_break'
             );
@@ -1176,6 +1179,10 @@ const Dashboard = () => {
                   badgeColor = 'bg-blue-600';
                   statusText = 'Permesso 104';
                   statusColor = 'text-blue-300';
+                } else if (person.status === 'vacation') {
+                  badgeColor = 'bg-purple-500';
+                  statusText = 'In Ferie';
+                  statusColor = 'text-purple-400';
                 } else if (person.status === 'non_working_day') {
                   badgeColor = 'bg-gray-600';
                   statusText = 'Non lavorativo';
