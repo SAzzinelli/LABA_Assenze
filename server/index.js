@@ -6242,11 +6242,17 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           console.log(`🔍 [NOTIFICA] Permission type: ${permissionType}, hours: ${hours}, exit_time: ${newRequest.exit_time}, entry_time: ${newRequest.entry_time}`);
           
           // Se è un permesso per tutta la giornata, controlla permission_type
-          // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa, non 0
-          // Controlla PRIMA permission_type, poi il fallback
+          // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa (circa 7-8h), non 0
+          // Controlla PRIMA permission_type, poi il fallback per richieste vecchie
+          const hasNoTimeFields = !newRequest.exit_time && !newRequest.entry_time;
+          const isStandardFullDayHours = hours >= 7 && hours <= 8.5; // Range tipico per una giornata lavorativa (7-8.5h)
+          
           const isFullDay = permissionType === 'full_day' || 
                            permissionType === 'tutta_giornata' ||
-                           (hours === 0 && !newRequest.exit_time && !newRequest.entry_time && permissionType !== 'early_exit' && permissionType !== 'late_entry' && permissionType !== null && permissionType !== undefined);
+                           // Fallback per richieste vecchie: se hours è 0 E non ci sono time fields, è full_day
+                           (hours === 0 && hasNoTimeFields && permissionType !== 'early_exit' && permissionType !== 'late_entry') ||
+                           // Fallback per richieste vecchie: se hours è standard (7-8.5h) E non ci sono time fields E permission_type è null/undefined, probabilmente è full_day
+                           (isStandardFullDayHours && hasNoTimeFields && (permissionType === null || permissionType === undefined));
           
           let hoursFormatted;
           if (isFullDay) {
@@ -6257,7 +6263,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             hoursFormatted = '0h';
           }
           
-          console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}, permissionType check: ${permissionType === 'full_day'}, ${permissionType === 'tutta_giornata'}`);
+          console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}, permissionType check: ${permissionType === 'full_day'}, ${permissionType === 'tutta_giornata'}, hasNoTimeFields: ${hasNoTimeFields}, isStandardFullDayHours: ${isStandardFullDayHours}`);
           messageText = `${userName} ha richiesto un ${requestTypeText} ${isFullDay ? '' : `di ${hoursFormatted}`} per il ${formattedStartDate}`;
         } else {
           // FERIE/MALATTIA: sono in GIORNI
