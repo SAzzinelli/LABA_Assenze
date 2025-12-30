@@ -6221,9 +6221,15 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           const hours = newRequest.hours || 0;
           const permissionType = newRequest.permission_type;
           
+          // Debug log per verificare i valori
+          console.log(`🔍 [NOTIFICA] Permission type: ${permissionType}, hours: ${hours}, exit_time: ${newRequest.exit_time}, entry_time: ${newRequest.entry_time}`);
+          
           // Se è un permesso per tutta la giornata, controlla permission_type
           // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa, non 0
-          const isFullDay = permissionType === 'full_day' || permissionType === 'tutta_giornata';
+          // Inoltre, se hours è 0 e non ci sono exit_time/entry_time, potrebbe essere full_day
+          const isFullDay = permissionType === 'full_day' || 
+                           permissionType === 'tutta_giornata' ||
+                           (hours === 0 && !newRequest.exit_time && !newRequest.entry_time && permissionType !== 'early_exit' && permissionType !== 'late_entry');
           
           let hoursFormatted;
           if (isFullDay) {
@@ -6234,6 +6240,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             hoursFormatted = '0h';
           }
           
+          console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}`);
           messageText = `${userName} ha richiesto un ${requestTypeText} ${isFullDay ? '' : `di ${hoursFormatted}`} per il ${formattedStartDate}`;
         } else {
           // FERIE/MALATTIA: sono in GIORNI
