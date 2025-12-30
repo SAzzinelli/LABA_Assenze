@@ -6169,10 +6169,25 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
         if (type === 'permission' || type === 'permission_104') {
           // PERMESSI: sono in ORE, non giorni
           const hours = newRequest.hours || 0;
-          const hoursFormatted = hours > 0
-            ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
-            : '0h';
-          messageText = `${userName} ha richiesto un ${requestTypeText} di ${hoursFormatted} per il ${formattedStartDate}`;
+          const permissionType = newRequest.permission_type;
+          
+          // Se è un permesso per tutta la giornata (senza exit_time/entry_time specifici e hours = 0)
+          // oppure se permission_type è 'tutta_giornata' o simile
+          const isFullDay = (hours === 0 || hours === null) && 
+                           !newRequest.exit_time && 
+                           !newRequest.entry_time &&
+                           (permissionType === 'tutta_giornata' || permissionType === 'full_day' || !permissionType);
+          
+          let hoursFormatted;
+          if (isFullDay) {
+            hoursFormatted = 'Tutta la giornata';
+          } else if (hours > 0) {
+            hoursFormatted = `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`;
+          } else {
+            hoursFormatted = '0h';
+          }
+          
+          messageText = `${userName} ha richiesto un ${requestTypeText} ${isFullDay ? '' : `di ${hoursFormatted}`} per il ${formattedStartDate}`;
         } else {
           // FERIE/MALATTIA: sono in GIORNI
           if (startDate === endDate) {
