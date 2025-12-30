@@ -247,8 +247,17 @@ const Dashboard = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('🔍 Fetched current attendance data:', data);
+        console.log('🔍 Status breakdown:', {
+          working: data.filter(e => e.status === 'working').length,
+          on_break: data.filter(e => e.status === 'on_break').length,
+          vacation: data.filter(e => e.status === 'vacation').length,
+          sick_leave: data.filter(e => e.status === 'sick_leave').length,
+          permission_104: data.filter(e => e.status === 'permission_104').length,
+          completed: data.filter(e => e.status === 'completed').length,
+          other: data.filter(e => !['working', 'on_break', 'vacation', 'sick_leave', 'permission_104', 'completed'].includes(e.status)).length
+        });
         setCurrentAttendance(data);
-        console.log('📊 Current attendance loaded:', data.length, 'employees currently working');
+        console.log('📊 Current attendance loaded:', data.length, 'employees');
       } else if (response.status === 403) {
         // 403 è atteso per non-admin, ignora silenziosamente
         console.log('⚠️ Access denied to current attendance (expected for non-admin)');
@@ -1151,14 +1160,33 @@ const Dashboard = () => {
           {!presentNowCollapsed && (() => {
             // Includi tutti i dipendenti con status rilevanti (lavoro, pausa, ferie, malattia, permessi 104)
             // Escludi solo quelli con status 'non_working_day' o 'absent' senza giustificazione
-            const presentNow = adminRealTimeData.filter(person => 
-              person.status === 'working' || 
-              person.status === 'on_break' || 
-              person.status === 'vacation' ||
-              person.status === 'sick_leave' ||
-              person.status === 'permission_104' ||
-              person.status === 'completed'
-            );
+            console.log('🔍 [Dashboard] adminRealTimeData:', adminRealTimeData);
+            console.log('🔍 [Dashboard] adminRealTimeData length:', adminRealTimeData.length);
+            
+            const presentNow = adminRealTimeData.filter(person => {
+              const shouldInclude = person.status === 'working' || 
+                person.status === 'on_break' || 
+                person.status === 'vacation' ||
+                person.status === 'sick_leave' ||
+                person.status === 'permission_104' ||
+                person.status === 'completed';
+              
+              if (person.status === 'vacation') {
+                console.log('🏖️ [Dashboard] Trovato dipendente in ferie:', person.name, person.status);
+              }
+              
+              return shouldInclude;
+            });
+            
+            console.log('🔍 [Dashboard] presentNow filtered:', presentNow.length, 'dipendenti');
+            console.log('🔍 [Dashboard] presentNow status breakdown:', {
+              working: presentNow.filter(p => p.status === 'working').length,
+              on_break: presentNow.filter(p => p.status === 'on_break').length,
+              vacation: presentNow.filter(p => p.status === 'vacation').length,
+              sick_leave: presentNow.filter(p => p.status === 'sick_leave').length,
+              permission_104: presentNow.filter(p => p.status === 'permission_104').length,
+              completed: presentNow.filter(p => p.status === 'completed').length
+            });
             
             return presentNow.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
