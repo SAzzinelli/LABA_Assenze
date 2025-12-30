@@ -294,6 +294,18 @@ const Dashboard = () => {
 
     // Ricalcola lo status real-time per ogni employee
     const realTimeData = currentAttendance.map(employee => {
+      // IMPORTANTE: Preserva lo status per ferie, malattia, permessi 104
+      // Questi status non devono essere modificati
+      if (employee.status === 'vacation' || employee.status === 'sick_leave' || employee.status === 'permission_104') {
+        console.log(`👤 ${employee.first_name} ${employee.last_name}: status=${employee.status} (preservato)`);
+        return {
+          ...employee,
+          status: employee.status,
+          is_working_day: employee.is_working_day || true,
+          is_absent: false
+        };
+      }
+
       // Trova lo schedule per oggi
       const todaySchedule = workSchedules.find(schedule => 
         schedule.user_id === employee.user_id && 
