@@ -6171,12 +6171,9 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           const hours = newRequest.hours || 0;
           const permissionType = newRequest.permission_type;
           
-          // Se è un permesso per tutta la giornata (senza exit_time/entry_time specifici e hours = 0)
-          // oppure se permission_type è 'tutta_giornata' o simile
-          const isFullDay = (hours === 0 || hours === null) && 
-                           !newRequest.exit_time && 
-                           !newRequest.entry_time &&
-                           (permissionType === 'tutta_giornata' || permissionType === 'full_day' || !permissionType);
+          // Se è un permesso per tutta la giornata, controlla permission_type
+          // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa, non 0
+          const isFullDay = permissionType === 'full_day' || permissionType === 'tutta_giornata';
           
           let hoursFormatted;
           if (isFullDay) {

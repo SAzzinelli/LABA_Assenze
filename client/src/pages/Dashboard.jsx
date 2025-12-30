@@ -243,11 +243,12 @@ const Dashboard = () => {
         return;
       }
       
-      const response = await apiCall('/api/attendance/current');
+      // Forza refresh senza cache aggiungendo timestamp
+      const response = await apiCall(`/api/attendance/current?t=${Date.now()}`);
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 Fetched current attendance data:', data);
-        console.log('🔍 Status breakdown:', {
+        console.log('🔍 [Dashboard] Fetched current attendance data:', data);
+        console.log('🔍 [Dashboard] Status breakdown:', {
           working: data.filter(e => e.status === 'working').length,
           on_break: data.filter(e => e.status === 'on_break').length,
           vacation: data.filter(e => e.status === 'vacation').length,
@@ -256,8 +257,17 @@ const Dashboard = () => {
           completed: data.filter(e => e.status === 'completed').length,
           other: data.filter(e => !['working', 'on_break', 'vacation', 'sick_leave', 'permission_104', 'completed'].includes(e.status)).length
         });
+        
+        // Log specifico per dipendenti in ferie
+        const vacationEmployees = data.filter(e => e.status === 'vacation');
+        if (vacationEmployees.length > 0) {
+          console.log('🏖️ [Dashboard] Dipendenti in ferie trovati:', vacationEmployees.map(e => `${e.first_name} ${e.last_name} (${e.status})`));
+        } else {
+          console.log('⚠️ [Dashboard] Nessun dipendente in ferie trovato nei dati');
+        }
+        
         setCurrentAttendance(data);
-        console.log('📊 Current attendance loaded:', data.length, 'employees');
+        console.log('📊 [Dashboard] Current attendance loaded:', data.length, 'employees');
       } else if (response.status === 403) {
         // 403 è atteso per non-admin, ignora silenziosamente
         console.log('⚠️ Access denied to current attendance (expected for non-admin)');
