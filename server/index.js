@@ -18,6 +18,51 @@ const cron = require('node-cron');
 const XLSX = require('xlsx');
 require('dotenv').config();
 
+/**
+ * Helper function per formattare nomi duplicati per Google Calendar e log
+ * Silvia Consorti -> Silvia 1, Silvia Nardi-Dei -> Silvia 2
+ * @param {string} firstName - Nome
+ * @param {string} lastName - Cognome
+ * @param {Array} allUsers - Array di tutti gli utenti con {first_name, last_name}
+ * @returns {string} Nome formattato (es. "Silvia 1" o "Silvia 2")
+ */
+function formatNameForCalendarAndLogs(firstName, lastName, allUsers = []) {
+  // Se non ci sono altri utenti, usa il nome completo
+  if (!allUsers || allUsers.length === 0) {
+    return `${firstName} ${lastName}`;
+  }
+
+  // Trova tutti gli utenti con lo stesso first_name
+  const sameFirstName = allUsers.filter(u => 
+    u.first_name && u.first_name.toLowerCase() === firstName.toLowerCase()
+  );
+
+  // Se c'è solo uno con questo nome, usa il nome completo
+  if (sameFirstName.length <= 1) {
+    return `${firstName} ${lastName}`;
+  }
+
+  // Ordina per cognome alfabeticamente
+  const sorted = sameFirstName.sort((a, b) => {
+    const aLast = (a.last_name || '').toLowerCase();
+    const bLast = (b.last_name || '').toLowerCase();
+    return aLast.localeCompare(bLast);
+  });
+
+  // Trova l'indice di questo utente nell'array ordinato
+  const index = sorted.findIndex(u => 
+    u.last_name && u.last_name.toLowerCase() === lastName.toLowerCase()
+  );
+
+  // Se non trovato, usa il nome completo
+  if (index === -1) {
+    return `${firstName} ${lastName}`;
+  }
+
+  // Restituisci "Nome 1" o "Nome 2" in base all'indice (1-based)
+  return `${firstName} ${index + 1}`;
+}
+
 // Rate limiting rimosso per facilitare i test
 
 const app = express();
@@ -3005,7 +3050,12 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         userToday >= v.start && userToday <= v.end
       );
       if (userVacation) {
-        console.log(`🏖️ ${user.first_name} è in ferie oggi`);
+        const formattedName = formatNameForCalendarAndLogs(
+          user.first_name,
+          user.last_name,
+          allUsers || []
+        );
+        console.log(`🏖️ ${formattedName} è in ferie oggi`);
         return {
           user_id: user.id,
           first_name: user.first_name,
@@ -7038,7 +7088,16 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          // Recupera tutti gli utenti per formattare nomi duplicati
+          const { data: allUsers } = await supabase
+            .from('users')
+            .select('first_name, last_name');
+          
+          const userName = formatNameForCalendarAndLogs(
+            employee.first_name,
+            employee.last_name,
+            allUsers || []
+          );
           console.log(`📅 [APPROVAZIONE FERIE] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
@@ -7221,7 +7280,16 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          // Recupera tutti gli utenti per formattare nomi duplicati
+          const { data: allUsers } = await supabase
+            .from('users')
+            .select('first_name, last_name');
+          
+          const userName = formatNameForCalendarAndLogs(
+            employee.first_name,
+            employee.last_name,
+            allUsers || []
+          );
           console.log(`📅 [APPROVAZIONE PERMESSO 104] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
@@ -7512,7 +7580,16 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           .single();
 
         if (!empError && employee) {
-          const userName = `${employee.first_name} ${employee.last_name}`;
+          // Recupera tutti gli utenti per formattare nomi duplicati
+          const { data: allUsers } = await supabase
+            .from('users')
+            .select('first_name, last_name');
+          
+          const userName = formatNameForCalendarAndLogs(
+            employee.first_name,
+            employee.last_name,
+            allUsers || []
+          );
           console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
           
           const calendarResult = await addPermissionEvent({
