@@ -189,6 +189,29 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
             <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-400 text-lg">Nessun dettaglio disponibile per questa data</p>
           </div>
+        ) : details.is_vacation ? (
+          <div className="text-center py-8">
+            <div className="bg-purple-500/20 border-2 border-purple-500 rounded-lg p-6 mb-4">
+              <p className="text-purple-300 text-xl font-semibold mb-2">In Ferie</p>
+              <p className="text-slate-400">
+                {details.summary.employee} è in ferie il {new Date(details.summary.date).toLocaleDateString('it-IT')}
+              </p>
+              <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-sm text-slate-400">Ore Attese</p>
+                  <p className="text-lg font-bold text-blue-400">0h 0m</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Ore Effettive</p>
+                  <p className="text-lg font-bold text-green-400">0h 0m</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Saldo Ore</p>
+                  <p className="text-lg font-bold text-slate-400">0h 0m</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             {/* Riepilogo principale */}

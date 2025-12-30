@@ -1593,7 +1593,7 @@ const AdminAttendance = () => {
                                 <Trash2 className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleViewAttendanceDetails(record)}
+                                onClick={(e) => { e.stopPropagation(); handleViewAttendanceDetails(record); }}
                                 className="p-2 text-green-400 hover:text-green-300 hover:bg-green-900/20 rounded-lg transition-colors"
                                 title="Visualizza dettagli presenze"
                               >

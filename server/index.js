@@ -4427,7 +4427,44 @@ app.get('/api/attendance/details', authenticateToken, async (req, res) => {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // Nessun record trovato
+        // Nessun record trovato - controlla se è una ferie approvata
+        const { data: vacationToday } = await supabase
+          .from('leave_requests')
+          .select('*, users!inner(first_name, last_name, email)')
+          .eq('user_id', targetUserId)
+          .eq('type', 'vacation')
+          .eq('status', 'approved')
+          .lte('start_date', date)
+          .gte('end_date', date)
+          .single();
+
+        if (vacationToday) {
+          // È una ferie approvata - restituisci informazioni appropriate
+          const { data: user } = await supabase
+            .from('users')
+            .select('first_name, last_name, email')
+            .eq('id', targetUserId)
+            .single();
+
+          return res.json({
+            success: true,
+            details: {
+              summary: {
+                employee: user ? `${user.first_name} ${user.last_name}` : 'N/A',
+                date: date,
+                expectedHours: 0,
+                actualHours: 0,
+                balanceHours: 0,
+                status: 'In Ferie'
+              },
+              schedule: null,
+              is_vacation: true
+            },
+            message: 'Giorno di ferie'
+          });
+        }
+
+        // Nessun record trovato e non è una ferie
         return res.json({
           success: true,
           details: null,
