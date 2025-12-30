@@ -3349,14 +3349,30 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     console.log(`🔍 Total calculated attendance records: ${currentAttendance.length}`);
     console.log(`🔍 All records:`, currentAttendance.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h)`));
 
-    // Modalità predefinita: restituisci SOLO i presenti ora (working/on_break/present)
-    // Se necessario, in futuro possiamo aggiungere una query (?includeScheduled=true) per includere anche not_started/completed
+    // Modalità predefinita: restituisci i presenti ora (working/on_break/present) E anche ferie/malattia/permessi 104
+    // Include anche completed per mostrare chi ha finito la giornata
     const presentNow = currentAttendance.filter(emp =>
-      emp.is_working_day && (emp.status === 'working' || emp.status === 'on_break' || emp.status === 'present')
+      emp.is_working_day && (
+        emp.status === 'working' || 
+        emp.status === 'on_break' || 
+        emp.status === 'present' ||
+        emp.status === 'vacation' ||
+        emp.status === 'sick_leave' ||
+        emp.status === 'permission_104' ||
+        emp.status === 'completed'
+      )
     );
 
     console.log(`🔍 Present now: ${presentNow.length}`);
     console.log(`🔍 Records:`, presentNow.map(emp => `${emp.name}: ${emp.status} (${emp.actual_hours}h/${emp.expected_hours}h)`));
+    console.log(`🔍 Status breakdown:`, {
+      working: presentNow.filter(e => e.status === 'working').length,
+      on_break: presentNow.filter(e => e.status === 'on_break').length,
+      vacation: presentNow.filter(e => e.status === 'vacation').length,
+      sick_leave: presentNow.filter(e => e.status === 'sick_leave').length,
+      permission_104: presentNow.filter(e => e.status === 'permission_104').length,
+      completed: presentNow.filter(e => e.status === 'completed').length
+    });
 
     res.json(presentNow);
   } catch (error) {
@@ -6221,15 +6237,16 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           const hours = newRequest.hours || 0;
           const permissionType = newRequest.permission_type;
           
-          // Debug log per verificare i valori
+          // Debug log per verificare i valori - log completo di newRequest
+          console.log(`🔍 [NOTIFICA] Full newRequest object:`, JSON.stringify(newRequest, null, 2));
           console.log(`🔍 [NOTIFICA] Permission type: ${permissionType}, hours: ${hours}, exit_time: ${newRequest.exit_time}, entry_time: ${newRequest.entry_time}`);
           
           // Se è un permesso per tutta la giornata, controlla permission_type
           // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa, non 0
-          // Inoltre, se hours è 0 e non ci sono exit_time/entry_time, potrebbe essere full_day
+          // Controlla PRIMA permission_type, poi il fallback
           const isFullDay = permissionType === 'full_day' || 
                            permissionType === 'tutta_giornata' ||
-                           (hours === 0 && !newRequest.exit_time && !newRequest.entry_time && permissionType !== 'early_exit' && permissionType !== 'late_entry');
+                           (hours === 0 && !newRequest.exit_time && !newRequest.entry_time && permissionType !== 'early_exit' && permissionType !== 'late_entry' && permissionType !== null && permissionType !== undefined);
           
           let hoursFormatted;
           if (isFullDay) {
@@ -6240,7 +6257,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
             hoursFormatted = '0h';
           }
           
-          console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}`);
+          console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}, permissionType check: ${permissionType === 'full_day'}, ${permissionType === 'tutta_giornata'}`);
           messageText = `${userName} ha richiesto un ${requestTypeText} ${isFullDay ? '' : `di ${hoursFormatted}`} per il ${formattedStartDate}`;
         } else {
           // FERIE/MALATTIA: sono in GIORNI
