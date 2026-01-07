@@ -1439,6 +1439,9 @@ const LeaveRequests = () => {
           // 1. Separate requests into categories
           // Filter helper for Month/Year
           const matchesFilters = (req) => {
+            // Se l'utente non è admin, mostra tutto (non filtrare per mese/anno di default)
+            if (user?.role !== 'admin') return true;
+
             const rDate = parseRequestDate(req);
             if (!rDate) return false;
             return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
