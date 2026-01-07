@@ -59,10 +59,8 @@ const LeaveRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Tab per admin
-  const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
-  // Sotto-tab per "Imminenti" per separare pending da approved
-  const [imminentiSubTab, setImminentiSubTab] = useState('approvate'); // 'in_approvazione' | 'approvate'
+  // Accordion state for passate
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Stati per dialog di approvazione/rifiuto/annullamento/modifica
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -105,15 +103,8 @@ const LeaveRequests = () => {
         const data = await response.json();
         setRequests(data);
 
-        // Smart Tab Logic: Se ci sono richieste pending, vai su "In Approvazione"
-        if (user?.role === 'admin') {
-          const hasPending = data.some(r => r.status === 'pending');
-          if (hasPending) {
-            setImminentiSubTab('in_approvazione');
-          } else {
-            setImminentiSubTab('approvate');
-          }
-        }
+        // Smart Tab Logic rimosso per layout a singola pagina
+        // Le richieste pending vengono mostrate automaticamente nella sezione prioritaria "Da Approvare"
       } else {
         console.error('Errore nel recupero delle richieste');
       }
@@ -917,12 +908,19 @@ const LeaveRequests = () => {
             return dateA - dateB;
           });
       } else {
-        // Tab "Cronologia": filtra per mese/anno selezionato (tutti gli status)
+        // Tab "Cronologia" (ora "Passate"): filtra per mese/anno selezionato MA escludi date future
         filtered = filtered.filter(request => {
           const requestDate = parseRequestDate(request);
           if (!requestDate) return false;
-          // Filtra per mese/anno - include tutti gli status (pending, approved, rejected)
-          return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+
+          // Filtra per mese/anno
+          const matchesMonth = requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+          if (!matchesMonth) return false;
+
+          // Per "Passate", non mostrare permessi futuri
+          // Se la data è nel futuro rispetto a oggi (start of day), escludila
+          // Questo serve perché "Passate" dovrebbe essere uno storico
+          return requestDate < todayStart;
         });
       }
     } else {
@@ -1120,66 +1118,7 @@ const LeaveRequests = () => {
         </div>
 
         {/* Tab per admin - Full width su mobile */}
-        {user?.role === 'admin' && (
-          <div className="space-y-3">
-            {/* Tab principali con migliore gerarchia visiva */}
-            <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
-              <button
-                onClick={() => setActiveTab('imminenti')}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] relative ${activeTab === 'imminenti'
-                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                  : 'text-slate-300 hover:text-white'
-                  }`}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-1.5">
-                  <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
-                  Imminenti
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('cronologia')}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] ${activeTab === 'cronologia'
-                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                  : 'text-slate-300 hover:text-white'
-                  }`}
-              >
-                <span className="flex items-center justify-center gap-1.5">
-                  <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
-                  Passate
-                </span>
-              </button>
-            </div>
-            {/* Sotto-tab per Imminenti con migliore connessione visiva */}
-            {activeTab === 'imminenti' && (
-              <div className="ml-2 mr-2 flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
-                <button
-                  onClick={() => setImminentiSubTab('in_approvazione')}
-                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] relative ${imminentiSubTab === 'in_approvazione'
-                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
-                    : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                >
-                  <span className="flex items-center justify-center gap-1.5">
-                    <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
-                    In Approvazione
-                  </span>
-                </button>
-                <button
-                  onClick={() => setImminentiSubTab('approvate')}
-                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] ${imminentiSubTab === 'approvate'
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
-                    : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                >
-                  <span className="flex items-center justify-center gap-1.5">
-                    <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
-                    Approvate
-                  </span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Tab removal: Layout a singola pagina non necessita di tab su mobile */}
       </div>
 
       {/* Desktop: Header migliorato con migliore UX */}
@@ -1205,64 +1144,14 @@ const LeaveRequests = () => {
           {/* Tab e Pulsante per Admin - Desktop con migliore layout */}
           {user?.role === 'admin' && (
             <div className="flex flex-col items-end gap-3 flex-shrink-0">
-              <div className="flex flex-row items-center gap-3">
-                {/* Tab principali con icone */}
-                <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
-                  <button
-                    onClick={() => setActiveTab('imminenti')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'imminenti'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
-                      }`}
-                  >
-                    <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
-                    Imminenti
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('cronologia')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'cronologia'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
-                      }`}
-                  >
-                    <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
-                    Passate
-                  </button>
-                </div>
-                {/* Bottone Aggiungi con gradiente */}
-                <button
-                  onClick={() => setShowAdminCreateModal(true)}
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 font-semibold"
-                >
-                  <UserPlus className="h-5 w-5" />
-                  Aggiungi
-                </button>
-              </div>
-              {/* Sotto-tab per Imminenti - Desktop con migliore connessione visiva */}
-              {activeTab === 'imminenti' && (
-                <div className="flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
-                  <button
-                    onClick={() => setImminentiSubTab('in_approvazione')}
-                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${imminentiSubTab === 'in_approvazione'
-                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
-                      }`}
-                  >
-                    <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
-                    In Approvazione
-                  </button>
-                  <button
-                    onClick={() => setImminentiSubTab('approvate')}
-                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${imminentiSubTab === 'approvate'
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
-                      }`}
-                  >
-                    <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
-                    Approvate
-                  </button>
-                </div>
-              )}
+              {/* Bottone Aggiungi con gradiente */}
+              <button
+                onClick={() => setShowAdminCreateModal(true)}
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 font-semibold"
+              >
+                <UserPlus className="h-5 w-5" />
+                Aggiungi
+              </button>
             </div>
           )}
           {user?.role !== 'admin' && (
@@ -1533,205 +1422,265 @@ const LeaveRequests = () => {
       )}
 
       {/* Requests List */}
-      <div className="bg-slate-800 rounded-lg p-4">
-        <h2 className="text-xl font-bold text-white flex items-center mb-4">
-          <Clock className="h-6 w-6 mr-3 text-slate-400" />
-          {user?.role === 'admin' ? 'Gestione Richieste Permessi' : 'Storico Richieste Permessi'}
-        </h2>
+      <div className="space-y-6">
 
         {(() => {
-          const filteredRequests = getFilteredRequests();
-          return filteredRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400 text-lg">
-                {user?.role === 'admin'
-                  ? (activeTab === 'imminenti'
-                    ? (imminentiSubTab === 'in_approvazione'
-                      ? 'Nessuna richiesta in approvazione'
-                      : 'Nessuna richiesta approvata imminente')
-                    : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
-                  : 'Nessuna richiesta di permesso presente'
-                }
-              </p>
-              <p className="text-slate-500 text-sm mt-2">
-                {user?.role === 'admin'
-                  ? (activeTab === 'imminenti'
-                    ? (imminentiSubTab === 'in_approvazione'
-                      ? 'Le richieste in attesa di approvazione appariranno qui'
-                      : 'Le richieste approvate con date future appariranno qui')
-                    : 'Prova a cambiare mese o aggiungere nuove richieste')
-                  : 'Clicca su "Nuova Richiesta" per iniziare'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredRequests.map((request) => {
-                const permissionDate = request.permissionDate ? formatDate(request.permissionDate) :
-                  request.startDate ? formatDate(request.startDate) : 'Data non disponibile';
-                const hours = request.hours ? formatHoursReadable(request.hours) :
-                  `${calculateDays(request.startDate, request.endDate)} giorni`;
-                const isApproved = request.status === 'approved';
-                const isPending = request.status === 'pending';
-                const isRejected = request.status === 'rejected';
+          const now = new Date();
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-                return (
-                  <div key={request.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:bg-slate-800/80">
-                    <div className="flex flex-col sm:flex-row gap-4">
+          // Helper to parse request date consistently
+          const parseRequestDate = (request, asTimestamp = false) => {
+            const dateString = request.permissionDate || request.startDate || request.start_date;
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            return asTimestamp ? date.getTime() : date;
+          };
 
-                      {/* SINISTRA: Data e Status Icon */}
-                      <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                        <div className={`p-2 rounded-xl bg-slate-700/50 flex items-center justify-center w-12 h-12 shadow-inner group-hover:scale-110 transition-transform ${isApproved ? 'text-green-400 bg-green-500/10' :
-                            isPending ? 'text-yellow-400 bg-yellow-500/10' :
-                              'text-red-400 bg-red-500/10'
-                          }`}>
-                          {getStatusIcon(request.status)}
+          // 1. Separate requests into categories
+          const pendingRequests = requests.filter(r => r.status === 'pending');
+
+          const futureRequests = requests.filter(r => {
+            if (r.status === 'pending') return false; // Already handled
+            const rDate = parseRequestDate(r);
+            return rDate && rDate >= todayStart;
+          }).sort((a, b) => {
+            return parseRequestDate(a, true) - parseRequestDate(b, true);
+          });
+
+          const pastRequests = requests.filter(r => {
+            if (r.status === 'pending') return false;
+            const rDate = parseRequestDate(r);
+            return rDate && rDate < todayStart;
+          }).sort((a, b) => {
+            // Past requests: descending order (newest first)
+            return parseRequestDate(b, true) - parseRequestDate(a, true);
+          });
+
+          // Helper to render a list of cards
+          const renderRequestList = (list) => {
+            if (list.length === 0) return <p className="text-slate-500 italic p-4">Nessuna richiesta.</p>;
+
+            return (
+              <div className="space-y-3">
+                {list.map((request) => {
+                  const permissionDate = request.permissionDate ? formatDate(request.permissionDate) :
+                    request.startDate ? formatDate(request.startDate) : 'Data non disponibile';
+                  const hours = request.hours ? formatHoursReadable(request.hours) :
+                    `${calculateDays(request.startDate, request.endDate)} giorni`;
+                  const isApproved = request.status === 'approved';
+                  const isPending = request.status === 'pending';
+                  const isRejected = request.status === 'rejected';
+
+                  // Card Design (Reused)
+                  return (
+                    <div key={request.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:bg-slate-800/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
+                      <div className="flex flex-col sm:flex-row gap-4">
+
+                        {/* SINISTRA: Data e Status Icon */}
+                        <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                          <div className={`p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 shadow-inner transition-transform ${isApproved ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                            isPending ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                              'bg-red-500/10 text-red-400 border border-red-500/20'
+                            }`}>
+                            <span className="text-2xl sm:text-3xl font-bold leading-none">
+                              {new Date(request.permissionDate || request.startDate).getDate()}
+                            </span>
+                            <span className="text-xs font-bold uppercase tracking-wider mt-1 opacity-80">
+                              {new Date(request.permissionDate || request.startDate).toLocaleString('it-IT', { month: 'short' }).replace('.', '')}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-center sm:items-center w-full">
-                          <span className="text-xl sm:text-2xl font-bold text-white leading-none">
-                            {new Date(request.permissionDate || request.startDate).getDate()}
-                          </span>
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            {new Date(request.permissionDate || request.startDate).toLocaleString('it-IT', { month: 'short' })}
-                          </span>
-                        </div>
-                      </div>
 
-                      {/* CENTRO: Dettagli Permesso */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        {/* Row Superiore: Utente e Label Stato */}
-                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                          {user?.role === 'admin' && (
-                            <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                              <User className="w-3 h-3" />
-                              <span className="text-xs font-bold truncate max-w-[150px]">
-                                {request.submittedBy || (request.user?.first_name ? `${request.user.first_name} ${request.user.last_name}` : 'Dipendente')}
-                              </span>
-                            </div>
-                          )}
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${isApproved ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                        {/* CENTRO: Dettagli Permesso */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          {/* Row Superiore: Utente e Label Stato */}
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            {user?.role === 'admin' && (
+                              <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                                <User className="w-3 h-3" />
+                                <span className="text-xs font-bold truncate max-w-[150px]">
+                                  {request.submittedBy || (request.user?.first_name ? `${request.user.first_name} ${request.user.last_name}` : 'Dipendente')}
+                                </span>
+                              </div>
+                            )}
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${isApproved ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                               isPending ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                                 'bg-red-500/10 text-red-400 border-red-500/20'
-                            }`}>
-                            {getStatusText(request.status)}
-                          </span>
-                        </div>
-
-                        {/* Titolo e Orari */}
-                        <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                          {getPermissionTypeText(request)}
-                        </h3>
-
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                            <Clock className="w-3.5 h-3.5 text-slate-300" />
-                            <span className="font-medium text-slate-200">{hours}</span>
-                          </span>
-                          {(request.exitTime || request.entryTime) && (
-                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                              <Timer className="w-3.5 h-3.5 text-slate-300" />
-                              <span className="font-medium text-slate-200">
-                                {request.exitTime ? `Uscita: ${formatTimeWithoutSeconds(request.exitTime)}` : `Entrata: ${formatTimeWithoutSeconds(request.entryTime)}`}
-                              </span>
+                              }`}>
+                              {getStatusText(request.status)}
                             </span>
+                          </div>
+
+                          {/* Titolo e Orari */}
+                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
+                            {getPermissionTypeText(request)}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                              <Clock className="w-3.5 h-3.5 text-slate-300" />
+                              <span className="font-medium text-slate-200">{hours}</span>
+                            </span>
+                            {(request.exitTime || request.entryTime) && (
+                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                                <Timer className="w-3.5 h-3.5 text-slate-300" />
+                                <span className="font-medium text-slate-200">
+                                  {request.exitTime ? `Uscita: ${formatTimeWithoutSeconds(request.exitTime)}` : `Entrata: ${formatTimeWithoutSeconds(request.entryTime)}`}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Note (se presenti) */}
+                          {(request.notes || request.rejectionReason) && (
+                            <div className="mt-3 text-xs bg-slate-900/30 p-2 rounded border border-slate-700/50">
+                              {request.notes && (
+                                <p className="text-slate-400 line-clamp-2">
+                                  <span className="font-semibold text-slate-500 mr-1">Note:</span>
+                                  {request.notes}
+                                </p>
+                              )}
+                              {request.rejectionReason && (
+                                <p className="text-red-300 mt-1">
+                                  <span className="font-semibold text-red-400 mr-1">Rifiuto:</span>
+                                  {request.rejectionReason}
+                                </p>
+                              )}
+                            </div>
                           )}
                         </div>
 
-                        {/* Note (se presenti) */}
-                        {(request.notes || request.rejectionReason) && (
-                          <div className="mt-3 text-xs bg-slate-900/30 p-2 rounded border border-slate-700/50">
-                            {request.notes && (
-                              <p className="text-slate-400 line-clamp-2">
-                                <span className="font-semibold text-slate-500 mr-1">Note:</span>
-                                {request.notes}
-                              </p>
-                            )}
-                            {request.rejectionReason && (
-                              <p className="text-red-300 mt-1">
-                                <span className="font-semibold text-red-400 mr-1">Rifiuto:</span>
-                                {request.rejectionReason}
-                              </p>
-                            )}
+                        {/* DESTRA: Azioni */}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+
+                          {/* Admin Actions: Pending */}
+                          {user?.role === 'admin' && isPending && (
+                            <>
+                              <button
+                                onClick={() => openApproveDialog(request.id)}
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-lg shadow-green-900/20 font-medium text-xs gap-1.5"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Approva
+                              </button>
+                              <button
+                                onClick={() => openRejectDialog(request.id)}
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Rifiuta
+                              </button>
+                            </>
+                          )}
+
+                          {/* Admin Actions: Approved (Edit/Cancel) */}
+                          {user?.role === 'admin' && isApproved && request.type === 'permission' && (
+                            <>
+                              {canModifyRequest(request) && (
+                                <button
+                                  onClick={() => openEditDialog(request)}
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-blue-500"
+                                >
+                                  <Save className="h-3.5 w-3.5" />
+                                  Modifica
+                                </button>
+                              )}
+                              {canCancelRequest(request) && (
+                                <button
+                                  onClick={() => openCancelDialog(request.id)}
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-red-500"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Annulla
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          {/* Employee Actions */}
+                          {user?.role !== 'admin' && (
+                            <>
+                              {canRequestModification(request) && isApproved && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedRequest(request);
+                                    setModificationRequest({ reason: '', requestedChanges: '' });
+                                    setShowRequestModificationDialog(true);
+                                  }}
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-indigo-500"
+                                >
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  Richiedi Modifica
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          <div className="hidden sm:block mt-auto w-full pt-2">
+                            <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider mb-0.5">Richiesto il:</p>
+                            <p className="text-xs text-slate-400 text-center font-medium">
+                              {formatDateTime(request.submittedAt).split(',')[0]}
+                            </p>
                           </div>
-                        )}
-                      </div>
-
-                      {/* DESTRA: Azioni */}
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
-
-                        {/* Admin Actions: Pending */}
-                        {user?.role === 'admin' && isPending && (
-                          <>
-                            <button
-                              onClick={() => openApproveDialog(request.id)}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-lg shadow-green-900/20 font-medium text-xs gap-1.5"
-                            >
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              Approva
-                            </button>
-                            <button
-                              onClick={() => openRejectDialog(request.id)}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              Rifiuta
-                            </button>
-                          </>
-                        )}
-
-                        {/* Admin Actions: Approved (Edit/Cancel) */}
-                        {user?.role === 'admin' && isApproved && request.type === 'permission' && (
-                          <>
-                            {canModifyRequest(request) && (
-                              <button
-                                onClick={() => openEditDialog(request)}
-                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-blue-500"
-                              >
-                                <Save className="h-3.5 w-3.5" />
-                                Modifica
-                              </button>
-                            )}
-                            {canCancelRequest(request) && (
-                              <button
-                                onClick={() => openCancelDialog(request.id)}
-                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-red-500"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                                Annulla
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        {/* Employee Actions */}
-                        {user?.role !== 'admin' && (
-                          <>
-                            {canRequestModification(request) && isApproved && (
-                              <button
-                                onClick={() => {
-                                  setSelectedRequest(request);
-                                  setModificationRequest({ reason: '', requestedChanges: '' });
-                                  setShowRequestModificationDialog(true);
-                                }}
-                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-indigo-500"
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                Richiedi Modifica
-                              </button>
-                            )}
-                          </>
-                        )}
-
-                        <div className="hidden sm:block mt-auto text-[10px] text-slate-500 text-center w-full pt-2">
-                          {formatDateTime(request.submittedAt).split(',')[0]}
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          return (
+            <>
+              {/* SECTION 1: IN APPROVAZIONE (High Priority) */}
+              {pendingRequests.length > 0 && (
+                <div className="bg-yellow-500/5 rounded-xl border border-yellow-500/20 p-4 sm:p-6 mb-8 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                  <h2 className="text-xl font-bold text-yellow-100 flex items-center mb-4">
+                    <AlertCircle className="h-6 w-6 mr-2 text-yellow-500" />
+                    Da Approvare ({pendingRequests.length})
+                  </h2>
+                  {renderRequestList(pendingRequests)}
+                </div>
+              )}
+
+              {/* SECTION 2: IMMINENTI (Future/Today, Approved only) */}
+              <div className="bg-slate-800 rounded-lg p-4 mb-4">
+                <h2 className="text-xl font-bold text-white flex items-center mb-4">
+                  <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
+                  In Programma
+                </h2>
+                {futureRequests.length > 0 ? renderRequestList(futureRequests) : (
+                  <p className="text-slate-500 text-center py-6">Nessun permesso in programma prossimamente.</p>
+                )}
+              </div>
+
+              {/* SECTION 3: PASSATE (Accordion) */}
+              <div className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700/50">
+                <button
+                  onClick={() => setHistoryOpen(!historyOpen)}
+                  className="w-full flex items-center justify-between p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-6 w-6 text-slate-400" />
+                    <h2 className="text-lg font-bold text-slate-300">Storico Passate</h2>
+                    <span className="text-xs font-semibold bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">
+                      {pastRequests.length}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  {historyOpen ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
+                </button>
+
+                {historyOpen && (
+                  <div className="p-4 border-t border-slate-700/50">
+                    {pastRequests.length > 0 ? renderRequestList(pastRequests) : (
+                      <p className="text-slate-500 text-center py-4">Nessuno storico disponibile.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           );
         })()}
       </div>
