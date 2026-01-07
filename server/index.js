@@ -1956,9 +1956,13 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
     const shouldFilter = !!userIdsParam;
     const userIds = shouldFilter ? userIdsParam.split(',').map(s => s.trim()).filter(Boolean) : null;
 
+    // FIX: Define today before query to filter future dates
+    const today = new Date().toISOString().split('T')[0];
+
     let query = supabase
       .from('attendance')
-      .select('user_id, balance_hours, date, notes');
+      .select('user_id, balance_hours, date, notes')
+      .lte('date', today);
 
     if (shouldFilter && userIds && userIds.length > 0) {
       query = query.in('user_id', userIds);
@@ -1966,8 +1970,7 @@ app.get('/api/attendance/total-balances', authenticateToken, async (req, res) =>
 
     const { data, error } = await query;
 
-    // Ottieni la data di oggi per il controllo permessi approvati
-    const today = new Date().toISOString().split('T')[0];
+    // Data di oggi già definita sopra
 
     if (error) {
       console.error('Total balances fetch error:', error);
@@ -3437,11 +3440,14 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    // Calcola il saldo totale da TUTTE le presenze
+    // Calcola il saldo totale da TUTTE le presenze (fino a oggi)
+    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
+
     const { data: allAttendance, error } = await supabase
       .from('attendance')
       .select('balance_hours, date, actual_hours, expected_hours, notes')
-      .eq('user_id', targetUserId);
+      .eq('user_id', targetUserId)
+      .lte('date', today); // Escludi date future
 
     if (error) {
       console.error('Total balance fetch error:', error);
@@ -3468,8 +3474,7 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       });
     }
 
-    const { date: today, time: currentTime, dateTime: now, isTestMode } = await getCurrentDateTime();
-
+    // Carica lo schedule per oggi (serve per verificare se la giornata è conclusa)
     // CONTROLLA PRIMA se oggi ha un permesso 104 - se sì, salta il calcolo real-time
     const hasPerm104Today = perm104Dates.has(today);
 
