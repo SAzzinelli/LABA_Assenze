@@ -5,12 +5,12 @@ import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import AdminCreatePermissionModal from '../components/AdminCreatePermissionModal';
 import { PermessiSkeleton } from '../components/Skeleton';
-import { 
-  FileText, 
-  Plus, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  FileText,
+  Plus,
+  CheckCircle,
+  XCircle,
+  Clock,
   Calendar,
   Save,
   X,
@@ -40,7 +40,7 @@ const LeaveRequests = () => {
     notes: '',
     fullDay: false // Permesso per tutta la giornata
   });
-  
+
   // Orario di lavoro reale per il calcolo corretto
   const [workSchedule, setWorkSchedule] = useState(null);
   const [fullDayHours, setFullDayHours] = useState(null);
@@ -48,22 +48,22 @@ const LeaveRequests = () => {
   // Filtri temporali per admin
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  
+
   // Campo di ricerca
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Stato per collassabile filtri
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
 
   // Array vuoto per le richieste di permessi
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Tab per admin
   const [activeTab, setActiveTab] = useState('imminenti'); // 'imminenti' | 'cronologia'
   // Sotto-tab per "Imminenti" per separare pending da approved
   const [imminentiSubTab, setImminentiSubTab] = useState('approvate'); // 'in_approvazione' | 'approvate'
-  
+
   // Stati per dialog di approvazione/rifiuto/annullamento/modifica
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -100,10 +100,20 @@ const LeaveRequests = () => {
       setLoading(true);
       // Filtra solo le richieste di tipo "permission" (permessi orari)
       const response = await apiCall('/api/leave-requests?type=permission');
-      
+
       if (response.ok) {
         const data = await response.json();
         setRequests(data);
+
+        // Smart Tab Logic: Se ci sono richieste pending, vai su "In Approvazione"
+        if (user?.role === 'admin') {
+          const hasPending = data.some(r => r.status === 'pending');
+          if (hasPending) {
+            setImminentiSubTab('in_approvazione');
+          } else {
+            setImminentiSubTab('approvate');
+          }
+        }
       } else {
         console.error('Errore nel recupero delle richieste');
       }
@@ -134,19 +144,19 @@ const LeaveRequests = () => {
         setFullDayHours(null);
         return;
       }
-      
+
       try {
         const date = new Date(formData.permissionDate);
         const dayOfWeek = date.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
-        
+
         const response = await apiCall('/api/work-schedules');
         if (response.ok) {
           const schedules = await response.json();
           // Trova l'orario per il giorno specifico
-          const schedule = schedules.find(s => 
+          const schedule = schedules.find(s =>
             s.day_of_week === dayOfWeek && s.is_working_day
           );
-          
+
           if (schedule) {
             setWorkSchedule({
               start_time: schedule.start_time,
@@ -165,7 +175,7 @@ const LeaveRequests = () => {
         setFullDayHours(null);
       }
     };
-    
+
     fetchWorkSchedule();
   }, [formData.permissionDate, apiCall]);
 
@@ -177,11 +187,11 @@ const LeaveRequests = () => {
         const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
         // IMPORTANTE: usa break_duration dal database, non default 0 (se è 0, è 0!)
         const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
-        
+
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = Math.max(0, totalMinutes - breakDuration);
         const hours = workMinutes / 60;
-        
+
         setFullDayHours(parseFloat(hours.toFixed(2)));
         console.log(`✅ Full day hours calculated: ${workSchedule.start_time}-${workSchedule.end_time}, break: ${breakDuration}min = ${hours.toFixed(2)}h`);
       } catch (error) {
@@ -283,23 +293,23 @@ const LeaveRequests = () => {
   const openEditDialog = async (request) => {
     setSelectedRequest(request);
     setSelectedRequestId(request.id);
-    
+
     // Recupera la data del permesso
     const permissionDate = request.permissionDate || request.startDate || request.start_date;
-    
+
     setEditFormData({
       permissionDate: permissionDate ? permissionDate.split('T')[0] : '',
       entryTime: request.entryTime || request.entry_time || '',
       exitTime: request.exitTime || request.exit_time || '',
       hours: request.hours || ''
     });
-    
+
     // Recupera l'orario di lavoro per la data del permesso
     if (permissionDate) {
       try {
         const date = new Date(permissionDate);
         const dayOfWeek = date.getDay(); // 0 = Domenica, 1 = Lunedì, etc.
-        
+
         // Se è un permesso di un dipendente specifico, recupera il suo orario
         const userId = request.userId || request.user_id;
         if (userId) {
@@ -328,7 +338,7 @@ const LeaveRequests = () => {
           const response = await apiCall('/api/work-schedules');
           if (response.ok) {
             const schedules = await response.json();
-            const schedule = schedules.find(s => 
+            const schedule = schedules.find(s =>
               s.day_of_week === dayOfWeek && s.is_working_day
             );
             if (schedule) {
@@ -345,15 +355,15 @@ const LeaveRequests = () => {
         console.error('Error fetching work schedule:', error);
       }
     }
-    
+
     setShowEditDialog(true);
-    
+
     // Calcola le ore iniziali dopo aver impostato lo schedule (con un piccolo delay per permettere lo stato di aggiornarsi)
     setTimeout(() => {
       calculateEditHours(request.entryTime || request.entry_time, request.exitTime || request.exit_time, request);
     }, 100);
   };
-  
+
   const calculateEditHours = (entryTime, exitTime, request) => {
     // Se non abbiamo ancora lo schedule, proviamo a recuperarlo dal selectedRequest
     const scheduleToUse = editWorkSchedule || (selectedRequest && selectedRequest.workSchedule);
@@ -380,10 +390,10 @@ const LeaveRequests = () => {
       // Entrata posticipata: ore = (entryTime - start_time) - break_duration se la pausa è completamente inclusa nel periodo
       const startMinutes = timeToMinutes(startTime);
       const entryMinutes = timeToMinutes(entryTime);
-      
+
       // Calcola la differenza totale in minuti
       const totalMinutesDiff = entryMinutes - startMinutes;
-      
+
       // Se c'è una pausa pranzo e il periodo di permesso include completamente la pausa, sottraila
       let breakMinutesToSubtract = 0;
       if (breakDuration && breakDuration > 0) {
@@ -398,7 +408,7 @@ const LeaveRequests = () => {
           breakStartMinutes = startMinutes + (totalMinutes / 2) - (breakDuration / 2);
         }
         const breakEndMinutes = breakStartMinutes + breakDuration;
-        
+
         // La pausa è completamente inclusa nel permesso se:
         // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (startMinutes)
         // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
@@ -406,7 +416,7 @@ const LeaveRequests = () => {
           breakMinutesToSubtract = breakDuration;
         }
       }
-      
+
       const workMinutesDiff = Math.max(0, totalMinutesDiff - breakMinutesToSubtract);
       calculated = workMinutesDiff / 60;
     } else if ((request.permissionType === 'early_exit' || request.permissionType === 'uscita_anticipata' || request.exitTime) && exitTime && endTime) {
@@ -436,25 +446,25 @@ const LeaveRequests = () => {
 
   const handleEditPermission = async () => {
     if (!selectedRequestId) return;
-    
+
     try {
       const payload = {};
       let hasChanges = false;
-      
+
       // Controlla se entryTime è cambiato
       const currentEntryTime = selectedRequest.entryTime || selectedRequest.entry_time || '';
       if (editFormData.entryTime !== currentEntryTime) {
         payload.entryTime = editFormData.entryTime;
         hasChanges = true;
       }
-      
+
       // Controlla se exitTime è cambiato
       const currentExitTime = selectedRequest.exitTime || selectedRequest.exit_time || '';
       if (editFormData.exitTime !== currentExitTime) {
         payload.exitTime = editFormData.exitTime;
         hasChanges = true;
       }
-      
+
       // Controlla se la data è cambiata
       const currentDate = selectedRequest.permissionDate || selectedRequest.startDate || selectedRequest.start_date;
       const currentDateStr = currentDate ? currentDate.split('T')[0] : '';
@@ -538,14 +548,14 @@ const LeaveRequests = () => {
   const handleCancelRequest = async (requestId, reason = '') => {
     try {
       const { token } = useAuthStore.getState();
-      
+
       if (!token) {
         showError('Token non trovato. Effettua il login.');
         return;
       }
-      
+
       console.log('🔍 Cancelling request with token:', token.substring(0, 20) + '...');
-      
+
       const response = await fetch(`/api/hours/admin/leave-requests/${requestId}/cancel`, {
         method: 'PUT',
         headers: {
@@ -574,13 +584,13 @@ const LeaveRequests = () => {
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     const newValue = type === 'checkbox' ? checked : value;
-    
+
     setFormData(prev => {
       const updated = {
         ...prev,
         [name]: newValue
       };
-      
+
       // Se cambia type a full_day, resetta i campi tempo e imposta fullDay
       if (name === 'type') {
         if (value === 'full_day') {
@@ -591,7 +601,7 @@ const LeaveRequests = () => {
           updated.fullDay = false;
         }
       }
-      
+
       return updated;
     });
   };
@@ -599,7 +609,7 @@ const LeaveRequests = () => {
   // Calcola automaticamente le ore di permesso usando l'orario reale
   const calculatePermissionHours = () => {
     if (!formData.permissionDate) return 0;
-    
+
     // Se abbiamo l'orario di lavoro per quel giorno, usalo
     if (workSchedule) {
       const timeToMinutes = (timeStr) => {
@@ -607,18 +617,18 @@ const LeaveRequests = () => {
         const [hours, minutes] = timeStr.split(':').map(Number);
         return hours * 60 + minutes;
       };
-      
+
       if (formData.type === 'uscita_anticipata' && formData.exitTime) {
         // Uscita anticipata: calcola le ore di lavoro perse da exitTime alla fine
         // IMPORTANTE: considera la pausa pranzo se l'uscita è prima o durante la pausa
         const exitMinutes = timeToMinutes(formData.exitTime);
         const standardEndMinutes = timeToMinutes(workSchedule.end_time);
         const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
-        
+
         // Calcola l'inizio e fine della pausa pranzo
         let breakStartMinutes = null;
         let breakEndMinutes = null;
-        
+
         if (breakDuration > 0 && workSchedule.break_start_time) {
           breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
           breakEndMinutes = breakStartMinutes + breakDuration;
@@ -629,10 +639,10 @@ const LeaveRequests = () => {
           breakStartMinutes = startMinutes + (totalMinutes / 2) - (breakDuration / 2);
           breakEndMinutes = breakStartMinutes + breakDuration;
         }
-        
+
         // Calcola le ore di permesso
         let permissionMinutes = 0;
-        
+
         if (exitMinutes <= breakStartMinutes) {
           // Esce prima della pausa: perde tutto il pomeriggio + pausa
           // Ore perse = (end - exit) - break_duration (perché la pausa non conta come lavoro)
@@ -645,7 +655,7 @@ const LeaveRequests = () => {
           // Ore perse = (end - break_start) - (exit - break_start) = end - exit
           permissionMinutes = standardEndMinutes - exitMinutes;
         }
-        
+
         return Math.max(0, parseFloat((permissionMinutes / 60).toFixed(2)));
       } else if (formData.type === 'entrata_posticipata' && formData.entryTime) {
         // Entrata posticipata: calcola le ore di lavoro perse dall'inizio a entryTime
@@ -653,11 +663,11 @@ const LeaveRequests = () => {
         const entryMinutes = timeToMinutes(formData.entryTime);
         const standardStartMinutes = timeToMinutes(workSchedule.start_time);
         const breakDuration = workSchedule.break_duration !== null && workSchedule.break_duration !== undefined ? workSchedule.break_duration : 0;
-        
+
         // Calcola l'inizio e fine della pausa pranzo
         let breakStartMinutes = null;
         let breakEndMinutes = null;
-        
+
         if (breakDuration > 0 && workSchedule.break_start_time) {
           breakStartMinutes = timeToMinutes(workSchedule.break_start_time);
           breakEndMinutes = breakStartMinutes + breakDuration;
@@ -667,11 +677,11 @@ const LeaveRequests = () => {
           breakStartMinutes = standardStartMinutes + (totalMinutes / 2) - (breakDuration / 2);
           breakEndMinutes = breakStartMinutes + breakDuration;
         }
-        
+
         // Calcola le ore di permesso
         // Calcola la differenza totale in minuti
         const totalMinutesDiff = entryMinutes - standardStartMinutes;
-        
+
         // Se c'è una pausa pranzo e il periodo di permesso include completamente la pausa, sottraila
         let breakMinutesToSubtract = 0;
         if (breakDuration && breakDuration > 0 && breakStartMinutes !== null && breakEndMinutes !== null) {
@@ -682,12 +692,12 @@ const LeaveRequests = () => {
             breakMinutesToSubtract = breakDuration;
           }
         }
-        
+
         const workMinutesDiff = Math.max(0, totalMinutesDiff - breakMinutesToSubtract);
         return Math.max(0, parseFloat((workMinutesDiff / 60).toFixed(2)));
       }
     }
-    
+
     // Fallback: se non abbiamo l'orario, usa valori di default (non dovrebbe accadere)
     return 0;
   };
@@ -701,7 +711,7 @@ const LeaveRequests = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.permissionDate) {
       showError('Seleziona una data per il permesso');
       return;
@@ -727,12 +737,12 @@ const LeaveRequests = () => {
 
     // Calcola automaticamente le ore di permesso
     const calculatedHours = formData.type === 'full_day' ? fullDayHours : calculatePermissionHours();
-    
+
     if (!calculatedHours || calculatedHours <= 0) {
       showError('Impossibile calcolare le ore di permesso. Verifica di avere un orario configurato per questo giorno.');
       return;
     }
-    
+
     try {
       const response = await apiCall('/api/leave-requests', {
         method: 'POST',
@@ -751,7 +761,7 @@ const LeaveRequests = () => {
           entryTime: formData.type === 'full_day' ? null : formData.entryTime
         })
       });
-      
+
       if (response.ok) {
         // Ricarica le richieste dal backend
         await fetchRequests();
@@ -920,24 +930,24 @@ const LeaveRequests = () => {
       filtered = filtered.filter(request => {
         const requestDate = parseRequestDate(request);
         if (!requestDate) return false;
-        
+
         // Mostra sempre permessi futuri (oltre il mese corrente)
         const requestMonth = requestDate.getMonth();
         const requestYear = requestDate.getFullYear();
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth();
         const currentYear = currentDate.getFullYear();
-        
+
         // Se il permesso è futuro (oltre il mese corrente), mostralo sempre
         if (requestYear > currentYear || (requestYear === currentYear && requestMonth > currentMonth)) {
           return true;
         }
-        
+
         // Altrimenti filtra per mese/anno selezionato (tutti gli status)
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
-    
+
     // Filtro per ricerca
     if (searchTerm.trim()) {
       filtered = filtered.filter(request => {
@@ -950,7 +960,7 @@ const LeaveRequests = () => {
         );
       });
     }
-    
+
     return filtered;
   };
 
@@ -1064,7 +1074,7 @@ const LeaveRequests = () => {
     const h = Math.floor(hours);
     const m = Math.round((hours - h) * 60);
     const timeStr = time ? ` | ${formatTimeWithoutSeconds(time)}` : '';
-    
+
     if (h > 0) {
       return `${h}h ${m}m${timeStr}`;
     } else {
@@ -1108,7 +1118,7 @@ const LeaveRequests = () => {
             <Plus className="h-5 w-5" />
           </button>
         </div>
-        
+
         {/* Tab per admin - Full width su mobile */}
         {user?.role === 'admin' && (
           <div className="space-y-3">
@@ -1116,11 +1126,10 @@ const LeaveRequests = () => {
             <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
               <button
                 onClick={() => setActiveTab('imminenti')}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] relative ${
-                  activeTab === 'imminenti'
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                    : 'text-slate-300 hover:text-white'
-                }`}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] relative ${activeTab === 'imminenti'
+                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                  : 'text-slate-300 hover:text-white'
+                  }`}
               >
                 <span className="relative z-10 flex items-center justify-center gap-1.5">
                   <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
@@ -1129,15 +1138,14 @@ const LeaveRequests = () => {
               </button>
               <button
                 onClick={() => setActiveTab('cronologia')}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] ${
-                  activeTab === 'cronologia'
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                    : 'text-slate-300 hover:text-white'
-                }`}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all touch-manipulation min-h-[44px] ${activeTab === 'cronologia'
+                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                  : 'text-slate-300 hover:text-white'
+                  }`}
               >
                 <span className="flex items-center justify-center gap-1.5">
                   <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
-                  Cronologia
+                  Passate
                 </span>
               </button>
             </div>
@@ -1146,11 +1154,10 @@ const LeaveRequests = () => {
               <div className="ml-2 mr-2 flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
                 <button
                   onClick={() => setImminentiSubTab('in_approvazione')}
-                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] relative ${
-                    imminentiSubTab === 'in_approvazione'
-                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] relative ${imminentiSubTab === 'in_approvazione'
+                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <span className="flex items-center justify-center gap-1.5">
                     <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
@@ -1159,11 +1166,10 @@ const LeaveRequests = () => {
                 </button>
                 <button
                   onClick={() => setImminentiSubTab('approvate')}
-                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] ${
-                    imminentiSubTab === 'approvate'
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`flex-1 px-3 py-2 rounded-md text-xs font-medium transition-all touch-manipulation min-h-[38px] ${imminentiSubTab === 'approvate'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <span className="flex items-center justify-center gap-1.5">
                     <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
@@ -1189,13 +1195,13 @@ const LeaveRequests = () => {
               </h1>
             </div>
             <p className="text-slate-400 text-base ml-14">
-              {user?.role === 'admin' 
+              {user?.role === 'admin'
                 ? 'Visualizza e gestisci tutte le richieste di permessi dei dipendenti'
                 : 'Gestisci le tue richieste di permessi e visualizza lo storico'
               }
             </p>
           </div>
-          
+
           {/* Tab e Pulsante per Admin - Desktop con migliore layout */}
           {user?.role === 'admin' && (
             <div className="flex flex-col items-end gap-3 flex-shrink-0">
@@ -1204,25 +1210,23 @@ const LeaveRequests = () => {
                 <div className="flex bg-slate-700/80 backdrop-blur-sm rounded-xl p-1.5 shadow-inner">
                   <button
                     onClick={() => setActiveTab('imminenti')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                      activeTab === 'imminenti'
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
-                    }`}
+                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'imminenti'
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
+                      }`}
                   >
                     <Clock className={`h-4 w-4 ${activeTab === 'imminenti' ? '' : 'opacity-60'}`} />
                     Imminenti
                   </button>
                   <button
                     onClick={() => setActiveTab('cronologia')}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                      activeTab === 'cronologia'
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
-                    }`}
+                    className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === 'cronologia'
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-600/50'
+                      }`}
                   >
                     <Calendar className={`h-4 w-4 ${activeTab === 'cronologia' ? '' : 'opacity-60'}`} />
-                    Cronologia
+                    Passate
                   </button>
                 </div>
                 {/* Bottone Aggiungi con gradiente */}
@@ -1239,22 +1243,20 @@ const LeaveRequests = () => {
                 <div className="flex bg-slate-700/60 backdrop-blur-sm rounded-lg p-1 border border-slate-600/50 shadow-inner">
                   <button
                     onClick={() => setImminentiSubTab('in_approvazione')}
-                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                      imminentiSubTab === 'in_approvazione'
-                        ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
-                    }`}
+                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${imminentiSubTab === 'in_approvazione'
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md shadow-yellow-500/25'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
+                      }`}
                   >
                     <Clock className={`h-3.5 w-3.5 ${imminentiSubTab === 'in_approvazione' ? '' : 'opacity-50'}`} />
                     In Approvazione
                   </button>
                   <button
                     onClick={() => setImminentiSubTab('approvate')}
-                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                      imminentiSubTab === 'approvate'
-                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
-                    }`}
+                    className={`px-4 py-2 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${imminentiSubTab === 'approvate'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md shadow-green-500/25'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-600/30'
+                      }`}
                   >
                     <CheckCircle className={`h-3.5 w-3.5 ${imminentiSubTab === 'approvate' ? '' : 'opacity-50'}`} />
                     Approvate
@@ -1291,7 +1293,7 @@ const LeaveRequests = () => {
             <ChevronUp className="h-5 w-5 text-slate-400" />
           )}
         </button>
-        
+
         {!filtersCollapsed && (
           <div className="border-t border-slate-700 p-4 space-y-4">
             {/* Filtro temporale per admin - Responsive: stack verticale su mobile */}
@@ -1354,7 +1356,7 @@ const LeaveRequests = () => {
 
       {/* New Request Modal */}
       {showNewRequest && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
@@ -1391,7 +1393,7 @@ const LeaveRequests = () => {
                     <option value="permission_104">Permesso 104</option>
                   )}
                 </select>
-                
+
                 {formData.type === 'full_day' && fullDayHours === null && formData.permissionDate && (
                   <p className="text-xs text-amber-400 mt-1">
                     ⚠️ Impossibile calcolare le ore. Verifica di avere un orario configurato per questo giorno.
@@ -1427,7 +1429,7 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    {workSchedule 
+                    {workSchedule
                       ? `Orario normale di uscita: ${workSchedule.end_time}. Le ore di permesso verranno calcolate automaticamente.`
                       : 'Caricamento orario di lavoro...'}
                   </p>
@@ -1448,7 +1450,7 @@ const LeaveRequests = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <p className="text-slate-400 text-xs mt-1">
-                    {workSchedule 
+                    {workSchedule
                       ? `Orario normale di entrata: ${workSchedule.start_time}. Le ore di permesso verranno calcolate automaticamente.`
                       : 'Caricamento orario di lavoro...'}
                   </p>
@@ -1469,20 +1471,17 @@ const LeaveRequests = () => {
 
               {/* Avviso permessi 104 */}
               {formData.type === 'permission_104' && user?.has104 && (
-                <div className={`p-4 rounded-lg border ${
-                  permissions104.remaining > 0 
-                    ? 'bg-amber-500/10 border-amber-500/20' 
-                    : 'bg-red-500/10 border-red-500/20'
-                }`}>
+                <div className={`p-4 rounded-lg border ${permissions104.remaining > 0
+                  ? 'bg-amber-500/10 border-amber-500/20'
+                  : 'bg-red-500/10 border-red-500/20'
+                  }`}>
                   <div className="flex items-center">
-                    <CheckCircle className={`h-5 w-5 mr-2 ${
-                      permissions104.remaining > 0 ? 'text-amber-400' : 'text-red-400'
-                    }`} />
+                    <CheckCircle className={`h-5 w-5 mr-2 ${permissions104.remaining > 0 ? 'text-amber-400' : 'text-red-400'
+                      }`} />
                     <div>
-                      <p className={`text-sm font-medium ${
-                        permissions104.remaining > 0 ? 'text-amber-200' : 'text-red-200'
-                      }`}>
-                        {permissions104.remaining > 0 
+                      <p className={`text-sm font-medium ${permissions104.remaining > 0 ? 'text-amber-200' : 'text-red-200'
+                        }`}>
+                        {permissions104.remaining > 0
                           ? `Permessi 104: ${permissions104.usedThisMonth}/${permissions104.maxPerMonth} usati questo mese`
                           : 'Hai raggiunto il limite massimo di 3 permessi 104 al mese'
                         }
@@ -1546,22 +1545,22 @@ const LeaveRequests = () => {
             <div className="text-center py-12">
               <FileText className="h-16 w-16 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-400 text-lg">
-                {user?.role === 'admin' 
-                  ? (activeTab === 'imminenti' 
-                      ? (imminentiSubTab === 'in_approvazione' 
-                          ? 'Nessuna richiesta in approvazione'
-                          : 'Nessuna richiesta approvata imminente')
-                      : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
+                {user?.role === 'admin'
+                  ? (activeTab === 'imminenti'
+                    ? (imminentiSubTab === 'in_approvazione'
+                      ? 'Nessuna richiesta in approvazione'
+                      : 'Nessuna richiesta approvata imminente')
+                    : `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`)
                   : 'Nessuna richiesta di permesso presente'
                 }
               </p>
               <p className="text-slate-500 text-sm mt-2">
-                {user?.role === 'admin' 
+                {user?.role === 'admin'
                   ? (activeTab === 'imminenti'
-                      ? (imminentiSubTab === 'in_approvazione'
-                          ? 'Le richieste in attesa di approvazione appariranno qui'
-                          : 'Le richieste approvate con date future appariranno qui')
-                      : 'Prova a cambiare mese o aggiungere nuove richieste')
+                    ? (imminentiSubTab === 'in_approvazione'
+                      ? 'Le richieste in attesa di approvazione appariranno qui'
+                      : 'Le richieste approvate con date future appariranno qui')
+                    : 'Prova a cambiare mese o aggiungere nuove richieste')
                   : 'Clicca su "Nuova Richiesta" per iniziare'
                 }
               </p>
@@ -1569,260 +1568,170 @@ const LeaveRequests = () => {
           ) : (
             <div className="space-y-3">
               {filteredRequests.map((request) => {
-                const permissionDate = request.permissionDate ? formatDate(request.permissionDate) : 
-                                      request.startDate ? formatDate(request.startDate) : 'Data non disponibile';
-                const hours = request.hours ? formatHoursReadable(request.hours) : 
-                             `${calculateDays(request.startDate, request.endDate)} giorni`;
+                const permissionDate = request.permissionDate ? formatDate(request.permissionDate) :
+                  request.startDate ? formatDate(request.startDate) : 'Data non disponibile';
+                const hours = request.hours ? formatHoursReadable(request.hours) :
+                  `${calculateDays(request.startDate, request.endDate)} giorni`;
                 const isApproved = request.status === 'approved';
                 const isPending = request.status === 'pending';
                 const isRejected = request.status === 'rejected';
-                
+
                 return (
-              <div key={request.id} className={`rounded-lg p-3 bg-slate-700/80 border border-slate-600/50 border-l-4 shadow-lg transition-all hover:shadow-xl hover:bg-slate-700/90 w-full ${
-                isApproved ? 'border-l-green-500' : 
-                isPending ? 'border-l-yellow-500' : 
-                'border-l-red-500'
-              }`}>
-                {/* HEADER: Status e Tipo */}
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(request.status)}
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{getPermissionTypeText(request)}</h3>
-                      <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        isApproved ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
-                        isPending ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
-                        'bg-red-500/20 text-red-300 border border-red-500/30'
-                      }`}>
-                        {getStatusText(request.status)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* LATO ADMIN: Dipendente in evidenza */}
-                  {user?.role === 'admin' && (
-                    <div className="bg-indigo-500/20 border border-indigo-500/30 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-indigo-400" />
-                        <div>
-                          <p className="text-xs text-indigo-300">Dipendente</p>
-                          <p className="text-base font-bold text-indigo-200">{request.submittedBy}</p>
+                  <div key={request.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:bg-slate-800/80">
+                    <div className="flex flex-col sm:flex-row gap-4">
+
+                      {/* SINISTRA: Data e Status Icon */}
+                      <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                        <div className={`p-2 rounded-xl bg-slate-700/50 flex items-center justify-center w-12 h-12 shadow-inner group-hover:scale-110 transition-transform ${isApproved ? 'text-green-400 bg-green-500/10' :
+                            isPending ? 'text-yellow-400 bg-yellow-500/10' :
+                              'text-red-400 bg-red-500/10'
+                          }`}>
+                          {getStatusIcon(request.status)}
+                        </div>
+                        <div className="flex flex-col items-center sm:items-center w-full">
+                          <span className="text-xl sm:text-2xl font-bold text-white leading-none">
+                            {new Date(request.permissionDate || request.startDate).getDate()}
+                          </span>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            {new Date(request.permissionDate || request.startDate).toLocaleString('it-IT', { month: 'short' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* CENTRO: Dettagli Permesso */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        {/* Row Superiore: Utente e Label Stato */}
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          {user?.role === 'admin' && (
+                            <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                              <User className="w-3 h-3" />
+                              <span className="text-xs font-bold truncate max-w-[150px]">
+                                {request.submittedBy || (request.user?.first_name ? `${request.user.first_name} ${request.user.last_name}` : 'Dipendente')}
+                              </span>
+                            </div>
+                          )}
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${isApproved ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                              isPending ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                            }`}>
+                            {getStatusText(request.status)}
+                          </span>
+                        </div>
+
+                        {/* Titolo e Orari */}
+                        <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
+                          {getPermissionTypeText(request)}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                            <Clock className="w-3.5 h-3.5 text-slate-300" />
+                            <span className="font-medium text-slate-200">{hours}</span>
+                          </span>
+                          {(request.exitTime || request.entryTime) && (
+                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                              <Timer className="w-3.5 h-3.5 text-slate-300" />
+                              <span className="font-medium text-slate-200">
+                                {request.exitTime ? `Uscita: ${formatTimeWithoutSeconds(request.exitTime)}` : `Entrata: ${formatTimeWithoutSeconds(request.entryTime)}`}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Note (se presenti) */}
+                        {(request.notes || request.rejectionReason) && (
+                          <div className="mt-3 text-xs bg-slate-900/30 p-2 rounded border border-slate-700/50">
+                            {request.notes && (
+                              <p className="text-slate-400 line-clamp-2">
+                                <span className="font-semibold text-slate-500 mr-1">Note:</span>
+                                {request.notes}
+                              </p>
+                            )}
+                            {request.rejectionReason && (
+                              <p className="text-red-300 mt-1">
+                                <span className="font-semibold text-red-400 mr-1">Rifiuto:</span>
+                                {request.rejectionReason}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* DESTRA: Azioni */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+
+                        {/* Admin Actions: Pending */}
+                        {user?.role === 'admin' && isPending && (
+                          <>
+                            <button
+                              onClick={() => openApproveDialog(request.id)}
+                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-lg shadow-green-900/20 font-medium text-xs gap-1.5"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              Approva
+                            </button>
+                            <button
+                              onClick={() => openRejectDialog(request.id)}
+                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Rifiuta
+                            </button>
+                          </>
+                        )}
+
+                        {/* Admin Actions: Approved (Edit/Cancel) */}
+                        {user?.role === 'admin' && isApproved && request.type === 'permission' && (
+                          <>
+                            {canModifyRequest(request) && (
+                              <button
+                                onClick={() => openEditDialog(request)}
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-blue-500"
+                              >
+                                <Save className="h-3.5 w-3.5" />
+                                Modifica
+                              </button>
+                            )}
+                            {canCancelRequest(request) && (
+                              <button
+                                onClick={() => openCancelDialog(request.id)}
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-red-500"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Annulla
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Employee Actions */}
+                        {user?.role !== 'admin' && (
+                          <>
+                            {canRequestModification(request) && isApproved && (
+                              <button
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setModificationRequest({ reason: '', requestedChanges: '' });
+                                  setShowRequestModificationDialog(true);
+                                }}
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-indigo-500"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                Richiedi Modifica
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <div className="hidden sm:block mt-auto text-[10px] text-slate-500 text-center w-full pt-2">
+                          {formatDateTime(request.submittedAt).split(',')[0]}
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* DATI PRINCIPALI: Quando e Per Quanto */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                  {/* QUANDO */}
-                  <div className="bg-slate-600/50 rounded-lg p-2 border border-slate-500/50">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-                      <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Data Permesso</span>
-                    </div>
-                    <p className="text-base font-bold text-white">{permissionDate}</p>
-                    {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && request.exitTime && (
-                      <p className="text-sm text-orange-400 mt-1 font-semibold">
-                        Uscita alle {formatTimeWithoutSeconds(request.exitTime || request.exit_time)}
-                      </p>
-                    )}
-                    {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && request.entryTime && (
-                      <p className="text-sm text-blue-400 mt-1 font-semibold">
-                        Entrata alle {formatTimeWithoutSeconds(request.entryTime || request.entry_time)}
-                      </p>
-                    )}
                   </div>
-
-                  {/* PER QUANTO */}
-                  <div className="bg-slate-600/50 rounded-lg p-2 border border-slate-500/50">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Clock className="h-3.5 w-3.5 text-amber-400" />
-                      <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Durata</span>
-                    </div>
-                    <p className="text-base font-bold text-white">{hours}</p>
-                    {(request.permissionType === 'uscita_anticipata' || request.permissionType === 'early_exit' || request.exitTime) && (
-                      <p className="text-xs text-slate-400 mt-0.5">Uscita Anticipata</p>
-                    )}
-                    {(request.permissionType === 'entrata_posticipata' || request.permissionType === 'late_entry' || request.entryTime) && (
-                      <p className="text-xs text-slate-400 mt-0.5">Entrata Posticipata</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* DATI SECONDARI: Approvazione e Richiesta */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                  {/* LATO DIPENDENTE: Approvazione */}
-                  {user?.role === 'employee' && (
-                    <>
-                      {isApproved && request.approvedAt && (
-                        <div className="bg-green-500/20 rounded-lg p-2 border border-green-500/30">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <CheckCircle className="h-3 w-3 text-green-400" />
-                            <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
-                          </div>
-                          <p className="text-xs text-white font-medium">
-                            Da: <span className="text-green-300">{request.approver?.name || request.approvedBy || 'Amministratore'}</span>
-                          </p>
-                          <p className="text-xs text-slate-300 mt-0.5">
-                            {formatDateTime(request.approvedAt)}
-                          </p>
-                        </div>
-                      )}
-                      {isPending && (
-                        <div className="bg-yellow-500/10 rounded-lg p-2 border border-yellow-500/20">
-                          <div className="flex items-center gap-1.5">
-                            <Timer className="h-3 w-3 text-yellow-400" />
-                            <span className="text-xs text-yellow-300 font-medium">In attesa di approvazione</span>
-                          </div>
-                        </div>
-                      )}
-                      {isRejected && request.rejectedAt && (
-                        <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/20">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <XCircle className="h-3 w-3 text-red-400" />
-                            <span className="text-xs font-medium text-red-300 uppercase">Rifiutato</span>
-                          </div>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {formatDateTime(request.rejectedAt)}
-                          </p>
-                        </div>
-                      )}
-                      <div className="bg-slate-600/50 rounded-lg p-2 border border-slate-500/50">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <Clock className="h-3 w-3 text-slate-400" />
-                          <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
-                        </div>
-                        <p className="text-xs text-white">{formatDateTime(request.submittedAt)}</p>
-                      </div>
-                    </>
-                  )}
-
-                  {/* LATO ADMIN: Info Approvazione */}
-                  {user?.role === 'admin' && (
-                    <>
-                      {isApproved && request.approvedAt && (
-                        <div className="bg-green-500/20 rounded-lg p-2 border border-green-500/30">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <CheckCircle className="h-3 w-3 text-green-400" />
-                            <span className="text-xs font-medium text-green-300 uppercase">Approvato</span>
-                          </div>
-                          <p className="text-xs text-white">
-                            {formatDateTime(request.approvedAt)}
-                          </p>
-                        </div>
-                      )}
-                      {isPending && (
-                        <div className="bg-yellow-500/10 rounded-lg p-2 border border-yellow-500/20">
-                          <div className="flex items-center gap-1.5">
-                            <Timer className="h-3 w-3 text-yellow-400" />
-                            <span className="text-xs text-yellow-300 font-medium">In attesa</span>
-                          </div>
-                        </div>
-                      )}
-                      <div className="bg-slate-600/50 rounded-lg p-2 border border-slate-500/50">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <Clock className="h-3 w-3 text-slate-400" />
-                          <span className="text-xs font-medium text-slate-400 uppercase">Richiesta il</span>
-                        </div>
-                        <p className="text-xs text-white">{formatDateTime(request.submittedAt)}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-                {/* NOTE E MOTIVI */}
-                {(request.notes || request.rejectionReason) && (
-                  <div className="space-y-1.5 mb-2">
-                    {request.notes && (
-                      <div className="bg-slate-600/50 rounded-lg p-2 border border-slate-500/50">
-                        <div className="flex items-start gap-1.5">
-                          <FileText className="h-3 w-3 text-slate-400 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs font-medium text-slate-400 mb-0.5">Note</p>
-                            <p className="text-xs text-slate-300">{request.notes}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {request.rejectionReason && (
-                      <div className="bg-red-500/10 rounded-lg p-2 border border-red-500/20">
-                        <div className="flex items-start gap-1.5">
-                          <XCircle className="h-3 w-3 text-red-400 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs font-medium text-red-300 mb-0.5">Motivo Rifiuto</p>
-                            <p className="text-xs text-red-200">{request.rejectionReason}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* PULSANTI AZIONE */}
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-600/50">
-                  {/* Pulsanti di approvazione per admin - solo per richieste pending */}
-                  {user?.role === 'admin' && request.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => openApproveDialog(request.id)}
-                        className="flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium text-xs min-h-[36px]"
-                      >
-                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                        Approva
-                      </button>
-                      <button
-                        onClick={() => openRejectDialog(request.id)}
-                        className="flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-xs min-h-[36px]"
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        Rifiuta
-                      </button>
-                    </>
-                  )}
-
-                  {/* Pulsanti di modifica e annullamento per admin - solo per richieste approvate */}
-                  {user?.role === 'admin' && request.status === 'approved' && request.type === 'permission' && (
-                    <>
-                      {canModifyRequest(request) && (
-                        <button
-                          onClick={() => openEditDialog(request)}
-                          className="flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[36px] font-medium text-xs"
-                        >
-                          <Save className="h-3.5 w-3.5 mr-1" />
-                          Modifica
-                        </button>
-                      )}
-                      {canCancelRequest(request) && (
-                        <button
-                          onClick={() => openCancelDialog(request.id)}
-                          className="flex items-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors touch-manipulation min-h-[36px] font-medium text-xs"
-                        >
-                          <X className="h-3.5 w-3.5 mr-1" />
-                          Annulla
-                        </button>
-                      )}
-                    </>
-                  )}
-
-                  {/* Pulsante richiesta modifica per dipendenti - solo per richieste approvate e se l'orario non è ancora passato */}
-                  {user?.role === 'employee' && request.status === 'approved' && request.type === 'permission' && canRequestModification(request) && (
-                    <button
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        setModificationRequest({ reason: '', requestedChanges: '' });
-                        setShowRequestModificationDialog(true);
-                      }}
-                      className="flex items-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors touch-manipulation min-h-[36px] font-medium text-xs"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5 mr-1" />
-                      Richiedi Modifica
-                    </button>
-                  )}
-                </div>
-              </div>
-              );
+                );
               })}
-          </div>
+            </div>
           );
         })()}
       </div>
@@ -1932,7 +1841,7 @@ const LeaveRequests = () => {
             <p className="text-slate-300 mb-4 text-sm">
               Modifica gli orari o le ore di permesso per correggere eventuali discrepanze.
             </p>
-            
+
             <div className="space-y-4">
               {/* Campo Data */}
               <div>
@@ -1945,19 +1854,19 @@ const LeaveRequests = () => {
                   onChange={async (e) => {
                     const newDate = e.target.value;
                     setEditFormData({ ...editFormData, permissionDate: newDate });
-                    
+
                     // Recupera l'orario di lavoro per la nuova data
                     if (newDate) {
                       try {
                         const date = new Date(newDate);
                         const dayOfWeek = date.getDay();
                         const userId = selectedRequest.userId || selectedRequest.user_id;
-                        
+
                         if (userId) {
                           const response = await apiCall(`/api/work-schedules/${userId}`);
                           if (response.ok) {
                             const schedules = await response.json();
-                            const schedule = schedules.find(s => 
+                            const schedule = schedules.find(s =>
                               s.day_of_week === dayOfWeek && s.is_working_day
                             );
                             if (schedule) {
@@ -2136,8 +2045,8 @@ const LeaveRequests = () => {
             </h3>
             <p className="text-slate-300 text-sm mb-4">
               Stai richiedendo una modifica al permesso approvato per il <strong>
-                {selectedRequest.permissionDate ? formatDate(selectedRequest.permissionDate) : 
-                 selectedRequest.startDate ? formatDate(selectedRequest.startDate) : 'Data non disponibile'}
+                {selectedRequest.permissionDate ? formatDate(selectedRequest.permissionDate) :
+                  selectedRequest.startDate ? formatDate(selectedRequest.startDate) : 'Data non disponibile'}
               </strong>.
               L'amministratore riceverà una notifica e potrà modificare il permesso.
             </p>
