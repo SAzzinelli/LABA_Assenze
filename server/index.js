@@ -11889,7 +11889,7 @@ async function calculateOvertimeBalance(userId, year = null) {
       .from('attendance')
       .select('balance_hours, date')
       .eq('user_id', userId)
-      .lte('date', endDate); // Prendi tutto fino alla fine dell'anno corrente
+      .lte('date', today); // Prendi tutto fino ad oggi (escludi futuro)
 
     if (attendanceError) {
       console.error(`Error fetching attendance for user ${userId}:`, attendanceError);
