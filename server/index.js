@@ -5767,7 +5767,42 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
 
       // Verifica bilancio ferie (giorni, non ore)
       const currentYear = new Date(startDate).getFullYear();
-      daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Calcola i giorni effettivi di ferie basandosi sull'orario di lavoro
+      // Escludi i giorni non lavorativi (sabato/domenica se non lavorativi)
+      const { data: userSchedules, error: schedulesError } = await supabase
+        .from('work_schedules')
+        .select('day_of_week, is_working_day')
+        .eq('user_id', req.user.id);
+
+      if (schedulesError) {
+        console.error('Error fetching work schedules for vacation calculation:', schedulesError);
+        return res.status(500).json({ error: 'Errore nel recupero degli orari di lavoro' });
+      }
+
+      let actualVacationDays = 0;
+      const vacationStart = new Date(startDate);
+      const vacationEnd = new Date(endDate);
+
+      for (let d = new Date(vacationStart); d <= vacationEnd; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay();
+        // Trova lo schedule per questo giorno della settimana
+        // Nota: day_of_week nel DB: 0=Domenica, 1=Lunedì, ecc. (standard JS getDay())
+        const schedule = userSchedules?.find(s => Number(s.day_of_week) === dayOfWeek);
+
+        // Se c'è uno schedule ed è un giorno lavorativo, conta come giorno di ferie
+        // Se non c'è schedule (es. domenica), NON conta (assumiamo non lavorativo di default)
+        if (schedule && schedule.is_working_day) {
+          actualVacationDays++;
+        }
+      }
+
+      daysRequested = actualVacationDays;
+      console.log(`📅 Richiesta ferie: ${startDate} -> ${endDate}. Giorni totali: ${Math.ceil((vacationEnd - vacationStart) / (1000 * 60 * 60 * 24)) + 1}, Giorni lavorativi (ferie effettivi): ${daysRequested}`);
+
+      if (daysRequested === 0) {
+        return res.status(400).json({ error: 'Il periodo selezionato non contiene giorni lavorativi' });
+      }
 
       // Recupera o crea bilancio ferie
       let { data: balance, error: balanceError } = await supabase
@@ -7153,9 +7188,39 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       }
 
       const requestYear = new Date(updatedRequest.start_date).getFullYear();
-      const daysRequested = updatedRequest.days_requested || 0;
+      const daysRequestedOriginal = updatedRequest.days_requested || 0;
+      let daysRequested = daysRequestedOriginal;
 
       if (daysRequested > 0) {
+        // Ricalcola i giorni effettivi basandosi sull'orario di lavoro (per correggere eventuali errori nel valore salvato)
+        const { data: userSchedules, error: schedulesError } = await supabase
+          .from('work_schedules')
+          .select('day_of_week, is_working_day')
+          .eq('user_id', updatedRequest.user_id);
+
+        if (!schedulesError && userSchedules) {
+          let actualVacationDays = 0;
+          const vacationStart = new Date(updatedRequest.start_date);
+          const vacationEnd = new Date(updatedRequest.end_date);
+
+          for (let d = new Date(vacationStart); d <= vacationEnd; d.setDate(d.getDate() + 1)) {
+            const dayOfWeek = d.getDay();
+            const schedule = userSchedules.find(s => Number(s.day_of_week) === dayOfWeek);
+            if (schedule && schedule.is_working_day) {
+              actualVacationDays++;
+            }
+          }
+          daysRequested = actualVacationDays;
+          console.log(`🔄 Ricalcolo giorni ferie all'approvazione: ${daysRequestedOriginal} -> ${daysRequested} (basato su giorni lavorativi)`);
+
+          // Se il numero è cambiato, aggiorna la richiesta nel DB con il valore corretto
+          if (daysRequested !== daysRequestedOriginal) {
+            await supabase
+              .from('leave_requests')
+              .update({ days_requested: daysRequested })
+              .eq('id', id);
+          }
+        }
         // Recupera o crea bilancio ferie
         let { data: balance, error: balanceError } = await supabase
           .from('vacation_balances')
