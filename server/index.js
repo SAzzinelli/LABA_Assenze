@@ -33,7 +33,7 @@ function formatNameForCalendarAndLogs(firstName, lastName, allUsers = []) {
   }
 
   // Trova tutti gli utenti con lo stesso first_name
-  const sameFirstName = allUsers.filter(u => 
+  const sameFirstName = allUsers.filter(u =>
     u.first_name && u.first_name.toLowerCase() === firstName.toLowerCase()
   );
 
@@ -50,7 +50,7 @@ function formatNameForCalendarAndLogs(firstName, lastName, allUsers = []) {
   });
 
   // Trova l'indice di questo utente nell'array ordinato
-  const index = sorted.findIndex(u => 
+  const index = sorted.findIndex(u =>
     u.last_name && u.last_name.toLowerCase() === lastName.toLowerCase()
   );
 
@@ -83,7 +83,7 @@ async function generateRetroactiveAttendance(userId, registrationDate) {
   try {
     const startDate = new Date('2025-10-01');
     const regDate = new Date(registrationDate);
-    
+
     // Se la registrazione è prima del 1 ottobre 2025, non fare nulla
     if (regDate <= startDate) {
       console.log(`⏭️ Dipendente ${userId} registrato prima del 1 ottobre 2025, nessuna presenza retroattiva necessaria`);
@@ -93,7 +93,7 @@ async function generateRetroactiveAttendance(userId, registrationDate) {
     // Calcola il giorno prima della registrazione
     const endDate = new Date(regDate);
     endDate.setDate(endDate.getDate() - 1);
-    
+
     console.log(`📅 Generazione presenze retroattive per dipendente ${userId} dal ${startDate.toISOString().split('T')[0]} al ${endDate.toISOString().split('T')[0]}`);
 
     // Recupera gli orari di lavoro del dipendente
@@ -114,7 +114,7 @@ async function generateRetroactiveAttendance(userId, registrationDate) {
       'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
       'thursday': 4, 'friday': 5, 'saturday': 6
     };
-    
+
     workSchedules.forEach(schedule => {
       let dayNum = schedule.day_of_week;
       // Se è una stringa, convertila in numero
@@ -345,7 +345,7 @@ const authenticateToken = async (req, res, next) => {
   if (req.path === '/api/recovery-requests/add-credit-hours') {
     console.log('🔵 [AUTH] Middleware authenticateToken chiamato per add-credit-hours');
   }
-  
+
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -414,37 +414,37 @@ app.post('/api/auth/login', async (req, res) => {
       console.error('❌ Tipo errore:', typeof error);
       console.error('❌ Messaggio errore:', error.message);
       console.error('❌ Codice errore:', error.code);
-      
+
       // Controlla se l'errore contiene HTML (segno che Cloudflare è down)
       const errorString = JSON.stringify(error);
-      const isCloudflareDown = errorString.includes('<html>') || 
-                                errorString.includes('cloudflare') || 
-                                errorString.includes('500 Internal Server Error') ||
-                                (error.message && error.message.includes('<html>'));
-      
+      const isCloudflareDown = errorString.includes('<html>') ||
+        errorString.includes('cloudflare') ||
+        errorString.includes('500 Internal Server Error') ||
+        (error.message && error.message.includes('<html>'));
+
       if (isCloudflareDown) {
         console.error('❌ Cloudflare è down - Supabase non raggiungibile');
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: 'Servizio temporaneamente non disponibile. Cloudflare è attualmente offline. Riprova tra qualche minuto.',
           code: 'CLOUDFLARE_DOWN'
         });
       }
-      
+
       // Se l'errore è un problema di connessione
       if (error.message && (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('ECONNREFUSED'))) {
         console.error('❌ Errore di connessione a Supabase');
-        return res.status(503).json({ 
+        return res.status(503).json({
           error: 'Errore di connessione al database. Il servizio potrebbe essere temporaneamente non disponibile.',
           code: 'DATABASE_CONNECTION_ERROR'
         });
       }
-      
+
       // Se l'errore è "PGRST116" significa che non è stato trovato nessun record
       if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
         console.log(`⚠️ Utente non trovato: ${email}`);
-      return res.status(401).json({ error: 'Credenziali non valide' });
-    }
-      
+        return res.status(401).json({ error: 'Credenziali non valide' });
+      }
+
       return res.status(401).json({ error: 'Credenziali non valide' });
     }
 
@@ -1313,7 +1313,7 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
         friday: 5, saturday: 6, sunday: 0
       };
-      
+
       const scheduleEntries = Object.entries(workSchedules).map(([day, schedule]) => {
         // Calcola automaticamente break_start_time a metà della giornata lavorativa
         let breakStartTime = null;
@@ -1560,7 +1560,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     }
 
     const { data: leaveRequests, error: leaveError } = await leaveQuery;
-    
+
     if (month && year) {
       console.log(`📋 [ATTENDANCE] Leave requests trovate per ${month}/${year}:`, leaveRequests?.length || 0);
       if (leaveRequests && leaveRequests.length > 0) {
@@ -1614,7 +1614,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     if (leaveRequests && leaveRequests.length > 0) {
       // Raggruppa per user_id per evitare duplicati
       const userVacations = new Map();
-      
+
       leaveRequests.forEach(leave => {
         if (leave.type === 'vacation') {
           const userId = leave.user_id;
@@ -1631,7 +1631,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
         .from('users')
         .select('id, first_name, last_name, email')
         .in('id', userIdsToFetch);
-      
+
       const usersMap = new Map();
       if (usersData) {
         usersData.forEach(user => {
@@ -1645,17 +1645,17 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
           // Usa le date direttamente come stringhe per evitare problemi di fuso orario
           const startDateStr = vacation.start_date;
           const endDateStr = vacation.end_date;
-          
+
           console.log(`🔄 [ATTENDANCE] Processando ferie per user ${userId}: ${startDateStr} → ${endDateStr}`);
-          
+
           // Parsa le date direttamente come stringhe per evitare problemi di fuso orario
           const [startYear, startMonth, startDay] = startDateStr.split('-').map(Number);
           const [endYear, endMonth, endDay] = endDateStr.split('-').map(Number);
-          
+
           // Crea date iniziale e finale usando UTC per evitare problemi di fuso orario
           let currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
           const finalDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-          
+
           let dayCount = 0;
           while (currentDate <= finalDate) {
             dayCount++;
@@ -1664,32 +1664,32 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
             const dateMonth = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
             const dateDay = String(currentDate.getUTCDate()).padStart(2, '0');
             const dateStr = `${dateYear}-${dateMonth}-${dateDay}`;
-            
+
             if (dayCount === 1) {
               console.log(`   📅 Primo giorno processato: ${dateStr} (user ${userId})`);
             }
             if (dateStr === '2025-12-24') {
               console.log(`   🎯 [ATTENDANCE] Processando 24/12/2025 per user ${userId}`);
             }
-            
+
             // Filtra per data se specificato
             if (date && dateStr !== date) {
               currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
               continue;
             }
-            
+
             // Filtra per mese/anno se specificato (parsa direttamente dalla stringa data)
             if (month && year) {
               const monthNum = parseInt(month, 10);
               const yearNum = parseInt(year, 10);
               // Parsa dalla stringa data invece di usare getMonth/getFullYear
               const [dateStrYear, dateStrMonth] = dateStr.split('-').map(Number);
-              
+
               if (dateStr === '2025-12-24') {
                 console.log(`🔍 [ATTENDANCE] Debug filtro 24/12/2025: dateStr=${dateStr}, dateStrMonth=${dateStrMonth} (type: ${typeof dateStrMonth}), monthNum=${monthNum} (type: ${typeof monthNum}), dateStrYear=${dateStrYear} (type: ${typeof dateStrYear}), yearNum=${yearNum} (type: ${typeof yearNum})`);
                 console.log(`🔍 [ATTENDANCE] Confronto: dateStrMonth !== monthNum = ${dateStrMonth !== monthNum}, dateStrYear !== yearNum = ${dateStrYear !== yearNum}`);
               }
-              
+
               if (dateStrMonth !== monthNum || dateStrYear !== yearNum) {
                 if (dateStr === '2025-12-24') {
                   console.log(`⚠️ [ATTENDANCE] 24/12/2025 escluso dal filtro: dateStrMonth=${dateStrMonth}, monthNum=${monthNum}, dateStrYear=${dateStrYear}, yearNum=${yearNum}`);
@@ -1701,19 +1701,19 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 console.log(`✅ [ATTENDANCE] 24/12/2025 incluso nel filtro, creando record virtuale per user ${userId}`);
               }
             }
-            
+
             // Verifica se esiste già un record di presenza per questa data
-            const existingRecord = attendanceWithLeaves.find(r => 
+            const existingRecord = attendanceWithLeaves.find(r =>
               r.user_id === userId && r.date === dateStr
             );
-            
+
             if (dateStr === '2025-12-24') {
               console.log(`   🔍 [ATTENDANCE] 24/12/2025 - existingRecord per user ${userId}:`, existingRecord ? 'TROVATO' : 'NON TROVATO');
               if (existingRecord) {
                 console.log(`      - existingRecord.id: ${existingRecord.id}, is_vacation: ${existingRecord.is_vacation}`);
               }
             }
-            
+
             // Se non esiste un record di presenza, crea un record virtuale per le ferie
             if (!existingRecord) {
               // Recupera i dati dell'utente (cerca prima nei record esistenti, altrimenti dalla mappa)
@@ -1724,7 +1724,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
               } else if (usersMap.has(userId)) {
                 userData = usersMap.get(userId);
               }
-              
+
               if (dateStr === '2025-12-24') {
                 console.log(`   ➕ [ATTENDANCE] Creando record virtuale per 24/12/2025, user ${userId}`);
               }
@@ -1742,20 +1742,20 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
                 users: userData,
                 is_vacation: true // Flag per identificare record virtuale di ferie
               };
-              
+
               if (dateStr === '2025-12-24') {
                 console.log(`   ✅ [ATTENDANCE] Record virtuale creato per 24/12/2025, user ${userId}, is_vacation: ${vacationRecord.is_vacation}`);
               }
-              
+
               vacationRecords.push(vacationRecord);
             } else if (dateStr === '2025-12-24') {
               console.log(`   ⚠️ [ATTENDANCE] 24/12/2025 - NON creato record virtuale per user ${userId} perché esiste già un record di presenza`);
             }
-            
+
             // Incrementa la data per il prossimo giorno (usa UTC per evitare problemi di fuso orario)
             currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
           }
-          
+
           console.log(`   ✅ [ATTENDANCE] Completato processing ferie per user ${userId}: ${dayCount} giorni processati`);
         });
       });
@@ -1763,13 +1763,13 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 
     // Combina record di presenza con record virtuali di ferie
     const allRecords = [...attendanceWithLeaves, ...vacationRecords];
-    
+
     // Filtra i record futuri (solo fino a oggi)
     const today = new Date().toISOString().split('T')[0];
     const filteredRecords = allRecords.filter(record => {
       return record.date <= today;
     });
-    
+
     // Ordina i record per data (decrescente - più recenti prima) e poi per nome dipendente
     filteredRecords.sort((a, b) => {
       // Prima ordina per data (decrescente)
@@ -1781,30 +1781,30 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
       const nameB = b.users ? `${b.users.first_name} ${b.users.last_name}` : '';
       return nameA.localeCompare(nameB);
     });
-    
+
     // Log per debug
     if (month && year) {
       const records24Dec = filteredRecords.filter(r => r.date === '2025-12-24');
       const vacationRecords24Dec = vacationRecords.filter(r => r.date === '2025-12-24');
       const attendanceRecords24Dec = attendanceWithLeaves.filter(r => r.date === '2025-12-24');
-      
+
       console.log(`📊 [ATTENDANCE] Record totali per ${month}/${year}: ${filteredRecords.length} (attendance: ${attendanceWithLeaves.length}, vacation: ${vacationRecords.length}, filtrati futuri: ${allRecords.length - filteredRecords.length})`);
       console.log(`📊 [ATTENDANCE] Record per 24/12/2025: ${records24Dec.length} (attendance: ${attendanceRecords24Dec.length}, vacation: ${vacationRecords24Dec.length})`);
-      
+
       if (vacationRecords24Dec.length > 0) {
         console.log(`   📋 Record virtuali ferie per 24/12/2025:`);
         vacationRecords24Dec.forEach(r => {
           console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, leave_type: ${r.leave_type}, id: ${r.id}`);
         });
       }
-      
+
       if (attendanceRecords24Dec.length > 0) {
         console.log(`   📋 Record presenza esistenti per 24/12/2025:`);
         attendanceRecords24Dec.forEach(r => {
           console.log(`      - User ${r.user_id}, is_vacation: ${r.is_vacation}, leave_type: ${r.leave_type}, id: ${r.id}`);
         });
       }
-      
+
       if (records24Dec.length > 0) {
         console.log(`   📋 Record finali per 24/12/2025 (dopo ordinamento):`);
         records24Dec.forEach(r => {
@@ -3353,8 +3353,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
     // Include anche completed per mostrare chi ha finito la giornata
     const presentNow = currentAttendance.filter(emp =>
       emp.is_working_day && (
-        emp.status === 'working' || 
-        emp.status === 'on_break' || 
+        emp.status === 'working' ||
+        emp.status === 'on_break' ||
         emp.status === 'present' ||
         emp.status === 'vacation' ||
         emp.status === 'sick_leave' ||
@@ -4377,13 +4377,13 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
 
     if (permissionsToday && permissionsToday.length > 0) {
       const totalPermissionHours = permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-      
+
       // IMPORTANTE: Le ore attese rimangono sempre quelle contrattuali (8h)
       // Il permesso influisce solo sul balance: balance = actual_hours - expected_hours
       // Se actual_hours = 6 (perché ha permesso di 2h), balance = 6 - 8 = -2
       finalExpectedHours = contractHours; // Sempre 8h, indipendentemente dal permesso
       finalBalanceHours = actualHours - contractHours; // Balance = actual - expected
-      
+
       console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h (sempre contrattuali), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
     }
 
@@ -6236,24 +6236,24 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           // PERMESSI: sono in ORE, non giorni
           const hours = newRequest.hours || 0;
           const permissionType = newRequest.permission_type;
-          
+
           // Debug log per verificare i valori - log completo di newRequest
           console.log(`🔍 [NOTIFICA] Full newRequest object:`, JSON.stringify(newRequest, null, 2));
           console.log(`🔍 [NOTIFICA] Permission type: ${permissionType}, hours: ${hours}, exit_time: ${newRequest.exit_time}, entry_time: ${newRequest.entry_time}`);
-          
+
           // Se è un permesso per tutta la giornata, controlla permission_type
           // IMPORTANTE: per full_day, hours contiene le ore della giornata lavorativa (circa 7-8h), non 0
           // Controlla PRIMA permission_type, poi il fallback per richieste vecchie
           const hasNoTimeFields = !newRequest.exit_time && !newRequest.entry_time;
           const isStandardFullDayHours = hours >= 7 && hours <= 8.5; // Range tipico per una giornata lavorativa (7-8.5h)
-          
-          const isFullDay = permissionType === 'full_day' || 
-                           permissionType === 'tutta_giornata' ||
-                           // Fallback per richieste vecchie: se hours è 0 E non ci sono time fields, è full_day
-                           (hours === 0 && hasNoTimeFields && permissionType !== 'early_exit' && permissionType !== 'late_entry') ||
-                           // Fallback per richieste vecchie: se hours è standard (7-8.5h) E non ci sono time fields E permission_type è null/undefined, probabilmente è full_day
-                           (isStandardFullDayHours && hasNoTimeFields && (permissionType === null || permissionType === undefined));
-          
+
+          const isFullDay = permissionType === 'full_day' ||
+            permissionType === 'tutta_giornata' ||
+            // Fallback per richieste vecchie: se hours è 0 E non ci sono time fields, è full_day
+            (hours === 0 && hasNoTimeFields && permissionType !== 'early_exit' && permissionType !== 'late_entry') ||
+            // Fallback per richieste vecchie: se hours è standard (7-8.5h) E non ci sono time fields E permission_type è null/undefined, probabilmente è full_day
+            (isStandardFullDayHours && hasNoTimeFields && (permissionType === null || permissionType === undefined));
+
           let hoursFormatted;
           if (isFullDay) {
             hoursFormatted = 'Tutta la giornata';
@@ -6262,7 +6262,7 @@ app.post('/api/leave-requests', authenticateToken, async (req, res) => {
           } else {
             hoursFormatted = '0h';
           }
-          
+
           console.log(`🔍 [NOTIFICA] isFullDay: ${isFullDay}, hoursFormatted: ${hoursFormatted}, permissionType check: ${permissionType === 'full_day'}, ${permissionType === 'tutta_giornata'}, hasNoTimeFields: ${hasNoTimeFields}, isStandardFullDayHours: ${isStandardFullDayHours}`);
           messageText = `${userName} ha richiesto un ${requestTypeText} ${isFullDay ? '' : `di ${hoursFormatted}`} per il ${formattedStartDate}`;
         } else {
@@ -6698,8 +6698,8 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     if (type === 'permission' && insertData.status === 'approved') {
       const permissionDate = startDate;
       // Usa calculatedHours se disponibile, altrimenti usa hours dal payload
-      const permissionHours = calculatedHours !== null && calculatedHours !== undefined 
-        ? parseFloat(calculatedHours) 
+      const permissionHours = calculatedHours !== null && calculatedHours !== undefined
+        ? parseFloat(calculatedHours)
         : (hours ? parseFloat(hours) : null);
 
       // Solo procedi se abbiamo delle ore valide
@@ -6708,99 +6708,99 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           try {
             const dayOfWeek = new Date(permissionDate).getDay();
 
-        // Recupera l'orario di lavoro per quel giorno
-        const { data: schedule, error: scheduleError } = await supabase
-          .from('work_schedules')
-          .select('start_time, end_time, break_duration')
-          .eq('user_id', userId)
-          .eq('day_of_week', dayOfWeek)
-          .eq('is_working_day', true)
-          .single();
-
-        if (!scheduleError && schedule) {
-          // Calcola le ore attese originali (senza permessi)
-          const originalExpectedHours = calculateExpectedHoursForSchedule({
-            start_time: schedule.start_time,
-            end_time: schedule.end_time,
-            break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
-          });
-
-          // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
-          const { data: approvedPermissions, error: permError } = await supabase
-            .from('leave_requests')
-            .select('hours')
-            .eq('user_id', userId)
-            .eq('type', 'permission')
-            .eq('status', 'approved')
-            .lte('start_date', permissionDate)
-            .gte('end_date', permissionDate);
-
-          let totalPermissionHours = 0;
-          if (!permError && approvedPermissions) {
-            totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
-          }
-
-          // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dal permesso
-          // Il permesso influisce solo sulle ore effettive e sul balance
-          const finalExpectedHours = originalExpectedHours;
-
-          // Recupera o crea la presenza per questa data
-          const { data: attendanceRecord, error: attError } = await supabase
-            .from('attendance')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('date', permissionDate)
-            .single();
-
-          if (!attError && attendanceRecord) {
-            // Calcola balance: actual_hours - expected_hours
-            // Se actual_hours non è ancora stato impostato, usa 0
-            const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
-            const newBalanceHours = actualHours - finalExpectedHours;
-
-            const { error: updateAttError } = await supabase
-              .from('attendance')
-              .update({
-                expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                balance_hours: Math.round(newBalanceHours * 100) / 100,
-                notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso creato dall'admin: -${permissionHours}h]` : `[Permesso creato dall'admin: -${permissionHours}h]`
-              })
+            // Recupera l'orario di lavoro per quel giorno
+            const { data: schedule, error: scheduleError } = await supabase
+              .from('work_schedules')
+              .select('start_time, end_time, break_duration')
               .eq('user_id', userId)
-              .eq('date', permissionDate);
+              .eq('day_of_week', dayOfWeek)
+              .eq('is_working_day', true)
+              .single();
 
-            if (updateAttError) {
-              console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
-            } else {
-              console.log(`✅ Attendance ${permissionDate} aggiornata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
-            }
-          } else if (attError && attError.code === 'PGRST116') {
-            // Nessun record di attendance, creane uno nuovo
-            // Le ore attese rimangono quelle originali (8h)
-            const actualHours = 0; // Non ha ancora lavorato
-            const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
-
-            const { error: createAttError } = await supabase
-              .from('attendance')
-              .insert({
-                user_id: userId,
-                date: permissionDate,
-                actual_hours: actualHours,
-                expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                balance_hours: Math.round(newBalanceHours * 100) / 100,
-                notes: `[Permesso creato dall'admin: -${permissionHours}h]`
+            if (!scheduleError && schedule) {
+              // Calcola le ore attese originali (senza permessi)
+              const originalExpectedHours = calculateExpectedHoursForSchedule({
+                start_time: schedule.start_time,
+                end_time: schedule.end_time,
+                break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
               });
 
-            if (createAttError) {
-              console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
+              // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena creato)
+              const { data: approvedPermissions, error: permError } = await supabase
+                .from('leave_requests')
+                .select('hours')
+                .eq('user_id', userId)
+                .eq('type', 'permission')
+                .eq('status', 'approved')
+                .lte('start_date', permissionDate)
+                .gte('end_date', permissionDate);
+
+              let totalPermissionHours = 0;
+              if (!permError && approvedPermissions) {
+                totalPermissionHours = approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0);
+              }
+
+              // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dal permesso
+              // Il permesso influisce solo sulle ore effettive e sul balance
+              const finalExpectedHours = originalExpectedHours;
+
+              // Recupera o crea la presenza per questa data
+              const { data: attendanceRecord, error: attError } = await supabase
+                .from('attendance')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('date', permissionDate)
+                .single();
+
+              if (!attError && attendanceRecord) {
+                // Calcola balance: actual_hours - expected_hours
+                // Se actual_hours non è ancora stato impostato, usa 0
+                const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+                const newBalanceHours = actualHours - finalExpectedHours;
+
+                const { error: updateAttError } = await supabase
+                  .from('attendance')
+                  .update({
+                    expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                    balance_hours: Math.round(newBalanceHours * 100) / 100,
+                    notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso creato dall'admin: -${permissionHours}h]` : `[Permesso creato dall'admin: -${permissionHours}h]`
+                  })
+                  .eq('user_id', userId)
+                  .eq('date', permissionDate);
+
+                if (updateAttError) {
+                  console.error(`❌ Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+                } else {
+                  console.log(`✅ Attendance ${permissionDate} aggiornata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                }
+              } else if (attError && attError.code === 'PGRST116') {
+                // Nessun record di attendance, creane uno nuovo
+                // Le ore attese rimangono quelle originali (8h)
+                const actualHours = 0; // Non ha ancora lavorato
+                const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
+
+                const { error: createAttError } = await supabase
+                  .from('attendance')
+                  .insert({
+                    user_id: userId,
+                    date: permissionDate,
+                    actual_hours: actualHours,
+                    expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                    balance_hours: Math.round(newBalanceHours * 100) / 100,
+                    notes: `[Permesso creato dall'admin: -${permissionHours}h]`
+                  });
+
+                if (createAttError) {
+                  console.error(`❌ Errore creazione presenza per ${permissionDate}:`, createAttError);
+                } else {
+                  console.log(`✅ Attendance ${permissionDate} creata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                }
+              } else if (attError) {
+                console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
+              }
             } else {
-              console.log(`✅ Attendance ${permissionDate} creata da admin: ${originalExpectedHours}h attese (permesso: -${permissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+              console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
             }
-          } else if (attError) {
-            console.error(`❌ Errore recupero presenza per ${permissionDate}:`, attError);
-          }
-          } else {
-            console.warn(`⚠️ Orario di lavoro non trovato per ${permissionDate}, impossibile aggiornare attendance`);
-          }
           } catch (error) {
             console.error(`❌ Errore imprevisto nell'aggiornamento attendance per permesso passato ${permissionDate}:`, error);
           }
@@ -6937,17 +6937,17 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
     console.error('❌ Admin leave request creation error:', error);
     console.error('❌ Error stack:', error.stack);
     console.error('❌ Request body:', JSON.stringify(req.body, null, 2));
-    
+
     // Se è un errore di database, fornisci più dettagli
     if (error.code || error.message) {
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Errore nella creazione della richiesta',
         details: error.message || 'Errore sconosciuto',
         code: error.code
       });
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Errore interno del server',
       details: error.message || 'Errore sconosciuto'
     });
@@ -6986,7 +6986,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
         updateData.days_requested = days_requested;
       }
     }
-    
+
     // Gestione modifica data per permessi normali
     if (existingRequest.type === 'permission' && start_date !== undefined) {
       updateData.start_date = start_date;
@@ -7046,19 +7046,19 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             (parseInt(schedule.start_time.split(':')[0]) * 60 + parseInt(schedule.start_time.split(':')[1])) : 0;
           const entryMinutes = finalEntryTime ?
             (parseInt(finalEntryTime.split(':')[0]) * 60 + parseInt(finalEntryTime.split(':')[1])) : 0;
-          
+
           // Calcola la differenza totale in minuti
           const totalMinutesDiff = entryMinutes - startMinutes;
-          
+
           // Se c'è una pausa pranzo e il periodo di permesso include completamente la pausa, sottraila
           let breakMinutesToSubtract = 0;
           if (schedule.break_duration && schedule.break_duration > 0) {
             // Calcola l'inizio e la fine della pausa
-            const breakStartMinutes = schedule.break_start_time ? 
+            const breakStartMinutes = schedule.break_start_time ?
               (parseInt(schedule.break_start_time.split(':')[0]) * 60 + parseInt(schedule.break_start_time.split(':')[1])) :
               (13 * 60); // Default: 13:00
             const breakEndMinutes = breakStartMinutes + schedule.break_duration;
-            
+
             // La pausa è completamente inclusa nel permesso se:
             // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (startMinutes)
             // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
@@ -7067,7 +7067,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               breakMinutesToSubtract = schedule.break_duration;
             }
           }
-          
+
           const workMinutesDiff = Math.max(0, totalMinutesDiff - breakMinutesToSubtract);
           const hoursDiff = workMinutesDiff / 60;
           updateData.hours = parseFloat(hoursDiff.toFixed(2));
@@ -7122,14 +7122,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const { data: allUsers } = await supabase
             .from('users')
             .select('first_name, last_name');
-          
+
           const userName = formatNameForCalendarAndLogs(
             employee.first_name,
             employee.last_name,
             allUsers || []
           );
           console.log(`📅 [APPROVAZIONE FERIE] Chiamata addPermissionEvent per ${userName}`);
-          
+
           const calendarResult = await addPermissionEvent({
             userName: userName,
             startDate: updatedRequest.start_date,
@@ -7138,7 +7138,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             type: updatedRequest.type,
             reason: updatedRequest.reason || notes || ''
           });
-          
+
           if (calendarResult) {
             console.log(`✅ [APPROVAZIONE FERIE] Evento Google Calendar creato con successo`);
           } else {
@@ -7314,14 +7314,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           const { data: allUsers } = await supabase
             .from('users')
             .select('first_name, last_name');
-          
+
           const userName = formatNameForCalendarAndLogs(
             employee.first_name,
             employee.last_name,
             allUsers || []
           );
           console.log(`📅 [APPROVAZIONE PERMESSO 104] Chiamata addPermissionEvent per ${userName}`);
-          
+
           const calendarResult = await addPermissionEvent({
             userName: userName,
             startDate: updatedRequest.start_date,
@@ -7330,7 +7330,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             type: updatedRequest.type,
             reason: updatedRequest.reason || notes || ''
           });
-          
+
           if (calendarResult) {
             console.log(`✅ [APPROVAZIONE PERMESSO 104] Evento Google Calendar creato con successo`);
           } else {
@@ -7586,11 +7586,11 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Se un PERMESSO viene APPROVATO O MODIFICATO (ore cambiate), aggiorna l'attendance per ridurre le expected_hours
     const permissionApproved = updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved';
-    const permissionHoursModified = updatedRequest.type === 'permission' && 
-      updatedRequest.status === 'approved' && 
+    const permissionHoursModified = updatedRequest.type === 'permission' &&
+      updatedRequest.status === 'approved' &&
       existingRequest.status === 'approved' &&
       (updateData.hours !== undefined && updatedRequest.hours !== existingRequest.hours);
-    
+
     if (permissionApproved || permissionHoursModified) {
       const actionType = permissionApproved ? 'approvato' : 'modificato (ore cambiate)';
       console.log(`🔄 Permesso ${actionType} - aggiorno attendance per ${updatedRequest.start_date}...`);
@@ -7602,45 +7602,45 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
       if (permissionApproved) {
         try {
           console.log('📅 [APPROVAZIONE PERMESSO] Tentativo aggiunta evento Google Calendar...');
-        // Recupera i dati del dipendente per il nome completo
-        const { data: employee, error: empError } = await supabase
-          .from('users')
-          .select('first_name, last_name')
-          .eq('id', updatedRequest.user_id)
-          .single();
-
-        if (!empError && employee) {
-          // Recupera tutti gli utenti per formattare nomi duplicati
-          const { data: allUsers } = await supabase
+          // Recupera i dati del dipendente per il nome completo
+          const { data: employee, error: empError } = await supabase
             .from('users')
-            .select('first_name, last_name');
-          
-          const userName = formatNameForCalendarAndLogs(
-            employee.first_name,
-            employee.last_name,
-            allUsers || []
-          );
-          console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
-          
-          const calendarResult = await addPermissionEvent({
-            userName: userName,
-            startDate: updatedRequest.start_date,
-            endDate: updatedRequest.end_date,
-            hours: permissionHours,
-            type: updatedRequest.type,
-            reason: updatedRequest.reason || notes || '',
-            entryTime: updatedRequest.entry_time || null,
-            exitTime: updatedRequest.exit_time || null
-          });
-          
-          if (calendarResult) {
-            console.log(`✅ [APPROVAZIONE PERMESSO] Evento Google Calendar creato con successo`);
+            .select('first_name, last_name')
+            .eq('id', updatedRequest.user_id)
+            .single();
+
+          if (!empError && employee) {
+            // Recupera tutti gli utenti per formattare nomi duplicati
+            const { data: allUsers } = await supabase
+              .from('users')
+              .select('first_name, last_name');
+
+            const userName = formatNameForCalendarAndLogs(
+              employee.first_name,
+              employee.last_name,
+              allUsers || []
+            );
+            console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
+
+            const calendarResult = await addPermissionEvent({
+              userName: userName,
+              startDate: updatedRequest.start_date,
+              endDate: updatedRequest.end_date,
+              hours: permissionHours,
+              type: updatedRequest.type,
+              reason: updatedRequest.reason || notes || '',
+              entryTime: updatedRequest.entry_time || null,
+              exitTime: updatedRequest.exit_time || null
+            });
+
+            if (calendarResult) {
+              console.log(`✅ [APPROVAZIONE PERMESSO] Evento Google Calendar creato con successo`);
+            } else {
+              console.log(`⚠️ [APPROVAZIONE PERMESSO] addPermissionEvent ha restituito null (evento non creato)`);
+            }
           } else {
-            console.log(`⚠️ [APPROVAZIONE PERMESSO] addPermissionEvent ha restituito null (evento non creato)`);
+            console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero dipendente:`, empError);
           }
-        } else {
-          console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero dipendente:`, empError);
-        }
         } catch (calendarError) {
           console.error('❌ [APPROVAZIONE PERMESSO] Errore aggiunta evento Google Calendar:', calendarError);
           console.error('❌ [APPROVAZIONE PERMESSO] Stack:', calendarError.stack);
@@ -7655,7 +7655,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
           // Non bloccare l'approvazione, ma loggare l'errore
         } else {
           const dayOfWeek = new Date(permissionDate).getDay();
-          
+
           // Validazione: dayOfWeek deve essere un numero valido (0-6)
           if (isNaN(dayOfWeek)) {
             console.error(`❌ [APPROVAZIONE PERMESSO] Impossibile calcolare giorno della settimana per data: ${permissionDate}`);
@@ -7677,8 +7677,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               console.error(`❌ [APPROVAZIONE PERMESSO] Orario di lavoro incompleto: start_time=${schedule.start_time}, end_time=${schedule.end_time}`);
             } else {
               // Validazione: break_duration deve essere un numero valido
-              const breakDuration = (schedule.break_duration !== null && schedule.break_duration !== undefined && !isNaN(schedule.break_duration)) 
-                ? schedule.break_duration 
+              const breakDuration = (schedule.break_duration !== null && schedule.break_duration !== undefined && !isNaN(schedule.break_duration))
+                ? schedule.break_duration
                 : 60;
 
               // Calcola le ore attese originali (senza permessi)
@@ -7730,78 +7730,79 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   // Ma non blocchiamo l'approvazione del permesso
                 } else {
 
-                // Recupera o crea la presenza per questa data
-                const { data: attendanceRecord, error: attError } = await supabase
-                  .from('attendance')
-                  .select('*')
-                  .eq('user_id', updatedRequest.user_id)
-                  .eq('date', permissionDate)
-                  .single();
-
-                if (attError && attError.code === 'PGRST116') {
-                  // Nessun record di attendance, creane uno nuovo
-                  // Le ore attese rimangono quelle originali (8h)
-                  const actualHours = 0; // Non ha ancora lavorato
-                  const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
-
-                  // Validazione: newBalanceHours deve essere un numero valido
-                  if (isNaN(newBalanceHours)) {
-                    console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
-                    // Non creiamo l'attendance se i calcoli non sono validi
-                  } else {
-                    const { error: createAttError } = await supabase
+                  // Recupera o crea la presenza per questa data
+                  const { data: attendanceRecord, error: attError } = await supabase
                     .from('attendance')
-                    .insert({
-                      user_id: updatedRequest.user_id,
-                      date: permissionDate,
-                      actual_hours: actualHours,
-                      expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                      balance_hours: Math.round(newBalanceHours * 100) / 100,
-                      notes: `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
-                    });
+                    .select('*')
+                    .eq('user_id', updatedRequest.user_id)
+                    .eq('date', permissionDate)
+                    .single();
 
-                    if (createAttError) {
-                      console.error(`❌ [APPROVAZIONE PERMESSO] Errore creazione presenza per ${permissionDate}:`, createAttError);
-                    } else {
-                      console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
-                    }
-                  }
-                } else if (attError) {
-                  console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero presenza per ${permissionDate}:`, attError);
-                  // Non bloccare l'approvazione, ma loggare l'errore
-                } else if (attendanceRecord) {
-                  // Aggiorna la presenza con le nuove ore attese
-                  // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
-                  // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-                  // Le ore attese rimangono sempre quelle originali (8h)
-                  const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
-                  
-                  // Validazione: actualHours deve essere un numero valido
-                  if (isNaN(actualHours)) {
-                    console.error(`❌ [APPROVAZIONE PERMESSO] Actual hours non valido: ${attendanceRecord.actual_hours}`);
-                    // Non aggiorniamo l'attendance se i valori non sono validi
-                  } else {
-                    const newBalanceHours = actualHours - finalExpectedHours;
+                  if (attError && attError.code === 'PGRST116') {
+                    // Nessun record di attendance, creane uno nuovo
+                    // Le ore attese rimangono quelle originali (8h)
+                    const actualHours = 0; // Non ha ancora lavorato
+                    const newBalanceHours = actualHours - finalExpectedHours; // 0 - 8 = -8
 
                     // Validazione: newBalanceHours deve essere un numero valido
                     if (isNaN(newBalanceHours)) {
                       console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
-                      // Non aggiorniamo l'attendance se i calcoli non sono validi
+                      // Non creiamo l'attendance se i calcoli non sono validi
                     } else {
-                      const { error: updateAttError } = await supabase
+                      const { error: createAttError } = await supabase
                         .from('attendance')
-                        .update({
+                        .insert({
+                          user_id: updatedRequest.user_id,
+                          date: permissionDate,
+                          actual_hours: actualHours,
                           expected_hours: Math.round(finalExpectedHours * 100) / 100,
                           balance_hours: Math.round(newBalanceHours * 100) / 100,
-                          notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
-                        })
-                        .eq('user_id', updatedRequest.user_id)
-                        .eq('date', permissionDate);
+                          notes: `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+                        });
 
-                      if (updateAttError) {
-                        console.error(`❌ [APPROVAZIONE PERMESSO] Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+                      if (createAttError) {
+                        console.error(`❌ [APPROVAZIONE PERMESSO] Errore creazione presenza per ${permissionDate}:`, createAttError);
                       } else {
-                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                      }
+                    }
+                  } else if (attError) {
+                    console.error(`❌ [APPROVAZIONE PERMESSO] Errore recupero presenza per ${permissionDate}:`, attError);
+                    // Non bloccare l'approvazione, ma loggare l'errore
+                  } else if (attendanceRecord) {
+                    // Aggiorna la presenza con le nuove ore attese
+                    // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
+                    // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
+                    // Le ore attese rimangono sempre quelle originali (8h)
+                    const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+
+                    // Validazione: actualHours deve essere un numero valido
+                    if (isNaN(actualHours)) {
+                      console.error(`❌ [APPROVAZIONE PERMESSO] Actual hours non valido: ${attendanceRecord.actual_hours}`);
+                      // Non aggiorniamo l'attendance se i valori non sono validi
+                    } else {
+                      const newBalanceHours = actualHours - finalExpectedHours;
+
+                      // Validazione: newBalanceHours deve essere un numero valido
+                      if (isNaN(newBalanceHours)) {
+                        console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
+                        // Non aggiorniamo l'attendance se i calcoli non sono validi
+                      } else {
+                        const { error: updateAttError } = await supabase
+                          .from('attendance')
+                          .update({
+                            expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                            balance_hours: Math.round(newBalanceHours * 100) / 100,
+                            notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+                          })
+                          .eq('user_id', updatedRequest.user_id)
+                          .eq('date', permissionDate);
+
+                        if (updateAttError) {
+                          console.error(`❌ [APPROVAZIONE PERMESSO] Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
+                        } else {
+                          console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                        }
                       }
                     }
                   }
@@ -7809,7 +7810,6 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               }
             }
           }
-        }
         }
       }
     }
@@ -7949,17 +7949,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
     }
 
     // Se un permesso già approvato viene modificato (senza cambiare status), invia notifica al dipendente
-    if (existingRequest.status === 'approved' && 
-        existingRequest.type === 'permission' && 
-        (!status || status === 'approved') && 
-        Object.keys(updateData).length > 0) {
-      
+    if (existingRequest.status === 'approved' &&
+      existingRequest.type === 'permission' &&
+      (!status || status === 'approved') &&
+      Object.keys(updateData).length > 0) {
+
       // Verifica se ci sono modifiche effettive (non solo ricalcolo ore)
-      const hasRealChanges = 
+      const hasRealChanges =
         (entryTime !== undefined && entryTime !== existingRequest.entry_time) ||
         (exitTime !== undefined && exitTime !== existingRequest.exit_time) ||
         (start_date !== undefined && start_date !== existingRequest.start_date);
-      
+
       if (hasRealChanges) {
         try {
           // Recupera dati dipendente
@@ -7987,7 +7987,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
             // Costruisci messaggio con dettagli delle modifiche
             let messageText = `Il tuo permesso approvato per il ${formattedDate} (${hoursFormatted}) è stato modificato dall'amministratore.\n\n`;
-            
+
             if (start_date !== undefined && start_date !== existingRequest.start_date) {
               const oldDate = new Date(existingRequest.start_date).toLocaleDateString('it-IT', {
                 day: '2-digit',
@@ -7997,17 +7997,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               });
               messageText += `📅 Data: ${oldDate} → ${formattedDate}\n`;
             }
-            
+
             if (entryTime !== undefined && entryTime !== existingRequest.entry_time) {
               const oldEntry = existingRequest.entry_time || 'Non impostato';
               messageText += `🕐 Orario entrata: ${oldEntry} → ${entryTime || 'Non impostato'}\n`;
             }
-            
+
             if (exitTime !== undefined && exitTime !== existingRequest.exit_time) {
               const oldExit = existingRequest.exit_time || 'Non impostato';
               messageText += `🕐 Orario uscita: ${oldExit} → ${exitTime || 'Non impostato'}\n`;
             }
-            
+
             if (updatedRequest.hours !== existingRequest.hours) {
               const oldHours = existingRequest.hours || 0;
               const oldHoursFormatted = oldHours > 0
@@ -8143,19 +8143,19 @@ app.post('/api/leave-requests/request-modification', authenticateToken, async (r
 
     // Costruisci il messaggio della notifica con struttura gerarchica
     const employeeName = leaveRequest.users ? `${leaveRequest.users.first_name} ${leaveRequest.users.last_name}` : 'Dipendente';
-    
+
     // Messaggio principale (generato dal sistema)
     let messageText = `${employeeName} ha richiesto una modifica al permesso approvato.\n\n`;
-    
+
     // Sezione: Informazioni del permesso (generato dal sistema)
     messageText += `📅 Permesso originale:\n`;
     messageText += `   Data: ${formattedDate}\n`;
     messageText += `   Ore: ${hoursFormatted}\n\n`;
-    
+
     // Sezione: Motivo (inserito dall'utente)
     messageText += `💬 Motivo della richiesta:\n`;
     messageText += `   ${reason}\n\n`;
-    
+
     // Sezione: Modifiche richieste (inserito dall'utente)
     if (requestedChanges && requestedChanges.trim()) {
       messageText += `✏️ Modifiche richieste:\n`;
@@ -8233,8 +8233,8 @@ app.get('/health', (req, res) => {
 // Endpoint di test per verificare che i cron endpoint siano raggiungibili
 app.get('/api/cron/test', async (req, res) => {
   console.log('✅ Endpoint cron test raggiunto');
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'Endpoint cron raggiungibile',
     timestamp: new Date().toISOString(),
     path: '/api/cron/test'
@@ -10601,8 +10601,8 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const endISO = endDate.toISOString().split('T')[0];
 
     // Nome del mese in italiano
-    const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 
-                        'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+    const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO',
+      'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
     const monthName = monthNames[monthParam - 1];
 
     // Recupera tutti i dipendenti attivi con data di registrazione
@@ -10857,18 +10857,18 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // ========== TABLE HEADER ==========
     // Calcola colonna di inizio statistiche (una sola volta)
     const statsStartCol = 3 + monthDates.length;
-    
+
     // Riga 4: Header principale della tabella (inizia dalla riga 4 come nello screen2)
     const headerRow = Array(50).fill('');
     headerRow[0] = 'N°';
     headerRow[1] = 'Cognome';
     headerRow[2] = 'Nome';
-    
+
     // Header giorni del mese - solo numeri in grassetto (senza giorno settimana)
     monthDates.forEach((dateInfo, idx) => {
       headerRow[3 + idx] = dateInfo.dayNumber; // Solo il numero, senza giorno settimana
     });
-    
+
     // Colonne statistiche finali
     headerRow[statsStartCol] = 'Ore Lavorate';
     headerRow[statsStartCol + 1] = 'Ferie';
@@ -10890,14 +10890,14 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
 
       // Calcola permessi totali per il mese (tutti i permessi approvati che cadono nel mese)
       const userLeaves = leaveData?.filter(l => l.user_id === user.id && l.type === 'permission') || [];
-      
+
       // Controlla se ogni permesso cade nel mese (anche se inizia prima o finisce dopo)
       userLeaves.forEach(perm => {
         const permStart = new Date(perm.start_date);
         const permEnd = new Date(perm.end_date);
         const monthStart = new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-01`);
         const monthEnd = new Date(yearParam, monthParam, 0); // Ultimo giorno del mese
-        
+
         // Se il permesso si sovrappone al mese, conta le ore
         if (permEnd >= monthStart && permStart <= monthEnd) {
           const permHours = parseFloat(perm.hours || 0);
@@ -10911,12 +10911,12 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         const dateStr = dateInfo.date;
         const value = emp.dailyValues[idx];
         const leaves = leaveMap[user.id]?.[dateStr] || [];
-        
+
         // Controlla permessi/ferie/malattie/104 dalla mappa leaveMap
         const sickLeave = leaves.find(l => l.type === 'sick_leave');
         const vacation = leaves.find(l => l.type === 'vacation');
         const permission104 = leaves.find(l => l.type === 'permission_104');
-        
+
         if (sickLeave) {
           sickDays++;
         } else if (vacation) {
@@ -10942,7 +10942,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       dataRow[0] = emp.number;
       dataRow[1] = emp.lastName;
       dataRow[2] = emp.firstName;
-      
+
       // Valori giorni
       monthDates.forEach((dateInfo, idx) => {
         const value = emp.dailyValues[idx];
@@ -10971,7 +10971,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       dataRow[statsStartCol + 3] = Math.round(permissionHours * 100) / 100;
       dataRow[statsStartCol + 4] = holidayDays;
       dataRow[statsStartCol + 5] = Math.round(emp.totalHours * 100) / 100;
-      
+
       wsData.push(dataRow);
     });
 
@@ -11016,14 +11016,14 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const thinBorder = { style: 'thin', color: { rgb: 'CCCCCC' } };
     const mediumBorder = { style: 'medium', color: { rgb: '666666' } };
     const thickBorder = { style: 'thick', color: { rgb: '000000' } };
-    
+
     const borderStyle = {
       top: thinBorder,
       bottom: thinBorder,
       left: thinBorder,
       right: thinBorder
     };
-    
+
     const headerBorderStyle = {
       top: mediumBorder,
       bottom: mediumBorder,
@@ -11044,7 +11044,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
     const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
     const legendRowIndex = totalRows - 1; // Ultima riga è la legenda
-    
+
     // Legenda: unisci celle come l'intestazione (dopo 2 righe vuote)
     ws['!merges'].push({ s: { r: legendRowIndex, c: 0 }, e: { r: legendRowIndex, c: 19 } });
 
@@ -11061,7 +11061,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
       alignment: { horizontal: 'center', vertical: 'center' }
     });
-    
+
     // Sottotitolo (riga 2) - unisci celle A2:J2
     for (let col = 0; col < 20; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
@@ -11074,7 +11074,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
       alignment: { horizontal: 'center', vertical: 'center' }
     });
-    
+
     // Azienda (riga 3) - unisci celle A3:J3
     for (let col = 0; col < 20; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 2, c: col });
@@ -11093,7 +11093,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     for (let col = 0; col < statsStartCol + 6; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
       let bgColor = '4B5563'; // Grigio scuro default
-      
+
       // Colori diversi per sezioni
       if (col === 0) bgColor = '1F2937'; // N° più scuro
       else if (col >= 1 && col <= 2) bgColor = '374151'; // Cognome/Nome
@@ -11108,16 +11108,18 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           cell.s.border = headerBorderStyle;
           cell.s.alignment = { horizontal: 'center', vertical: 'center' };
         } else {
-          ws[cellRef] = { v: '', t: 's', s: {
-            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-            fill: { fgColor: { rgb: bgColor } },
-            border: headerBorderStyle,
-            alignment: { horizontal: 'center', vertical: 'center' }
-          }};
+          ws[cellRef] = {
+            v: '', t: 's', s: {
+              font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+              fill: { fgColor: { rgb: bgColor } },
+              border: headerBorderStyle,
+              alignment: { horizontal: 'center', vertical: 'center' }
+            }
+          };
         }
         continue;
       } else bgColor = '2563EB'; // Statistiche in blu
-      
+
       // FORZATO DIRETTAMENTE per garantire bold
       const cell = ws[cellRef];
       if (cell) {
@@ -11127,12 +11129,14 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         cell.s.border = headerBorderStyle;
         cell.s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
       } else {
-        ws[cellRef] = { v: '', t: 's', s: {
-          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
-          fill: { fgColor: { rgb: bgColor } },
-          border: headerBorderStyle,
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-        }};
+        ws[cellRef] = {
+          v: '', t: 's', s: {
+            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+            fill: { fgColor: { rgb: bgColor } },
+            border: headerBorderStyle,
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+          }
+        };
       }
     }
 
@@ -11140,16 +11144,16 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     for (let row = dataStartRow; row < totalRows; row++) { // Tutte le righe dati
       const isEven = (row - dataStartRow) % 2 === 0;
       const bgColor = isEven ? 'FFFFFF' : 'F9FAFB';
-      
+
       for (let col = 0; col < statsStartCol + 6; col++) {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
         const cellValue = ws[cellRef]?.v;
-        
+
         let cellStyle = {
           border: borderStyle,
           fill: { fgColor: { rgb: bgColor } }
         };
-        
+
         // Formattazione per colonne specifiche - BOLD FORZATO
         if (col === 0) {
           // N°: centrato, grassetto
@@ -11184,7 +11188,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
             cellStyle.font.color = { rgb: '047857' };
           }
         }
-        
+
         applyStyle(cellRef, cellStyle);
       }
     }
@@ -11199,11 +11203,13 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         cell.s.alignment = { horizontal: 'center', vertical: 'center' };
         cell.s.border = borderStyle;
       } else {
-        ws[cellRef] = { v: '', t: 's', s: {
-          font: { bold: true, sz: 10, color: { rgb: '374151' } },
-          alignment: { horizontal: 'center', vertical: 'center' },
-          border: borderStyle
-        }};
+        ws[cellRef] = {
+          v: '', t: 's', s: {
+            font: { bold: true, sz: 10, color: { rgb: '374151' } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: borderStyle
+          }
+        };
       }
     }
     // Forza anche la prima cella della legenda (contenuto)
@@ -11348,7 +11354,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
   console.log('═══════════════════════════════════════════════════════════');
   console.log('🔵 [ADD-CREDIT-HOURS] Endpoint chiamato');
   console.log('═══════════════════════════════════════════════════════════');
-  
+
   try {
     // 1. VERIFICA PERMESSI ADMIN
     if (req.user.role !== 'admin') {
@@ -11416,10 +11422,10 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       }
 
       console.log(`✅ Record creato: balance = ${creditHours}h`);
-      
+
       // Crea notifica
       await createCreditHoursNotification(userId, creditHours, date, reason);
-      
+
       return res.json({
         success: true,
         message: `${creditHours} ore a credito aggiunte con successo`,
@@ -11451,7 +11457,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       .gte('end_date', date);
 
     const hasPermissions = !permError && approvedPermissions && approvedPermissions.length > 0;
-    
+
     let finalBalanceHours = oldBalanceHours + creditHours; // SCENARIO 1: Ricarica base
     let finalExpectedHours = oldExpectedHours; // Di default non cambia
     let permissionRecalculated = false;
@@ -11461,7 +11467,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
     // queste ore rappresentano ore recuperate dal permesso
     if (hasPermissions) {
       console.log(`🔐 Trovati ${approvedPermissions.length} permessi approvati`);
-      
+
       // Recupera schedule per calcolare ore contrattuali
       const dayOfWeek = new Date(date).getDay();
       const { data: schedule } = await supabase
@@ -11499,13 +11505,13 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           for (const perm of approvedPermissions) {
             const oldPermHours = parseFloat(perm.hours || 0);
             const newPermHours = Math.max(0, oldPermHours - hoursRecovered);
-            
+
             if (newPermHours !== oldPermHours) {
               const { error: updatePermError } = await supabase
                 .from('leave_requests')
                 .update({ hours: newPermHours.toFixed(2) })
                 .eq('id', perm.id);
-              
+
               if (!updatePermError) {
                 console.log(`✅ Permesso ${perm.id}: ${oldPermHours}h → ${newPermHours.toFixed(2)}h`);
               }
@@ -11521,7 +11527,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
           const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
           finalExpectedHours = contractHours - newTotalPermissionHours;
-          
+
           // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
           finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
           permissionRecalculated = true;
@@ -11547,13 +11553,13 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
             const reductionRatio = oldPermHours / totalPermissionHours; // Proporzione di questo permesso
             const reductionForThisPerm = hoursToReduceFromPermission * reductionRatio;
             const newPermHours = Math.max(0, oldPermHours - reductionForThisPerm);
-            
+
             if (newPermHours !== oldPermHours) {
               const { error: updatePermError } = await supabase
                 .from('leave_requests')
                 .update({ hours: newPermHours.toFixed(2) })
                 .eq('id', perm.id);
-              
+
               if (!updatePermError) {
                 console.log(`✅ Permesso ${perm.id}: ${oldPermHours}h → ${newPermHours.toFixed(2)}h (riduzione: ${reductionForThisPerm.toFixed(2)}h)`);
               } else {
@@ -11571,7 +11577,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
           const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
           finalExpectedHours = contractHours - newTotalPermissionHours;
-          
+
           // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
           // Le ore aggiunte manualmente sono già incluse nel calcolo perché riducono il permesso
           finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
@@ -11591,7 +11597,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     // 9. AGGIORNA RECORD
     console.log(`🔄 Aggiornamento record...`);
-    
+
     // Costruisci note dettagliate per audit trail
     let auditNote = '';
     if (permissionRecalculated) {
@@ -11603,12 +11609,12 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         .eq('status', 'approved');
       const newTotalPermHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
       const permReduction = oldTotalPermHours - newTotalPermHours;
-      
+
       auditNote = `\n[💰 Aggiunta manuale ore: +${creditHours}h | 🔐 Riduzione permesso: ${oldTotalPermHours.toFixed(2)}h → ${newTotalPermHours.toFixed(2)}h (${permReduction.toFixed(2)}h recuperate) | Motivo: ${reason || 'Nessun motivo'}]`;
     } else {
       auditNote = `\n[💰 Ricarica banca ore: +${creditHours}h | Motivo: ${reason || 'Nessun motivo'}]`;
     }
-    
+
     const updateData = {
       balance_hours: finalBalanceHours,
       notes: (existingAttendance.notes || '') + auditNote
@@ -11877,13 +11883,13 @@ async function calculateOvertimeBalance(userId, year = null) {
     const endDate = `${currentYear}-12-31`;
     const { date: today } = await getCurrentDateTime();
 
-    // Calcola il saldo totale dalle presenze dell'anno
+    // Calcola il saldo totale dalle presenze (includi anni passati)
+    // Non limitare al solo anno corrente per il saldo totale
     const { data: attendance, error: attendanceError } = await supabase
       .from('attendance')
       .select('balance_hours, date')
       .eq('user_id', userId)
-      .gte('date', startDate)
-      .lte('date', endDate);
+      .lte('date', endDate); // Prendi tutto fino alla fine dell'anno corrente
 
     if (attendanceError) {
       console.error(`Error fetching attendance for user ${userId}:`, attendanceError);
@@ -12657,19 +12663,19 @@ async function saveHourlyAttendance() {
 
     if (usersError) {
       console.error('❌ Errore nel recupero dipendenti:', usersError);
-      
+
       // Controlla se Cloudflare è down
       const errorString = JSON.stringify(usersError);
-      const isCloudflareDown = errorString.includes('<html>') || 
-                                errorString.includes('cloudflare') || 
-                                errorString.includes('500 Internal Server Error') ||
-                                (usersError.message && usersError.message.includes('<html>'));
-      
+      const isCloudflareDown = errorString.includes('<html>') ||
+        errorString.includes('cloudflare') ||
+        errorString.includes('500 Internal Server Error') ||
+        (usersError.message && usersError.message.includes('<html>'));
+
       if (isCloudflareDown) {
         console.error('❌ Cloudflare è down - impossibile recuperare dipendenti');
         return;
       }
-      
+
       // Se l'errore è un problema di connessione, logga più dettagli
       if (usersError.message) {
         console.error('❌ Dettagli errore:', usersError.message);
@@ -13380,7 +13386,7 @@ console.log(`   Tutte le chiavi process.env che contengono 'GOOGLE': ${googleKey
 console.log(`   Tutte le chiavi che contengono 'CLIENT' e 'ID': ${clientIdKeys.join(', ') || 'nessuna'}`);
 
 // Verifica se c'è una variabile con nome simile ma diverso
-const similarKeys = allEnvKeys.filter(k => 
+const similarKeys = allEnvKeys.filter(k =>
   (k.toUpperCase().includes('GOOGLE') && k.toUpperCase().includes('CLIENT')) ||
   (k.toUpperCase().includes('CLIENT') && k.toUpperCase().includes('ID') && k.toUpperCase().includes('GOOGLE'))
 );
@@ -13412,7 +13418,7 @@ server.listen(PORT, () => {
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'https://hr.laba.biz'}`);
   console.log(`🗄️  Database: ${supabaseUrl}`);
   console.log(`🔌 WebSocket attivo per aggiornamenti real-time`);
-  
+
   // Debug: mostra tutte le variabili d'ambiente che iniziano con GOOGLE_
   console.log(`\n🔍 Debug variabili d'ambiente GOOGLE_*:`);
   const googleEnvVars = Object.keys(process.env).filter(key => key.startsWith('GOOGLE_'));
@@ -13425,10 +13431,10 @@ server.listen(PORT, () => {
   } else {
     console.log(`   ⚠️ Nessuna variabile GOOGLE_* trovata in process.env`);
   }
-  
+
   // Debug: verifica anche variabili simili (potrebbero esserci errori di digitazione)
-  const similarVars = Object.keys(process.env).filter(key => 
-    key.toUpperCase().includes('GOOGLE') || 
+  const similarVars = Object.keys(process.env).filter(key =>
+    key.toUpperCase().includes('GOOGLE') ||
     key.toUpperCase().includes('CLIENT_ID') ||
     (key.includes('google') && key.includes('client'))
   );
@@ -13440,14 +13446,14 @@ server.listen(PORT, () => {
       }
     });
   }
-  
+
   // Debug: verifica direttamente GOOGLE_CLIENT_ID
   console.log(`\n🔍 Verifica diretta GOOGLE_CLIENT_ID:`);
   console.log(`   process.env.GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✅ presente (' + process.env.GOOGLE_CLIENT_ID.substring(0, 30) + '...)' : '❌ undefined o null'}`);
   console.log(`   typeof: ${typeof process.env.GOOGLE_CLIENT_ID}`);
   console.log(`   length: ${process.env.GOOGLE_CLIENT_ID ? process.env.GOOGLE_CLIENT_ID.length : 'N/A'}`);
   console.log(`\n`);
-  
+
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_REFRESH_TOKEN) {
     console.log(`📅 Google Calendar: Integrazione attiva`);
   } else {

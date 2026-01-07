@@ -1201,8 +1201,7 @@ const Dashboard = () => {
                 person.status === 'on_break' || 
                 person.status === 'vacation' ||
                 person.status === 'sick_leave' ||
-                person.status === 'permission_104' ||
-                person.status === 'completed';
+                person.status === 'permission_104';
               
               if (person.status === 'vacation') {
                 console.log('🏖️ [Dashboard] Trovato dipendente in ferie:', person.name, person.status);
