@@ -1110,7 +1110,7 @@ const LeaveRequests = () => {
           </div>
           <button
             onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-2.5 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg shadow-green-500/25 active:scale-95"
+            className="bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-xl transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
             aria-label="Aggiungi permesso"
           >
             <Plus className="h-5 w-5" />
@@ -1147,7 +1147,7 @@ const LeaveRequests = () => {
               {/* Bottone Aggiungi con gradiente */}
               <button
                 onClick={() => setShowAdminCreateModal(true)}
-                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-green-500/25 hover:shadow-green-500/40 font-semibold"
+                className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 font-semibold"
               >
                 <UserPlus className="h-5 w-5" />
                 Aggiungi
@@ -1457,7 +1457,7 @@ const LeaveRequests = () => {
           });
 
           // Helper to render a list of cards
-          const renderRequestList = (list) => {
+          const renderRequestList = (list, isHistory = false) => {
             if (list.length === 0) return <p className="text-slate-500 italic p-4">Nessuna richiesta.</p>;
 
             return (
@@ -1471,6 +1471,10 @@ const LeaveRequests = () => {
                   const isPending = request.status === 'pending';
                   const isRejected = request.status === 'rejected';
 
+                  // Styling logic: override approved color if history
+                  const approvedColorClass = isHistory ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20';
+                  const approvedTextClass = isHistory ? 'bg-slate-500/10 text-slate-400 border-slate-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20';
+
                   // Card Design (Reused)
                   return (
                     <div key={request.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:bg-slate-800/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
@@ -1478,7 +1482,7 @@ const LeaveRequests = () => {
 
                         {/* SINISTRA: Data e Status Icon */}
                         <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                          <div className={`p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 shadow-inner transition-transform ${isApproved ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          <div className={`p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 shadow-inner transition-transform ${isApproved ? approvedColorClass :
                             isPending ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
                               'bg-red-500/10 text-red-400 border border-red-500/20'
                             }`}>
@@ -1503,7 +1507,7 @@ const LeaveRequests = () => {
                                 </span>
                               </div>
                             )}
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${isApproved ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${isApproved ? approvedTextClass :
                               isPending ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
                                 'bg-red-500/10 text-red-400 border-red-500/20'
                               }`}>
@@ -1674,7 +1678,7 @@ const LeaveRequests = () => {
 
                 {historyOpen && (
                   <div className="p-4 border-t border-slate-700/50">
-                    {pastRequests.length > 0 ? renderRequestList(pastRequests) : (
+                    {pastRequests.length > 0 ? renderRequestList(pastRequests, true) : (
                       <p className="text-slate-500 text-center py-4">Nessuno storico disponibile.</p>
                     )}
                   </div>
