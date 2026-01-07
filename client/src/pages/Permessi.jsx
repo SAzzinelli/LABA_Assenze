@@ -1437,12 +1437,28 @@ const LeaveRequests = () => {
           };
 
           // 1. Separate requests into categories
-          const pendingRequests = requests.filter(r => r.status === 'pending');
+          // Filter helper for Month/Year
+          const matchesFilters = (req) => {
+            const rDate = parseRequestDate(req);
+            if (!rDate) return false;
+            return rDate.getMonth() === currentMonth && rDate.getFullYear() === currentYear;
+          };
+
+          // Search filter helper
+          const matchesSearch = (req) => {
+            if (!searchTerm) return true;
+            const term = searchTerm.toLowerCase();
+            const userName = req.submittedBy || (req.user?.first_name ? `${req.user.first_name} ${req.user.last_name}` : '');
+            return userName.toLowerCase().includes(term);
+          };
+
+          const pendingRequests = requests.filter(r => r.status === 'pending' && matchesSearch(r));
 
           const futureRequests = requests.filter(r => {
-            if (r.status === 'pending') return false; // Already handled
+            if (r.status === 'pending') return false;
             const rDate = parseRequestDate(r);
-            return rDate && rDate >= todayStart;
+            // Apply FILTERS (Month/Year + Search)
+            return rDate && rDate >= todayStart && matchesFilters(r) && matchesSearch(r);
           }).sort((a, b) => {
             return parseRequestDate(a, true) - parseRequestDate(b, true);
           });
@@ -1450,9 +1466,9 @@ const LeaveRequests = () => {
           const pastRequests = requests.filter(r => {
             if (r.status === 'pending') return false;
             const rDate = parseRequestDate(r);
-            return rDate && rDate < todayStart;
+            // Apply FILTERS (Month/Year + Search)
+            return rDate && rDate < todayStart && matchesFilters(r) && matchesSearch(r);
           }).sort((a, b) => {
-            // Past requests: descending order (newest first)
             return parseRequestDate(b, true) - parseRequestDate(a, true);
           });
 
