@@ -6576,40 +6576,22 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
       }
     }
 
+    // Inserisci la richiesta di congedo
+    const { data: newRequest, error: createRequestError } = await supabase
+      .from('leave_requests')
+      .insert([insertData])
+      .select()
+      .single();
+
+    if (createRequestError) {
+      console.error('Error creating leave request:', createRequestError);
+      return res.status(500).json({ error: 'Errore nella creazione della richiesta di congedo' });
+    }
+
     // Se admin crea ferie approvate direttamente, aggiorna bilancio ferie
     if (type === 'vacation' && insertData.status === 'approved') {
-      const requestYear = new Date(startDate).getFullYear();
-      const daysRequested = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-
-      // Aggiorna bilancio ferie dopo la creazione (vedi sotto)
-      setTimeout(async () => {
-        // Questo verrà eseguito dopo la risposta per non rallentare
-        let { data: balance, error: balanceError } = await supabase
-          .from('vacation_balances')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('year', requestYear)
-          .single();
-
-        if (balanceError && balanceError.code === 'PGRST116') {
-          await supabase.from('vacation_balances').insert([{
-            user_id: userId,
-            year: requestYear,
-            total_days: 30,
-            used_days: daysRequested,
-            pending_days: 0,
-            remaining_days: 30 - daysRequested
-          }]);
-        } else if (!balanceError && balance) {
-          const newUsedDays = (balance.used_days || 0) + daysRequested;
-          await supabase.from('vacation_balances').update({
-            used_days: newUsedDays,
-            remaining_days: (balance.total_days || 30) - newUsedDays,
-            updated_at: new Date().toISOString()
-          }).eq('id', balance.id);
-        }
-
-        // IMPORTANTE: Elimina le presenze esistenti per i giorni di ferie
+      try {
+        const requestYear = new Date(startDate).getFullYear();
         // Le ferie non sono presenze, sono giorni di assenza giustificata
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -6618,7 +6600,6 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
           vacationDates.push(d.toISOString().split('T')[0]);
         }
 
-        // Elimina tutte le presenze per i giorni di ferie
         let deletedCount = 0;
         for (const dateStr of vacationDates) {
           const { error: deleteError, count } = await supabase
@@ -6640,7 +6621,9 @@ app.post('/api/admin/leave-requests', authenticateToken, requireAdmin, async (re
         if (deletedCount > 0) {
           console.log(`✅ [CREAZIONE FERIE ADMIN] Totale presenze eliminate: ${deletedCount} su ${vacationDates.length} giorni`);
         }
-      }, 100);
+      } catch (err) {
+        console.error('Errore durante aggiornamento bilancio ferie admin:', err);
+      }
     }
 
     // Se admin crea permesso 104 approvato direttamente, aggiorna bilancio assenze 104
@@ -9256,6 +9239,7 @@ app.delete('/api/vacation-periods/:id', authenticateToken, requireAdmin, async (
 // Bilanci ferie (giorni interi, separati dalla banca ore)
 
 // Get vacation balance for user (giorni, non ore)
+// Get vacation balance for user (giorni, non ore)
 app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
   try {
     const { userId, year } = req.query;
@@ -9267,6 +9251,47 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
+    // ====== SELF-HEALING: Recalculate true used days from approved requests ======
+    // Fetch all approved requests for this year
+    let trueUsedDays = 0;
+
+    // 1. Get approved requests
+    const { data: approvedRequests } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date, days_requested')
+      .eq('user_id', targetUserId)
+      .eq('type', 'vacation')
+      .eq('status', 'approved')
+      .gte('start_date', `${targetYear}-01-01`)
+      .lte('end_date', `${targetYear}-12-31`);
+
+    // 2. Get work schedule for accurate calculation
+    const { data: userSchedules } = await supabase
+      .from('work_schedules')
+      .select('day_of_week, is_working_day')
+      .eq('user_id', targetUserId);
+
+    if (approvedRequests && userSchedules) {
+      for (const req of approvedRequests) {
+        let actualDays = 0;
+        const start = new Date(req.start_date);
+        const end = new Date(req.end_date);
+
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const dayOfWeek = d.getDay();
+          const schedule = userSchedules.find(s => Number(s.day_of_week) === dayOfWeek);
+          if (schedule && schedule.is_working_day) {
+            actualDays++;
+          }
+        }
+        trueUsedDays += actualDays;
+      }
+    } else if (approvedRequests) {
+      // Fallback if no schedules found: sum existing days_requested
+      trueUsedDays = approvedRequests.reduce((sum, r) => sum + (r.days_requested || 0), 0);
+    }
+    // =======================================================================
+
     // Recupera o crea bilancio ferie
     let { data: balance, error } = await supabase
       .from('vacation_balances')
@@ -9276,16 +9301,16 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
       .single();
 
     if (error && error.code === 'PGRST116') {
-      // Nessun bilancio trovato, creane uno nuovo con 30 giorni
+      // Nessun bilancio trovato, creane uno nuovo
       const { data: newBalance, error: createError } = await supabase
         .from('vacation_balances')
         .insert([{
           user_id: targetUserId,
           year: targetYear,
           total_days: 30,
-          used_days: 0,
+          used_days: trueUsedDays, // Initialize with correct used days
           pending_days: 0,
-          remaining_days: 30
+          remaining_days: 30 - trueUsedDays
         }])
         .select()
         .single();
@@ -9294,14 +9319,34 @@ app.get('/api/vacation-balances', authenticateToken, async (req, res) => {
         console.error('Vacation balance creation error:', createError);
         return res.status(500).json({ error: 'Errore nella creazione del bilancio' });
       }
-
       balance = newBalance;
     } else if (error) {
       console.error('Vacation balance fetch error:', error);
       return res.status(500).json({ error: 'Errore nel recupero del bilancio' });
     }
 
-    // Calcola pending_days dalle richieste in attesa
+    // Check if balance needs update (Self-healing match)
+    if (balance.used_days !== trueUsedDays) {
+      console.log(`🔧 Self-healing vacation balance: Stored=${balance.used_days} -> Real=${trueUsedDays}`);
+      const remainingDays = balance.total_days - trueUsedDays - balance.pending_days;
+
+      const { data: updatedBalance, error: updateError } = await supabase
+        .from('vacation_balances')
+        .update({
+          used_days: trueUsedDays,
+          remaining_days: remainingDays,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', balance.id)
+        .select()
+        .single();
+
+      if (!updateError && updatedBalance) {
+        balance = updatedBalance;
+      }
+    }
+
+    // Calcola pending_days dalle richieste in attesa (keep this logic)
     const { data: pendingRequests, error: pendingError } = await supabase
       .from('leave_requests')
       .select('days_requested')

@@ -5,14 +5,14 @@ import { useRealTimeUpdates } from '../hooks/useRealTimeUpdates';
 import VacationCalendar from '../components/VacationCalendar';
 import AdminCreateVacationModal from '../components/AdminCreateVacationModal';
 import { FerieSkeleton } from '../components/Skeleton';
-import { 
-  Plane, 
-  Plus, 
-  Calendar, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Plane,
+  Plus,
+  Calendar,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
   AlertCircle,
   Save,
   X,
@@ -34,12 +34,12 @@ import {
   ArrowLeft,
   Info
 } from 'lucide-react';
-import { 
-  calculateVacationHoursForDay, 
-  formatHours, 
+import {
+  calculateVacationHoursForDay,
+  formatHours,
   hoursToDays,
   daysToHours,
-  CONTRACT_TYPES 
+  CONTRACT_TYPES
 } from '../utils/hoursCalculation';
 
 const Vacation = () => {
@@ -55,10 +55,10 @@ const Vacation = () => {
   // Filtri temporali per admin
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  
+
   // Campo di ricerca
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Stato per collassabile filtri
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
 
@@ -67,7 +67,8 @@ const Vacation = () => {
 
   // Vista attiva (calendar o list)
   const [activeView, setActiveView] = useState('calendar');
-  
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+
   // Gestione periodi ferie (solo admin)
   const [showPeriodsManagement, setShowPeriodsManagement] = useState(false);
   const [vacationPeriods, setVacationPeriods] = useState([]);
@@ -132,7 +133,7 @@ const Vacation = () => {
       const balanceResponse = await apiCall('/api/vacation-balances');
       if (balanceResponse.ok) {
         const balanceData = await balanceResponse.json();
-        
+
         setVacationBalance({
           totalDays: balanceData.total_days || 30,
           usedDays: balanceData.used_days || 0,
@@ -190,7 +191,7 @@ const Vacation = () => {
       if (response.ok) {
         const result = await response.json();
         alert('Richiesta approvata con successo');
-        
+
         // Emetti aggiornamento real-time
         emitUpdate('request_decision', {
           requestId,
@@ -198,7 +199,7 @@ const Vacation = () => {
           userId: result.userId,
           message: 'La tua richiesta di ferie è stata approvata'
         });
-        
+
         fetchVacationData(); // Ricarica le richieste
       } else {
         const error = await response.json();
@@ -228,7 +229,7 @@ const Vacation = () => {
       if (response.ok) {
         const result = await response.json();
         alert('Richiesta rifiutata');
-        
+
         // Emetti aggiornamento real-time
         emitUpdate('request_decision', {
           requestId,
@@ -236,7 +237,7 @@ const Vacation = () => {
           userId: result.userId,
           message: 'La tua richiesta di ferie è stata rifiutata'
         });
-        
+
         fetchVacationData(); // Ricarica le richieste
       } else {
         const error = await response.json();
@@ -301,7 +302,7 @@ const Vacation = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.startDate || !formData.endDate) {
       alert('Seleziona le date di inizio e fine');
       return;
@@ -312,13 +313,13 @@ const Vacation = () => {
     if (!isValidPeriod && periodValidationError) {
       alert(periodValidationError);
       return;
-      }
+    }
 
     // Verifica che ci sia almeno un periodo aperto
     if (availablePeriods.length === 0) {
       alert('Non ci sono periodi di richiesta ferie aperti al momento. Contatta l\'amministratore.');
-        return;
-      }
+      return;
+    }
 
     try {
       // Calcola i GIORNI richiesti (1 giorno = 1 giorno per tutti, non ore)
@@ -346,7 +347,7 @@ const Vacation = () => {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Aggiorna stato locale
         const daysRequested = Math.ceil((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24)) + 1;
         const newRequest = {
@@ -357,7 +358,7 @@ const Vacation = () => {
           submittedBy: user?.firstName + ' ' + user?.lastName,
           daysRequested: daysRequested
         };
-        
+
         setVacationRequests(prev => [newRequest, ...prev]);
         setFormData({
           startDate: '',
@@ -365,7 +366,7 @@ const Vacation = () => {
           notes: ''
         });
         setShowNewRequest(false);
-        
+
         // Emetti aggiornamento real-time per admin
         emitUpdate('leave_request_update', {
           type: 'vacation',
@@ -377,10 +378,10 @@ const Vacation = () => {
           daysRequested: daysRequested,
           message: `Nuova richiesta ferie da ${user?.firstName} ${user?.lastName}`
         });
-        
+
         // Refresh data
         fetchVacationData();
-        
+
         alert(`Richiesta inviata con successo! Giorni richiesti: ${daysRequested} ${daysRequested === 1 ? 'giorno' : 'giorni'}`);
       } else {
         const error = await response.json();
@@ -434,7 +435,7 @@ const Vacation = () => {
   // Filtra le richieste per il mese/anno selezionato e ricerca
   const getFilteredRequests = () => {
     let filtered = vacationRequests;
-    
+
     // Filtro per mese/anno (solo admin e solo nella vista lista)
     if (user?.role === 'admin' && activeView === 'list') {
       filtered = filtered.filter(request => {
@@ -442,7 +443,7 @@ const Vacation = () => {
         return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
       });
     }
-    
+
     // Filtro per ricerca
     if (searchTerm.trim()) {
       filtered = filtered.filter(request => {
@@ -460,7 +461,7 @@ const Vacation = () => {
         }
       });
     }
-    
+
     return filtered;
   };
 
@@ -564,14 +565,14 @@ const Vacation = () => {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return periodFormData.name.trim() !== '' && 
-               periodFormData.startDate !== '' && 
-               periodFormData.endDate !== '' &&
-               periodFormData.startDate <= periodFormData.endDate;
+        return periodFormData.name.trim() !== '' &&
+          periodFormData.startDate !== '' &&
+          periodFormData.endDate !== '' &&
+          periodFormData.startDate <= periodFormData.endDate;
       case 2:
-        return periodFormData.vacationStartDate !== '' && 
-               periodFormData.vacationEndDate !== '' &&
-               periodFormData.vacationStartDate <= periodFormData.vacationEndDate;
+        return periodFormData.vacationStartDate !== '' &&
+          periodFormData.vacationEndDate !== '' &&
+          periodFormData.vacationStartDate <= periodFormData.vacationEndDate;
       case 3:
         // Step 3 non ha campi obbligatori (opzionali)
         return true;
@@ -596,12 +597,12 @@ const Vacation = () => {
   const handleSavePeriod = async (e) => {
     e.preventDefault();
     try {
-      const url = editingPeriod 
+      const url = editingPeriod
         ? `/api/vacation-periods/${editingPeriod.id}`
         : '/api/vacation-periods';
-      
+
       const method = editingPeriod ? 'PUT' : 'POST';
-      
+
       const response = await apiCall(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -696,44 +697,41 @@ const Vacation = () => {
           <button
             onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
             disabled={user?.role !== 'admin' && availablePeriods.length === 0}
-            className={`p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg ${
-              user?.role !== 'admin' && availablePeriods.length === 0
-                ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className={`p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg ${user?.role !== 'admin' && availablePeriods.length === 0
+              ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             aria-label="Aggiungi ferie"
             title={user?.role !== 'admin' && availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Aggiungi ferie'}
           >
             <Plus className="h-5 w-5" />
           </button>
         </div>
-        
+
         {/* Toggle Vista - Full width su mobile */}
         <div className="flex bg-slate-700 rounded-lg p-1 mb-2">
           <button
             onClick={() => setActiveView('list')}
-            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${
-              activeView === 'list' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400'
-            }`}
+            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'list'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400'
+              }`}
           >
             <List className="h-4 w-4 mr-2" />
             Lista
           </button>
           <button
             onClick={() => setActiveView('calendar')}
-            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${
-              activeView === 'calendar' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400'
-            }`}
+            className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'calendar'
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-400'
+              }`}
           >
             <CalendarDays className="h-4 w-4 mr-2" />
             Calendario
           </button>
         </div>
-        
+
         {/* Bottoni admin aggiuntivi su mobile - Stack verticale se presenti */}
         {user?.role === 'admin' && (
           <button
@@ -755,7 +753,7 @@ const Vacation = () => {
               <span className="truncate">{user?.role === 'admin' ? 'Gestione Ferie' : 'Le Mie Ferie'}</span>
             </h1>
             <p className="text-slate-400 mt-2 text-base">
-              {user?.role === 'admin' 
+              {user?.role === 'admin'
                 ? 'Visualizza e gestisci tutte le richieste di ferie dei dipendenti'
                 : 'Gestisci le tue richieste di ferie e visualizza il bilancio ferie'
               }
@@ -766,28 +764,26 @@ const Vacation = () => {
             <div className="flex bg-slate-700 rounded-lg p-1">
               <button
                 onClick={() => setActiveView('list')}
-                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${
-                  activeView === 'list' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <List className="h-4 w-4 mr-2" />
                 Lista
               </button>
               <button
                 onClick={() => setActiveView('calendar')}
-                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${
-                  activeView === 'calendar' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'calendar'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <CalendarDays className="h-4 w-4 mr-2" />
                 Calendario
               </button>
             </div>
-            
+
             {user?.role === 'admin' ? (
               <>
                 <button
@@ -797,23 +793,22 @@ const Vacation = () => {
                   <Calendar className="h-5 w-5 mr-2" />
                   Periodi di Ferie
                 </button>
-              <button
-                onClick={() => setShowAdminCreateModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
-              >
-                <UserPlus className="h-5 w-5 mr-2" />
-                Aggiungi manualmente
-              </button>
+                <button
+                  onClick={() => setShowAdminCreateModal(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center text-base"
+                >
+                  <UserPlus className="h-5 w-5 mr-2" />
+                  Aggiungi manualmente
+                </button>
               </>
             ) : (
               <button
                 onClick={() => setShowNewRequest(true)}
                 disabled={availablePeriods.length === 0}
-                className={`px-6 py-3 rounded-lg transition-colors flex items-center ${
-                  availablePeriods.length === 0
-                    ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
+                className={`px-6 py-3 rounded-lg transition-colors flex items-center ${availablePeriods.length === 0
+                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 title={availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Nuova Richiesta'}
               >
                 <Plus className="h-5 w-5 mr-2" />
@@ -827,42 +822,42 @@ const Vacation = () => {
       {/* Vacation Balance - GIORNI (non ore) - Solo per dipendenti */}
       {user?.role !== 'admin' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-white">Totale Giorni</h3>
-            <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0" />
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-white">Totale Giorni</h3>
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0" />
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
-        </div>
-        
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Utilizzati</h3>
-            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
+
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Utilizzati</h3>
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Ferie già godute</p>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-green-400">{vacationBalance.usedDays}</p>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">Ferie già godute</p>
-        </div>
-        
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Rimanenti</h3>
-            <Sun className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0" />
+
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Rimanenti</h3>
+              <Sun className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0" />
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Disponibili per richieste</p>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-yellow-400">{vacationBalance.remainingDays}</p>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">Disponibili per richieste</p>
-        </div>
-        
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-base sm:text-lg font-semibold text-white">In Attesa</h3>
-            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 flex-shrink-0" />
+
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-white">In Attesa</h3>
+              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 flex-shrink-0" />
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Richieste pendenti</p>
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-orange-400">{vacationBalance.pendingDays}</p>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">Richieste pendenti</p>
         </div>
-      </div>
       )}
 
       {/* Avviso periodi disponibili */}
@@ -925,11 +920,10 @@ const Vacation = () => {
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
                         <h3 className="text-lg font-semibold text-white mr-3">{period.name}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                          period.is_open 
-                            ? 'bg-green-500/20 text-green-300 border-green-400/30' 
-                            : 'bg-red-500/20 text-red-300 border-red-400/30'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${period.is_open
+                          ? 'bg-green-500/20 text-green-300 border-green-400/30'
+                          : 'bg-red-500/20 text-red-300 border-red-400/30'
+                          }`}>
                           {period.is_open ? 'Aperto' : 'Chiuso'}
                         </span>
                       </div>
@@ -959,11 +953,10 @@ const Vacation = () => {
                     <div className="flex items-center space-x-2 ml-4">
                       <button
                         onClick={() => handleTogglePeriod(period)}
-                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                          period.is_open
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${period.is_open
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
                       >
                         {period.is_open ? 'Chiudi' : 'Apri'}
                       </button>
@@ -990,7 +983,7 @@ const Vacation = () => {
 
       {/* Modal Creazione/Modifica Periodo - WIZARD A STEP */}
       {showPeriodModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
@@ -1018,36 +1011,33 @@ const Vacation = () => {
 
             {/* Indicatori Step */}
             <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4">
                 {[1, 2, 3, 4].map((step) => (
                   <React.Fragment key={step}>
                     <div className="flex items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        periodFormStep === step 
-                          ? 'bg-purple-600 border-purple-500 text-white' 
-                          : periodFormStep > step
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${periodFormStep === step
+                        ? 'bg-purple-600 border-purple-500 text-white'
+                        : periodFormStep > step
                           ? 'bg-green-600 border-green-500 text-white'
                           : 'bg-slate-700 border-slate-600 text-slate-400'
-                      }`}>
+                        }`}>
                         {periodFormStep > step ? (
                           <CheckCircle className="h-5 w-5" />
                         ) : (
                           <span className="font-bold">{step}</span>
                         )}
-          </div>
-                      <span className={`ml-2 text-sm font-medium hidden sm:block ${
-                        periodFormStep === step ? 'text-white' : 'text-slate-400'
-                      }`}>
+                      </div>
+                      <span className={`ml-2 text-sm font-medium hidden sm:block ${periodFormStep === step ? 'text-white' : 'text-slate-400'
+                        }`}>
                         {step === 1 && 'Informazioni Base'}
                         {step === 2 && 'Periodo Ferie'}
                         {step === 3 && 'Impostazioni'}
                         {step === 4 && 'Riepilogo'}
                       </span>
-          </div>
+                    </div>
                     {step < 4 && (
-                      <div className={`flex-1 h-0.5 mx-2 ${
-                        periodFormStep > step ? 'bg-green-600' : 'bg-slate-700'
-                      }`} />
+                      <div className={`flex-1 h-0.5 mx-2 ${periodFormStep > step ? 'bg-green-600' : 'bg-slate-700'
+                        }`} />
                     )}
                   </React.Fragment>
                 ))}
@@ -1223,8 +1213,8 @@ const Vacation = () => {
                         <span className="ml-3 text-slate-300 font-medium">Periodo aperto</span>
                       </label>
                       <p className="text-xs text-slate-400">
-                        {periodFormData.isOpen 
-                          ? '✅ I dipendenti possono richiedere ferie per questo periodo' 
+                        {periodFormData.isOpen
+                          ? '✅ I dipendenti possono richiedere ferie per questo periodo'
                           : '❌ Il periodo è chiuso, i dipendenti non possono richiedere ferie'}
                       </p>
                     </div>
@@ -1256,7 +1246,7 @@ const Vacation = () => {
                       <div className="flex justify-between">
                         <span className="text-slate-400">Periodo Richieste:</span>
                         <span className="text-white">
-                          {periodFormData.startDate && periodFormData.endDate 
+                          {periodFormData.startDate && periodFormData.endDate
                             ? `${new Date(periodFormData.startDate).toLocaleDateString('it-IT')} - ${new Date(periodFormData.endDate).toLocaleDateString('it-IT')}`
                             : '-'}
                         </span>
@@ -1362,14 +1352,14 @@ const Vacation = () => {
                 </div>
               </div>
             </form>
+          </div>
         </div>
-      </div>
       )}
 
 
       {/* New Request Modal */}
       {showNewRequest && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
@@ -1501,84 +1491,84 @@ const Vacation = () => {
 
       {/* Filtri Collassabili - Solo nella vista lista */}
       {activeView === 'list' && (
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <button
-          onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-          className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
-        >
-          <div className="flex items-center space-x-3">
-            <Filter className="h-5 w-5 text-blue-400" />
-            <span className="text-white font-medium">Filtri e Ricerca</span>
-          </div>
-          {filtersCollapsed ? (
-            <ChevronDown className="h-5 w-5 text-slate-400" />
-          ) : (
-            <ChevronUp className="h-5 w-5 text-slate-400" />
-          )}
-        </button>
-        
-        {!filtersCollapsed && (
-          <div className="border-t border-slate-700 p-4 space-y-4">
-            {/* Filtro temporale per admin - solo nella vista lista */}
-            {user?.role === 'admin' && activeView === 'list' && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Calendar className="h-5 w-5 text-blue-400" />
-                  <span className="text-white font-medium">Filtro per periodo:</span>
-                  <button
-                    onClick={goToToday}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                  >
-                    OGGI
-                  </button>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={goToPreviousMonth}
-                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <div className="text-white font-semibold min-w-[120px] text-center">
-                    {monthNames[currentMonth]} {currentYear}
-                  </div>
-                  <button
-                    onClick={goToNextMonth}
-                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Campo di ricerca */}
-            <div className="flex items-center space-x-4">
-              <Search className="h-5 w-5 text-green-400" />
-              <input
-                type="text"
-                placeholder={activeView === 'calendar' ? "Cerca per nome dipendente..." : "Cerca per note o stato..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="p-2 text-slate-400 hover:text-white transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+        <div className="bg-slate-800 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+            className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Filter className="h-5 w-5 text-blue-400" />
+              <span className="text-white font-medium">Filtri e Ricerca</span>
             </div>
-          </div>
-        )}
-      </div>
+            {filtersCollapsed ? (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronUp className="h-5 w-5 text-slate-400" />
+            )}
+          </button>
+
+          {!filtersCollapsed && (
+            <div className="border-t border-slate-700 p-4 space-y-4">
+              {/* Filtro temporale per admin - solo nella vista lista */}
+              {user?.role === 'admin' && activeView === 'list' && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <Calendar className="h-5 w-5 text-blue-400" />
+                    <span className="text-white font-medium">Filtro per periodo:</span>
+                    <button
+                      onClick={goToToday}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                    >
+                      OGGI
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={goToPreviousMonth}
+                      className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="text-white font-semibold min-w-[120px] text-center">
+                      {monthNames[currentMonth]} {currentYear}
+                    </div>
+                    <button
+                      onClick={goToNextMonth}
+                      className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Campo di ricerca */}
+              <div className="flex items-center space-x-4">
+                <Search className="h-5 w-5 text-green-400" />
+                <input
+                  type="text"
+                  placeholder={activeView === 'calendar' ? "Cerca per nome dipendente..." : "Cerca per note o stato..."}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="p-2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Vista Calendario */}
       {activeView === 'calendar' && (
-        <VacationCalendar 
+        <VacationCalendar
           vacationRequests={vacationRequests}
           onDateClick={(date, requests) => {
             console.log('Data selezionata:', date, 'Richieste:', requests);
@@ -1589,40 +1579,75 @@ const Vacation = () => {
 
       {/* Requests List */}
       {activeView === 'list' && (
-      <div className="bg-slate-800 rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center">
-          <FileText className="h-6 w-6 mr-3 text-slate-400" />
-          {user?.role === 'admin' ? 'Gestione Richieste Ferie' : 'Storico Richieste Ferie'}
-        </h2>
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+            <FileText className="h-6 w-6 mr-3 text-slate-400" />
+            {user?.role === 'admin' ? 'Gestione Richieste Ferie' : 'Storico Richieste Ferie'}
+          </h2>
 
-        {(() => {
-          const filteredRequests = getFilteredRequests();
-          return filteredRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <Plane className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-400 text-lg">
-                {user?.role === 'admin' 
-                  ? `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`
-                  : 'Nessuna richiesta di ferie presente'
-                }
-              </p>
-              <p className="text-slate-500 text-sm mt-2">
-                {user?.role === 'admin' 
-                  ? 'Prova a cambiare mese o aggiungere nuove richieste'
-                  : 'Clicca su "Nuova Richiesta" per iniziare'
-                }
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredRequests.map((request) => (
-              <div key={request.id} className="bg-slate-700 rounded-lg p-6 hover:bg-slate-600 transition-colors">
+          {(() => {
+            // Logica di filtraggio e raggruppamento simile a Permessi.jsx
+
+            // 1. Richieste "Da Approvare" (Pending) - Globali (ignorano filtro mese, rispettano filtro ricerca)
+            const pendingRequests = vacationRequests.filter(req => {
+              const matchesSearch = !searchTerm || (
+                (req.notes && req.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (req.submittedBy && req.submittedBy.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (req.status && req.status.toLowerCase().includes(searchTerm.toLowerCase()))
+              );
+              return req.status === 'pending' && matchesSearch;
+            });
+
+            // 2. Richieste Approvate/Rifiutate - Divise in "In Programma" e "Storico"
+            // Queste rispettano SIA il filtro ricerca SIA il filtro mese/anno (se admin)
+
+            const approvedRequests = vacationRequests.filter(req => {
+              // Escludi pending
+              if (req.status === 'pending') return false;
+
+              // Filtro ricerca
+              const matchesSearch = !searchTerm || (
+                (req.notes && req.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (req.submittedBy && req.submittedBy.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (req.status && req.status.toLowerCase().includes(searchTerm.toLowerCase()))
+              );
+              if (!matchesSearch) return false;
+
+              // Filtro mese/anno (solo per admin, come da logica originale)
+              // Se utente normale, mostra tutto (o logica diversa?)
+              // Nella logica originale: if (user?.role === 'admin' && activeView === 'list') { filter by date }
+              if (user?.role === 'admin') {
+                const requestDate = new Date(req.startDate);
+                return requestDate.getMonth() === currentMonth && requestDate.getFullYear() === currentYear;
+              }
+
+              return true;
+            });
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const upcomingRequests = approvedRequests.filter(req => new Date(req.endDate) >= today);
+            const pastRequests = approvedRequests.filter(req => new Date(req.endDate) < today);
+
+            // Funzione helper per renderizzare una card
+            const renderRequestCard = (request, isPast = false) => (
+              <div key={request.id} className={`${isPast ? 'bg-slate-800 border border-slate-700 opacity-75 hover:opacity-100' : 'bg-slate-700'} rounded-lg p-6 hover:bg-slate-600 transition-all duration-200 mb-4`}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
-                      {getStatusIcon(request.status)}
-                      <h3 className="text-lg font-semibold text-white ml-2">Richiesta Ferie</h3>
-                      <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
+                      {/* Icona stato diversa per passato */}
+                      {isPast && request.status === 'approved' ? (
+                        <CheckCircle className="h-5 w-5 text-slate-400" />
+                      ) : (
+                        getStatusIcon(request.status)
+                      )}
+
+                      <h3 className={`text-lg font-semibold ml-2 ${isPast ? 'text-slate-400' : 'text-white'}`}>
+                        {isPast ? 'Ferie Passate' : 'Richiesta Ferie'}
+                      </h3>
+
+                      <span className={`ml-3 px-3 py-1 rounded-full text-xs font-medium border ${isPast ? 'bg-slate-700 text-slate-400 border-slate-600' : getStatusColor(request.status)}`}>
                         {getStatusText(request.status)}
                       </span>
                     </div>
@@ -1637,7 +1662,7 @@ const Vacation = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-slate-400" />
-                        <span>Dal {formatDate(request.startDate)} al {formatDate(request.endDate)}</span>
+                        <span className={isPast ? 'text-slate-400' : 'text-white'}>Dal {formatDate(request.startDate)} al {formatDate(request.endDate)}</span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="h-4 w-4 mr-2 text-slate-400" />
@@ -1655,14 +1680,14 @@ const Vacation = () => {
                       )}
                     </div>
                     {request.notes && (
-                      <div className="mt-3 p-3 bg-slate-600 rounded-lg">
+                      <div className="mt-3 p-3 bg-slate-600/50 rounded-lg">
                         <p className="text-slate-300 text-sm">
                           <strong>Note:</strong> {request.notes}
                         </p>
                       </div>
                     )}
-                    
-                    {/* Pulsanti di approvazione per admin - solo per richieste pending */}
+
+                    {/* Pulsanti di approvazione per admin - solo per richieste pending (che non dovrebbero essere qui se isPast=true ma per sicurezza) */}
                     {user?.role === 'admin' && request.status === 'pending' && (
                       <div className="mt-4 flex gap-3">
                         <button
@@ -1690,11 +1715,78 @@ const Vacation = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-          );
-        })()}
-      </div>
+            );
+
+            if (pendingRequests.length === 0 && upcomingRequests.length === 0 && pastRequests.length === 0) {
+              return (
+                <div className="text-center py-12">
+                  <Plane className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-400 text-lg">
+                    {user?.role === 'admin'
+                      ? `Nessuna richiesta per ${monthNames[currentMonth]} ${currentYear}`
+                      : 'Nessuna richiesta di ferie presente'
+                    }
+                  </p>
+                  <p className="text-slate-500 text-sm mt-2">
+                    Clicca su "Nuova Richiesta" per iniziare
+                  </p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-8">
+                {/* 1. SEZIONE DA APPROVARE (Priorità Alta) */}
+                {pendingRequests.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-yellow-500/30">
+                      <AlertCircle className="h-5 w-5 text-yellow-500" />
+                      <h3 className="text-lg font-bold text-yellow-500">Da Approvare ({pendingRequests.length})</h3>
+                    </div>
+                    {pendingRequests.map(req => renderRequestCard(req))}
+                  </div>
+                )}
+
+                {/* 2. SEZIONE IN PROGRAMMA */}
+                {upcomingRequests.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-700">
+                      <Calendar className="h-5 w-5 text-blue-400" />
+                      <h3 className="text-lg font-bold text-white">In Programma ({upcomingRequests.length})</h3>
+                    </div>
+                    {upcomingRequests.map(req => renderRequestCard(req))}
+                  </div>
+                )}
+
+                {/* 3. SEZIONE STORICO PASSATE (Collassabile) */}
+                {pastRequests.length > 0 && (
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setHistoryExpanded(!historyExpanded)}
+                      className="w-full flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-700 hover:bg-slate-800/50 p-2 rounded transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <List className="h-5 w-5 text-slate-500 group-hover:text-slate-400" />
+                        <h3 className="text-lg font-bold text-slate-500 group-hover:text-slate-400">Storico Passate ({pastRequests.length})</h3>
+                      </div>
+                      {historyExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-slate-500" />
+                      )}
+                    </button>
+
+                    {historyExpanded && (
+                      <div className="animate-fadeIn space-y-4 pl-0 sm:pl-4 border-l-2 border-slate-800">
+                        {pastRequests.map(req => renderRequestCard(req, true))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {/* Modal Admin Crea Ferie per Dipendente */}

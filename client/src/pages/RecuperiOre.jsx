@@ -3,11 +3,11 @@ import { useAuthStore } from '../utils/store';
 import { useOvertimeBalance } from '../hooks/useOvertimeBalance';
 import { formatHours } from '../utils/hoursCalculation';
 import { RecuperiOreSkeleton } from '../components/Skeleton';
-import { 
-  RefreshCw, 
-  Plus, 
-  AlertCircle, 
-  Timer, 
+import {
+  RefreshCw,
+  Plus,
+  AlertCircle,
+  Timer,
   Clock,
   CheckCircle,
   XCircle,
@@ -37,7 +37,7 @@ const RecuperiOre = () => {
     notes: ''
   });
   const [suggestedTimeSlots, setSuggestedTimeSlots] = useState([]); // Slot orari suggeriti
-  
+
   // Dati per admin gestione recuperi
   const [activeTab, setActiveTab] = useState('debt'); // 'debt', 'proposals' o 'add-hours'
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
@@ -133,7 +133,7 @@ const RecuperiOre = () => {
 
       const pendingData = pendingResponse.ok ? await pendingResponse.json() : [];
       const proposedData = proposedResponse.ok ? await proposedResponse.json() : [];
-      
+
       const allRequests = [...(pendingData || []), ...(proposedData || [])];
       setPendingRecoveryRequests(allRequests);
     } catch (error) {
@@ -145,7 +145,7 @@ const RecuperiOre = () => {
   const fetchDebtSummary = async () => {
     try {
       if (user?.role !== 'admin') return;
-      
+
       const response = await apiCall('/api/recovery-requests/debt-summary');
       if (response.ok) {
         const data = await response.json();
@@ -176,14 +176,14 @@ const RecuperiOre = () => {
   const fetchAllEmployees = async () => {
     try {
       if (user?.role !== 'admin') return;
-      
+
       setLoadingEmployees(true);
       const response = await apiCall('/api/employees');
       if (response.ok) {
         const data = await response.json();
         // Filtra solo dipendenti attivi
         const activeEmployees = data.filter(emp => emp.isActive !== false);
-        
+
         // Carica il saldo banca ore per ogni dipendente
         // Aggiungi timestamp per forzare refresh cache
         const timestamp = Date.now();
@@ -210,7 +210,7 @@ const RecuperiOre = () => {
             }
           })
         );
-        
+
         setAllEmployees(employeesWithBalance);
         console.log('✅ All employees loaded for proposals:', employeesWithBalance.length);
       } else {
@@ -247,7 +247,7 @@ const RecuperiOre = () => {
           alert('Errore nel calcolo dell\'orario di fine');
           return;
         }
-      } 
+      }
       // Se è stato inserito endTime, calcola le ore
       else if (endTime && endTime !== '') {
         finalHours = calculateHours(startTime, endTime);
@@ -380,10 +380,10 @@ const RecuperiOre = () => {
         const hoursText = hoursNum > 0 ? `${hoursNum}h` : '';
         const minutesText = minutesNum > 0 ? `${minutesNum}min` : '';
         const totalText = [hoursText, minutesText].filter(Boolean).join(' ');
-        
+
         console.log('✅ Ore aggiunte con successo:', data);
         console.log('💰 Nuovo balance:', data.newBalance);
-        
+
         // Forza refresh completo con delay per assicurarsi che il database sia aggiornato
         // Refresh multiplo per essere sicuri che i dati vengano aggiornati
         setTimeout(async () => {
@@ -394,7 +394,7 @@ const RecuperiOre = () => {
             await refetchBalance();
           }
         }, 300);
-        
+
         setTimeout(async () => {
           console.log('🔄 Ricarica dati dopo aggiunta ore (tentativo 2)...');
           await fetchAllEmployees();
@@ -404,9 +404,9 @@ const RecuperiOre = () => {
           }
           console.log('✅ Dati ricaricati');
         }, 1000);
-        
+
         alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}${data.newBalance !== undefined ? `\nNuovo saldo: ${data.newBalance.toFixed(2)}h` : ''}`);
-        
+
         // Chiudi modal e resetta form
         setShowAddHoursModal(false);
         setSelectedEmployeeForAddHours(null);
@@ -496,10 +496,10 @@ const RecuperiOre = () => {
   // Genera slot orari suggeriti basati sulle ore selezionate
   const generateTimeSlots = (hours) => {
     if (!hours || parseFloat(hours) <= 0) return [];
-    
+
     const hoursNum = parseFloat(hours);
     const slots = [];
-    
+
     // Genera slot ogni ora dalle 8:00 alle 18:00
     for (let startHour = 8; startHour <= 18 - Math.ceil(hoursNum); startHour++) {
       const startTime = `${String(startHour).padStart(2, '0')}:00`;
@@ -508,7 +508,7 @@ const RecuperiOre = () => {
         slots.push({ startTime, endTime, label: `${startTime} - ${endTime}` });
       }
     }
-    
+
     return slots;
   };
 
@@ -560,7 +560,7 @@ const RecuperiOre = () => {
         return;
       }
       if (!selectedEmployeeForProposal) return;
-      
+
       // Se è nella tab "Debiti", limita alle ore di debito
       // Se è nella tab "Proposte", non c'è limite (può proporre straordinari anche in positivo)
       if (activeTab === 'debt') {
@@ -571,7 +571,7 @@ const RecuperiOre = () => {
         }
       }
       // Per la tab "Proposte", non c'è limite - può proporre qualsiasi quantità di straordinari
-      
+
       // Genera slot suggeriti
       setProposalSuggestedTimeSlots(generateTimeSlots(hours));
       setProposalStep(3);
@@ -624,7 +624,7 @@ const RecuperiOre = () => {
       // Verifica che le ore selezionate corrispondano ESATTAMENTE al range orario
       const calculatedHours = parseFloat(calculateHours(startTime, endTime));
       const requestedHours = parseFloat(hours);
-      
+
       if (Math.abs(calculatedHours - requestedHours) > 0.01) {
         alert(`Il range orario selezionato (${formatHoursFromDecimal(calculatedHours.toString())}) deve corrispondere ESATTAMENTE alle ore richieste (${formatHoursFromDecimal(requestedHours.toString())}). Le ore devono tornare matematicamente.`);
         return;
@@ -711,18 +711,7 @@ const RecuperiOre = () => {
           </div>
 
           {/* Debito */}
-          {totalBalance < 0 && (
-            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-amber-300">Debito Attuale</h3>
-                <AlertCircle className="h-5 w-5 text-amber-400" />
-              </div>
-              <p className="text-2xl font-bold text-amber-400">
-                {formatHours(Math.abs(totalBalance))}
-              </p>
-              <p className="text-xs text-amber-300/70 mt-1">Ore da recuperare</p>
-            </div>
-          )}
+
 
           {/* Credito */}
           {totalBalance > 0 && (
@@ -765,7 +754,7 @@ const RecuperiOre = () => {
                     Il tuo saldo banca ore è <span className="font-bold text-amber-300">{formatHours(Math.abs(totalBalance))}</span> in negativo.
                   </p>
                   <p className="text-sm text-amber-200/80">
-                    Puoi richiedere di recuperare queste ore attraverso straordinari concordati con l'amministratore. 
+                    Puoi richiedere di recuperare queste ore attraverso straordinari concordati con l'amministratore.
                     Una volta approvata la richiesta, potrai lavorare negli orari indicati per compensare il debito.
                   </p>
                 </div>
@@ -806,7 +795,7 @@ const RecuperiOre = () => {
                 </p>
               </div>
             </div>
-            
+
             {approvedRecoveries.length > 0 && (
               <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -820,11 +809,11 @@ const RecuperiOre = () => {
                         <div className="flex items-center gap-2 mb-2">
                           <Calendar className="h-4 w-4 text-green-400" />
                           <div className="text-white font-semibold">
-                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
                             })}
                           </div>
                         </div>
@@ -862,11 +851,11 @@ const RecuperiOre = () => {
                         <div className="flex items-center gap-2 mb-2">
                           <Calendar className="h-4 w-4 text-yellow-400" />
                           <div className="text-white font-semibold">
-                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
                             })}
                           </div>
                         </div>
@@ -904,11 +893,11 @@ const RecuperiOre = () => {
                         <div className="flex items-center gap-2 mb-2">
                           <Calendar className="h-4 w-4 text-blue-400" />
                           <div className="text-white font-semibold">
-                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
+                            {new Date(recovery.recovery_date).toLocaleDateString('it-IT', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
                             })}
                           </div>
                         </div>
@@ -999,7 +988,7 @@ const RecuperiOre = () => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold text-white mb-4">Nuova Richiesta Recupero Ore</h3>
-              
+
               {/* Indicatore step */}
               <div className="flex items-center justify-center mb-6 gap-2">
                 <div className={`flex items-center ${recoveryStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
@@ -1039,7 +1028,7 @@ const RecuperiOre = () => {
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
                     />
                   </div>
-                  
+
                   {recoveryFormData.recoveryDate && (
                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                       <p className="text-sm text-blue-400">
@@ -1071,7 +1060,7 @@ const RecuperiOre = () => {
                       Debito attuale: <span className="text-red-400 font-semibold">{formatHours(Math.abs(totalBalance))}</span>
                     </p>
                   </div>
-                  
+
                   {recoveryFormData.hours && parseFloat(recoveryFormData.hours) > 0 && (
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
                       <p className="text-sm text-amber-400 font-medium">
@@ -1089,7 +1078,7 @@ const RecuperiOre = () => {
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Seleziona l'orario ({formatHoursFromDecimal(recoveryFormData.hours)})
                     </label>
-                    
+
                     {/* Slot suggeriti */}
                     {suggestedTimeSlots.length > 0 && (
                       <div className="mb-4">
@@ -1099,11 +1088,10 @@ const RecuperiOre = () => {
                             <button
                               key={idx}
                               onClick={() => handleSelectTimeSlot(slot)}
-                              className={`px-3 py-2 rounded-lg border transition-colors text-sm ${
-                                recoveryFormData.startTime === slot.startTime && recoveryFormData.endTime === slot.endTime
+                              className={`px-3 py-2 rounded-lg border transition-colors text-sm ${recoveryFormData.startTime === slot.startTime && recoveryFormData.endTime === slot.endTime
                                   ? 'bg-amber-500 border-amber-400 text-white'
                                   : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                              }`}
+                                }`}
                             >
                               {slot.label}
                             </button>
@@ -1122,8 +1110,8 @@ const RecuperiOre = () => {
                           onChange={(e) => {
                             const newStartTime = e.target.value;
                             const newEndTime = calculateEndTime(newStartTime, recoveryFormData.hours);
-                            setRecoveryFormData({ 
-                              ...recoveryFormData, 
+                            setRecoveryFormData({
+                              ...recoveryFormData,
                               startTime: newStartTime,
                               endTime: newEndTime || ''
                             });
@@ -1140,20 +1128,20 @@ const RecuperiOre = () => {
                             const newEndTime = e.target.value;
                             const calculatedHours = calculateHours(recoveryFormData.startTime, newEndTime);
                             const requestedHours = parseFloat(recoveryFormData.hours);
-                            
+
                             if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
                               alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(recoveryFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
                               // Reimposta endTime calcolato automaticamente
                               const autoEndTime = calculateEndTime(recoveryFormData.startTime, recoveryFormData.hours);
-                              setRecoveryFormData({ 
-                                ...recoveryFormData, 
+                              setRecoveryFormData({
+                                ...recoveryFormData,
                                 endTime: autoEndTime || ''
                               });
                               return;
                             }
-                            
-                            setRecoveryFormData({ 
-                              ...recoveryFormData, 
+
+                            setRecoveryFormData({
+                              ...recoveryFormData,
                               endTime: newEndTime
                             });
                           }}
@@ -1161,7 +1149,7 @@ const RecuperiOre = () => {
                         />
                       </div>
                     </div>
-                    
+
                     {recoveryFormData.startTime && recoveryFormData.endTime && (
                       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
                         <p className="text-sm text-green-400 font-medium">
@@ -1182,7 +1170,7 @@ const RecuperiOre = () => {
                       placeholder="Motivo della richiesta di recupero ore..."
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
                     <textarea
@@ -1195,7 +1183,7 @@ const RecuperiOre = () => {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-3 justify-between mt-6">
                 {recoveryStep > 1 ? (
                   <button
@@ -1224,7 +1212,7 @@ const RecuperiOre = () => {
                     Annulla
                   </button>
                 )}
-                
+
                 {recoveryStep < 3 ? (
                   <button
                     onClick={handleNextStep}
@@ -1266,38 +1254,35 @@ const RecuperiOre = () => {
             Gestione Recuperi Ore
           </h3>
         </div>
-        
+
         {/* Tab Buttons */}
         <div className="flex gap-2 mb-6 border-b border-slate-700">
           <button
             onClick={() => setActiveTab('debt')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-              activeTab === 'debt'
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'debt'
                 ? 'text-red-400 border-red-400'
                 : 'text-slate-400 border-transparent hover:text-slate-300'
-            }`}
+              }`}
           >
             <AlertCircle className="h-4 w-4 inline mr-2" />
             Debiti ({employeesWithDebt.length})
           </button>
           <button
             onClick={() => setActiveTab('proposals')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-              activeTab === 'proposals'
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
                 ? 'text-blue-400 border-blue-400'
                 : 'text-slate-400 border-transparent hover:text-slate-300'
-            }`}
+              }`}
           >
             <Plus className="h-4 w-4 inline mr-2" />
             Proposte Straordinari
           </button>
           <button
             onClick={() => setActiveTab('add-hours')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${
-              activeTab === 'add-hours'
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
                 ? 'text-green-400 border-green-400'
                 : 'text-slate-400 border-transparent hover:text-slate-300'
-            }`}
+              }`}
           >
             <CheckCircle className="h-4 w-4 inline mr-2" />
             Aggiungi Ore
@@ -1310,31 +1295,31 @@ const RecuperiOre = () => {
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
               <div className="text-sm text-slate-400">
-                {employeesWithDebt.length > 0 
+                {employeesWithDebt.length > 0
                   ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
                   : 'Nessun debito al momento'
                 }
               </div>
             </div>
-        {employeesWithDebt.length > 0 ? (
-          <div className="space-y-3">
-            {employeesWithDebt.map((employee) => (
-              <div key={employee.id} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-white font-semibold text-sm">
-                          {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="text-white font-semibold">
-                          {employee.first_name} {employee.last_name}
-                        </h4>
-                        <p className="text-red-300 text-sm">{employee.department || 'N/A'}</p>
-                      </div>
-                    </div>
+            {employeesWithDebt.length > 0 ? (
+              <div className="space-y-3">
+                {employeesWithDebt.map((employee) => (
+                  <div key={employee.id} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-white font-semibold text-sm">
+                              {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {employee.first_name} {employee.last_name}
+                            </h4>
+                            <p className="text-red-300 text-sm">{employee.department || 'N/A'}</p>
+                          </div>
+                        </div>
                         <div className="text-slate-300 text-sm mt-2">
                           <div className="text-red-400 font-semibold">
                             Debito: {formatHours(employee.debtHours)}
@@ -1343,37 +1328,37 @@ const RecuperiOre = () => {
                             Saldo totale: {formatHours(employee.totalBalance)}
                           </div>
                         </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployeeForProposal(employee);
+                          setProposalStep(1);
+                          setProposalFormData({
+                            recoveryDate: '',
+                            startTime: '',
+                            endTime: '',
+                            hours: '',
+                            reason: '',
+                            notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                          });
+                          setProposalSuggestedTimeSlots([]);
+                          setShowProposeRecoveryModal(true);
+                        }}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                      >
+                        Proponi Recupero
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedEmployeeForProposal(employee);
-                      setProposalStep(1);
-                      setProposalFormData({
-                        recoveryDate: '',
-                        startTime: '',
-                        endTime: '',
-                        hours: '',
-                        reason: '',
-                        notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                      });
-                      setProposalSuggestedTimeSlots([]);
-                      setShowProposeRecoveryModal(true);
-                    }}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
-                  >
-                    Proponi Recupero
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-400">
-            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
-            <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
-          </div>
-        )}
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
+                <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1395,26 +1380,24 @@ const RecuperiOre = () => {
             ) : allEmployees.length > 0 ? (
               <div className="space-y-3">
                 {allEmployees.map((employee) => (
-                  <div 
-                    key={employee.id} 
-                    className={`rounded-lg p-4 border ${
-                      employee.balance < 0
+                  <div
+                    key={employee.id}
+                    className={`rounded-lg p-4 border ${employee.balance < 0
                         ? 'bg-red-500/10 border-red-500/20'
                         : employee.balance > 0
                           ? 'bg-green-500/10 border-green-500/20'
                           : 'bg-slate-700/50 border-slate-600'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                            employee.balance < 0
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
                               ? 'bg-red-500'
                               : employee.balance > 0
                                 ? 'bg-green-500'
                                 : 'bg-slate-500'
-                          }`}>
+                            }`}>
                             <span className="text-white font-semibold text-sm">
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}
                               {employee.lastName?.[0] || employee.last_name?.[0] || ''}
@@ -1428,13 +1411,12 @@ const RecuperiOre = () => {
                           </div>
                         </div>
                         <div className="text-slate-300 text-sm mt-2">
-                          <div className={`font-semibold ${
-                            employee.balance < 0
+                          <div className={`font-semibold ${employee.balance < 0
                               ? 'text-red-400'
                               : employee.balance > 0
                                 ? 'text-green-400'
                                 : 'text-slate-400'
-                          }`}>
+                            }`}>
                             Saldo attuale: {formatHours(employee.balance)}
                             {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
                             {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
@@ -1459,7 +1441,7 @@ const RecuperiOre = () => {
                             endTime: '',
                             hours: '',
                             reason: '',
-                            notes: employee.balance < 0 
+                            notes: employee.balance < 0
                               ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
                               : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
                           });
@@ -1489,7 +1471,7 @@ const RecuperiOre = () => {
             <div className="mb-4">
               <h4 className="text-lg font-semibold text-white mb-2">Aggiungi Ore a Credito</h4>
               <p className="text-sm text-slate-400">
-                Aggiungi direttamente ore a credito alla banca ore di qualsiasi dipendente. 
+                Aggiungi direttamente ore a credito alla banca ore di qualsiasi dipendente.
                 Queste ore influenzano positivamente il saldo e vengono aggiunte immediatamente.
               </p>
             </div>
@@ -1501,26 +1483,24 @@ const RecuperiOre = () => {
             ) : allEmployees.length > 0 ? (
               <div className="space-y-3">
                 {allEmployees.map((employee) => (
-                  <div 
-                    key={employee.id} 
-                    className={`rounded-lg p-4 border ${
-                      employee.balance < 0
+                  <div
+                    key={employee.id}
+                    className={`rounded-lg p-4 border ${employee.balance < 0
                         ? 'bg-red-500/10 border-red-500/20'
                         : employee.balance > 0
                           ? 'bg-green-500/10 border-green-500/20'
                           : 'bg-slate-700/50 border-slate-600'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                            employee.balance < 0
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
                               ? 'bg-red-500'
                               : employee.balance > 0
                                 ? 'bg-green-500'
                                 : 'bg-slate-500'
-                          }`}>
+                            }`}>
                             <span className="text-white font-semibold text-sm">
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}{employee.lastName?.[0] || employee.last_name?.[0] || ''}
                             </span>
@@ -1533,13 +1513,12 @@ const RecuperiOre = () => {
                           </div>
                         </div>
                         <div className="text-slate-300 text-sm mt-2">
-                          <div className={`font-semibold ${
-                            employee.balance < 0
+                          <div className={`font-semibold ${employee.balance < 0
                               ? 'text-red-400'
                               : employee.balance > 0
                                 ? 'text-green-400'
                                 : 'text-slate-400'
-                          }`}>
+                            }`}>
                             Saldo attuale: {formatHours(employee.balance)}
                             {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
                             {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
@@ -1717,7 +1696,7 @@ const RecuperiOre = () => {
             <h3 className="text-xl font-bold text-white mb-4">
               Proponi Recupero per {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
             </h3>
-            
+
             {/* Indicatore step */}
             <div className="flex items-center justify-center mb-6 gap-2">
               <div className={`flex items-center ${proposalStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
@@ -1757,7 +1736,7 @@ const RecuperiOre = () => {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
                   />
                 </div>
-                
+
                 {proposalFormData.recoveryDate && (
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                     <p className="text-sm text-blue-400">
@@ -1775,38 +1754,37 @@ const RecuperiOre = () => {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Quante ore vuoi proporre? *
                   </label>
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0.25"
-                      max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
-                      value={proposalFormData.hours}
-                      onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
-                      placeholder="es. 2.5"
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-                    />
-                    {activeTab === 'debt' && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
-                      </p>
-                    )}
-                    {activeTab === 'proposals' && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Saldo attuale: <span className={`font-semibold ${
-                          (selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0.25"
+                    max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
+                    value={proposalFormData.hours}
+                    onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
+                    placeholder="es. 2.5"
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                  />
+                  {activeTab === 'debt' && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
+                    </p>
+                  )}
+                  {activeTab === 'proposals' && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
                           (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
                         }`}>
-                          {formatHours(selectedEmployeeForProposal.balance || 0)}
+                        {formatHours(selectedEmployeeForProposal.balance || 0)}
+                      </span>
+                      {selectedEmployeeForProposal.balance !== undefined && (
+                        <span className="text-xs text-slate-500 ml-2">
+                          (puoi proporre qualsiasi quantità di straordinari)
                         </span>
-                        {selectedEmployeeForProposal.balance !== undefined && (
-                          <span className="text-xs text-slate-500 ml-2">
-                            (puoi proporre qualsiasi quantità di straordinari)
-                          </span>
-                        )}
-                      </p>
-                    )}
+                      )}
+                    </p>
+                  )}
                 </div>
-                
+
                 {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
                   <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
                     <p className="text-sm text-amber-400 font-medium">
@@ -1824,7 +1802,7 @@ const RecuperiOre = () => {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Seleziona l'orario ({formatHoursFromDecimal(proposalFormData.hours)})
                   </label>
-                  
+
                   {/* Slot suggeriti */}
                   {proposalSuggestedTimeSlots.length > 0 && (
                     <div className="mb-4">
@@ -1834,11 +1812,10 @@ const RecuperiOre = () => {
                           <button
                             key={idx}
                             onClick={() => handleSelectProposalTimeSlot(slot)}
-                            className={`px-3 py-2 rounded-lg border transition-colors text-sm ${
-                              proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
+                            className={`px-3 py-2 rounded-lg border transition-colors text-sm ${proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
                                 ? 'bg-amber-500 border-amber-400 text-white'
                                 : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                            }`}
+                              }`}
                           >
                             {slot.label}
                           </button>
@@ -1857,8 +1834,8 @@ const RecuperiOre = () => {
                         onChange={(e) => {
                           const newStartTime = e.target.value;
                           const newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
-                          setProposalFormData({ 
-                            ...proposalFormData, 
+                          setProposalFormData({
+                            ...proposalFormData,
                             startTime: newStartTime,
                             endTime: newEndTime || ''
                           });
@@ -1875,20 +1852,20 @@ const RecuperiOre = () => {
                           const newEndTime = e.target.value;
                           const calculatedHours = calculateHours(proposalFormData.startTime, newEndTime);
                           const requestedHours = parseFloat(proposalFormData.hours);
-                          
+
                           if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
                             alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(proposalFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
                             // Reimposta endTime calcolato automaticamente
                             const autoEndTime = calculateEndTime(proposalFormData.startTime, proposalFormData.hours);
-                            setProposalFormData({ 
-                              ...proposalFormData, 
+                            setProposalFormData({
+                              ...proposalFormData,
                               endTime: autoEndTime || ''
                             });
                             return;
                           }
-                          
-                          setProposalFormData({ 
-                            ...proposalFormData, 
+
+                          setProposalFormData({
+                            ...proposalFormData,
                             endTime: newEndTime
                           });
                         }}
@@ -1896,7 +1873,7 @@ const RecuperiOre = () => {
                       />
                     </div>
                   </div>
-                  
+
                   {proposalFormData.startTime && proposalFormData.endTime && (
                     <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
                       <p className="text-sm text-green-400 font-medium">
@@ -1917,7 +1894,7 @@ const RecuperiOre = () => {
                     placeholder="Motivo della proposta di recupero ore..."
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
                   <textarea
@@ -1930,7 +1907,7 @@ const RecuperiOre = () => {
                 </div>
               </div>
             )}
-            
+
             <div className="flex gap-3 justify-between mt-6">
               {proposalStep > 1 ? (
                 <button
@@ -1960,7 +1937,7 @@ const RecuperiOre = () => {
                   Annulla
                 </button>
               )}
-              
+
               {proposalStep < 3 ? (
                 <button
                   onClick={handleProposalNextStep}
@@ -2032,10 +2009,9 @@ const RecuperiOre = () => {
                   </div>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Saldo attuale: <span className={`font-semibold ${
-                    (selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
-                    (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
-                  }`}>
+                  Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
+                      (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                    }`}>
                     {formatHours(selectedEmployeeForAddHours.balance || 0)}
                   </span>
                 </p>
