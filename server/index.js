@@ -948,12 +948,11 @@ app.get('/api/employees', authenticateToken, async (req, res) => {
         // Calcola ore settimanali standard escludendo sabato e domenica (solo lun-ven)
         weeklyHours: Object.keys(detailedWorkSchedule).length > 0 ?
           Object.entries(detailedWorkSchedule)
-            .filter(([dayName]) => dayName !== 'saturday' && dayName !== 'sunday')
             .reduce((total, [, day]) => total + (day.totalHours || 0), 0) :
           (activeWorkPattern ?
             (activeWorkPattern.monday_hours + activeWorkPattern.tuesday_hours +
               activeWorkPattern.wednesday_hours + activeWorkPattern.thursday_hours +
-              activeWorkPattern.friday_hours) : emp.weekly_hours || 0),
+              activeWorkPattern.friday_hours + activeWorkPattern.saturday_hours + activeWorkPattern.sunday_hours) : emp.weekly_hours || 0),
         // Dati ferie (30 giorni per tutti i dipendenti)
         usedVacationDays: 0,
         totalVacationDays: 30

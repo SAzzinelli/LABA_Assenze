@@ -438,8 +438,8 @@ const Employees = () => {
             <button
               onClick={() => setViewMode('list')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-300 hover:text-white'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Lista"
             >
@@ -448,8 +448,8 @@ const Employees = () => {
             <button
               onClick={() => setViewMode('card')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'card'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-300 hover:text-white'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Card"
             >
@@ -646,14 +646,14 @@ const Employees = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${employee.department === 'Amministrazione'
-                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
-                          : employee.department === 'Segreteria'
-                            ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
-                            : employee.department === 'Orientamento'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                              : employee.department === 'Reparto IT'
-                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                                : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                        : employee.department === 'Segreteria'
+                          ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+                          : employee.department === 'Orientamento'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                            : employee.department === 'Reparto IT'
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                              : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
                         }`}>
                         {employee.department}
                       </span>
@@ -887,8 +887,8 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('details')}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
                 <User className="h-4 w-4 inline mr-2" />
@@ -897,8 +897,8 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('balance')}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
                 <DollarSign className="h-4 w-4 inline mr-2" />
@@ -907,8 +907,8 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('schedule')}
                 className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
                 <Clock className="h-4 w-4 inline mr-2" />
@@ -1024,10 +1024,10 @@ const Employees = () => {
                       const formatted = formatHoursValue(currentBalance);
                       return (
                         <div className={`text-6xl font-bold ${currentBalance > 0
-                            ? 'text-green-400'
-                            : currentBalance < 0
-                              ? 'text-red-400'
-                              : 'text-slate-400'
+                          ? 'text-green-400'
+                          : currentBalance < 0
+                            ? 'text-red-400'
+                            : 'text-slate-400'
                           }`}>
                           {formatted.sign}
                           {formatted.hours}
@@ -1040,10 +1040,10 @@ const Employees = () => {
                   </div>
                   <div className="text-center mt-4">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${currentBalance > 0
-                        ? 'bg-green-500/20 text-green-300 border border-green-400/30'
-                        : currentBalance < 0
-                          ? 'bg-red-500/20 text-red-300 border border-red-400/30'
-                          : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                      ? 'bg-green-500/20 text-green-300 border border-green-400/30'
+                      : currentBalance < 0
+                        ? 'bg-red-500/20 text-red-300 border border-red-400/30'
+                        : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
                       }`}>
                       {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
                       {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
@@ -1063,14 +1063,14 @@ const Employees = () => {
                     const now = new Date();
                     const currentHour = now.getHours();
                     const currentMinute = now.getMinutes();
-                    
+
                     // Verifica se la giornata è conclusa (controlla orario di fine lavoro)
                     let isWorkDayCompleted = false;
                     if (selectedEmployee?.workSchedule) {
                       const dayOfWeek = now.getDay();
                       const dayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
                       const todaySchedule = selectedEmployee.workSchedule[dayKey];
-                      
+
                       if (todaySchedule && todaySchedule.active) {
                         // Usa endTime o end_time con fallback a '18:00'
                         const endTime = todaySchedule.endTime || todaySchedule.end_time || '18:00';
@@ -1081,18 +1081,18 @@ const Employees = () => {
                         }
                       }
                     }
-                    
+
                     // Filtra: mostra giornate con balance != 0
                     // Include oggi solo se la giornata è conclusa O c'è un permesso approvato (balance già definitivo)
                     const completedRecords = balanceHistory.filter(record => {
                       const balance = record.balance_hours || 0;
                       const isToday = record.date === today;
-                      
+
                       // Se non è oggi, mostra solo se balance != 0
                       if (!isToday) {
                         return balance !== 0;
                       }
-                      
+
                       // Per oggi: escludi sempre a meno che:
                       // 1. La giornata sia conclusa (orario di fine passato)
                       // 2. OPPURE ci sia un permesso approvato (balance già definitivo)
@@ -1104,11 +1104,11 @@ const Employees = () => {
                           record.notes.includes('Permesso 104') ||
                           record.notes.includes('permission_104')
                         );
-                        
+
                         // Include solo se (giornata conclusa O permesso approvato) E balance != 0
                         return balance !== 0 && (isWorkDayCompleted || hasPermission);
                       }
-                      
+
                       return false;
                     });
                     return completedRecords.length > 0 ? (
@@ -1118,18 +1118,18 @@ const Employees = () => {
                           const notes = record.notes || '';
                           const hasManualCredit = notes.includes('Aggiunta manuale ore') || notes.includes('Ricarica banca ore');
                           const hasPermissionReduction = notes.includes('Riduzione permesso');
-                          
+
                           // Estrai dettagli dalle note se presenti
                           let manualCreditInfo = null;
                           let permissionReductionInfo = null;
-                          
+
                           if (hasManualCredit) {
                             const creditMatch = notes.match(/Aggiunta manuale ore: \+([\d.]+)h/);
                             if (creditMatch) {
                               manualCreditInfo = parseFloat(creditMatch[1]);
                             }
                           }
-                          
+
                           if (hasPermissionReduction) {
                             const permMatch = notes.match(/Riduzione permesso: ([\d.]+)h → ([\d.]+)h \(([\d.]+)h recuperate\)/);
                             if (permMatch) {
@@ -1140,7 +1140,7 @@ const Employees = () => {
                               };
                             }
                           }
-                          
+
                           return (
                             <div key={index} className="bg-slate-600 rounded-lg p-4">
                               <div className="flex items-center justify-between mb-2">
@@ -1169,10 +1169,10 @@ const Employees = () => {
                                     return (
                                       <>
                                         <p className={`text-lg font-bold ${record.balance_hours > 0
-                                            ? 'text-green-400'
-                                            : record.balance_hours < 0
-                                              ? 'text-red-400'
-                                              : 'text-slate-400'
+                                          ? 'text-green-400'
+                                          : record.balance_hours < 0
+                                            ? 'text-red-400'
+                                            : 'text-slate-400'
                                           }`}>
                                           {balanceFormatted.full}
                                         </p>
@@ -1184,7 +1184,7 @@ const Employees = () => {
                                   })()}
                                 </div>
                               </div>
-                              
+
                               {/* Mostra audit trail per aggiunte manuali */}
                               {hasManualCredit && (
                                 <div className="mt-3 pt-3 border-t border-slate-500">
@@ -1196,7 +1196,7 @@ const Employees = () => {
                                             💰 Aggiunta manuale: +{manualCreditInfo?.toFixed(2) || '0'}h
                                           </p>
                                           <p className="text-xs text-blue-300">
-                                            🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h 
+                                            🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h
                                             <span className="text-green-300"> ({permissionReductionInfo.recovered.toFixed(2)}h recuperate)</span>
                                           </p>
                                         </>
@@ -1284,19 +1284,31 @@ const Employees = () => {
                                     const morningEnd = formatTime(breakStart);
                                     const afternoonStart = formatTime(breakEnd);
 
+                                    // Determina se mostrare la mattina
+                                    const showMorning = startTime < morningEnd;
+                                    // Determina se mostrare il pomeriggio (solo se l'inizio pomeriggio è prima della fine turno)
+                                    const showAfternoon = afternoonStart < endTime;
+
                                     return (
                                       <>
-                                        <div className="text-xs text-slate-300">{formatTime(startTime)} - {morningEnd} (Mattina)</div>
-                                        {breakDuration > 0 && (
+                                        {showMorning && (
+                                          <div className="text-xs text-slate-300">{formatTime(startTime)} - {morningEnd} (Mattina)</div>
+                                        )}
+                                        {breakDuration > 0 && showMorning && showAfternoon && (
                                           <div className="text-xs text-slate-400">{morningEnd} - {afternoonStart} (Pausa)</div>
                                         )}
-                                        <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
+                                        {showAfternoon && (
+                                          <div className="text-xs text-slate-300">{afternoonStart} - {formatTime(endTime)} (Pomeriggio)</div>
+                                        )}
+                                        {!showMorning && !showAfternoon && (
+                                          <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)}</div>
+                                        )}
                                         <div className="text-xs font-semibold text-green-400 mt-1">
                                           Totale: {totalHours > 0 ? formatHours(totalHours) : formatHours(7)}
                                         </div>
                                       </>
                                     );
-                                  } else if (daySchedule.workType === 'morning' || daySchedule.work_type === 'morning') {
+                                  } else if (daySchedule.workType === 'morning' || daySchedule.work_type === 'morning' || daySchedule.workType === 'solo_mattina' || daySchedule.work_type === 'solo_mattina') {
                                     return (
                                       <>
                                         <div className="text-xs text-slate-300">{formatTime(startTime)} - {formatTime(endTime)} (Mattina)</div>
