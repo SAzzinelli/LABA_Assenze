@@ -11,7 +11,22 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Calendar
+  Calendar,
+  User,
+  Users,
+  Wallet,
+  Building2,
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Search,
+  ArrowDownUp,
+  FileText,
+  CheckCircle2,
+  Trash2,
+  Edit2,
+  Ban
 } from 'lucide-react';
 
 const RecuperiOre = () => {
@@ -1414,50 +1429,66 @@ const RecuperiOre = () => {
             {employeesWithDebt.length > 0 ? (
               <div className="space-y-3">
                 {employeesWithDebt.map((employee) => (
-                  <div key={employee.id} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-2">
-                          <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-white font-semibold text-sm">
-                              {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
-                            </span>
-                          </div>
-                          <div>
-                            <h4 className="text-white font-semibold">
-                              {employee.first_name} {employee.last_name}
-                            </h4>
-                            <p className="text-red-300 text-sm">{employee.department || 'N/A'}</p>
-                          </div>
-                        </div>
-                        <div className="text-slate-300 text-sm mt-2">
-                          <div className="text-red-400 font-semibold">
-                            Debito: {formatHours(employee.debtHours)}
-                          </div>
-                          <div className="text-slate-400 text-xs mt-1">
-                            Saldo totale: {formatHours(employee.totalBalance)}
-                          </div>
+                  <div key={employee.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-slate-800/80 border-l-4 border-l-red-500">
+                    <div className="flex flex-col sm:flex-row gap-4">
+
+                      {/* SINISTRA: Icona Utente Grande */}
+                      <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-2xl font-bold border border-red-500/30">
+                          {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedEmployeeForProposal(employee);
-                          setProposalStep(1);
-                          setProposalFormData({
-                            recoveryDate: '',
-                            startTime: '',
-                            endTime: '',
-                            hours: '',
-                            reason: '',
-                            notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                          });
-                          setProposalSuggestedTimeSlots([]);
-                          setShowProposeRecoveryModal(true);
-                        }}
-                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
-                      >
-                        Proponi Recupero
-                      </button>
+
+                      {/* CENTRO: Dettagli Dipendente */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
+                            Debito
+                          </span>
+                          <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                            {employee.department || 'N/A'}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors">
+                          {employee.first_name} {employee.last_name}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                            <Clock className="w-3.5 h-3.5 text-red-400" />
+                            <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                            <Wallet className="w-3.5 h-3.5 text-slate-300" />
+                            <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* DESTRA: Azioni */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                        <button
+                          onClick={() => {
+                            setSelectedEmployeeForProposal(employee);
+                            setProposalStep(1);
+                            setProposalFormData({
+                              recoveryDate: '',
+                              startTime: '',
+                              endTime: '',
+                              hours: '',
+                              reason: '',
+                              notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                            });
+                            setProposalSuggestedTimeSlots([]);
+                            setShowProposeRecoveryModal(true);
+                          }}
+                          className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Proponi Recupero
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1468,7 +1499,8 @@ const RecuperiOre = () => {
                 <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
                 <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
               </div>
-            )}
+            )
+            }
           </div>
         )}
 
@@ -1489,83 +1521,91 @@ const RecuperiOre = () => {
               </div>
             ) : allEmployees.length > 0 ? (
               <div className="space-y-3">
-                {allEmployees.map((employee) => (
-                  <div
-                    key={employee.id}
-                    className={`rounded-lg p-4 border ${employee.balance < 0
-                      ? 'bg-red-500/10 border-red-500/20'
-                      : employee.balance > 0
-                        ? 'bg-green-500/10 border-green-500/20'
-                        : 'bg-slate-700/50 border-slate-600'
-                      }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-2">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
-                            ? 'bg-red-500'
-                            : employee.balance > 0
-                              ? 'bg-green-500'
-                              : 'bg-slate-500'
-                            }`}>
-                            <span className="text-white font-semibold text-sm">
-                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}
-                              {employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                {allEmployees.map((employee) => {
+                  const isDebt = employee.balance < 0;
+                  const isCredit = employee.balance > 0;
+                  const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
+                    isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
+                      'border-l-slate-500 hover:border-indigo-500/30 hover:shadow-indigo-500/5';
+
+                  const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
+                  const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
+                  const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+
+                  return (
+                    <div key={employee.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 transition-all hover:shadow-lg hover:bg-slate-800/80 border-l-4 ${borderClass}`}>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {/* SINISTRA: Icona Utente Grande */}
+                        <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl font-bold border ${avatarBg}`}>
+                            {employee.firstName?.[0] || employee.first_name?.[0] || ''}
+                            {employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                          </div>
+                        </div>
+
+                        {/* CENTRO: Dettagli Dipendente */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                              {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
+                            </span>
+                            <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                              {employee.department || 'N/A'}
                             </span>
                           </div>
-                          <div>
-                            <h4 className="text-white font-semibold">
-                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                            </h4>
-                            <p className="text-slate-300 text-sm">{employee.department || 'N/A'}</p>
+
+                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
+                            {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                              <Wallet className={`w-3.5 h-3.5 ${statusColor}`} />
+                              <span className={`font-medium ${statusColor}`}>
+                                Saldo: {formatHours(employee.balance)}
+                                {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                              </span>
+                            </span>
                           </div>
                         </div>
-                        <div className="text-slate-300 text-sm mt-2">
-                          <div className={`font-semibold ${employee.balance < 0
-                            ? 'text-red-400'
-                            : employee.balance > 0
-                              ? 'text-green-400'
-                              : 'text-slate-400'
-                            }`}>
-                            Saldo attuale: {formatHours(employee.balance)}
-                            {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
-                            {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
-                            {employee.balance === 0 && ' (In pari)'}
-                          </div>
+
+                        {/* DESTRA: Azioni */}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                          <button
+                            onClick={() => {
+                              setSelectedEmployeeForProposal({
+                                id: employee.id,
+                                first_name: employee.firstName || employee.first_name,
+                                last_name: employee.lastName || employee.last_name,
+                                department: employee.department,
+                                balance: employee.balance,
+                                debtHours: employee.debtHours || 0
+                              });
+                              setProposalStep(1);
+                              setProposalFormData({
+                                recoveryDate: '',
+                                startTime: '',
+                                endTime: '',
+                                hours: '',
+                                reason: '',
+                                notes: employee.balance < 0
+                                  ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                                  : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
+                              });
+                              setProposalSuggestedTimeSlots([]);
+                              setShowProposeRecoveryModal(true);
+                            }}
+                            className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Proponi
+                          </button>
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedEmployeeForProposal({
-                            id: employee.id,
-                            first_name: employee.firstName || employee.first_name,
-                            last_name: employee.lastName || employee.last_name,
-                            department: employee.department,
-                            balance: employee.balance,
-                            debtHours: employee.debtHours || 0
-                          });
-                          setProposalStep(1);
-                          setProposalFormData({
-                            recoveryDate: '',
-                            startTime: '',
-                            endTime: '',
-                            hours: '',
-                            reason: '',
-                            notes: employee.balance < 0
-                              ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                              : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
-                          });
-                          setProposalSuggestedTimeSlots([]);
-                          setShowProposeRecoveryModal(true);
-                        }}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
-                      >
-                        <Plus className="h-4 w-4 inline mr-2" />
-                        Proponi Straordinario
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-slate-400">
