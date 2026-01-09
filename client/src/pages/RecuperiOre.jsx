@@ -1089,8 +1089,8 @@ const RecuperiOre = () => {
                               key={idx}
                               onClick={() => handleSelectTimeSlot(slot)}
                               className={`px-3 py-2 rounded-lg border transition-colors text-sm ${recoveryFormData.startTime === slot.startTime && recoveryFormData.endTime === slot.endTime
-                                  ? 'bg-amber-500 border-amber-400 text-white'
-                                  : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                                ? 'bg-amber-500 border-amber-400 text-white'
+                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
                                 }`}
                             >
                               {slot.label}
@@ -1246,6 +1246,67 @@ const RecuperiOre = () => {
         </h1>
       </div>
 
+      {/* Richieste Recupero Ore in Attesa */}
+      {pendingRecoveryRequests.length > 0 && (
+        <div className="bg-amber-900/10 border border-amber-500/30 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
+            <Clock className="h-6 w-6 mr-3 text-amber-400" />
+            Richieste Recupero Ore in Attesa
+          </h3>
+          <div className="space-y-3">
+            {pendingRecoveryRequests.map((recovery) => (
+              <div key={recovery.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-white font-semibold text-sm">
+                          {recovery.users?.first_name?.[0] || ''}{recovery.users?.last_name?.[0] || ''}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-white font-semibold">
+                          {recovery.users?.first_name} {recovery.users?.last_name}
+                        </h4>
+                        <p className="text-amber-300 text-sm">{recovery.users?.department || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="text-slate-300 text-sm mt-2">
+                      <div>📅 Data: {new Date(recovery.recovery_date).toLocaleDateString('it-IT')}</div>
+                      <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})</div>
+                      {recovery.reason && (
+                        <div className="mt-1">💬 Motivo: {recovery.reason}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedRecoveryId(recovery.id);
+                        setShowApproveRecoveryModal(true);
+                      }}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
+                    >
+                      Approva
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedRecoveryId(recovery.id);
+                        setRejectionReason('');
+                        setShowRejectRecoveryModal(true);
+                      }}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
+                    >
+                      Rifiuta
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="bg-slate-800 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
@@ -1260,8 +1321,8 @@ const RecuperiOre = () => {
           <button
             onClick={() => setActiveTab('debt')}
             className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'debt'
-                ? 'text-red-400 border-red-400'
-                : 'text-slate-400 border-transparent hover:text-slate-300'
+              ? 'text-red-400 border-red-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
               }`}
           >
             <AlertCircle className="h-4 w-4 inline mr-2" />
@@ -1270,8 +1331,8 @@ const RecuperiOre = () => {
           <button
             onClick={() => setActiveTab('proposals')}
             className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
-                ? 'text-blue-400 border-blue-400'
-                : 'text-slate-400 border-transparent hover:text-slate-300'
+              ? 'text-blue-400 border-blue-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
               }`}
           >
             <Plus className="h-4 w-4 inline mr-2" />
@@ -1280,8 +1341,8 @@ const RecuperiOre = () => {
           <button
             onClick={() => setActiveTab('add-hours')}
             className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
-                ? 'text-green-400 border-green-400'
-                : 'text-slate-400 border-transparent hover:text-slate-300'
+              ? 'text-green-400 border-green-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
               }`}
           >
             <CheckCircle className="h-4 w-4 inline mr-2" />
@@ -1383,20 +1444,20 @@ const RecuperiOre = () => {
                   <div
                     key={employee.id}
                     className={`rounded-lg p-4 border ${employee.balance < 0
-                        ? 'bg-red-500/10 border-red-500/20'
-                        : employee.balance > 0
-                          ? 'bg-green-500/10 border-green-500/20'
-                          : 'bg-slate-700/50 border-slate-600'
+                      ? 'bg-red-500/10 border-red-500/20'
+                      : employee.balance > 0
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : 'bg-slate-700/50 border-slate-600'
                       }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
-                              ? 'bg-red-500'
-                              : employee.balance > 0
-                                ? 'bg-green-500'
-                                : 'bg-slate-500'
+                            ? 'bg-red-500'
+                            : employee.balance > 0
+                              ? 'bg-green-500'
+                              : 'bg-slate-500'
                             }`}>
                             <span className="text-white font-semibold text-sm">
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}
@@ -1412,10 +1473,10 @@ const RecuperiOre = () => {
                         </div>
                         <div className="text-slate-300 text-sm mt-2">
                           <div className={`font-semibold ${employee.balance < 0
-                              ? 'text-red-400'
-                              : employee.balance > 0
-                                ? 'text-green-400'
-                                : 'text-slate-400'
+                            ? 'text-red-400'
+                            : employee.balance > 0
+                              ? 'text-green-400'
+                              : 'text-slate-400'
                             }`}>
                             Saldo attuale: {formatHours(employee.balance)}
                             {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
@@ -1486,20 +1547,20 @@ const RecuperiOre = () => {
                   <div
                     key={employee.id}
                     className={`rounded-lg p-4 border ${employee.balance < 0
-                        ? 'bg-red-500/10 border-red-500/20'
-                        : employee.balance > 0
-                          ? 'bg-green-500/10 border-green-500/20'
-                          : 'bg-slate-700/50 border-slate-600'
+                      ? 'bg-red-500/10 border-red-500/20'
+                      : employee.balance > 0
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : 'bg-slate-700/50 border-slate-600'
                       }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
                         <div className="flex items-center mb-2">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
-                              ? 'bg-red-500'
-                              : employee.balance > 0
-                                ? 'bg-green-500'
-                                : 'bg-slate-500'
+                            ? 'bg-red-500'
+                            : employee.balance > 0
+                              ? 'bg-green-500'
+                              : 'bg-slate-500'
                             }`}>
                             <span className="text-white font-semibold text-sm">
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}{employee.lastName?.[0] || employee.last_name?.[0] || ''}
@@ -1514,10 +1575,10 @@ const RecuperiOre = () => {
                         </div>
                         <div className="text-slate-300 text-sm mt-2">
                           <div className={`font-semibold ${employee.balance < 0
-                              ? 'text-red-400'
-                              : employee.balance > 0
-                                ? 'text-green-400'
-                                : 'text-slate-400'
+                            ? 'text-red-400'
+                            : employee.balance > 0
+                              ? 'text-green-400'
+                              : 'text-slate-400'
                             }`}>
                             Saldo attuale: {formatHours(employee.balance)}
                             {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
@@ -1562,66 +1623,7 @@ const RecuperiOre = () => {
         )}
       </div>
 
-      {/* Richieste Recupero Ore in Attesa */}
-      {pendingRecoveryRequests.length > 0 && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Clock className="h-6 w-6 mr-3 text-amber-400" />
-            Richieste Recupero Ore in Attesa
-          </h3>
-          <div className="space-y-3">
-            {pendingRecoveryRequests.map((recovery) => (
-              <div key={recovery.id} className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-white font-semibold text-sm">
-                          {recovery.users?.first_name?.[0] || ''}{recovery.users?.last_name?.[0] || ''}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="text-white font-semibold">
-                          {recovery.users?.first_name} {recovery.users?.last_name}
-                        </h4>
-                        <p className="text-amber-300 text-sm">{recovery.users?.department || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="text-slate-300 text-sm mt-2">
-                      <div>📅 Data: {new Date(recovery.recovery_date).toLocaleDateString('it-IT')}</div>
-                      <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})</div>
-                      {recovery.reason && (
-                        <div className="mt-1">💬 Motivo: {recovery.reason}</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedRecoveryId(recovery.id);
-                        setShowApproveRecoveryModal(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
-                    >
-                      Approva
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedRecoveryId(recovery.id);
-                        setRejectionReason('');
-                        setShowRejectRecoveryModal(true);
-                      }}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
-                    >
-                      Rifiuta
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* Modal Approva Recupero */}
       {showApproveRecoveryModal && (
@@ -1772,7 +1774,7 @@ const RecuperiOre = () => {
                   {activeTab === 'proposals' && (
                     <p className="text-xs text-slate-400 mt-1">
                       Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
-                          (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                        (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
                         }`}>
                         {formatHours(selectedEmployeeForProposal.balance || 0)}
                       </span>
@@ -1813,8 +1815,8 @@ const RecuperiOre = () => {
                             key={idx}
                             onClick={() => handleSelectProposalTimeSlot(slot)}
                             className={`px-3 py-2 rounded-lg border transition-colors text-sm ${proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
-                                ? 'bg-amber-500 border-amber-400 text-white'
-                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                              ? 'bg-amber-500 border-amber-400 text-white'
+                              : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
                               }`}
                           >
                             {slot.label}
@@ -2010,7 +2012,7 @@ const RecuperiOre = () => {
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
                   Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
-                      (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                    (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
                     }`}>
                     {formatHours(selectedEmployeeForAddHours.balance || 0)}
                   </span>
