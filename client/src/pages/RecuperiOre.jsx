@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
 import { useOvertimeBalance } from '../hooks/useOvertimeBalance';
-import { formatHours } from '../utils/hoursCalculation';
+import { formatHours, calculateNetWorkHours } from '../utils/hoursCalculation';
 import { RecuperiOreSkeleton } from '../components/Skeleton';
 import {
   RefreshCw,
@@ -84,6 +84,7 @@ const RecuperiOre = () => {
     reason: '', // Motivo dell'aggiunta
     notes: '' // Note aggiuntive
   });
+  const [userWorkSchedule, setUserWorkSchedule] = useState([]); // Orario di lavoro dell'utente loggato
 
   useEffect(() => {
     const loadData = async () => {
@@ -98,6 +99,7 @@ const RecuperiOre = () => {
           // Carica sempre le richieste di recupero, anche se non c'è debito
           // (potrebbero esserci recuperi già approvati o in attesa)
           await fetchRecoveryRequests();
+          await fetchUserSchedule();
         }
       } catch (error) {
         console.error('Error loading recovery data:', error);
@@ -135,6 +137,19 @@ const RecuperiOre = () => {
       }
     } catch (error) {
       console.error('Error fetching recovery requests:', error);
+    }
+  };
+
+  // Fetch orario di lavoro dell'utente per calcolo pause
+  const fetchUserSchedule = async () => {
+    try {
+      const response = await apiCall('/api/work-schedules');
+      if (response.ok) {
+        const data = await response.json();
+        setUserWorkSchedule(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user schedule:', error);
     }
   };
 
@@ -477,26 +492,70 @@ const RecuperiOre = () => {
   // Funzione helper per calcolare endTime da startTime + ore
   const calculateEndTime = (startTime, hours) => {
     if (!startTime || !hours) return '';
-    const [hoursPart, minutesPart] = startTime.split(':').map(Number);
-    const totalMinutes = hoursPart * 60 + minutesPart;
     const hoursToAdd = parseFloat(hours);
-    const minutesToAdd = Math.round(hoursToAdd * 60);
-    const newTotalMinutes = totalMinutes + minutesToAdd;
-    const newHours = Math.floor(newTotalMinutes / 60) % 24;
-    const newMinutes = newTotalMinutes % 60;
-    return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`;
+
+    // Recupera la pausa dell'utente per il giorno selezionato
+    const dateStr = recoveryFormData.recoveryDate || proposalFormData.recoveryDate;
+    const dayOfWeek = dateStr ? new Date(dateStr).getDay() : null;
+    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => s.day_of_week === dayOfWeek) : null;
+
+    const breakStart = daySchedule?.break_start_time || '13:00';
+    const breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+
+    const parseTimeToMinutes = (t) => {
+      if (!t) return 0;
+      const tStr = String(t);
+      const [h, m] = tStr.split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    let currentMinutes = parseTimeToMinutes(startTime);
+    let remainingMinutes = Math.round(hoursToAdd * 60);
+
+    const bStart = parseTimeToMinutes(breakStart);
+    const bDuration = parseInt(breakDuration, 10) || 0;
+    const bEnd = bStart + bDuration;
+
+    // Forza timeout di sicurezza
+    let iterations = 0;
+    while (remainingMinutes > 0 && iterations < 1440) {
+      iterations++;
+      // Se siamo prima della pausa e il prossimo pezzetto di lavoro incrocia o tocca la pausa
+      if (bDuration > 0 && currentMinutes < bStart) {
+        const minutesUntilBreak = bStart - currentMinutes;
+        const canWork = Math.min(minutesUntilBreak, remainingMinutes);
+        currentMinutes += canWork;
+        remainingMinutes -= canWork;
+      }
+      // Se siamo esattamente all'inizio della pausa o dentro, saltiamo alla fine
+      else if (bDuration > 0 && currentMinutes >= bStart && currentMinutes < bEnd) {
+        currentMinutes = bEnd;
+      }
+      // Altrimenti lavoriamo tutto il resto
+      else {
+        currentMinutes += remainingMinutes;
+        remainingMinutes = 0;
+      }
+    }
+
+    const endH = Math.floor(currentMinutes / 60) % 24;
+    const endM = currentMinutes % 60;
+    return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
   };
 
   // Funzione helper per calcolare ore da startTime e endTime
   const calculateHours = (startTime, endTime) => {
     if (!startTime || !endTime) return '';
-    const [startH, startM] = startTime.split(':').map(Number);
-    const [endH, endM] = endTime.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    const diffMinutes = endMinutes - startMinutes;
-    if (diffMinutes <= 0) return '';
-    return (diffMinutes / 60).toFixed(2);
+
+    const dateStr = recoveryFormData.recoveryDate || proposalFormData.recoveryDate;
+    const dayOfWeek = dateStr ? new Date(dateStr).getDay() : null;
+    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => s.day_of_week === dayOfWeek) : null;
+
+    const breakStart = daySchedule?.break_start_time || '13:00';
+    const breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+
+    const hours = calculateNetWorkHours(startTime, endTime, breakStart, breakDuration);
+    return hours > 0 ? hours.toFixed(2) : '';
   };
 
   // Funzione helper per formattare ore in "Xh Ymin"

@@ -9,7 +9,15 @@ const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 const { sendEmail, sendEmailToAdmins } = require('./emailService');
 const emailScheduler = require('./emailScheduler');
-const { calculateExpectedHoursForSchedule, calculateRealTimeHours } = require('./utils/hoursCalculation');
+const {
+  CONTRACT_TYPES,
+  calculateWeeklyHours,
+  getDailyHoursForDay,
+  formatHours,
+  calculateExpectedHoursForSchedule,
+  calculateRealTimeHours,
+  calculateNetWorkHours
+} = require('./utils/hoursCalculation');
 const AttendanceScheduler = require('./attendanceScheduler');
 const http = require('http');
 const { addPermissionEvent, initializeCalendarClient } = require('./googleCalendarService');
@@ -11829,12 +11837,21 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'La data di recupero deve essere nel futuro' });
     }
 
-    // Calcola le ore dalla differenza tra startTime e endTime
-    const [startHour, startMin] = startTime.split(':').map(Number);
-    const [endHour, endMin] = endTime.split(':').map(Number);
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    const calculatedHours = (endMinutes - startMinutes) / 60;
+    // Recupera la pausa dell'utente per il giorno selezionato
+    const dayOfWeek = recoveryDateObj.getDay(); // 0: Sunday, 1: Monday, ...
+
+    const { data: schedule } = await supabase
+      .from('work_schedules')
+      .select('break_start_time, break_duration')
+      .eq('user_id', userId)
+      .eq('day_of_week', dayOfWeek)
+      .single();
+
+    const breakStart = schedule?.break_start_time || '13:00';
+    const breakDuration = (schedule?.break_duration !== null && schedule?.break_duration !== undefined) ? schedule.break_duration : 60;
+
+    // Calcola le ore nette usando la nuova utility
+    const calculatedHours = calculateNetWorkHours(startTime, endTime, breakStart, breakDuration);
 
     if (calculatedHours <= 0) {
       return res.status(400).json({ error: 'L\'orario di fine deve essere successivo all\'orario di inizio' });

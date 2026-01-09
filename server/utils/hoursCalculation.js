@@ -224,13 +224,43 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
   };
 }
 
+/**
+ * Calcola le ore nette di lavoro sottraendo la pausa se presente
+ */
+function calculateNetWorkHours(startTime, endTime, breakStart = '13:00', breakDuration = 60) {
+  if (!startTime || !endTime) return 0;
+
+  const parseTime = (t) => {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  const start = parseTime(startTime);
+  const end = parseTime(endTime);
+  const bStart = parseTime(breakStart);
+  const bDuration = parseInt(breakDuration, 10) || 0;
+  const bEnd = bStart + bDuration;
+
+  if (end <= start) return 0;
+
+  // Calcola l'intervallo della pausa che cade all'interno dell'intervallo lavorativo
+  const overlapStart = Math.max(start, bStart);
+  const overlapEnd = Math.min(end, bEnd);
+
+  const overlapMinutes = bDuration > 0 ? Math.max(0, overlapEnd - overlapStart) : 0;
+
+  return (end - start - overlapMinutes) / 60;
+}
+
 module.exports = {
   CONTRACT_TYPES,
   calculateWeeklyHours,
   getDailyHoursForDay,
   formatHours,
   calculateExpectedHoursForSchedule,
-  calculateRealTimeHours, // NUOVA FUNZIONE CENTRALIZZATA
+  calculateRealTimeHours,
+  calculateNetWorkHours, // NUOVA FUNZIONE
 };
 
 
