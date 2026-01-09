@@ -26,7 +26,8 @@ import {
   CheckCircle2,
   Trash2,
   Edit2,
-  Ban
+  Ban,
+  Info
 } from 'lucide-react';
 
 const RecuperiOre = () => {
@@ -1388,7 +1389,7 @@ const RecuperiOre = () => {
                             </div>
 
                             <h3 className="text-lg font-bold text-white mb-1 group-hover:text-amber-300 transition-colors">
-                              Recupero Ore
+                              {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
                             </h3>
 
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
@@ -1405,9 +1406,9 @@ const RecuperiOre = () => {
                             </div>
 
                             {recovery.reason && (
-                              <div className="mt-3 text-xs bg-slate-900/30 p-2 rounded border border-slate-700/50">
-                                <p className="text-slate-400 line-clamp-2">
-                                  <span className="font-semibold text-slate-500 mr-1">Motivo:</span>
+                              <div className="mt-2 text-[11px] bg-slate-900/30 p-2 rounded border border-slate-700/50 max-w-md">
+                                <p className="text-slate-400 line-clamp-1">
+                                  <span className="font-semibold text-slate-500 mr-1 uppercase tracking-tighter text-[9px]">Motivo:</span>
                                   {recovery.reason}
                                 </p>
                               </div>
@@ -1415,15 +1416,15 @@ const RecuperiOre = () => {
                           </div>
 
                           {/* DESTRA: Azioni */}
-                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                          <div className="flex sm:flex-col items-center sm:items-end justify-center gap-1.5 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[130px]">
                             {recovery.status === 'pending' && (
-                              <>
+                              <div className="flex sm:flex-col gap-1.5 w-full">
                                 <button
                                   onClick={() => {
                                     setSelectedRecoveryId(recovery.id);
                                     setShowApproveRecoveryModal(true);
                                   }}
-                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-lg shadow-green-900/20 font-medium text-xs gap-1.5"
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600/90 hover:bg-green-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
                                 >
                                   <CheckCircle className="h-3.5 w-3.5" />
                                   Approva
@@ -1434,12 +1435,12 @@ const RecuperiOre = () => {
                                     setRejectionReason('');
                                     setShowRejectRecoveryModal(true);
                                   }}
-                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600/90 hover:bg-red-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
                                 >
                                   <XCircle className="h-3.5 w-3.5" />
                                   Rifiuta
                                 </button>
-                              </>
+                              </div>
                             )}
 
                             {recovery.status === 'proposed' && (
@@ -1510,40 +1511,42 @@ const RecuperiOre = () => {
                       const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                       return (
-                        <div key={recovery.id} className="group bg-slate-800/80 rounded-xl border border-green-500/20 p-4 hover:border-green-500/40 transition-all border-l-4 border-l-green-500">
-                          <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                              <div className="p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-green-500/10 text-green-400 border border-green-500/20">
-                                <span className="text-2xl sm:text-3xl font-bold leading-none">{day}</span>
-                                <span className="text-xs font-bold uppercase tracking-wider mt-1 opacity-80">{month}</span>
+                        <div key={recovery.id} className="group bg-slate-800/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
+                              <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-green-500/10 text-green-400 border border-green-500/20">
+                                <span className="text-xl sm:text-2xl font-bold leading-none">{day}</span>
+                                <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
                               </div>
                             </div>
 
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
-                                  <User className="w-3 h-3" />
-                                  <span className="text-xs font-bold truncate max-w-[150px]">
-                                    {recovery.users?.first_name} {recovery.users?.last_name}
+                            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/10">
+                                    <User className="w-3 h-3" />
+                                    <span className="text-[10px] font-bold truncate max-w-[120px]">
+                                      {recovery.users?.first_name} {recovery.users?.last_name}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
+                                    Approvata (Programmata)
                                   </span>
                                 </div>
-                                <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
-                                  Approvata (Programmata)
-                                </span>
+
+                                <h3 className="text-base font-bold text-white group-hover:text-green-300 transition-colors">
+                                  {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
+                                </h3>
                               </div>
 
-                              <h3 className="text-lg font-bold text-white mb-1 group-hover:text-green-300 transition-colors">
-                                Recupero Ore
-                              </h3>
-
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 sm:pr-4">
                                 <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3.5 h-3.5 text-green-300" />
-                                  <span className="font-medium text-slate-200">{formatHours(recovery.hours)}</span>
+                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
                                 </span>
                                 <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3.5 h-3.5 text-green-300" />
-                                  <span className="font-medium text-slate-200">
+                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <span className="font-semibold text-slate-200">
                                     {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
                                   </span>
                                 </span>

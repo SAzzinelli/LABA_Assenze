@@ -11920,6 +11920,21 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
           const isOvertime = (reason && reason.toLowerCase().includes('straordinario')) ||
             (notes && notes.toLowerCase().includes('straordinario'));
 
+          // Formattazione per notifiche
+          const formattedDate = new Date(recoveryDate).toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Europe/Rome'
+          });
+
+          const hoursFormatted = (() => {
+            const h = Math.floor(Math.abs(calculatedHours));
+            const m = Math.round((Math.abs(calculatedHours) - h) * 60);
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}min`;
+          })();
+
           const notifTitle = isOvertime ? 'Proposta Straordinario' : 'Proposta Recupero Ore';
           const notifMessage = isOvertime
             ? `L'amministratore ti ha proposto una sessione di straordinario il ${formattedDate} dalle ${startTime} alle ${endTime} (${hoursFormatted})`
@@ -12429,23 +12444,24 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       const employee = updatedRequest.users;
       const employeeName = employee ? `${employee.first_name} ${employee.last_name}` : 'Dipendente';
 
+      // Formattazione comune per notifiche
+      const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Rome'
+      });
+
+      const hoursFormatted = (() => {
+        const h = Math.floor(Math.abs(existingRequest.hours));
+        const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}min`;
+      })();
+
       // Scenario 1: Admin approva/rifiuta recovery request del dipendente
       if (req.user.role === 'admin' && existingRequest.status === 'pending') {
         // Notifica in-app al dipendente
-        const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'Europe/Rome'
-        });
-
-        const hoursFormatted = (() => {
-          const h = Math.floor(Math.abs(existingRequest.hours));
-          const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
-          if (m === 0) return `${h}h`;
-          return `${h}h ${m}min`;
-        })();
-
         // Determina se è straordinario o recupero
         const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
           (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
@@ -12506,27 +12522,12 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
             (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
 
-          // Notifica in-app all'admin
-          const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'Europe/Rome'
-          });
-
-          const hoursFormatted = (() => {
-            const h = Math.floor(Math.abs(existingRequest.hours));
-            const m = Math.round((Math.abs(existingRequest.hours) - h) * 60);
-            if (m === 0) return `${h}h`;
-            return `${h}h ${m}min`;
-          })();
-
           const notifTitle = isOvertime ? 'Proposta Straordinario Accettata' : 'Proposta Recupero Ore Accettata';
           const notifMessage = isOvertime
             ? `${employeeName} ha accettato la tua proposta di straordinario del ${formattedDate} (${hoursFormatted})`
             : `${employeeName} ha accettato la tua proposta di recupero ore del ${formattedDate} (${hoursFormatted})`;
           const notifType = isOvertime ? 'overtime_accepted' : 'recovery_accepted';
-          const emailTemplate = isOvertime ? 'overtimeResponse' : 'recoveryAccepted'; // Nota: per admin si usa recoveryAccepted se non è straordinario
+          const emailTemplate = isOvertime ? 'overtimeResponse' : 'recoveryAccepted';
 
           await supabase
             .from('notifications')
@@ -12543,8 +12544,6 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           // Email all'admin
           if (isRealEmail(adminData.email)) {
             try {
-              // Se è straordinario, usiamo lo stesso overtimeResponse che invia i dettagli
-              // Se è recupero, usiamo recoveryAccepted
               if (isOvertime) {
                 await sendEmail(adminData.email, 'overtimeResponse', [
                   `${adminData.first_name} ${adminData.last_name}`,
@@ -12587,14 +12586,6 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
             (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
 
-          // Notifica in-app all'admin
-          const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'Europe/Rome'
-          });
-
           const notifTitle = isOvertime ? 'Proposta Straordinario Rifiutata' : 'Proposta Recupero Ore Rifiutata';
           const notifMessage = isOvertime
             ? `${employeeName} ha rifiutato la tua proposta di straordinario del ${formattedDate}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`
@@ -12618,7 +12609,6 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
       }
     } catch (notifError) {
       console.error('Error creating notifications for recovery:', notifError);
-      // Non bloccare l'aggiornamento se le notifiche falliscono
     }
 
     res.json({
