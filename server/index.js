@@ -12079,8 +12079,10 @@ async function calculateOvertimeBalance(userId, year = null) {
     // Il debito totale include:
     // 1. Il saldo negativo dalle presenze (già include i permessi approvati registrati)
     // 2. Le ore dei permessi approvati per oggi non ancora registrati nell'attendance
-    // 3. Le ore di recupero richieste ma non ancora approvate/completate
-    const totalBalanceWithRecovery = totalBalance - todayPermissionHours - pendingRecoveryHours;
+    // 3. Le ore di recupero richieste ma NON ancora approvate NON devono essere sottratte.
+    //    Rappresentano una intenzione di recupero, ma finché non sono approvate/svolte 
+    //    non incidono sul saldo attuale (né in positivo né in negativo).
+    const totalBalanceWithRecovery = totalBalance - todayPermissionHours;
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log dettagliato per debug
@@ -12098,7 +12100,7 @@ async function calculateOvertimeBalance(userId, year = null) {
     }
     console.log(`💰 Attendance balance: ${totalBalance.toFixed(2)}h`);
     console.log(`🔐 Today permission (not in attendance): ${todayPermissionHours.toFixed(2)}h`);
-    console.log(`⏳ Pending recovery hours: ${pendingRecoveryHours.toFixed(2)}h`);
+    console.log(`⏳ Pending recovery hours (IGNORED in balance): ${pendingRecoveryHours.toFixed(2)}h`);
     console.log(`💰 FINAL BALANCE: ${roundedBalance.toFixed(2)}h`);
     console.log(`═══════════════════════════════════════════════════════════`);
 

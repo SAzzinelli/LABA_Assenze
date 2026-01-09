@@ -212,8 +212,8 @@ const AdminAttendance = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 
-                          'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
+      const monthNames = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO',
+        'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
       const monthName = monthNames[selectedMonth - 1];
       link.href = url;
       link.download = `foglio presenze dip ${monthName} ${selectedYear}.xls`;
@@ -592,6 +592,7 @@ const AdminAttendance = () => {
       case 'permission_104': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
+      case 'on_break': return 'bg-orange-900 text-orange-100 border-orange-700';
       default: return 'bg-gray-900 text-gray-100 border-gray-700';
     }
   };
@@ -608,6 +609,7 @@ const AdminAttendance = () => {
       case 'permission_104': return 'Permesso 104';
       case 'holiday': return 'Festivo';
       case 'non_working_day': return 'Non lavorativo';
+      case 'on_break': return 'In Pausa';
       default: return 'Sconosciuto';
     }
   };
@@ -758,13 +760,13 @@ const AdminAttendance = () => {
       const recordDate = new Date(record.date + 'T00:00:00');
       const todayLocal = getTodayLocal();
       const isRecordDatePast = record.date < todayLocal;
-      
+
       if (isRecordDatePast) {
         // Data passata: usa sempre i dati del database
         const expected = record.expected_hours || 0;
         const actual = record.actual_hours || 0;
         const balance = record.balance_hours !== undefined ? record.balance_hours : (actual - expected);
-        
+
         // Determina status in base ai dati
         // IMPORTANTE: Controlla prima se c'è una ferie approvata (is_vacation o leave_type)
         let status = 'completed';
@@ -779,7 +781,7 @@ const AdminAttendance = () => {
         } else if (expected === 0) {
           status = 'non_working_day';
         }
-        
+
         return {
           expectedHours: expected,
           actualHours: actual,
@@ -788,19 +790,20 @@ const AdminAttendance = () => {
           isPresent: false
         };
       }
-      
+
       // Se è OGGI ma la giornata lavorativa è già conclusa E ci sono dati nel database, usa quelli
       if (workSchedule.end_time && record.actual_hours > 0) {
         const [endHour, endMin] = workSchedule.end_time.split(':').map(Number);
-        const endTime = new Date(todayDate);
+        // Use 'now' to ensure we have the correct day and timezone
+        const endTime = new Date();
         endTime.setHours(endHour, endMin, 0, 0);
-        
+
         // Se l'orario di fine è già passato, usa i dati del database
         if (now > endTime) {
           const expected = record.expected_hours || 0;
           const actual = record.actual_hours || 0;
           const balance = record.balance_hours || (actual - expected);
-          
+
           return {
             expectedHours: expected,
             actualHours: actual,
@@ -935,6 +938,7 @@ const AdminAttendance = () => {
       case 'permission_104': return <Accessibility className="h-4 w-4" />;
       case 'holiday': return <Calendar className="h-4 w-4" />;
       case 'non_working_day': return <Minus className="h-4 w-4" />;
+      case 'on_break': return <Clock className="h-4 w-4 text-orange-500" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
@@ -1170,17 +1174,17 @@ const AdminAttendance = () => {
         if (record.date !== today) {
           return false; // Escludi date passate o future dalla tab "Oggi"
         }
-        
+
         // Mostra chi ha lavorato oggi O è in malattia/ferie/permesso 104
         // O ha già completato la giornata (actual_hours > 0 nel database)
         const realTimeData = calculateRealTimeHoursForRecord(record);
         const hasCompletedDay = (record.actual_hours || 0) > 0;
         const actualHoursToCheck = hasCompletedDay ? record.actual_hours : realTimeData.actualHours;
-        return actualHoursToCheck > 0 || 
-               realTimeData.status === 'sick_leave' || 
-               realTimeData.status === 'holiday' || 
-               realTimeData.status === 'permission_104' ||
-               realTimeData.status === 'completed';
+        return actualHoursToCheck > 0 ||
+          realTimeData.status === 'sick_leave' ||
+          realTimeData.status === 'holiday' ||
+          realTimeData.status === 'permission_104' ||
+          realTimeData.status === 'completed';
       }
 
       return true;
