@@ -1479,114 +1479,658 @@ const RecuperiOre = () => {
                     </div>
                   </div>
                 </div>
-                </div>
-          );
+              );
             })}
+          </div>
         </div>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
+            Gestione Recuperi Ore
+          </h3>
         </div>
-  )
-}
 
-{/* Tab Navigation */ }
-<div className="bg-slate-800 rounded-lg p-6">
-  <div className="flex items-center justify-between mb-6">
-    <h3 className="text-xl font-bold text-white flex items-center">
-      <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
-      Gestione Recuperi Ore
-    </h3>
-  </div>
-
-  {/* Tab Buttons */}
-  <div className="flex gap-2 mb-6 border-b border-slate-700">
-    <button
-      onClick={() => setActiveTab('debt')}
-      className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'debt'
-        ? 'text-red-400 border-red-400'
-        : 'text-slate-400 border-transparent hover:text-slate-300'
-        }`}
-    >
-      <AlertCircle className="h-4 w-4 inline mr-2" />
-      Debiti ({employeesWithDebt.length})
-    </button>
-    <button
-      onClick={() => setActiveTab('proposals')}
-      className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
-        ? 'text-blue-400 border-blue-400'
-        : 'text-slate-400 border-transparent hover:text-slate-300'
-        }`}
-    >
-      <Plus className="h-4 w-4 inline mr-2" />
-      Proposte Straordinari
-    </button>
-    <button
-      onClick={() => setActiveTab('add-hours')}
-      className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
-        ? 'text-green-400 border-green-400'
-        : 'text-slate-400 border-transparent hover:text-slate-300'
-        }`}
-    >
-      <CheckCircle className="h-4 w-4 inline mr-2" />
-      Aggiungi Ore
-    </button>
-  </div>
-
-  {/* Tab Content: Debiti */}
-  {activeTab === 'debt' && (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
-        <div className="text-sm text-slate-400">
-          {employeesWithDebt.length > 0
-            ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
-            : 'Nessun debito al momento'
-          }
+        {/* Tab Buttons */}
+        <div className="flex gap-2 mb-6 border-b border-slate-700">
+          <button
+            onClick={() => setActiveTab('debt')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'debt'
+              ? 'text-red-400 border-red-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <AlertCircle className="h-4 w-4 inline mr-2" />
+            Debiti ({employeesWithDebt.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('proposals')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
+              ? 'text-blue-400 border-blue-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <Plus className="h-4 w-4 inline mr-2" />
+            Proposte Straordinari
+          </button>
+          <button
+            onClick={() => setActiveTab('add-hours')}
+            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
+              ? 'text-green-400 border-green-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <CheckCircle className="h-4 w-4 inline mr-2" />
+            Aggiungi Ore
+          </button>
         </div>
+
+        {/* Tab Content: Debiti */}
+        {activeTab === 'debt' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
+              <div className="text-sm text-slate-400">
+                {employeesWithDebt.length > 0
+                  ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
+                  : 'Nessun debito al momento'
+                }
+              </div>
+            </div>
+            {employeesWithDebt.length > 0 ? (
+              <div className="space-y-3">
+                {employeesWithDebt.map((employee) => (
+                  <div key={employee.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-slate-800/80 border-l-4 border-l-red-500">
+                    <div className="flex flex-col sm:flex-row gap-4">
+
+                      {/* SINISTRA: Icona Utente Grande */}
+                      <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-2xl font-bold border border-red-500/30">
+                          {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
+                        </div>
+                      </div>
+
+                      {/* CENTRO: Dettagli Dipendente */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
+                            Debito
+                          </span>
+                          <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                            {employee.department || 'N/A'}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors">
+                          {employee.first_name} {employee.last_name}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                            <Clock className="w-3.5 h-3.5 text-red-400" />
+                            <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                            <Wallet className="w-3.5 h-3.5 text-slate-300" />
+                            <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* DESTRA: Azioni */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                        <button
+                          onClick={() => {
+                            setSelectedEmployeeForProposal(employee);
+                            setProposalStep(1);
+                            setProposalFormData({
+                              recoveryDate: '',
+                              startTime: '',
+                              endTime: '',
+                              hours: '',
+                              reason: '',
+                              notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                            });
+                            setProposalSuggestedTimeSlots([]);
+                            setShowProposeRecoveryModal(true);
+                          }}
+                          className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Proponi Recupero
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
+                <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
+              </div>
+            )
+            }
+          </div>
+        )}
+
+        {/* Tab Content: Proposte Straordinari */}
+        {activeTab === 'proposals' && (
+          <div>
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Proponi Straordinari a Qualsiasi Dipendente</h4>
+              <p className="text-sm text-slate-400">
+                Puoi proporre straordinari anche a dipendenti in pari o in positivo (es. eventi dopo cena, progetti speciali).
+                Queste ore verranno aggiunte al saldo positivo della banca ore.
+              </p>
+            </div>
+
+            {loadingEmployees ? (
+              <div className="text-center py-8">
+                <div className="text-slate-400">Caricamento dipendenti...</div>
+              </div>
+            ) : allEmployees.length > 0 ? (
+              <div className="space-y-3">
+                {allEmployees.map((employee) => {
+                  const isDebt = employee.balance < 0;
+                  const isCredit = employee.balance > 0;
+                  const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
+                    isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
+                      'border-l-slate-500 hover:border-indigo-500/30 hover:shadow-indigo-500/5';
+
+                  const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
+                  const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
+                  const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+
+                  return (
+                    <div key={employee.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 transition-all hover:shadow-lg hover:bg-slate-800/80 border-l-4 ${borderClass}`}>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {/* SINISTRA: Icona Utente Grande */}
+                        <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                          <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl font-bold border ${avatarBg}`}>
+                            {employee.firstName?.[0] || employee.first_name?.[0] || ''}
+                            {employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                          </div>
+                        </div>
+
+                        {/* CENTRO: Dettagli Dipendente */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                              {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
+                            </span>
+                            <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                              {employee.department || 'N/A'}
+                            </span>
+                          </div>
+
+                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
+                            {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                              <Wallet className={`w-3.5 h-3.5 ${statusColor}`} />
+                              <span className={`font-medium ${statusColor}`}>
+                                Saldo: {formatHours(employee.balance)}
+                                {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* DESTRA: Azioni */}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                          <button
+                            onClick={() => {
+                              setSelectedEmployeeForProposal({
+                                id: employee.id,
+                                first_name: employee.firstName || employee.first_name,
+                                last_name: employee.lastName || employee.last_name,
+                                department: employee.department,
+                                balance: employee.balance,
+                                debtHours: employee.debtHours || 0
+                              });
+                              setProposalStep(1);
+                              setProposalFormData({
+                                recoveryDate: '',
+                                startTime: '',
+                                endTime: '',
+                                hours: '',
+                                reason: '',
+                                notes: employee.balance < 0
+                                  ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                                  : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
+                              });
+                              setProposalSuggestedTimeSlots([]);
+                              setShowProposeRecoveryModal(true);
+                            }}
+                            className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Proponi
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p>Nessun dipendente disponibile</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab Content: Aggiungi Ore */}
+        {activeTab === 'add-hours' && (
+          <div>
+            <div className="mb-4">
+              <h4 className="text-lg font-semibold text-white mb-2">Aggiungi Ore a Credito</h4>
+              <p className="text-sm text-slate-400">
+                Aggiungi direttamente ore a credito alla banca ore di qualsiasi dipendente.
+                Queste ore influenzano positivamente il saldo e vengono aggiunte immediatamente.
+              </p>
+            </div>
+
+            {loadingEmployees ? (
+              <div className="text-center py-8">
+                <div className="text-slate-400">Caricamento dipendenti...</div>
+              </div>
+            ) : allEmployees.length > 0 ? (
+              <div className="space-y-3">
+                {allEmployees.map((employee) => (
+                  <div
+                    key={employee.id}
+                    className={`rounded-lg p-4 border ${employee.balance < 0
+                      ? 'bg-red-500/10 border-red-500/20'
+                      : employee.balance > 0
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : 'bg-slate-700/50 border-slate-600'
+                      }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
+                            ? 'bg-red-500'
+                            : employee.balance > 0
+                              ? 'bg-green-500'
+                              : 'bg-slate-500'
+                            }`}>
+                            <span className="text-white font-semibold text-sm">
+                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}{employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">
+                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                            </h4>
+                            <p className="text-slate-300 text-sm">{employee.department || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="text-slate-300 text-sm mt-2">
+                          <div className={`font-semibold ${employee.balance < 0
+                            ? 'text-red-400'
+                            : employee.balance > 0
+                              ? 'text-green-400'
+                              : 'text-slate-400'
+                            }`}>
+                            Saldo attuale: {formatHours(employee.balance)}
+                            {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
+                            {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
+                            {employee.balance === 0 && ' (In pari)'}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedEmployeeForAddHours({
+                            id: employee.id,
+                            first_name: employee.firstName || employee.first_name,
+                            last_name: employee.lastName || employee.last_name,
+                            department: employee.department,
+                            balance: employee.balance
+                          });
+                          setAddHoursFormData({
+                            hours: '',
+                            minutes: '',
+                            date: new Date().toISOString().split('T')[0],
+                            reason: '',
+                            notes: ''
+                          });
+                          setShowAddHoursModal(true);
+                        }}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                      >
+                        <CheckCircle className="h-4 w-4 inline mr-2" />
+                        Aggiungi Ore
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <p>Nessun dipendente disponibile</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {employeesWithDebt.length > 0 ? (
-        <div className="space-y-3">
-          {employeesWithDebt.map((employee) => (
-            <div key={employee.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-slate-800/80 border-l-4 border-l-red-500">
-              <div className="flex flex-col sm:flex-row gap-4">
 
-                {/* SINISTRA: Icona Utente Grande */}
-                <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-2xl font-bold border border-red-500/30">
-                    {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
+
+
+      {/* Modal Approva Recupero */}
+      {
+        showApproveRecoveryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-white mb-4">Approva Richiesta Recupero</h3>
+              <p className="text-slate-300 mb-6">Sei sicuro di voler approvare questa richiesta di recupero ore?</p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowApproveRecoveryModal(false);
+                    setSelectedRecoveryId(null);
+                  }}
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleApproveRecovery}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Approva
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Modal Rifiuta Recupero */}
+      {
+        showRejectRecoveryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-white mb-4">Rifiuta Richiesta Recupero</h3>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Motivo del rifiuto</label>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="Motivo del rifiuto (opzionale)..."
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowRejectRecoveryModal(false);
+                    setSelectedRecoveryId(null);
+                    setRejectionReason('');
+                  }}
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleRejectRecovery}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Rifiuta
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Modal Proponi Recupero */}
+      {
+        showProposeRecoveryModal && selectedEmployeeForProposal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Proponi Recupero per {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
+              </h3>
+
+              {/* Indicatore step */}
+              <div className="flex items-center justify-center mb-6 gap-2">
+                <div className={`flex items-center ${proposalStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 1 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    {proposalStep > 1 ? '✓' : '1'}
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Data</span>
+                </div>
+                <div className={`w-12 h-0.5 ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+                <div className={`flex items-center ${proposalStep >= 2 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    {proposalStep > 2 ? '✓' : '2'}
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Ore</span>
+                </div>
+                <div className={`w-12 h-0.5 ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
+                <div className={`flex items-center ${proposalStep >= 3 ? 'text-amber-400' : 'text-slate-500'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                    3
+                  </div>
+                  <span className="ml-2 text-sm font-medium">Orario</span>
+                </div>
+              </div>
+
+              {/* Step 1: Data recupero */}
+              {proposalStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Quale giorno vuoi proporre? *
+                    </label>
+                    <input
+                      type="date"
+                      value={proposalFormData.recoveryDate}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                    />
+                  </div>
+
+                  {proposalFormData.recoveryDate && (
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                      <p className="text-sm text-blue-400">
+                        📅 Data selezionata: <strong>{new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Ore da recuperare */}
+              {proposalStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Quante ore vuoi proporre? *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0.25"
+                      max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
+                      value={proposalFormData.hours}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
+                      placeholder="es. 2.5"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                    />
+                    {activeTab === 'debt' && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
+                      </p>
+                    )}
+                    {activeTab === 'proposals' && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
+                          (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
+                          }`}>
+                          {formatHours(selectedEmployeeForProposal.balance || 0)}
+                        </span>
+                        {selectedEmployeeForProposal.balance !== undefined && (
+                          <span className="text-xs text-slate-500 ml-2">
+                            (puoi proporre qualsiasi quantità di straordinari)
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-sm text-amber-400 font-medium">
+                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong> per il <strong>{proposalFormData.recoveryDate ? new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Orario */}
+              {proposalStep === 3 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Seleziona l'orario ({formatHoursFromDecimal(proposalFormData.hours)})
+                    </label>
+
+                    {/* Slot suggeriti */}
+                    {proposalSuggestedTimeSlots.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs text-slate-400 mb-2">Suggerimenti automatici:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {proposalSuggestedTimeSlots.map((slot, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSelectProposalTimeSlot(slot)}
+                              className={`px-3 py-2 rounded-lg border transition-colors text-sm ${proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
+                                ? 'bg-amber-500 border-amber-400 text-white'
+                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                                }`}
+                            >
+                              {slot.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Input manuale */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Da</label>
+                        <input
+                          type="time"
+                          value={proposalFormData.startTime}
+                          onChange={(e) => {
+                            const newStartTime = e.target.value;
+                            const newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
+                            setProposalFormData({
+                              ...proposalFormData,
+                              startTime: newStartTime,
+                              endTime: newEndTime || ''
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">A</label>
+                        <input
+                          type="time"
+                          value={proposalFormData.endTime}
+                          onChange={(e) => {
+                            const newEndTime = e.target.value;
+                            const calculatedHours = calculateHours(proposalFormData.startTime, newEndTime);
+                            const requestedHours = parseFloat(proposalFormData.hours);
+
+                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
+                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(proposalFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
+                              // Reimposta endTime calcolato automaticamente
+                              const autoEndTime = calculateEndTime(proposalFormData.startTime, proposalFormData.hours);
+                              setProposalFormData({
+                                ...proposalFormData,
+                                endTime: autoEndTime || ''
+                              });
+                              return;
+                            }
+
+                            setProposalFormData({
+                              ...proposalFormData,
+                              endTime: newEndTime
+                            });
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    {proposalFormData.startTime && proposalFormData.endTime && (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                        <p className="text-sm text-green-400 font-medium">
+                          ✅ Range selezionato: <strong>{proposalFormData.startTime} - {proposalFormData.endTime}</strong> ({formatHoursFromDecimal(calculateHours(proposalFormData.startTime, proposalFormData.endTime) || '0')})
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Motivo e Note (solo nello step 3) */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
+                    <textarea
+                      value={proposalFormData.reason}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="Motivo della proposta di recupero ore..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
+                    <textarea
+                      value={proposalFormData.notes}
+                      onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      placeholder="Note aggiuntive..."
+                    />
                   </div>
                 </div>
+              )}
 
-                {/* CENTRO: Dettagli Dipendente */}
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
-                      Debito
-                    </span>
-                    <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                      {employee.department || 'N/A'}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors">
-                    {employee.first_name} {employee.last_name}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                    <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                      <Clock className="w-3.5 h-3.5 text-red-400" />
-                      <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                      <Wallet className="w-3.5 h-3.5 text-slate-300" />
-                      <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* DESTRA: Azioni */}
-                <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+              <div className="flex gap-3 justify-between mt-6">
+                {proposalStep > 1 ? (
+                  <button
+                    onClick={handleProposalPrevStep}
+                    className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                  >
+                    Indietro
+                  </button>
+                ) : (
                   <button
                     onClick={() => {
-                      setSelectedEmployeeForProposal(employee);
+                      setShowProposeRecoveryModal(false);
+                      setSelectedEmployeeForProposal(null);
                       setProposalStep(1);
                       setProposalFormData({
                         recoveryDate: '',
@@ -1594,732 +2138,186 @@ const RecuperiOre = () => {
                         endTime: '',
                         hours: '',
                         reason: '',
-                        notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                        notes: ''
                       });
                       setProposalSuggestedTimeSlots([]);
-                      setShowProposeRecoveryModal(true);
                     }}
-                    className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
+                    className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    Proponi Recupero
+                    Annulla
                   </button>
-                </div>
+                )}
+
+                {proposalStep < 3 ? (
+                  <button
+                    onClick={handleProposalNextStep}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                  >
+                    Avanti
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleProposeRecovery}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
+                  >
+                    Invia Proposta
+                  </button>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8 text-slate-400">
-          <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-          <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
-          <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
-        </div>
-      )
+          </div>
+        )
       }
-    </div>
-  )}
 
-  {/* Tab Content: Proposte Straordinari */}
-  {activeTab === 'proposals' && (
-    <div>
-      <div className="mb-4">
-        <h4 className="text-lg font-semibold text-white mb-2">Proponi Straordinari a Qualsiasi Dipendente</h4>
-        <p className="text-sm text-slate-400">
-          Puoi proporre straordinari anche a dipendenti in pari o in positivo (es. eventi dopo cena, progetti speciali).
-          Queste ore verranno aggiunte al saldo positivo della banca ore.
-        </p>
-      </div>
+      {/* Modal Aggiungi Ore */}
+      {
+        showAddHoursModal && selectedEmployeeForAddHours && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-white mb-4">
+                Aggiungi Ore a Credito
+              </h3>
+              <p className="text-slate-300 text-sm mb-4">
+                Aggiungi ore direttamente al saldo di <strong>{selectedEmployeeForAddHours.first_name} {selectedEmployeeForAddHours.last_name}</strong>.
+                Le ore verranno aggiunte immediatamente come credito nella banca ore.
+              </p>
 
-      {loadingEmployees ? (
-        <div className="text-center py-8">
-          <div className="text-slate-400">Caricamento dipendenti...</div>
-        </div>
-      ) : allEmployees.length > 0 ? (
-        <div className="space-y-3">
-          {allEmployees.map((employee) => {
-            const isDebt = employee.balance < 0;
-            const isCredit = employee.balance > 0;
-            const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
-              isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
-                'border-l-slate-500 hover:border-indigo-500/30 hover:shadow-indigo-500/5';
-
-            const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
-            const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
-            const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
-
-            return (
-              <div key={employee.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 transition-all hover:shadow-lg hover:bg-slate-800/80 border-l-4 ${borderClass}`}>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {/* SINISTRA: Icona Utente Grande */}
-                  <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl font-bold border ${avatarBg}`}>
-                      {employee.firstName?.[0] || employee.first_name?.[0] || ''}
-                      {employee.lastName?.[0] || employee.last_name?.[0] || ''}
-                    </div>
-                  </div>
-
-                  {/* CENTRO: Dettagli Dipendente */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
-                        {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
-                      </span>
-                      <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                        {employee.department || 'N/A'}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                      {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                    </h3>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                      <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                        <Wallet className={`w-3.5 h-3.5 ${statusColor}`} />
-                        <span className={`font-medium ${statusColor}`}>
-                          Saldo: {formatHours(employee.balance)}
-                          {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                          {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* DESTRA: Azioni */}
-                  <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
-                    <button
-                      onClick={() => {
-                        setSelectedEmployeeForProposal({
-                          id: employee.id,
-                          first_name: employee.firstName || employee.first_name,
-                          last_name: employee.lastName || employee.last_name,
-                          department: employee.department,
-                          balance: employee.balance,
-                          debtHours: employee.debtHours || 0
-                        });
-                        setProposalStep(1);
-                        setProposalFormData({
-                          recoveryDate: '',
-                          startTime: '',
-                          endTime: '',
-                          hours: '',
-                          reason: '',
-                          notes: employee.balance < 0
-                            ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                            : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
-                        });
-                        setProposalSuggestedTimeSlots([]);
-                        setShowProposeRecoveryModal(true);
-                      }}
-                      className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Proponi
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-8 text-slate-400">
-          <p>Nessun dipendente disponibile</p>
-        </div>
-      )}
-    </div>
-  )}
-
-  {/* Tab Content: Aggiungi Ore */}
-  {activeTab === 'add-hours' && (
-    <div>
-      <div className="mb-4">
-        <h4 className="text-lg font-semibold text-white mb-2">Aggiungi Ore a Credito</h4>
-        <p className="text-sm text-slate-400">
-          Aggiungi direttamente ore a credito alla banca ore di qualsiasi dipendente.
-          Queste ore influenzano positivamente il saldo e vengono aggiunte immediatamente.
-        </p>
-      </div>
-
-      {loadingEmployees ? (
-        <div className="text-center py-8">
-          <div className="text-slate-400">Caricamento dipendenti...</div>
-        </div>
-      ) : allEmployees.length > 0 ? (
-        <div className="space-y-3">
-          {allEmployees.map((employee) => (
-            <div
-              key={employee.id}
-              className={`rounded-lg p-4 border ${employee.balance < 0
-                ? 'bg-red-500/10 border-red-500/20'
-                : employee.balance > 0
-                  ? 'bg-green-500/10 border-green-500/20'
-                  : 'bg-slate-700/50 border-slate-600'
-                }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center mb-2">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${employee.balance < 0
-                      ? 'bg-red-500'
-                      : employee.balance > 0
-                        ? 'bg-green-500'
-                        : 'bg-slate-500'
-                      }`}>
-                      <span className="text-white font-semibold text-sm">
-                        {employee.firstName?.[0] || employee.first_name?.[0] || ''}{employee.lastName?.[0] || employee.last_name?.[0] || ''}
-                      </span>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Ore e Minuti da aggiungere *
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1">Ore</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={addHoursFormData.hours}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                          setAddHoursFormData({ ...addHoursFormData, hours: val.toString() });
+                        }}
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                      />
                     </div>
                     <div>
-                      <h4 className="text-white font-semibold">
-                        {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                      </h4>
-                      <p className="text-slate-300 text-sm">{employee.department || 'N/A'}</p>
+                      <label className="block text-xs text-slate-400 mb-1">Minuti</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        step="1"
+                        value={addHoursFormData.minutes}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                          setAddHoursFormData({ ...addHoursFormData, minutes: val.toString() });
+                        }}
+                        placeholder="0"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                      />
                     </div>
                   </div>
-                  <div className="text-slate-300 text-sm mt-2">
-                    <div className={`font-semibold ${employee.balance < 0
-                      ? 'text-red-400'
-                      : employee.balance > 0
-                        ? 'text-green-400'
-                        : 'text-slate-400'
+                  <p className="text-xs text-slate-400 mt-1">
+                    Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
+                      (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
                       }`}>
-                      Saldo attuale: {formatHours(employee.balance)}
-                      {employee.balance < 0 && ` (Debito: ${formatHours(employee.debtHours)})`}
-                      {employee.balance > 0 && ` (Credito: ${formatHours(employee.creditHours)})`}
-                      {employee.balance === 0 && ' (In pari)'}
-                    </div>
-                  </div>
+                      {formatHours(selectedEmployeeForAddHours.balance || 0)}
+                    </span>
+                  </p>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Data di riferimento *
+                  </label>
+                  <input
+                    type="date"
+                    value={addHoursFormData.date}
+                    onChange={(e) => setAddHoursFormData({ ...addHoursFormData, date: e.target.value })}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Motivo *
+                  </label>
+                  <textarea
+                    value={addHoursFormData.reason}
+                    onChange={(e) => setAddHoursFormData({ ...addHoursFormData, reason: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Motivo dell'aggiunta delle ore..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Note (opzionale)
+                  </label>
+                  <textarea
+                    value={addHoursFormData.notes}
+                    onChange={(e) => setAddHoursFormData({ ...addHoursFormData, notes: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Note aggiuntive..."
+                  />
+                </div>
+
+                {((addHoursFormData.hours && parseInt(addHoursFormData.hours) > 0) || (addHoursFormData.minutes && parseInt(addHoursFormData.minutes) > 0)) && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                    <p className="text-sm text-green-400 font-medium">
+                      ✅ Verranno aggiunte <strong>{(() => {
+                        const h = parseInt(addHoursFormData.hours) || 0;
+                        const m = parseInt(addHoursFormData.minutes) || 0;
+                        const hoursText = h > 0 ? `${h}h` : '';
+                        const minutesText = m > 0 ? `${m}min` : '';
+                        return [hoursText, minutesText].filter(Boolean).join(' ') || '0h 0min';
+                      })()}</strong> a credito
+                      {addHoursFormData.date && (
+                        <span> per il <strong>{new Date(addHoursFormData.date).toLocaleDateString('it-IT')}</strong></span>
+                      )}
+                    </p>
+                    <p className="text-xs text-green-300 mt-1">
+                      Nuovo saldo stimato: {formatHours((selectedEmployeeForAddHours.balance || 0) + ((parseInt(addHoursFormData.hours) || 0) + ((parseInt(addHoursFormData.minutes) || 0) / 60)))}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 justify-end mt-6">
                 <button
                   onClick={() => {
-                    setSelectedEmployeeForAddHours({
-                      id: employee.id,
-                      first_name: employee.firstName || employee.first_name,
-                      last_name: employee.lastName || employee.last_name,
-                      department: employee.department,
-                      balance: employee.balance
-                    });
+                    setShowAddHoursModal(false);
+                    setSelectedEmployeeForAddHours(null);
                     setAddHoursFormData({
                       hours: '',
-                      minutes: '',
                       date: new Date().toISOString().split('T')[0],
                       reason: '',
                       notes: ''
                     });
-                    setShowAddHoursModal(true);
                   }}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px] whitespace-nowrap"
+                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleAddHours}
+                  disabled={((!addHoursFormData.hours || parseInt(addHoursFormData.hours) === 0) && (!addHoursFormData.minutes || parseInt(addHoursFormData.minutes) === 0)) || !addHoursFormData.date || !addHoursFormData.reason}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors min-h-[44px]"
                 >
                   <CheckCircle className="h-4 w-4 inline mr-2" />
                   Aggiungi Ore
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8 text-slate-400">
-          <p>Nessun dipendente disponibile</p>
-        </div>
-      )}
-    </div>
-  )}
-</div>
-
-
-
-{/* Modal Approva Recupero */ }
-{
-  showApproveRecoveryModal && (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-white mb-4">Approva Richiesta Recupero</h3>
-        <p className="text-slate-300 mb-6">Sei sicuro di voler approvare questa richiesta di recupero ore?</p>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={() => {
-              setShowApproveRecoveryModal(false);
-              setSelectedRecoveryId(null);
-            }}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            Annulla
-          </button>
-          <button
-            onClick={handleApproveRecovery}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            Approva
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-{/* Modal Rifiuta Recupero */ }
-{
-  showRejectRecoveryModal && (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
-        <h3 className="text-xl font-bold text-white mb-4">Rifiuta Richiesta Recupero</h3>
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Motivo del rifiuto</label>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-              placeholder="Motivo del rifiuto (opzionale)..."
-            />
           </div>
-        </div>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={() => {
-              setShowRejectRecoveryModal(false);
-              setSelectedRecoveryId(null);
-              setRejectionReason('');
-            }}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            Annulla
-          </button>
-          <button
-            onClick={handleRejectRecovery}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            Rifiuta
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-{/* Modal Proponi Recupero */ }
-{
-  showProposeRecoveryModal && selectedEmployeeForProposal && (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-white mb-4">
-          Proponi Recupero per {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
-        </h3>
-
-        {/* Indicatore step */}
-        <div className="flex items-center justify-center mb-6 gap-2">
-          <div className={`flex items-center ${proposalStep >= 1 ? 'text-amber-400' : 'text-slate-500'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 1 ? 'bg-amber-500' : 'bg-slate-600'}`}>
-              {proposalStep > 1 ? '✓' : '1'}
-            </div>
-            <span className="ml-2 text-sm font-medium">Data</span>
-          </div>
-          <div className={`w-12 h-0.5 ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
-          <div className={`flex items-center ${proposalStep >= 2 ? 'text-amber-400' : 'text-slate-500'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 2 ? 'bg-amber-500' : 'bg-slate-600'}`}>
-              {proposalStep > 2 ? '✓' : '2'}
-            </div>
-            <span className="ml-2 text-sm font-medium">Ore</span>
-          </div>
-          <div className={`w-12 h-0.5 ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}></div>
-          <div className={`flex items-center ${proposalStep >= 3 ? 'text-amber-400' : 'text-slate-500'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${proposalStep >= 3 ? 'bg-amber-500' : 'bg-slate-600'}`}>
-              3
-            </div>
-            <span className="ml-2 text-sm font-medium">Orario</span>
-          </div>
-        </div>
-
-        {/* Step 1: Data recupero */}
-        {proposalStep === 1 && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Quale giorno vuoi proporre? *
-              </label>
-              <input
-                type="date"
-                value={proposalFormData.recoveryDate}
-                onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-              />
-            </div>
-
-            {proposalFormData.recoveryDate && (
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                <p className="text-sm text-blue-400">
-                  📅 Data selezionata: <strong>{new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 2: Ore da recuperare */}
-        {proposalStep === 2 && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Quante ore vuoi proporre? *
-              </label>
-              <input
-                type="number"
-                step="0.25"
-                min="0.25"
-                max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
-                value={proposalFormData.hours}
-                onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
-                placeholder="es. 2.5"
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-              />
-              {activeTab === 'debt' && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
-                </p>
-              )}
-              {activeTab === 'proposals' && (
-                <p className="text-xs text-slate-400 mt-1">
-                  Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
-                    (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
-                    }`}>
-                    {formatHours(selectedEmployeeForProposal.balance || 0)}
-                  </span>
-                  {selectedEmployeeForProposal.balance !== undefined && (
-                    <span className="text-xs text-slate-500 ml-2">
-                      (puoi proporre qualsiasi quantità di straordinari)
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
-
-            {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                <p className="text-sm text-amber-400 font-medium">
-                  ✅ Hai selezionato <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong> per il <strong>{proposalFormData.recoveryDate ? new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 3: Orario */}
-        {proposalStep === 3 && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Seleziona l'orario ({formatHoursFromDecimal(proposalFormData.hours)})
-              </label>
-
-              {/* Slot suggeriti */}
-              {proposalSuggestedTimeSlots.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs text-slate-400 mb-2">Suggerimenti automatici:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {proposalSuggestedTimeSlots.map((slot, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSelectProposalTimeSlot(slot)}
-                        className={`px-3 py-2 rounded-lg border transition-colors text-sm ${proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
-                          ? 'bg-amber-500 border-amber-400 text-white'
-                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                          }`}
-                      >
-                        {slot.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Input manuale */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Da</label>
-                  <input
-                    type="time"
-                    value={proposalFormData.startTime}
-                    onChange={(e) => {
-                      const newStartTime = e.target.value;
-                      const newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
-                      setProposalFormData({
-                        ...proposalFormData,
-                        startTime: newStartTime,
-                        endTime: newEndTime || ''
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">A</label>
-                  <input
-                    type="time"
-                    value={proposalFormData.endTime}
-                    onChange={(e) => {
-                      const newEndTime = e.target.value;
-                      const calculatedHours = calculateHours(proposalFormData.startTime, newEndTime);
-                      const requestedHours = parseFloat(proposalFormData.hours);
-
-                      if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
-                        alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(proposalFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
-                        // Reimposta endTime calcolato automaticamente
-                        const autoEndTime = calculateEndTime(proposalFormData.startTime, proposalFormData.hours);
-                        setProposalFormData({
-                          ...proposalFormData,
-                          endTime: autoEndTime || ''
-                        });
-                        return;
-                      }
-
-                      setProposalFormData({
-                        ...proposalFormData,
-                        endTime: newEndTime
-                      });
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              </div>
-
-              {proposalFormData.startTime && proposalFormData.endTime && (
-                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-sm text-green-400 font-medium">
-                    ✅ Range selezionato: <strong>{proposalFormData.startTime} - {proposalFormData.endTime}</strong> ({formatHoursFromDecimal(calculateHours(proposalFormData.startTime, proposalFormData.endTime) || '0')})
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Motivo e Note (solo nello step 3) */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Motivo</label>
-              <textarea
-                value={proposalFormData.reason}
-                onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="Motivo della proposta di recupero ore..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Note</label>
-              <textarea
-                value={proposalFormData.notes}
-                onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
-                rows={2}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder="Note aggiuntive..."
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-3 justify-between mt-6">
-          {proposalStep > 1 ? (
-            <button
-              onClick={handleProposalPrevStep}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-            >
-              Indietro
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                setShowProposeRecoveryModal(false);
-                setSelectedEmployeeForProposal(null);
-                setProposalStep(1);
-                setProposalFormData({
-                  recoveryDate: '',
-                  startTime: '',
-                  endTime: '',
-                  hours: '',
-                  reason: '',
-                  notes: ''
-                });
-                setProposalSuggestedTimeSlots([]);
-              }}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-            >
-              Annulla
-            </button>
-          )}
-
-          {proposalStep < 3 ? (
-            <button
-              onClick={handleProposalNextStep}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
-            >
-              Avanti
-            </button>
-          ) : (
-            <button
-              onClick={handleProposeRecovery}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[44px] ml-auto"
-            >
-              Invia Proposta
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-{/* Modal Aggiungi Ore */ }
-{
-  showAddHoursModal && selectedEmployeeForAddHours && (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-white mb-4">
-          Aggiungi Ore a Credito
-        </h3>
-        <p className="text-slate-300 text-sm mb-4">
-          Aggiungi ore direttamente al saldo di <strong>{selectedEmployeeForAddHours.first_name} {selectedEmployeeForAddHours.last_name}</strong>.
-          Le ore verranno aggiunte immediatamente come credito nella banca ore.
-        </p>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Ore e Minuti da aggiungere *
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Ore</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={addHoursFormData.hours}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
-                    setAddHoursFormData({ ...addHoursFormData, hours: val.toString() });
-                  }}
-                  placeholder="0"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Minuti</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="59"
-                  step="1"
-                  value={addHoursFormData.minutes}
-                  onChange={(e) => {
-                    const val = e.target.value === '' ? '' : Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
-                    setAddHoursFormData({ ...addHoursFormData, minutes: val.toString() });
-                  }}
-                  placeholder="0"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForAddHours.balance || 0) < 0 ? 'text-red-400' :
-                (selectedEmployeeForAddHours.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
-                }`}>
-                {formatHours(selectedEmployeeForAddHours.balance || 0)}
-              </span>
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Data di riferimento *
-            </label>
-            <input
-              type="date"
-              value={addHoursFormData.date}
-              onChange={(e) => setAddHoursFormData({ ...addHoursFormData, date: e.target.value })}
-              max={new Date().toISOString().split('T')[0]}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Motivo *
-            </label>
-            <textarea
-              value={addHoursFormData.reason}
-              onChange={(e) => setAddHoursFormData({ ...addHoursFormData, reason: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Motivo dell'aggiunta delle ore..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Note (opzionale)
-            </label>
-            <textarea
-              value={addHoursFormData.notes}
-              onChange={(e) => setAddHoursFormData({ ...addHoursFormData, notes: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Note aggiuntive..."
-            />
-          </div>
-
-          {((addHoursFormData.hours && parseInt(addHoursFormData.hours) > 0) || (addHoursFormData.minutes && parseInt(addHoursFormData.minutes) > 0)) && (
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-              <p className="text-sm text-green-400 font-medium">
-                ✅ Verranno aggiunte <strong>{(() => {
-                  const h = parseInt(addHoursFormData.hours) || 0;
-                  const m = parseInt(addHoursFormData.minutes) || 0;
-                  const hoursText = h > 0 ? `${h}h` : '';
-                  const minutesText = m > 0 ? `${m}min` : '';
-                  return [hoursText, minutesText].filter(Boolean).join(' ') || '0h 0min';
-                })()}</strong> a credito
-                {addHoursFormData.date && (
-                  <span> per il <strong>{new Date(addHoursFormData.date).toLocaleDateString('it-IT')}</strong></span>
-                )}
-              </p>
-              <p className="text-xs text-green-300 mt-1">
-                Nuovo saldo stimato: {formatHours((selectedEmployeeForAddHours.balance || 0) + ((parseInt(addHoursFormData.hours) || 0) + ((parseInt(addHoursFormData.minutes) || 0) / 60)))}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3 justify-end mt-6">
-          <button
-            onClick={() => {
-              setShowAddHoursModal(false);
-              setSelectedEmployeeForAddHours(null);
-              setAddHoursFormData({
-                hours: '',
-                date: new Date().toISOString().split('T')[0],
-                reason: '',
-                notes: ''
-              });
-            }}
-            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            Annulla
-          </button>
-          <button
-            onClick={handleAddHours}
-            disabled={((!addHoursFormData.hours || parseInt(addHoursFormData.hours) === 0) && (!addHoursFormData.minutes || parseInt(addHoursFormData.minutes) === 0)) || !addHoursFormData.date || !addHoursFormData.reason}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors min-h-[44px]"
-          >
-            <CheckCircle className="h-4 w-4 inline mr-2" />
-            Aggiungi Ore
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+        )
+      }
     </div >
   );
 };
