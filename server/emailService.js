@@ -17,13 +17,13 @@ console.log('✅ Resend configured and ready to send emails');
 // Funzione helper per formattare date in formato GG/MM/AAAA
 const formatDateItalian = (dateStr) => {
   if (!dateStr) return '';
-  
+
   // Se è già una stringa YYYY-MM-DD, convertila
   if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
     const [year, month, day] = dateStr.split('-');
     return `${day}/${month}/${year}`;
   }
-  
+
   // Se è un oggetto Date, formattalo
   if (dateStr instanceof Date) {
     const day = String(dateStr.getDate()).padStart(2, '0');
@@ -31,14 +31,14 @@ const formatDateItalian = (dateStr) => {
     const year = dateStr.getFullYear();
     return `${day}/${month}/${year}`;
   }
-  
+
   return dateStr;
 };
 
 // Funzione helper per formattare date estese (es: "08 gennaio 2025")
 const formatDateExtended = (dateStr) => {
   if (!dateStr) return '';
-  
+
   const parseLocalDate = (str) => {
     if (typeof str === 'string' && str.match(/^\d{4}-\d{2}-\d{2}/)) {
       const [year, month, day] = str.split('-').map(Number);
@@ -46,7 +46,7 @@ const formatDateExtended = (dateStr) => {
     }
     return new Date(str);
   };
-  
+
   const date = parseLocalDate(dateStr);
   return date.toLocaleDateString('it-IT', {
     day: '2-digit',
@@ -85,7 +85,7 @@ const emailTemplates = {
     const dateStart = formatDateItalian(startDate);
     const dateEnd = formatDateItalian(endDate);
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
-    
+
     // Determina la pagina corretta basata sul tipo di richiesta
     const getRequestPage = (type) => {
       const pageMap = {
@@ -99,7 +99,7 @@ const emailTemplates = {
     };
     const requestPage = getRequestPage(requestType);
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
-    
+
     // Formatta le ore in formato leggibile
     const formatHours = (hoursValue) => {
       if (!hoursValue || hoursValue === 0) return '0h';
@@ -108,7 +108,7 @@ const emailTemplates = {
       if (m === 0) return `${h}h`;
       return `${h}h ${m}min`;
     };
-    
+
     // Genera informazioni specifiche per permessi entrata/uscita
     let permissionDetails = '';
     if (requestType === 'permission' || requestType === 'Permesso') {
@@ -149,10 +149,10 @@ const emailTemplates = {
         `;
       }
     }
-    
+
     return {
       subject: `Nuova Richiesta di ${typeLabel} - Gestione personale LABA`,
-    html: `
+      html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -224,10 +224,10 @@ const emailTemplates = {
     const dateStart = formatDateItalian(startDate);
     const dateEnd = formatDateItalian(endDate);
     const dateRange = startDate === endDate ? dateStart : `${dateStart} - ${dateEnd}`;
-    
+
     // Normalizza lo status per confronto (trim, lowercase) per evitare problemi
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    
+
     // Colori in base allo stato - VERDE solo se esattamente 'approved'
     const isApproved = normalizedStatus === 'approved';
     const statusColor = isApproved ? '#10B981' : '#EF4444'; // Verde per approvato, Rosso per rifiutato
@@ -235,9 +235,9 @@ const emailTemplates = {
     // Usa statusText coerente con la logica dei colori (evita undefined)
     const statusText = isApproved ? 'Approvata' : 'Rifiutata';
     const headerColor = isApproved
-      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
       : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
-    
+
     // Determina la pagina corretta basata sul tipo di richiesta
     const getRequestPage = (type) => {
       const pageMap = {
@@ -251,7 +251,7 @@ const emailTemplates = {
     };
     const requestPage = getRequestPage(requestType);
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
-    
+
     // Formatta le ore in formato leggibile
     const formatHours = (hoursValue) => {
       if (!hoursValue || hoursValue === 0) return '0h';
@@ -260,7 +260,7 @@ const emailTemplates = {
       if (m === 0) return `${h}h`;
       return `${h}h ${m}min`;
     };
-    
+
     // Genera informazioni specifiche per permessi entrata/uscita
     let permissionDetails = '';
     if (requestType === 'permission' || requestType === 'Permesso') {
@@ -301,10 +301,10 @@ const emailTemplates = {
         `;
       }
     }
-    
+
     return {
       subject: `Richiesta di ${typeLabel} - Gestione personale LABA`,
-    html: `
+      html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -381,7 +381,7 @@ const emailTemplates = {
     const daysPresent = weekData.daysPresent || 0;
     const overtimeHours = weekData.overtimeHours || 0;
     const balanceHours = weekData.balanceHours || 0;
-    
+
     // Formatta ore in formato "Xh Ym"
     const formatHours = (hours) => {
       const h = Math.floor(Math.abs(hours));
@@ -390,7 +390,7 @@ const emailTemplates = {
       if (m === 0) return `${sign}${h}h`;
       return `${sign}${h}h ${m}m`;
     };
-    
+
     return {
       subject: `Report Settimanale - Settimana ${weekNumber} - Gestione personale LABA`,
       html: `
@@ -475,10 +475,10 @@ const emailTemplates = {
       if (m === 0) return `${h}h`;
       return `${h}h ${m}min`;
     })();
-    
+
     return {
       subject: `Proposta Recupero Ore - Gestione personale LABA`,
-    html: `
+      html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -558,16 +558,16 @@ const emailTemplates = {
       if (m === 0) return `${h}h`;
       return `${h}h ${m}min`;
     })();
-    
+
     const normalizedStatus = String(status || '').trim().toLowerCase();
     const isApproved = normalizedStatus === 'approved';
     const statusText = isApproved ? 'Approvata' : 'Rifiutata';
     const statusColor = isApproved ? '#10B981' : '#EF4444';
     const statusBg = isApproved ? '#D1FAE5' : '#FEE2E2';
     const headerColor = isApproved
-      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
+      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
       : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
-    
+
     return {
       subject: `Recupero Ore - Gestione personale LABA`,
       html: `
@@ -643,6 +643,183 @@ const emailTemplates = {
     };
   },
 
+  // Proposta straordinario da admin a dipendente
+  overtimeProposal: (userName, recoveryDate, startTime, endTime, hours, reason) => {
+    const dateFormatted = formatDateExtended(recoveryDate);
+    const hoursFormatted = (() => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+
+    return {
+      subject: `Proposta Straordinario - Gestione personale LABA`,
+      html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Proposta Straordinario</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .info-box { background: #ECFDF5; border-left: 4px solid #10B981; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .info-box h2 { margin-top: 0; color: #065F46; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #065F46; }
+            .btn { display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { background: #059669; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+              <h1>Proposta Straordinario</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+            </div>
+            <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>L'amministratore ti ha proposto una sessione di straordinario per le attività indicate.</p>
+              
+              <div class="info-box">
+                <h2>Dettagli Proposta</h2>
+                <div class="info-row">
+                  <span class="info-label">Data:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Orario:</span> ${startTime} - ${endTime}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore Totali:</span> ${hoursFormatted}
+                </div>
+                ${reason ? `
+                <div class="info-row">
+                  <span class="info-label">Motivo:</span> ${reason}
+                </div>
+                ` : ''}
+              </div>
+              
+              <p style="margin-top: 20px; font-size: 14px; color: #6B7280;">
+                Accedi al sistema per visualizzare i dettagli o gestire la proposta nella sezione Recuperi Ore.
+              </p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
+                  Visualizza Proposta
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
+  // Risposta straordinario (approvata/rifiutata)
+  overtimeResponse: (userName, recoveryDate, startTime, endTime, hours, status, reason) => {
+    const dateFormatted = formatDateExtended(recoveryDate);
+    const hoursFormatted = (() => {
+      const h = Math.floor(Math.abs(hours));
+      const m = Math.round((Math.abs(hours) - h) * 60);
+      if (m === 0) return `${h}h`;
+      return `${h}h ${m}min`;
+    })();
+
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const isApproved = normalizedStatus === 'approved';
+    const statusText = isApproved ? 'Approvato' : 'Rifiutato';
+    const statusColor = isApproved ? '#10B981' : '#EF4444';
+    const statusBg = isApproved ? '#D1FAE5' : '#FEE2E2';
+    const headerColor = isApproved
+      ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+      : 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
+
+    return {
+      subject: `Straordinario ${statusText} - Gestione personale LABA`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Straordinario ${statusText}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { padding: 30px; }
+            .status-box { background: ${statusBg}; border-left: 4px solid ${statusColor}; padding: 20px; margin: 20px 0; border-radius: 5px; }
+            .status-box h2 { margin-top: 0; color: ${statusColor}; font-size: 18px; }
+            .info-row { margin: 10px 0; }
+            .info-label { font-weight: bold; color: #374151; }
+            .btn { display: inline-block; background: ${statusColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .btn:hover { opacity: 0.9; }
+            .notes-box { background: #F9FAFB; padding: 15px; border-radius: 5px; margin: 15px 0; border: 1px solid #E5E7EB; }
+            .footer { text-align: center; padding: 20px; background: #F9FAFB; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Straordinario</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Gestione personale LABA</p>
+          </div>
+          <div class="content">
+              <p style="font-size: 16px; margin-bottom: 20px;">Ciao ${userName},</p>
+              <p>La tua sessione di straordinario è stata <strong style="color: ${statusColor};">${statusText}</strong>.</p>
+              
+              <div class="status-box">
+                <h2>Dettagli</h2>
+                <div class="info-row">
+                  <span class="info-label">Data:</span> ${dateFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Orario:</span> ${startTime} - ${endTime}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Ore:</span> ${hoursFormatted}
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Stato:</span> <strong style="color: ${statusColor};">${statusText}</strong>
+                </div>
+              </div>
+              
+              ${reason ? `
+                <div class="notes-box">
+                  <strong>Motivo:</strong><br>
+                  ${reason}
+                </div>
+              ` : ''}
+              
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://hr.laba.biz'}/recuperi-ore" class="btn">
+                  Visualizza Dettagli
+                </a>
+              </div>
+            </div>
+            <div class="footer">
+              <p style="margin: 5px 0;">Questo messaggio è stato inviato automaticamente da Gestione personale LABA</p>
+              <p style="margin: 5px 0;">LABA Firenze - Libera Accademia di Belle Arti</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+  },
+
   // Notifica admin quando dipendente accetta proposta recupero
   recoveryAccepted: (adminName, employeeName, recoveryDate, startTime, endTime, hours) => {
     const dateFormatted = formatDateExtended(recoveryDate);
@@ -652,7 +829,7 @@ const emailTemplates = {
       if (m === 0) return `${h}h`;
       return `${h}h ${m}min`;
     })();
-    
+
     return {
       subject: `Proposta Recupero Ore Accettata - Gestione personale LABA`,
       html: `
@@ -727,7 +904,7 @@ const emailTemplates = {
       ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
       : '0h';
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
-    
+
     return {
       subject: `Richiesta Modifica Permesso - Gestione personale LABA`,
       html: `
@@ -814,7 +991,7 @@ const emailTemplates = {
       ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
       : '0h';
     const baseUrl = process.env.FRONTEND_URL || 'https://hr.laba.biz';
-    
+
     return {
       subject: `Permesso Modificato - Gestione personale LABA`,
       html: `
@@ -1012,14 +1189,14 @@ const emailTemplates = {
 const sendEmail = async (to, template, data) => {
   try {
     console.log(`📧 Tentativo invio email ${template} a: ${to}`);
-    
+
     if (!to || !emailTemplates[template]) {
       console.error(`❌ Parametri non validi: to=${to}, template=${template}`);
       return { success: false, error: 'Parametri non validi' };
     }
-    
+
     const emailTemplate = emailTemplates[template](...data);
-    
+
     const result = await resend.emails.send({
       from: 'LABA - Gestione Personale <hr@labafirenze.com>',
       to: to,
@@ -1041,7 +1218,7 @@ const sendEmailToAdmins = async (template, data) => {
     // Recupera tutti gli admin reali dal database
     const { createClient } = require('@supabase/supabase-js');
     require('dotenv').config();
-    
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -1063,16 +1240,16 @@ const sendEmailToAdmins = async (template, data) => {
     }
 
     console.log(`📧 Invio email a ${admins.length} admin`);
-    
+
     const results = [];
     for (const admin of admins) {
       // Invia a tutti gli admin, non solo quelli con email "reali"
       if (admin.email) {
         const result = await sendEmail(admin.email, template, data);
         results.push({ email: admin.email, name: `${admin.first_name} ${admin.last_name}`, ...result });
+      }
     }
-    }
-    
+
     console.log(`✅ Email inviate a ${results.filter(r => r.success).length}/${results.length} admin`);
     return results;
   } catch (error) {

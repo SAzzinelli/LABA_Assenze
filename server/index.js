@@ -11916,39 +11916,35 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
         if (employeeError || !employee) {
           console.error('Error fetching employee for notification:', employeeError);
         } else {
-          // Crea notifica in-app per il dipendente
-          const formattedDate = new Date(recoveryDate).toLocaleDateString('it-IT', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'Europe/Rome'
-          });
+          // Determina se è straordinario o recupero
+          const isOvertime = (reason && reason.toLowerCase().includes('straordinario')) ||
+            (notes && notes.toLowerCase().includes('straordinario'));
 
-          const hoursFormatted = (() => {
-            const h = Math.floor(Math.abs(calculatedHours));
-            const m = Math.round((Math.abs(calculatedHours) - h) * 60);
-            if (m === 0) return `${h}h`;
-            return `${h}h ${m}min`;
-          })();
+          const notifTitle = isOvertime ? 'Proposta Straordinario' : 'Proposta Recupero Ore';
+          const notifMessage = isOvertime
+            ? `L'amministratore ti ha proposto una sessione di straordinario il ${formattedDate} dalle ${startTime} alle ${endTime} (${hoursFormatted})`
+            : `L'amministratore ti ha proposto un recupero ore il ${formattedDate} dalle ${startTime} alle ${endTime} (${hoursFormatted})`;
+          const notifType = isOvertime ? 'overtime_proposal' : 'recovery_proposal';
+          const emailTemplate = isOvertime ? 'overtimeProposal' : 'recoveryProposal';
 
           await supabase
             .from('notifications')
             .insert([{
               user_id: userId,
-              title: 'Proposta Recupero Ore',
-              message: `L'amministratore ti ha proposto un recupero ore il ${formattedDate} dalle ${startTime} alle ${endTime} (${hoursFormatted})`,
-              type: 'recovery_proposal',
+              title: notifTitle,
+              message: notifMessage,
+              type: notifType,
               is_read: false,
               related_id: recoveryRequest.id,
               created_at: new Date().toISOString()
             }]);
 
-          console.log(`✅ Notifica creata per dipendente ${employee.first_name} ${employee.last_name}`);
+          console.log(`✅ Notifica creata per dipendente ${employee.first_name} ${employee.last_name} (${isOvertime ? 'straordinario' : 'recupero'})`);
 
           // Invia email al dipendente
           if (isRealEmail(employee.email)) {
             try {
-              await sendEmail(employee.email, 'recoveryProposal', [
+              await sendEmail(employee.email, emailTemplate, [
                 `${employee.first_name} ${employee.last_name}`,
                 recoveryDate,
                 startTime,
@@ -11956,7 +11952,7 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
                 calculatedHours,
                 reason || ''
               ]);
-              console.log(`✅ Email inviata a ${employee.email}`);
+              console.log(`✅ Email (${emailTemplate}) inviata a ${employee.email}`);
             } catch (emailError) {
               console.error('Error sending recovery proposal email:', emailError);
             }
@@ -12450,13 +12446,28 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           return `${h}h ${m}min`;
         })();
 
+        // Determina se è straordinario o recupero
+        const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
+          (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
+
+        const notifTitle = isOvertime
+          ? `Straordinario ${status === 'approved' ? 'Approvato' : 'Rifiutato'}`
+          : `Recupero Ore ${status === 'approved' ? 'Approvato' : 'Rifiutato'}`;
+        const notifMessage = isOvertime
+          ? `La tua sessione di straordinario del ${formattedDate} (${hoursFormatted}) è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`
+          : `La tua richiesta di recupero ore del ${formattedDate} (${hoursFormatted}) è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`;
+        const notifType = isOvertime
+          ? (status === 'approved' ? 'overtime_approved' : 'overtime_rejected')
+          : (status === 'approved' ? 'recovery_approved' : 'recovery_rejected');
+        const emailTemplate = isOvertime ? 'overtimeResponse' : 'recoveryResponse';
+
         await supabase
           .from('notifications')
           .insert([{
             user_id: existingRequest.user_id,
-            title: `Recupero Ore ${status === 'approved' ? 'Approvato' : 'Rifiutato'}`,
-            message: `La tua richiesta di recupero ore del ${formattedDate} (${hoursFormatted}) è stata ${status === 'approved' ? 'approvata' : 'rifiutata'}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`,
-            type: status === 'approved' ? 'recovery_approved' : 'recovery_rejected',
+            title: notifTitle,
+            message: notifMessage,
+            type: notifType,
             is_read: false,
             related_id: id,
             created_at: new Date().toISOString()
@@ -12465,7 +12476,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
         // Email al dipendente
         if (employee && isRealEmail(employee.email)) {
           try {
-            await sendEmail(employee.email, 'recoveryResponse', [
+            await sendEmail(employee.email, emailTemplate, [
               employeeName,
               existingRequest.recovery_date,
               existingRequest.start_time,
@@ -12474,7 +12485,7 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
               status,
               rejectionReason || ''
             ]);
-            console.log(`✅ Email inviata a ${employee.email} per recovery ${status}`);
+            console.log(`✅ Email (${emailTemplate}) inviata a ${employee.email} per ${isOvertime ? 'straordinario' : 'recovery'} ${status}`);
           } catch (emailError) {
             console.error('Error sending recovery response email:', emailError);
           }
@@ -12491,6 +12502,10 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           .single();
 
         if (adminData) {
+          // Determina se è straordinario o recupero
+          const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
+            (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
+
           // Notifica in-app all'admin
           const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
             day: '2-digit',
@@ -12506,13 +12521,20 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             return `${h}h ${m}min`;
           })();
 
+          const notifTitle = isOvertime ? 'Proposta Straordinario Accettata' : 'Proposta Recupero Ore Accettata';
+          const notifMessage = isOvertime
+            ? `${employeeName} ha accettato la tua proposta di straordinario del ${formattedDate} (${hoursFormatted})`
+            : `${employeeName} ha accettato la tua proposta di recupero ore del ${formattedDate} (${hoursFormatted})`;
+          const notifType = isOvertime ? 'overtime_accepted' : 'recovery_accepted';
+          const emailTemplate = isOvertime ? 'overtimeResponse' : 'recoveryAccepted'; // Nota: per admin si usa recoveryAccepted se non è straordinario
+
           await supabase
             .from('notifications')
             .insert([{
               user_id: existingRequest.submitted_by,
-              title: 'Proposta Recupero Ore Accettata',
-              message: `${employeeName} ha accettato la tua proposta di recupero ore del ${formattedDate} (${hoursFormatted})`,
-              type: 'recovery_accepted',
+              title: notifTitle,
+              message: notifMessage,
+              type: notifType,
               is_read: false,
               related_id: id,
               created_at: new Date().toISOString()
@@ -12521,14 +12543,28 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           // Email all'admin
           if (isRealEmail(adminData.email)) {
             try {
-              await sendEmail(adminData.email, 'recoveryAccepted', [
-                `${adminData.first_name} ${adminData.last_name}`,
-                employeeName,
-                existingRequest.recovery_date,
-                existingRequest.start_time,
-                existingRequest.end_time,
-                existingRequest.hours
-              ]);
+              // Se è straordinario, usiamo lo stesso overtimeResponse che invia i dettagli
+              // Se è recupero, usiamo recoveryAccepted
+              if (isOvertime) {
+                await sendEmail(adminData.email, 'overtimeResponse', [
+                  `${adminData.first_name} ${adminData.last_name}`,
+                  existingRequest.recovery_date,
+                  existingRequest.start_time,
+                  existingRequest.end_time,
+                  existingRequest.hours,
+                  'approved',
+                  ''
+                ]);
+              } else {
+                await sendEmail(adminData.email, 'recoveryAccepted', [
+                  `${adminData.first_name} ${adminData.last_name}`,
+                  employeeName,
+                  existingRequest.recovery_date,
+                  existingRequest.start_time,
+                  existingRequest.end_time,
+                  existingRequest.hours
+                ]);
+              }
               console.log(`✅ Email inviata a ${adminData.email} per proposta accettata`);
             } catch (emailError) {
               console.error('Error sending recovery accepted email:', emailError);
@@ -12547,6 +12583,10 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           .single();
 
         if (adminData) {
+          // Determina se è straordinario o recupero
+          const isOvertime = (existingRequest.reason && existingRequest.reason.toLowerCase().includes('straordinario')) ||
+            (existingRequest.notes && existingRequest.notes.toLowerCase().includes('straordinario'));
+
           // Notifica in-app all'admin
           const formattedDate = new Date(existingRequest.recovery_date).toLocaleDateString('it-IT', {
             day: '2-digit',
@@ -12555,19 +12595,25 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             timeZone: 'Europe/Rome'
           });
 
+          const notifTitle = isOvertime ? 'Proposta Straordinario Rifiutata' : 'Proposta Recupero Ore Rifiutata';
+          const notifMessage = isOvertime
+            ? `${employeeName} ha rifiutato la tua proposta di straordinario del ${formattedDate}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`
+            : `${employeeName} ha rifiutato la tua proposta di recupero ore del ${formattedDate}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`;
+          const notifType = isOvertime ? 'overtime_rejected' : 'recovery_rejected';
+
           await supabase
             .from('notifications')
             .insert([{
               user_id: existingRequest.submitted_by,
-              title: 'Proposta Recupero Ore Rifiutata',
-              message: `${employeeName} ha rifiutato la tua proposta di recupero ore del ${formattedDate}${rejectionReason ? `. Motivo: ${rejectionReason}` : ''}`,
-              type: 'recovery_rejected',
+              title: notifTitle,
+              message: notifMessage,
+              type: notifType,
               is_read: false,
               related_id: id,
               created_at: new Date().toISOString()
             }]);
 
-          console.log(`✅ Notifica creata per admin ${adminData.first_name} ${adminData.last_name}`);
+          console.log(`✅ Notifica creata per admin ${adminData.first_name} ${adminData.last_name} (${isOvertime ? 'straordinario' : 'recupero'} rifiutato)`);
         }
       }
     } catch (notifError) {
