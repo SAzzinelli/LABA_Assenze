@@ -1322,11 +1322,23 @@ const RecuperiOre = () => {
   // Vista Admin
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center">
           <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 mr-3 text-amber-400" />
           Gestione Recuperi Ore
         </h1>
+      </div>
+
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+        <div className="flex items-start">
+          <Info className="h-5 w-5 text-blue-400 mr-3 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-bold text-blue-300 mb-1">Elaborazione Banca Ore</h4>
+            <p className="text-xs text-blue-400/80 leading-relaxed">
+              Le ore delle richieste approvate verranno aggiunte automaticamente al saldo banca ore del dipendente solo <strong>dopo il passaggio della data e dell'orario di fine</strong> della sessione di recupero/straordinario. Finché non vengono elaborate, le vedrai in questo elenco come "Approvata (Programmata)".
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Richieste Recupero Ore in Attesa */}
@@ -2318,7 +2330,7 @@ const RecuperiOre = () => {
           </div>
         )
       }
-    </div >
+    </div>
   );
 };
 
