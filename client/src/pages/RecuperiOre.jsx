@@ -1248,61 +1248,110 @@ const RecuperiOre = () => {
 
       {/* Richieste Recupero Ore in Attesa */}
       {pendingRecoveryRequests.length > 0 && (
-        <div className="bg-amber-900/10 border border-amber-500/30 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-6 flex items-center">
-            <Clock className="h-6 w-6 mr-3 text-amber-400" />
-            Richieste Recupero Ore in Attesa
+        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-6 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+          <h3 className="text-xl font-bold text-amber-100 mb-6 flex items-center">
+            <Clock className="h-6 w-6 mr-3 text-amber-500" />
+            Da Approvare ({pendingRecoveryRequests.length})
           </h3>
           <div className="space-y-3">
-            {pendingRecoveryRequests.map((recovery) => (
-              <div key={recovery.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-white font-semibold text-sm">
-                          {recovery.users?.first_name?.[0] || ''}{recovery.users?.last_name?.[0] || ''}
+            {pendingRecoveryRequests.map((recovery) => {
+              // Helper data format
+              const dateObj = new Date(recovery.recovery_date);
+              const day = dateObj.getDate();
+              const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
+
+              return (
+                <div key={recovery.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 hover:bg-slate-800/80 border-l-4 border-l-amber-500">
+                  <div className="flex flex-col sm:flex-row gap-4">
+
+                    {/* SINISTRA: Data Icon */}
+                    <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
+                      <div className="p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 shadow-inner transition-transform bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="text-2xl sm:text-3xl font-bold leading-none">{day}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider mt-1 opacity-80">{month}</span>
+                      </div>
+                    </div>
+
+                    {/* CENTRO: Dettagli */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      {/* Utente e Label Stato */}
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                          <User className="w-3 h-3" />
+                          <span className="text-xs font-bold truncate max-w-[150px]">
+                            {recovery.users?.first_name} {recovery.users?.last_name}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+                          In Attesa
                         </span>
                       </div>
-                      <div>
-                        <h4 className="text-white font-semibold">
-                          {recovery.users?.first_name} {recovery.users?.last_name}
-                        </h4>
-                        <p className="text-amber-300 text-sm">{recovery.users?.department || 'N/A'}</p>
+
+                      {/* Titolo e Orari */}
+                      <h3 className="text-lg font-bold text-white mb-1 group-hover:text-amber-300 transition-colors">
+                        Recupero Ore
+                      </h3>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
+                        <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                          <Clock className="w-3.5 h-3.5 text-slate-300" />
+                          <span className="font-medium text-slate-200">{formatHours(recovery.hours)}</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                          <Clock className="w-3.5 h-3.5 text-slate-300" />
+                          <span className="font-medium text-slate-200">
+                            {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                          </span>
+                        </span>
                       </div>
-                    </div>
-                    <div className="text-slate-300 text-sm mt-2">
-                      <div>📅 Data: {new Date(recovery.recovery_date).toLocaleDateString('it-IT')}</div>
-                      <div>⏰ Dalle {recovery.start_time} alle {recovery.end_time} ({formatHours(recovery.hours)})</div>
+
+                      {/* Note */}
                       {recovery.reason && (
-                        <div className="mt-1">💬 Motivo: {recovery.reason}</div>
+                        <div className="mt-3 text-xs bg-slate-900/30 p-2 rounded border border-slate-700/50">
+                          <p className="text-slate-400 line-clamp-2">
+                            <span className="font-semibold text-slate-500 mr-1">Motivo:</span>
+                            {recovery.reason}
+                          </p>
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedRecoveryId(recovery.id);
-                        setShowApproveRecoveryModal(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors min-h-[44px]"
-                    >
-                      Approva
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedRecoveryId(recovery.id);
-                        setRejectionReason('');
-                        setShowRejectRecoveryModal(true);
-                      }}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors min-h-[44px]"
-                    >
-                      Rifiuta
-                    </button>
+
+                    {/* DESTRA: Azioni */}
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                      <button
+                        onClick={() => {
+                          setSelectedRecoveryId(recovery.id);
+                          setShowApproveRecoveryModal(true);
+                        }}
+                        className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all shadow-lg shadow-green-900/20 font-medium text-xs gap-1.5"
+                      >
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Approva
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedRecoveryId(recovery.id);
+                          setRejectionReason('');
+                          setShowRejectRecoveryModal(true);
+                        }}
+                        className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Rifiuta
+                      </button>
+
+                      <div className="hidden sm:block mt-auto w-full pt-2">
+                        <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider mb-0.5">Richiesto il:</p>
+                        <p className="text-xs text-slate-400 text-center font-medium">
+                          {new Date(recovery.created_at).toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
