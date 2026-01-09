@@ -638,7 +638,7 @@ const RecuperiOre = () => {
         body: JSON.stringify({
           recoveryDate,
           startTime,
-          endTime: finalEndTime,
+          endTime: endTime,
           reason,
           notes
         })
