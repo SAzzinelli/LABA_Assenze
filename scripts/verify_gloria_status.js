@@ -7,8 +7,8 @@ require('dotenv').config({ path: path.join(__dirname, '../server/.env') });
 // Since we can't easily import ES modules from client in this script without Babel/setup,
 // I will replicate the key logic of calculateRealTimeHours here to verify.
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || 'https://gojhljczpwbjxbbrtrlq.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_s7Vzh0AtPEaEv3f3VmkIEg_3ZqBhGsS';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function calculateRealTimeHours(schedule, currentTimeStr) {
