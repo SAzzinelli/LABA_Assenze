@@ -100,16 +100,106 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
     return parseFloat(hours.toFixed(2));
   };
 
-  // Aggiorna ore calcolate quando cambiano userId, date o permissionType
+  // Calcola ore per permesso late_entry o early_exit
+  const calculatePermissionHours = (userId, date, permissionType, entryTime, exitTime) => {
+    if (!userId || !date || !permissionType) return null;
+
+    const dateObj = new Date(date);
+    const dayOfWeek = dateObj.getDay();
+
+    // Trova lo schedule per questo utente e questo giorno
+    const schedule = workSchedules.find(s => 
+      s.user_id === userId &&
+      Number(s.day_of_week) === Number(dayOfWeek) &&
+      s.is_working_day === true
+    );
+
+    if (!schedule || !schedule.start_time || !schedule.end_time) {
+      return null;
+    }
+
+    const timeToMinutes = (timeStr) => {
+      if (!timeStr) return 0;
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const startTime = schedule.start_time;
+    const endTime = schedule.end_time;
+    const breakDuration = schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 0;
+    const breakStartTime = schedule.break_start_time || null;
+
+    if (permissionType === 'late_entry' && entryTime) {
+      // Entrata posticipata: calcola le ore di lavoro perse dall'inizio a entryTime
+      const entryMinutes = timeToMinutes(entryTime);
+      const standardStartMinutes = timeToMinutes(startTime);
+      
+      // Calcola l'inizio e fine della pausa pranzo
+      let breakStartMinutes = null;
+      let breakEndMinutes = null;
+
+      if (breakDuration > 0 && breakStartTime) {
+        breakStartMinutes = timeToMinutes(breakStartTime);
+        breakEndMinutes = breakStartMinutes + breakDuration;
+      } else if (breakDuration > 0) {
+        const endMinutes = timeToMinutes(endTime);
+        const totalMinutes = endMinutes - standardStartMinutes;
+        breakStartMinutes = standardStartMinutes + (totalMinutes / 2) - (breakDuration / 2);
+        breakEndMinutes = breakStartMinutes + breakDuration;
+      }
+
+      // Calcola la differenza totale in minuti
+      const totalMinutesDiff = entryMinutes - standardStartMinutes;
+
+      // Se c'è una pausa pranzo e il periodo di permesso include completamente la pausa, sottraila
+      let breakMinutesToSubtract = 0;
+      if (breakDuration && breakDuration > 0 && breakStartMinutes !== null && breakEndMinutes !== null) {
+        // La pausa è completamente inclusa nel permesso se:
+        // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro
+        // 2. La fine della pausa è prima o uguale all'entrata posticipata
+        // IMPORTANTE: Se l'entrata è esattamente alla fine della pausa, la pausa è inclusa e va sottratta
+        if (breakStartMinutes >= standardStartMinutes && breakEndMinutes <= entryMinutes) {
+          breakMinutesToSubtract = breakDuration;
+          console.log(`✅ [ADMIN MODAL] Pausa pranzo inclusa: ${Math.floor(breakStartMinutes/60)}:${(breakStartMinutes%60).toString().padStart(2,'0')}-${Math.floor(breakEndMinutes/60)}:${(breakEndMinutes%60).toString().padStart(2,'0')} (${breakDuration} min), sottratta`);
+        }
+      }
+
+      const workMinutesDiff = Math.max(0, totalMinutesDiff - breakMinutesToSubtract);
+      return parseFloat((workMinutesDiff / 60).toFixed(2));
+    } else if (permissionType === 'early_exit' && exitTime) {
+      // Uscita anticipata: calcola le ore perse da exitTime alla fine
+      const exitMinutes = timeToMinutes(exitTime);
+      const standardEndMinutes = timeToMinutes(endTime);
+      
+      const totalMinutesDiff = standardEndMinutes - exitMinutes;
+      return Math.max(0, parseFloat((totalMinutesDiff / 60).toFixed(2)));
+    }
+
+    return null;
+  };
+
+  // Aggiorna ore calcolate quando cambiano userId, date, permissionType, entryTime o exitTime
   useEffect(() => {
     if (formData.permissionType === 'full_day' && formData.userId && formData.date) {
       const hours = calculateFullDayHours(formData.userId, formData.date);
       setCalculatedHours(hours);
       console.log(`✅ Full day hours calculated: ${hours !== null ? hours.toFixed(2) + 'h' : 'null'}`);
-    } else if (formData.permissionType !== 'full_day') {
+    } else if ((formData.permissionType === 'late_entry' || formData.permissionType === 'early_exit') && formData.userId && formData.date) {
+      const hours = calculatePermissionHours(
+        formData.userId,
+        formData.date,
+        formData.permissionType,
+        formData.entryTime,
+        formData.exitTime
+      );
+      setCalculatedHours(hours);
+      if (hours !== null) {
+        console.log(`✅ Permission hours calculated (${formData.permissionType}): ${hours.toFixed(2)}h`);
+      }
+    } else {
       setCalculatedHours(null);
     }
-  }, [formData.userId, formData.date, formData.permissionType, workSchedules]);
+  }, [formData.userId, formData.date, formData.permissionType, formData.entryTime, formData.exitTime, workSchedules]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -182,7 +272,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
         permissionType: formData.permissionType,
         exitTime: formData.permissionType === 'full_day' ? null : (formData.exitTime || null),
         entryTime: formData.permissionType === 'full_day' ? null : (formData.entryTime || null),
-        hours: formData.permissionType === 'full_day' ? calculatedHours : null // Per tutta la giornata, usa ore calcolate
+        hours: calculatedHours !== null ? calculatedHours : null // Usa le ore calcolate per tutti i tipi di permesso
       };
 
       const response = await apiCall('/api/admin/leave-requests', {
@@ -309,15 +399,17 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     <option value="early_exit">Uscita Anticipata</option>
                   </select>
                   
-                  {formData.permissionType === 'full_day' && calculatedHours !== null && (
+                  {calculatedHours !== null && (
                     <p className="text-xs text-indigo-400 mt-2">
                       Ore calcolate: {calculatedHours.toFixed(2)}h
                     </p>
                   )}
-                  
-                  {formData.permissionType === 'full_day' && calculatedHours === null && formData.userId && formData.date && (
+
+                  {calculatedHours === null && formData.userId && formData.date && formData.permissionType && (
                     <p className="text-xs text-amber-400 mt-1">
-                      ⚠️ Impossibile calcolare le ore. Verifica che il dipendente abbia un orario configurato per questo giorno.
+                      ⚠️ Impossibile calcolare le ore. Verifica che il dipendente abbia un orario configurato per questo giorno
+                      {formData.permissionType === 'late_entry' && !formData.entryTime ? ' e che sia inserito l\'orario di entrata' : ''}
+                      {formData.permissionType === 'early_exit' && !formData.exitTime ? ' e che sia inserito l\'orario di uscita' : ''}.
                     </p>
                   )}
                 </div>

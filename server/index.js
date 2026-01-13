@@ -7079,9 +7079,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             // La pausa è completamente inclusa nel permesso se:
             // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (startMinutes)
             // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
+            // IMPORTANTE: Se l'entrata è esattamente alla fine della pausa (es. pausa 13:00-14:00, entrata 14:00),
+            // la pausa è completamente inclusa nel periodo di permesso (10:00-14:00) e deve essere sottratta
             // Questo significa che tutta la pausa cade nel periodo di permesso
             if (breakStartMinutes >= startMinutes && breakEndMinutes <= entryMinutes) {
               breakMinutesToSubtract = schedule.break_duration;
+              console.log(`✅ [UPDATE PERMISSION] Pausa pranzo inclusa: ${Math.floor(breakStartMinutes/60)}:${(breakStartMinutes%60).toString().padStart(2,'0')}-${Math.floor(breakEndMinutes/60)}:${(breakEndMinutes%60).toString().padStart(2,'0')} (${schedule.break_duration} min), sottratta`);
+            } else {
+              console.log(`⚠️ [UPDATE PERMISSION] Pausa NON inclusa: breakStart=${breakStartMinutes} >= start=${startMinutes}? ${breakStartMinutes >= startMinutes}, breakEnd=${breakEndMinutes} <= entry=${entryMinutes}? ${breakEndMinutes <= entryMinutes}`);
             }
           }
 

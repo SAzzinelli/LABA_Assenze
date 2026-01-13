@@ -403,8 +403,13 @@ const LeaveRequests = () => {
         // La pausa è completamente inclusa nel permesso se:
         // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (startMinutes)
         // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
+        // IMPORTANTE: Se l'entrata è esattamente alla fine della pausa (es. pausa 13:00-14:00, entrata 14:00),
+        // la pausa è completamente inclusa nel periodo di permesso e deve essere sottratta
         if (breakStartMinutes >= startMinutes && breakEndMinutes <= entryMinutes) {
           breakMinutesToSubtract = breakDuration;
+          console.log(`✅ Pausa pranzo inclusa nel permesso (edit): ${breakStartMinutes/60}:00-${breakEndMinutes/60}:00 (${breakDuration} min), sottratta`);
+        } else {
+          console.log(`⚠️ Pausa pranzo NON inclusa (edit): breakStart=${breakStartMinutes/60}:00 >= start=${startMinutes/60}:00? ${breakStartMinutes >= startMinutes}, breakEnd=${breakEndMinutes/60}:00 <= entry=${entryMinutes/60}:00? ${breakEndMinutes <= entryMinutes}`);
         }
       }
 
@@ -679,8 +684,13 @@ const LeaveRequests = () => {
           // La pausa è completamente inclusa nel permesso se:
           // 1. L'inizio della pausa è dopo o uguale all'inizio del lavoro (standardStartMinutes)
           // 2. La fine della pausa è prima o uguale all'entrata posticipata (entryMinutes)
+          // IMPORTANTE: Se l'entrata è esattamente alla fine della pausa (es. pausa 13:00-14:00, entrata 14:00),
+          // la pausa è completamente inclusa nel periodo di permesso (10:00-14:00) e deve essere sottratta
           if (breakStartMinutes >= standardStartMinutes && breakEndMinutes <= entryMinutes) {
             breakMinutesToSubtract = breakDuration;
+            console.log(`✅ Pausa pranzo inclusa nel permesso: ${breakStartMinutes/60}:00-${breakEndMinutes/60}:00 (${breakDuration} min), sottratta`);
+          } else {
+            console.log(`⚠️ Pausa pranzo NON inclusa: breakStart=${breakStartMinutes/60}:00 >= start=${standardStartMinutes/60}:00? ${breakStartMinutes >= standardStartMinutes}, breakEnd=${breakEndMinutes/60}:00 <= entry=${entryMinutes/60}:00? ${breakEndMinutes <= entryMinutes}`);
           }
         }
 
