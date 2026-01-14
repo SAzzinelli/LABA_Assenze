@@ -7638,17 +7638,27 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
 
     // Se un PERMESSO viene APPROVATO O MODIFICATO (ore cambiate), aggiorna l'attendance per ridurre le expected_hours
     const permissionApproved = updatedRequest.type === 'permission' && status === 'approved' && existingRequest.status !== 'approved';
+    // Controlla se le ore sono cambiate (sia direttamente che tramite modifica orari)
+    // IMPORTANTE: Quando viene modificato entry_time o exit_time, le ore vengono ricalcolate automaticamente
+    // quindi controlliamo anche se gli orari sono cambiati
+    const hoursChanged = updateData.hours !== undefined && updatedRequest.hours !== existingRequest.hours;
+    const entryTimeChanged = (updateData.entry_time !== undefined && updatedRequest.entry_time !== existingRequest.entry_time) ||
+                             (updateData.entryTime !== undefined && updatedRequest.entry_time !== existingRequest.entry_time);
+    const exitTimeChanged = (updateData.exit_time !== undefined && updatedRequest.exit_time !== existingRequest.exit_time) ||
+                            (updateData.exitTime !== undefined && updatedRequest.exit_time !== existingRequest.exit_time);
     const permissionHoursModified = updatedRequest.type === 'permission' &&
       updatedRequest.status === 'approved' &&
       existingRequest.status === 'approved' &&
-      (updateData.hours !== undefined && updatedRequest.hours !== existingRequest.hours);
+      (hoursChanged || entryTimeChanged || exitTimeChanged);
 
     if (permissionApproved || permissionHoursModified) {
-      const actionType = permissionApproved ? 'approvato' : 'modificato (ore cambiate)';
+      const actionType = permissionApproved ? 'approvato' : 'modificato (ore/orari cambiati)';
       console.log(`🔄 Permesso ${actionType} - aggiorno attendance per ${updatedRequest.start_date}...`);
 
       const permissionDate = updatedRequest.start_date;
-      const permissionHours = parseFloat(updatedRequest.hours || 0);
+      // Usa le ore aggiornate se disponibili (potrebbero essere state ricalcolate da entry_time/exit_time)
+      // Se sono state modificate entry_time/exit_time, le ore sono già state ricalcolate in updateData.hours
+      const permissionHours = parseFloat(updateData.hours !== undefined ? updatedRequest.hours : (updatedRequest.hours || existingRequest.hours || 0));
 
       // Aggiungi evento a Google Calendar (solo se è una nuova approvazione, non una modifica)
       if (permissionApproved) {
@@ -7745,7 +7755,8 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                 console.error(`❌ [APPROVAZIONE PERMESSO] Ore attese calcolate non valide: ${originalExpectedHours}`);
               } else {
 
-                // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato)
+                // Recupera tutti i permessi APPROVATI per questa data (incluso quello appena approvato/modificato)
+                // IMPORTANTE: Questo viene fatto DOPO l'update del database, quindi include già le modifiche
                 const { data: approvedPermissions, error: permError } = await supabase
                   .from('leave_requests')
                   .select('hours')
@@ -7771,9 +7782,9 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                   totalPermissionHours = 0;
                 }
 
-                // IMPORTANTE: Le ore attese rimangono sempre quelle originali (8h), non vengono ridotte dal permesso
-                // Il permesso influisce solo sulle ore effettive e sul balance
-                const finalExpectedHours = originalExpectedHours;
+                // IMPORTANTE: Le ore attese vengono ridotte dal permesso approvato
+                // Se un dipendente ha un permesso di 3h, le ore attese diventano 8h - 3h = 5h
+                const finalExpectedHours = Math.max(0, originalExpectedHours - totalPermissionHours);
 
                 // Validazione: finalExpectedHours deve essere un numero valido
                 if (isNaN(finalExpectedHours)) {
@@ -7815,7 +7826,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                       if (createAttError) {
                         console.error(`❌ [APPROVAZIONE PERMESSO] Errore creazione presenza per ${permissionDate}:`, createAttError);
                       } else {
-                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                        console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} creata: ${originalExpectedHours}h originali - ${totalPermissionHours}h permessi = ${finalExpectedHours.toFixed(2)}h attese finali, actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
                       }
                     }
                   } else if (attError) {
@@ -7853,7 +7864,7 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                         if (updateAttError) {
                           console.error(`❌ [APPROVAZIONE PERMESSO] Errore aggiornamento presenza per ${permissionDate}:`, updateAttError);
                         } else {
-                          console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h attese (permesso: -${permissionHours}h, totale permessi: -${totalPermissionHours}h), actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
+                          console.log(`✅ [APPROVAZIONE PERMESSO] Attendance ${permissionDate} aggiornata: ${originalExpectedHours}h originali - ${totalPermissionHours}h permessi = ${finalExpectedHours.toFixed(2)}h attese finali, actual: ${actualHours}h, balance: ${newBalanceHours.toFixed(2)}h`);
                         }
                       }
                     }
