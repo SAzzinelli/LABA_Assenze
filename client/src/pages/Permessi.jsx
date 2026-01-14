@@ -855,18 +855,64 @@ const LeaveRequests = () => {
     if (request.status !== 'approved') return false;
     const dateWithTime = parseRequestDate(request, true);
     if (!dateWithTime) return true;
-    // Permetti annullamento solo se l'orario del permesso è almeno 2 ore nel futuro
-    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    return dateWithTime > twoHoursFromNow;
+    
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    // Se è futuro (almeno 2 ore), permettere
+    if (dateWithTime > twoHoursFromNow) return true;
+    
+    // Se è nella stessa giornata (anche se l'orario è già passato), permettere fino a fine giornata
+    const requestDate = new Date(dateWithTime);
+    const today = new Date(now);
+    const isSameDay = requestDate.getDate() === today.getDate() &&
+                      requestDate.getMonth() === today.getMonth() &&
+                      requestDate.getFullYear() === today.getFullYear();
+    
+    if (isSameDay) {
+      // Permetti fino a fine giornata (23:59:59)
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+      return now <= endOfDay;
+    }
+    
+    // Se è passato ma non più di 24 ore fa, permettere (per correzioni)
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (dateWithTime < now && dateWithTime > twentyFourHoursAgo) return true;
+    
+    return false;
   };
 
   const canModifyRequest = (request) => {
     if (request.status !== 'approved') return false;
     const dateWithTime = parseRequestDate(request, true);
     if (!dateWithTime) return true; // Se non c'è orario, permettere modifica
-    // Permetti modifica solo se l'orario del permesso è almeno 2 ore nel futuro
-    const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000);
-    return dateWithTime > twoHoursFromNow;
+    
+    const now = new Date();
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    // Se è futuro (almeno 2 ore), permettere
+    if (dateWithTime > twoHoursFromNow) return true;
+    
+    // Se è nella stessa giornata (anche se l'orario è già passato), permettere fino a fine giornata
+    const requestDate = new Date(dateWithTime);
+    const today = new Date(now);
+    const isSameDay = requestDate.getDate() === today.getDate() &&
+                      requestDate.getMonth() === today.getMonth() &&
+                      requestDate.getFullYear() === today.getFullYear();
+    
+    if (isSameDay) {
+      // Permetti fino a fine giornata (23:59:59)
+      const endOfDay = new Date(today);
+      endOfDay.setHours(23, 59, 59, 999);
+      return now <= endOfDay;
+    }
+    
+    // Se è passato ma non più di 24 ore fa, permettere (per correzioni)
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    if (dateWithTime < now && dateWithTime > twentyFourHoursAgo) return true;
+    
+    return false;
   };
 
   const canRequestModification = (request) => {
