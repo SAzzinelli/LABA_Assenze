@@ -302,17 +302,17 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Mobile sidebar overlay - Full width su mobile piccolo, max-w-xs su mobile grande */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div 
-            className={`fixed inset-0 bg-black transition-opacity duration-300 ease-in-out ${
-              sidebarOpen ? 'opacity-50' : 'opacity-0'
-            }`}
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-slate-800 transform transition-all duration-300 ease-in-out ${
-            sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
-          }`}>
+      <div className={`fixed inset-0 z-40 lg:hidden transition-opacity duration-300 ease-in-out ${
+        sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+      }`}>
+        <div 
+          className="fixed inset-0 bg-black transition-opacity duration-300 ease-in-out"
+          style={{ opacity: sidebarOpen ? 0.5 : 0 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-slate-800 transform transition-all duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+        }`}>
             <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button
                 className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
