@@ -623,9 +623,9 @@ const Layout = ({ children }) => {
                                           hour: '2-digit',
                                           minute: '2-digit',
                                           timeZone: 'Europe/Rome'
-                                        })}
+                                        }                                        )}
                                         {notification.request_id && (
-                                          <span className="ml-2 text-blue-400 text-xs">
+                                          <span className="ml-2 text-slate-400 text-xs">
                                             Clicca per vedere la richiesta →
                                           </span>
                                         )}
@@ -651,7 +651,7 @@ const Layout = ({ children }) => {
                           )}
                           <button
                             onClick={() => setNotificationsOpen(false)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
                           >
                             Chiudi
                           </button>
