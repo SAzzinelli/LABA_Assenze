@@ -646,7 +646,7 @@ const Employees = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${employee.department === 'Amministrazione'
-                        ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                        ? 'bg-zinc-800 text-slate-300 border border-zinc-700'
                         : employee.department === 'Segreteria'
                           ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
                           : employee.department === 'Orientamento'
