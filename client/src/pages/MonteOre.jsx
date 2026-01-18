@@ -355,7 +355,7 @@ const MonteOre = () => {
           <select
             value={filters.year}
             onChange={(e) => setFilters({...filters, year: e.target.value})}
-            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
+            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="2024">2024</option>
             <option value="2025">2025</option>
@@ -365,7 +365,7 @@ const MonteOre = () => {
           <select
             value={filters.month}
             onChange={(e) => setFilters({...filters, month: e.target.value})}
-            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
+            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Tutti i mesi</option>
             <option value="1">Gennaio</option>
@@ -385,7 +385,7 @@ const MonteOre = () => {
           <select
             value={filters.type}
             onChange={(e) => setFilters({...filters, type: e.target.value})}
-            className="border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2"
+            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">Tutti i tipi</option>
             <option value="accrual">Maturate</option>

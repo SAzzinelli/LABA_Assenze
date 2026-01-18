@@ -804,7 +804,7 @@ const Employees = () => {
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+                    className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
                   >
                     <option value="">Seleziona dipartimento</option>
                     {departments.map((dept) => (

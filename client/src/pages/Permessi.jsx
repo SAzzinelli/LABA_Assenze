@@ -1329,7 +1329,7 @@ const LeaveRequests = () => {
                   value={formData.type}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="uscita_anticipata">Uscita Anticipata</option>
                   <option value="entrata_posticipata">Entrata Posticipata</option>

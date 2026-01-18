@@ -1895,7 +1895,7 @@ const AdminAttendance = () => {
                     <select
                       value={generateForm.employeeId}
                       onChange={(e) => setGenerateForm({ ...generateForm, employeeId: e.target.value })}
-                      className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       <option value="">Seleziona dipendente</option>
                       {allEmployees.map((emp) => (

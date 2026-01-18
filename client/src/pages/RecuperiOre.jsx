@@ -1179,7 +1179,7 @@ const RecuperiOre = () => {
                             setRecoveryFormData({ ...recoveryFormData, hours: val });
                           }}
                           placeholder="0"
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
                         />
                       </div>
                       <div>
@@ -1187,7 +1187,7 @@ const RecuperiOre = () => {
                         <select
                           value={recoveryFormData.minutes}
                           onChange={(e) => setRecoveryFormData({ ...recoveryFormData, minutes: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
                         >
                           <option value="0">0 min</option>
                           <option value="30">30 min</option>
@@ -2139,7 +2139,7 @@ const RecuperiOre = () => {
                             setProposalFormData({ ...proposalFormData, hours: val });
                           }}
                           placeholder="0"
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
                         />
                       </div>
                       <div>
@@ -2147,7 +2147,7 @@ const RecuperiOre = () => {
                         <select
                           value={proposalFormData.minutes}
                           onChange={(e) => setProposalFormData({ ...proposalFormData, minutes: e.target.value })}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
                         >
                           <option value="0">0 min</option>
                           <option value="30">30 min</option>
