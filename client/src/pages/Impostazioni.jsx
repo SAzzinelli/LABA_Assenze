@@ -237,7 +237,7 @@ const Settings = () => {
             type="text"
             value={settings.company.name}
             onChange={(e) => handleSettingChange('company', 'name', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -246,7 +246,7 @@ const Settings = () => {
             type="text"
             value={settings.company.address}
             onChange={(e) => handleSettingChange('company', 'address', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -255,7 +255,7 @@ const Settings = () => {
             type="text"
             value={settings.company.vat}
             onChange={(e) => handleSettingChange('company', 'vat', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -264,7 +264,7 @@ const Settings = () => {
             type="tel"
             value={settings.company.phone}
             onChange={(e) => handleSettingChange('company', 'phone', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -273,7 +273,7 @@ const Settings = () => {
             type="email"
             value={settings.company.email}
             onChange={(e) => handleSettingChange('company', 'email', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -282,7 +282,7 @@ const Settings = () => {
             type="url"
             value={settings.company.website}
             onChange={(e) => handleSettingChange('company', 'website', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -294,14 +294,14 @@ const Settings = () => {
       {/* Notifiche Desktop */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white flex items-center">
-          <Bell className="h-5 w-5 mr-2 text-indigo-400" />
+          <Bell className="h-5 w-5 mr-2 text-slate-400" />
           Notifiche Desktop
         </h3>
         <p className="text-slate-400 text-sm mb-4">
           Ricevi notifiche desktop dal browser quando arrivano nuove richieste o aggiornamenti.
         </p>
         <div className="space-y-3">
-          <div className="p-4 bg-slate-700 rounded-lg">
+          <div className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h4 className="text-white font-medium">Notifiche Browser</h4>
@@ -498,8 +498,8 @@ const Settings = () => {
                       }}
                       className={`px-4 py-2 rounded-lg transition-colors ${
                         permission === 'denied' 
-                          ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50' 
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          ? 'bg-zinc-800 text-slate-400 cursor-not-allowed opacity-50' 
+                          : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
                       }`}
                       disabled={permission === 'denied'}
                     >
@@ -584,7 +584,7 @@ const Settings = () => {
             { key: 'leaveRequestUpdates', label: 'Aggiornamenti Richieste Permessi', description: 'Ricevi notifiche sullo stato delle tue richieste di permessi e ferie' },
             { key: 'weeklyReports', label: 'Report Settimanali', description: 'Ricevi un riepilogo settimanale delle tue presenze e ore lavorate' }
           ].map(item => (
-            <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700 rounded-lg">
+            <div key={item.key} className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg border border-zinc-700">
               <div>
                 <h4 className="text-white font-medium">{item.label}</h4>
                 <p className="text-slate-400 text-sm">{item.description}</p>
@@ -596,7 +596,7 @@ const Settings = () => {
                   onChange={(e) => handleSettingChange('notifications', item.key, e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           ))}
@@ -610,9 +610,9 @@ const Settings = () => {
     return (
       <div className="space-y-6">
         {/* Info Email Automatiche */}
-        <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-6">
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6">
           <div className="flex items-start">
-            <Mail className="h-5 w-5 mr-3 text-indigo-400 mt-0.5 flex-shrink-0" />
+            <Mail className="h-5 w-5 mr-3 text-slate-400 mt-0.5 flex-shrink-0" />
             <div>
               <h3 className="text-lg font-semibold text-white mb-2">Email Automatiche</h3>
               <p className="text-slate-300 text-sm mb-3">
@@ -628,9 +628,9 @@ const Settings = () => {
         </div>
 
         {/* Invio Email Manuale */}
-          <div className="bg-slate-700 rounded-lg p-6">
+          <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
             <h3 className="text-lg font-semibold text-white flex items-center mb-4">
-            <Send className="h-5 w-5 mr-2 text-indigo-400" />
+            <Send className="h-5 w-5 mr-2 text-slate-400" />
             Invio Email Manuale
             </h3>
           <p className="text-slate-400 text-sm mb-6">
@@ -646,7 +646,7 @@ const Settings = () => {
                   <select
                     value={settings.emailManagement.selectedEmployee}
                     onChange={(e) => handleSettingChange('emailManagement', 'selectedEmployee', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
                   >
                   <option value="">Seleziona un dipendente</option>
                     {settings.emailManagement.employees.map(emp => (
@@ -670,7 +670,7 @@ const Settings = () => {
                   <textarea
                     value={settings.emailManagement.customMessage}
                     onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
-                className="w-full px-4 py-3 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 rows="6"
                 placeholder="Scrivi il messaggio che vuoi inviare al dipendente..."
               />
@@ -682,7 +682,7 @@ const Settings = () => {
               <button
                 onClick={sendEmail}
               disabled={emailLoading || !settings.emailManagement.selectedEmployee || !settings.emailManagement.customMessage.trim()}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium"
+              className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:bg-zinc-800 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex items-center justify-center font-medium"
               >
                 {emailLoading ? (
                 <>
@@ -732,11 +732,11 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <SettingsIcon className="h-8 w-8 mr-3 text-indigo-400" />
+              <SettingsIcon className="h-8 w-8 mr-3 text-slate-400" />
               Impostazioni
             </h1>
             <p className="text-slate-400 mt-2">
@@ -749,7 +749,7 @@ const Settings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <div className="bg-slate-800 rounded-lg p-4">
+          <div className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
             <nav className="space-y-2">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
@@ -759,8 +759,8 @@ const Settings = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-700'
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                        : 'text-slate-300 hover:bg-zinc-800'
                     }`}
                   >
                     <IconComponent className="h-5 w-5 mr-3" />
@@ -774,7 +774,7 @@ const Settings = () => {
 
         {/* Content */}
         <div className="lg:col-span-3">
-          <div className="bg-slate-800 rounded-lg p-6">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-slate-400">Caricamento impostazioni...</div>
@@ -783,10 +783,10 @@ const Settings = () => {
               <>
                 {renderTabContent()}
                 
-                <div className="mt-8 pt-6 border-t border-slate-700">
+                <div className="mt-8 pt-6 border-t border-zinc-800">
                   <button
                     onClick={handleSaveSettings}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                    className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
                   >
                     <Save className="h-5 w-5 mr-2" />
                     Salva Impostazioni
