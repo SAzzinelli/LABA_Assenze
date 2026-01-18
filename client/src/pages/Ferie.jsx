@@ -877,11 +877,11 @@ const Vacation = () => {
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <Calendar className="h-5 w-5 text-slate-400 mr-2" />
-            <p className="text-blue-300 font-semibold">Periodi di richiesta ferie aperti:</p>
+            <p className="text-slate-300 font-semibold">Periodi di richiesta ferie aperti:</p>
           </div>
           <div className="space-y-2 mt-2">
             {availablePeriods.map(period => (
-              <div key={period.id} className="text-blue-200 text-sm">
+              <div key={period.id} className="text-slate-300 text-sm">
                 • <strong>{period.name}</strong>: puoi richiedere ferie dal {new Date(period.vacation_start_date).toLocaleDateString('it-IT')} al {new Date(period.vacation_end_date).toLocaleDateString('it-IT')}
               </div>
             ))}
@@ -1162,8 +1162,8 @@ const Vacation = () => {
                   </div>
 
                   {periodFormData.vacationStartDate && periodFormData.vacationEndDate && periodFormData.startDate && periodFormData.endDate && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
-                      <p className="text-blue-200 text-sm">
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3 mt-4">
+                      <p className="text-slate-300 text-sm">
                         ℹ️ I dipendenti possono richiedere ferie dal <strong>{new Date(periodFormData.vacationStartDate).toLocaleDateString('it-IT')}</strong> al <strong>{new Date(periodFormData.vacationEndDate).toLocaleDateString('it-IT')}</strong>
                       </p>
                     </div>

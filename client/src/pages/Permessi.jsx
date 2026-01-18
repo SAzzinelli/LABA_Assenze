@@ -1725,9 +1725,9 @@ const LeaveRequests = () => {
               )}
 
               {/* SECTION 2: IMMINENTI (Future/Today, Approved only) */}
-              <div className="bg-slate-800 rounded-lg p-4 mb-4">
+              <div className="bg-zinc-900 rounded-lg p-4 mb-4 border border-zinc-800">
                 <h2 className="text-xl font-bold text-white flex items-center mb-4">
-                  <Calendar className="h-6 w-6 mr-3 text-blue-400" />
+                  <Calendar className="h-6 w-6 mr-3 text-slate-400" />
                   In Programma
                 </h2>
                 {futureRequests.length > 0 ? renderRequestList(futureRequests) : (
@@ -1744,7 +1744,7 @@ const LeaveRequests = () => {
                   <div className="flex items-center gap-3">
                     <Clock className="h-6 w-6 text-slate-400" />
                     <h2 className="text-lg font-bold text-slate-300">Storico Passate</h2>
-                    <span className="text-xs font-semibold bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold bg-zinc-800 text-slate-400 px-2 py-0.5 rounded-full">
                       {pastRequests.length}
                     </span>
                   </div>

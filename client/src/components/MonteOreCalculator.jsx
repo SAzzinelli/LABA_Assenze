@@ -335,11 +335,11 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-slate-700 rounded-lg p-6 flex flex-col items-center justify-center border border-slate-600">
-          <Loader2 className="h-10 w-10 text-indigo-300 animate-spin mb-4" />
+        <div className="bg-zinc-900 rounded-lg p-6 flex flex-col items-center justify-center border border-zinc-800">
+          <Loader2 className="h-10 w-10 text-slate-400 animate-spin mb-4" />
           <p className="text-slate-300">Caricamento banca ore in corso...</p>
         </div>
-        <div className="bg-slate-700 rounded-lg p-6 border border-slate-600">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="animate-pulse space-y-4">
             <div className="h-6 bg-slate-600 rounded w-1/3"></div>
             <div className="h-32 bg-slate-600 rounded"></div>
@@ -359,9 +359,13 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
   return (
     <div className="space-y-6">
       {/* Banca Ore Attuale - In evidenza */}
-      <div className="bg-slate-700 rounded-lg p-6">
+      <div className={`rounded-lg p-6 ${currentBalance < 0 
+        ? 'bg-red-900/20 border-2 border-red-500/50' 
+        : currentBalance > 0 
+        ? 'bg-green-900/20 border-2 border-green-500/50' 
+        : 'bg-zinc-900 border-2 border-zinc-800'}`}>
         <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-          <DollarSign className="h-5 w-5 mr-2 text-indigo-400" />
+          <DollarSign className="h-5 w-5 mr-2 text-slate-400" />
           Banca Ore Attuale
         </h4>
         <div className="flex items-center justify-center py-8">
@@ -383,7 +387,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
               ? 'bg-green-500/20 text-green-300 border border-green-400/30'
               : currentBalance < 0
                 ? 'bg-red-500/20 text-red-300 border border-red-400/30'
-                : 'bg-slate-500/20 text-slate-300 border border-slate-400/30'
+                : 'bg-zinc-800/50 text-slate-300 border border-zinc-700'
             }`}>
             {currentBalance > 0 && <TrendingUp className="h-4 w-4 mr-1" />}
             {currentBalance < 0 && <TrendingDown className="h-4 w-4 mr-1" />}
@@ -393,7 +397,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
       </div>
 
       {/* Ultime Fluttuazioni */}
-      <div className="bg-slate-700 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
           <Activity className="h-5 w-5 mr-2 text-amber-400" />
           Ultime Fluttuazioni
@@ -488,7 +492,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                               <p className="text-xs text-amber-300 font-semibold mb-1">
                                 💰 Aggiunta manuale: +{manualCreditInfo?.toFixed(2) || '0'}h
                               </p>
-                              <p className="text-xs text-blue-300">
+                              <p className="text-xs text-slate-300">
                                 🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h 
                                 <span className="text-green-300"> ({permissionReductionInfo.recovered.toFixed(2)}h recuperate)</span>
                               </p>

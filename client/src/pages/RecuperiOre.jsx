@@ -1104,7 +1104,7 @@ const RecuperiOre = () => {
                   <h4 className="text-base font-semibold text-slate-300">Proposte dall'amministratore ({proposedRecoveries.length})</h4>
                 </div>
                 {proposedRecoveries.map((recovery) => (
-                  <div key={recovery.id} className="bg-zinc-900/50 border-l-4 border-zinc-700 rounded-lg p-4 hover:bg-zinc-900/70 transition-colors">
+                  <div key={recovery.id} className="bg-zinc-900 border-l-4 border-zinc-700 rounded-lg p-4 hover:bg-zinc-900/80 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -1127,7 +1127,7 @@ const RecuperiOre = () => {
                           <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
                         )}
                         {recovery.notes && (
-                          <div className="text-slate-300 text-xs mt-2 pl-6 italic bg-zinc-900/50 p-2 rounded">{recovery.notes}</div>
+                          <div className="text-slate-300 text-xs mt-2 pl-6 italic bg-zinc-800 p-2 rounded">{recovery.notes}</div>
                         )}
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
@@ -1279,7 +1279,7 @@ const RecuperiOre = () => {
                   </div>
 
                   {recoveryFormData.recoveryDate && (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
                       <p className="text-sm text-slate-300">
                         📅 Data selezionata: <strong>{new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
                       </p>
@@ -2315,7 +2315,7 @@ const RecuperiOre = () => {
                   </div>
 
                   {proposalFormData.recoveryDate && (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
                       <p className="text-sm text-slate-300">
                         📅 Data selezionata: <strong>{new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
                       </p>

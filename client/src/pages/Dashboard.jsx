@@ -934,7 +934,7 @@ const Dashboard = () => {
                   onClick={() => setFerieCollapsed(!ferieCollapsed)}
                 >
                   <h3 className="text-lg font-bold text-white flex items-center">
-                    <Plane className="h-5 w-5 mr-2 text-blue-400" />
+                    <Plane className="h-5 w-5 mr-2 text-slate-400" />
                     Ferie
                   </h3>
                   <div className="flex items-center gap-2">
@@ -965,7 +965,7 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <p className="text-xs text-slate-400 mb-1">Giorni Utilizzati</p>
-                        <p className="text-2xl font-bold text-blue-400">
+                        <p className="text-2xl font-bold text-slate-300">
                           {vacationBalance.used_days || 0}
                         </p>
                       </div>
@@ -1017,7 +1017,7 @@ const Dashboard = () => {
                         const colorClasses = {
                           green: 'bg-green-500/8 border-green-500/20',
                           red: 'bg-red-500/8 border-red-500/20',
-                          blue: 'bg-blue-500/8 border-blue-500/20',
+                          blue: 'bg-zinc-900/50 border-zinc-800',
                           purple: 'bg-purple-500/8 border-purple-500/20'
                         };
                         
@@ -1269,7 +1269,7 @@ const Dashboard = () => {
                 } else if (isCompleted) {
                   badgeColor = 'bg-blue-500';
                   statusText = 'Giornata terminata';
-                  statusColor = 'text-blue-400';
+                  statusColor = 'text-slate-300';
                 } else if (isNotStarted) {
                   badgeColor = 'bg-slate-500';
                   statusText = 'Non iniziato';
@@ -1281,7 +1281,7 @@ const Dashboard = () => {
                 } else if (person.status === 'permission_104') {
                   badgeColor = 'bg-blue-600';
                   statusText = 'Permesso 104';
-                  statusColor = 'text-blue-300';
+                  statusColor = 'text-slate-300';
                 } else if (person.status === 'vacation') {
                   badgeColor = 'bg-purple-500';
                   statusText = 'In Ferie';
@@ -1374,13 +1374,13 @@ const Dashboard = () => {
                   textLight: 'text-red-300',
                   textBold: 'text-red-400'
                 } : {
-                  bg: 'bg-blue-500/10',
-                  border: 'border-blue-500/20',
-                  hover: 'hover:bg-blue-500/20',
-                  circle: 'bg-blue-500',
-                  text: 'text-blue-200',
-                  textLight: 'text-blue-300',
-                  textBold: 'text-blue-400'
+                  bg: 'bg-zinc-900/50',
+                  border: 'border-zinc-800',
+                  hover: 'hover:bg-zinc-900/70',
+                  circle: 'bg-zinc-800',
+                  text: 'text-slate-300',
+                  textLight: 'text-slate-300',
+                  textBold: 'text-slate-300'
                 };
 
                 return (
