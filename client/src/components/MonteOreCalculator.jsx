@@ -341,8 +341,8 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
         </div>
         <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-slate-600 rounded w-1/3"></div>
-            <div className="h-32 bg-slate-600 rounded"></div>
+            <div className="h-6 bg-zinc-800 rounded w-1/3"></div>
+            <div className="h-32 bg-zinc-800 rounded"></div>
           </div>
         </div>
       </div>
