@@ -155,7 +155,7 @@ const Login = () => {
                         name="password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all pr-12"
+                        className="w-full px-4 py-3 bg-zinc-800/50 border border-zinc-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent transition-all pr-12"
                         placeholder="La tua password"
                         required
                       />
