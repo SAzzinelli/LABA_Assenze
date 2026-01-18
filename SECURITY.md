@@ -31,6 +31,9 @@
 
 ### Backend (server) - Ultimo aggiornamento: 18/01/2026
 - ✅ `@supabase/supabase-js`: 2.58.0 → 2.90.1 (aggiornato 18/01/2026)
+- ✅ `dotenv`: 16.4.5 → 17.2.3 (aggiornato 18/01/2026, major update)
+- ✅ `helmet`: 7.2.0 → 8.1.0 (aggiornato 18/01/2026, major update)
+- ✅ `uuid`: 10.0.0 → 13.0.0 (aggiornato 18/01/2026, major update)
 - ✅ `jsonwebtoken`: 9.0.2 → 9.0.3 (aggiornato 18/01/2026)
 - ✅ `nodemailer`: 7.0.6 → 7.0.12 (aggiornato 18/01/2026, fix vulnerabilità moderate)
 - ✅ `resend`: 6.1.1 → 6.7.0 (aggiornato 18/01/2026)
