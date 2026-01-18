@@ -1188,7 +1188,7 @@ const Dashboard = () => {
           )}
 
           {/* Presenti adesso - Full width con 2 colonne interne */}
-          <div className="bg-slate-800 rounded-lg p-6">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div 
               className="flex items-center justify-between mb-6 cursor-pointer"
               onClick={() => setPresentNowCollapsed(!presentNowCollapsed)}
@@ -1267,7 +1267,7 @@ const Dashboard = () => {
                   statusText = 'In pausa';
                   statusColor = 'text-yellow-400';
                 } else if (isCompleted) {
-                  badgeColor = 'bg-blue-500';
+                  badgeColor = 'bg-zinc-700';
                   statusText = 'Giornata terminata';
                   statusColor = 'text-slate-300';
                 } else if (isNotStarted) {
@@ -1279,7 +1279,7 @@ const Dashboard = () => {
                   statusText = 'In malattia';
                   statusColor = 'text-red-400';
                 } else if (person.status === 'permission_104') {
-                  badgeColor = 'bg-blue-600';
+                  badgeColor = 'bg-purple-600';
                   statusText = 'Permesso 104';
                   statusColor = 'text-slate-300';
                 } else if (person.status === 'vacation') {
@@ -1293,7 +1293,7 @@ const Dashboard = () => {
                 }
                 
                 return (
-                  <div key={person.user_id} className="bg-slate-700 rounded-lg p-3 sm:p-4 hover:bg-slate-600 transition-colors">
+                  <div key={person.user_id} className="bg-zinc-800 rounded-lg p-3 sm:p-4 hover:bg-zinc-700 transition-colors border border-zinc-700">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex items-center min-w-0 flex-1">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${badgeColor}`}>
@@ -1332,7 +1332,7 @@ const Dashboard = () => {
           {/* Grid per Richieste Recenti e In programma oggi */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 mt-3 sm:mt-4 md:mt-6">
           {/* Richieste Recenti */}
-          <div className="bg-slate-800 rounded-lg p-6">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div 
               className="flex items-center justify-between mb-6 cursor-pointer"
               onClick={() => setRecentRequestsCollapsed(!recentRequestsCollapsed)}
@@ -1437,7 +1437,7 @@ const Dashboard = () => {
           </div>
 
           {/* In programma oggi */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div 
           className="flex items-center justify-between mb-4 cursor-pointer"
           onClick={() => setTodayEventsCollapsed(!todayEventsCollapsed)}
@@ -1474,14 +1474,14 @@ const Dashboard = () => {
               const colorClasses = {
                 green: 'bg-green-900/20 border-green-500/30',
                 red: 'bg-red-900/20 border-red-500/30',
-                blue: 'bg-blue-900/20 border-blue-500/30',
+                blue: 'bg-zinc-900/50 border-zinc-800',
                 purple: 'bg-purple-900/20 border-purple-500/30'
               };
               
               const iconColors = {
                 green: 'text-green-400',
                 red: 'text-red-400',
-                blue: 'text-blue-400',
+                blue: 'text-slate-400',
                 purple: 'text-purple-400'
               };
               
