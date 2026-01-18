@@ -449,7 +449,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
               }
               
               return (
-                <div key={index} className="bg-slate-600 rounded-lg p-4">
+                <div key={index} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 text-slate-400 mr-3" />
@@ -484,7 +484,7 @@ const MonteOreCalculator = ({ user, workSchedule }) => {
                   
                   {/* Mostra audit trail per aggiunte manuali */}
                   {hasManualCredit && (
-                    <div className="mt-3 pt-3 border-t border-slate-500">
+                    <div className="mt-3 pt-3 border-t border-zinc-700">
                       <div className="flex items-start gap-2">
                         <div className="flex-1">
                           {hasPermissionReduction && permissionReductionInfo ? (
