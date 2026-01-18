@@ -1363,7 +1363,7 @@ const Vacation = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4 border border-zinc-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Plane className="h-6 w-6 mr-2 text-blue-400" />
@@ -1491,7 +1491,7 @@ const Vacation = () => {
 
       {/* Filtri Collassabili - Solo nella vista lista */}
       {activeView === 'list' && (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <div className="bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
           <button
             onClick={() => setFiltersCollapsed(!filtersCollapsed)}
             className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
@@ -1579,7 +1579,7 @@ const Vacation = () => {
 
       {/* Requests List */}
       {activeView === 'list' && (
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <h2 className="text-xl font-bold text-white mb-6 flex items-center">
             <FileText className="h-6 w-6 mr-3 text-slate-400" />
             {user?.role === 'admin' ? 'Gestione Richieste Ferie' : 'Storico Richieste Ferie'}
@@ -1632,7 +1632,7 @@ const Vacation = () => {
 
             // Funzione helper per renderizzare una card
             const renderRequestCard = (request, isPast = false) => (
-              <div key={request.id} className={`${isPast ? 'bg-slate-800 border border-slate-700 opacity-75 hover:opacity-100' : 'bg-slate-700'} rounded-lg p-6 hover:bg-slate-600 transition-all duration-200 mb-4`}>
+              <div key={request.id} className={`${isPast ? 'bg-zinc-900 border border-zinc-800 opacity-75 hover:opacity-100' : 'bg-zinc-800'} rounded-lg p-6 hover:bg-zinc-700 transition-all duration-200 mb-4 border border-zinc-800`}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
@@ -1763,7 +1763,7 @@ const Vacation = () => {
                   <div className="space-y-4">
                     <button
                       onClick={() => setHistoryExpanded(!historyExpanded)}
-                      className="w-full flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-700 hover:bg-slate-800/50 p-2 rounded transition-colors group"
+                      className="w-full flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-800 hover:bg-zinc-900/50 p-2 rounded transition-colors group"
                     >
                       <div className="flex items-center gap-2">
                         <List className="h-5 w-5 text-slate-500 group-hover:text-slate-400" />
