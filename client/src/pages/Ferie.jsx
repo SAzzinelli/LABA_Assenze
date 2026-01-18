@@ -1208,7 +1208,7 @@ const Vacation = () => {
                           name="isOpen"
                           checked={periodFormData.isOpen}
                           onChange={handlePeriodInputChange}
-                          className="h-5 w-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
+                          className="h-5 w-5 text-purple-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600"
                         />
                         <span className="ml-3 text-slate-300 font-medium">Periodo aperto</span>
                       </label>
