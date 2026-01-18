@@ -1736,10 +1736,10 @@ const LeaveRequests = () => {
               </div>
 
               {/* SECTION 3: PASSATE (Accordion) */}
-              <div className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700/50">
+              <div className="bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
                 <button
                   onClick={() => setHistoryOpen(!historyOpen)}
-                  className="w-full flex items-center justify-between p-4 bg-slate-800 hover:bg-slate-700/50 transition-colors"
+                  className="w-full flex items-center justify-between p-4 bg-zinc-900 hover:bg-zinc-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Clock className="h-6 w-6 text-slate-400" />
@@ -1752,7 +1752,7 @@ const LeaveRequests = () => {
                 </button>
 
                 {historyOpen && (
-                  <div className="p-4 border-t border-slate-700/50">
+                  <div className="p-4 border-t border-zinc-800">
                     {pastRequests.length > 0 ? renderRequestList(pastRequests, true) : (
                       <p className="text-slate-500 text-center py-4">Nessuno storico disponibile.</p>
                     )}
