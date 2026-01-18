@@ -46,7 +46,8 @@ const RecuperiOre = () => {
   const [recoveryStep, setRecoveryStep] = useState(1); // Step corrente del wizard (1: Data, 2: Ore, 3: Orario)
   const [recoveryFormData, setRecoveryFormData] = useState({
     recoveryDate: '', // Step 1: Data recupero
-    hours: '', // Step 2: Ore da recuperare
+    hours: '', // Step 2: Ore da recuperare (numero intero)
+    minutes: '0', // Step 2: Minuti da recuperare (0 o 30)
     startTime: '', // Step 3: Orario inizio
     endTime: '', // Step 3: Orario fine
     reason: '',
@@ -72,7 +73,8 @@ const RecuperiOre = () => {
   const [proposalStep, setProposalStep] = useState(1); // Step corrente del wizard admin (1: Data, 2: Ore, 3: Orario)
   const [proposalFormData, setProposalFormData] = useState({
     recoveryDate: '', // Step 1: Data recupero
-    hours: '', // Step 2: Ore da recuperare
+    hours: '', // Step 2: Ore da recuperare (numero intero)
+    minutes: '0', // Step 2: Minuti da recuperare (0 o 30)
     startTime: '', // Step 3: Orario inizio
     endTime: '', // Step 3: Orario fine
     reason: '',
@@ -270,7 +272,7 @@ const RecuperiOre = () => {
   const handleProposeRecovery = async () => {
     try {
       if (!selectedEmployeeForProposal) return;
-      const { recoveryDate, startTime, endTime, hours, reason, notes } = proposalFormData;
+      const { recoveryDate, startTime, endTime, hours, minutes, reason, notes } = proposalFormData;
 
       // Validazione: serve data + (startTime+endTime) OPPURE (startTime+hours)
       if (!recoveryDate || !startTime) {
@@ -279,11 +281,12 @@ const RecuperiOre = () => {
       }
 
       let finalEndTime = endTime;
-      let finalHours = hours;
+      let finalHoursDecimal = 0;
 
       // Se è stato inserito il campo "ore", calcola endTime
       if (hours && hours !== '') {
-        finalEndTime = calculateEndTime(startTime, hours);
+        finalHoursDecimal = hoursMinutesToDecimal(hours, minutes);
+        finalEndTime = calculateEndTime(startTime, finalHoursDecimal.toString());
         if (!finalEndTime) {
           alert('Errore nel calcolo dell\'orario di fine');
           return;
@@ -291,11 +294,12 @@ const RecuperiOre = () => {
       }
       // Se è stato inserito endTime, calcola le ore
       else if (endTime && endTime !== '') {
-        finalHours = calculateHours(startTime, endTime);
-        if (!finalHours || parseFloat(finalHours) <= 0) {
+        const calculatedHours = calculateHours(startTime, endTime);
+        if (!calculatedHours || parseFloat(calculatedHours) <= 0) {
           alert('L\'orario di fine deve essere successivo all\'orario di inizio');
           return;
         }
+        finalHoursDecimal = parseFloat(calculatedHours);
       } else {
         alert('Inserisci o l\'orario di fine o le ore da recuperare');
         return;
@@ -311,6 +315,7 @@ const RecuperiOre = () => {
           recoveryDate,
           startTime,
           endTime: finalEndTime,
+          hours: finalHoursDecimal, // Invia come decimale
           reason,
           notes
         })
@@ -325,6 +330,7 @@ const RecuperiOre = () => {
           startTime: '',
           endTime: '',
           hours: '',
+          minutes: '0',
           reason: '',
           notes: ''
         });
@@ -578,6 +584,24 @@ const RecuperiOre = () => {
     return `${h}h ${m}min`;
   };
 
+  // Converte ore e minuti in decimale (per invio al backend)
+  const hoursMinutesToDecimal = (hours, minutes) => {
+    const h = parseInt(hours) || 0;
+    const m = parseInt(minutes) || 0;
+    return h + (m / 60);
+  };
+
+  // Converte decimale in ore e minuti (per visualizzazione/modifica)
+  const decimalToHoursMinutes = (decimal) => {
+    if (!decimal || decimal === '') return { hours: '', minutes: '0' };
+    const total = Math.abs(parseFloat(decimal));
+    const h = Math.floor(total);
+    const m = Math.round((total - h) * 60);
+    // Arrotonda i minuti a 0 o 30
+    const roundedMinutes = m <= 15 ? 0 : m >= 45 ? 0 : 30;
+    return { hours: h.toString(), minutes: roundedMinutes.toString() };
+  };
+
   // Genera slot orari suggeriti basati sulle ore selezionate
   const generateTimeSlots = (hours) => {
     if (!hours || parseFloat(hours) <= 0) return [];
@@ -608,22 +632,29 @@ const RecuperiOre = () => {
       setRecoveryStep(2);
     } else if (recoveryStep === 2) {
       // Validazione step 2: ore da recuperare
-      const hours = parseFloat(recoveryFormData.hours);
+      const hours = parseInt(recoveryFormData.hours) || 0;
+      const minutes = parseInt(recoveryFormData.minutes) || 0;
+      
       if (!recoveryFormData.hours || hours <= 0) {
         alert('Inserisci le ore da recuperare');
         return;
       }
+      
       if (totalBalance >= 0) {
         alert('Non hai debiti da recuperare');
         return;
       }
+      
+      const totalHoursDecimal = hoursMinutesToDecimal(hours, minutes);
       const maxHours = Math.abs(totalBalance);
-      if (hours > maxHours) {
+      
+      if (totalHoursDecimal > maxHours) {
         alert(`Puoi recuperare massimo ${formatHoursFromDecimal(maxHours.toString())} (il tuo debito attuale)`);
         return;
       }
+      
       // Genera slot suggeriti
-      setSuggestedTimeSlots(generateTimeSlots(hours));
+      setSuggestedTimeSlots(generateTimeSlots(totalHoursDecimal));
       setRecoveryStep(3);
     }
   };
@@ -639,18 +670,22 @@ const RecuperiOre = () => {
       setProposalStep(2);
     } else if (proposalStep === 2) {
       // Validazione step 2: ore da recuperare
-      const hours = parseFloat(proposalFormData.hours);
+      const hours = parseInt(proposalFormData.hours) || 0;
+      const minutes = parseInt(proposalFormData.minutes) || 0;
+      
       if (!proposalFormData.hours || hours <= 0) {
         alert('Inserisci le ore da recuperare');
         return;
       }
       if (!selectedEmployeeForProposal) return;
 
+      const totalHoursDecimal = hoursMinutesToDecimal(hours, minutes);
+
       // Se è nella tab "Debiti", limita alle ore di debito
       // Se è nella tab "Proposte", non c'è limite (può proporre straordinari anche in positivo)
       if (activeTab === 'debt') {
         const employeeDebt = Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0);
-        if (hours > employeeDebt) {
+        if (totalHoursDecimal > employeeDebt) {
           alert(`Il dipendente può recuperare massimo ${formatHoursFromDecimal(employeeDebt.toString())} (il suo debito attuale)`);
           return;
         }
@@ -658,7 +693,7 @@ const RecuperiOre = () => {
       // Per la tab "Proposte", non c'è limite - può proporre qualsiasi quantità di straordinari
 
       // Genera slot suggeriti
-      setProposalSuggestedTimeSlots(generateTimeSlots(hours));
+      setProposalSuggestedTimeSlots(generateTimeSlots(totalHoursDecimal));
       setProposalStep(3);
     }
   };
@@ -698,7 +733,7 @@ const RecuperiOre = () => {
   // Crea richiesta recupero ore
   const handleCreateRecoveryRequest = async () => {
     try {
-      const { recoveryDate, startTime, endTime, hours, reason, notes } = recoveryFormData;
+      const { recoveryDate, startTime, endTime, hours, minutes, reason, notes } = recoveryFormData;
 
       // Validazione finale
       if (!recoveryDate || !startTime || !endTime) {
@@ -706,12 +741,14 @@ const RecuperiOre = () => {
         return;
       }
 
+      // Converti ore e minuti in decimale
+      const requestedHoursDecimal = hoursMinutesToDecimal(hours, minutes);
+
       // Verifica che le ore selezionate corrispondano ESATTAMENTE al range orario
       const calculatedHours = parseFloat(calculateHours(startTime, endTime));
-      const requestedHours = parseFloat(hours);
 
-      if (Math.abs(calculatedHours - requestedHours) > 0.01) {
-        alert(`Il range orario selezionato (${formatHoursFromDecimal(calculatedHours.toString())}) deve corrispondere ESATTAMENTE alle ore richieste (${formatHoursFromDecimal(requestedHours.toString())}). Le ore devono tornare matematicamente.`);
+      if (Math.abs(calculatedHours - requestedHoursDecimal) > 0.01) {
+        alert(`Il range orario selezionato (${formatHoursFromDecimal(calculatedHours.toString())}) deve corrispondere ESATTAMENTE alle ore richieste (${formatHoursFromDecimal(requestedHoursDecimal.toString())}). Le ore devono tornare matematicamente.`);
         return;
       }
 
@@ -724,6 +761,7 @@ const RecuperiOre = () => {
           recoveryDate,
           startTime,
           endTime: endTime,
+          hours: requestedHoursDecimal, // Invia come decimale
           reason,
           notes
         })
@@ -738,6 +776,7 @@ const RecuperiOre = () => {
           startTime: '',
           endTime: '',
           hours: '',
+          minutes: '0',
           reason: '',
           notes: ''
         });
@@ -1131,25 +1170,43 @@ const RecuperiOre = () => {
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Quante ore vuoi recuperare? *
                     </label>
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0.25"
-                      max={Math.abs(totalBalance)}
-                      value={recoveryFormData.hours}
-                      onChange={(e) => setRecoveryFormData({ ...recoveryFormData, hours: e.target.value })}
-                      placeholder="es. 2.5"
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Ore</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={Math.floor(Math.abs(totalBalance))}
+                          value={recoveryFormData.hours}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                            setRecoveryFormData({ ...recoveryFormData, hours: val });
+                          }}
+                          placeholder="0"
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Minuti</label>
+                        <select
+                          value={recoveryFormData.minutes}
+                          onChange={(e) => setRecoveryFormData({ ...recoveryFormData, minutes: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                        >
+                          <option value="0">0 min</option>
+                          <option value="30">30 min</option>
+                        </select>
+                      </div>
+                    </div>
                     <p className="text-xs text-slate-400 mt-1">
                       Debito attuale: <span className="text-red-400 font-semibold">{formatHours(Math.abs(totalBalance))}</span>
                     </p>
                   </div>
 
-                  {recoveryFormData.hours && parseFloat(recoveryFormData.hours) > 0 && (
+                  {recoveryFormData.hours && parseInt(recoveryFormData.hours) > 0 && (
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
                       <p className="text-sm text-amber-400 font-medium">
-                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(recoveryFormData.hours)}</strong> per il <strong>{recoveryFormData.recoveryDate ? new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
+                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(hoursMinutesToDecimal(recoveryFormData.hours, recoveryFormData.minutes).toString())}</strong> per il <strong>{recoveryFormData.recoveryDate ? new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
                       </p>
                     </div>
                   )}
@@ -1161,7 +1218,7 @@ const RecuperiOre = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Seleziona l'orario ({formatHoursFromDecimal(recoveryFormData.hours)})
+                      Seleziona l'orario ({formatHoursFromDecimal(hoursMinutesToDecimal(recoveryFormData.hours, recoveryFormData.minutes).toString())})
                     </label>
 
                     {/* Slot suggeriti */}
@@ -1194,7 +1251,8 @@ const RecuperiOre = () => {
                           value={recoveryFormData.startTime}
                           onChange={(e) => {
                             const newStartTime = e.target.value;
-                            const newEndTime = calculateEndTime(newStartTime, recoveryFormData.hours);
+                            const totalHoursDecimal = hoursMinutesToDecimal(recoveryFormData.hours, recoveryFormData.minutes);
+                            const newEndTime = calculateEndTime(newStartTime, totalHoursDecimal.toString());
                             setRecoveryFormData({
                               ...recoveryFormData,
                               startTime: newStartTime,
@@ -1212,12 +1270,12 @@ const RecuperiOre = () => {
                           onChange={(e) => {
                             const newEndTime = e.target.value;
                             const calculatedHours = calculateHours(recoveryFormData.startTime, newEndTime);
-                            const requestedHours = parseFloat(recoveryFormData.hours);
+                            const requestedHoursDecimal = hoursMinutesToDecimal(recoveryFormData.hours, recoveryFormData.minutes);
 
-                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
-                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(recoveryFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
+                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHoursDecimal) > 0.01) {
+                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(requestedHoursDecimal.toString())} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
                               // Reimposta endTime calcolato automaticamente
-                              const autoEndTime = calculateEndTime(recoveryFormData.startTime, recoveryFormData.hours);
+                              const autoEndTime = calculateEndTime(recoveryFormData.startTime, requestedHoursDecimal.toString());
                               setRecoveryFormData({
                                 ...recoveryFormData,
                                 endTime: autoEndTime || ''
@@ -1287,6 +1345,7 @@ const RecuperiOre = () => {
                         startTime: '',
                         endTime: '',
                         hours: '',
+                        minutes: '0',
                         reason: '',
                         notes: ''
                       });
@@ -2071,14 +2130,50 @@ const RecuperiOre = () => {
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Quante ore vuoi proporre? *
                     </label>
-                    <input
-                      type="number"
-                      step="0.25"
-                      min="0.25"
-                      max={activeTab === 'debt' ? Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0) : undefined}
-                      value={proposalFormData.hours}
-                      onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value })}
-                      placeholder="es. 2.5"
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Ore</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max={activeTab === 'debt' ? Math.floor(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0)) : undefined}
+                          value={proposalFormData.hours}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
+                            setProposalFormData({ ...proposalFormData, hours: val });
+                          }}
+                          placeholder="0"
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Minuti</label>
+                        <select
+                          value={proposalFormData.minutes}
+                          onChange={(e) => setProposalFormData({ ...proposalFormData, minutes: e.target.value })}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                        >
+                          <option value="0">0 min</option>
+                          <option value="30">30 min</option>
+                        </select>
+                      </div>
+                    </div>
+                    {activeTab === 'debt' && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {proposalFormData.hours && parseInt(proposalFormData.hours) > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-sm text-amber-400 font-medium">
+                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(hoursMinutesToDecimal(proposalFormData.hours, proposalFormData.minutes).toString())}</strong> per il <strong>{proposalFormData.recoveryDate ? new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
                     />
                     {activeTab === 'debt' && (
@@ -2102,13 +2197,6 @@ const RecuperiOre = () => {
                     )}
                   </div>
 
-                  {proposalFormData.hours && parseFloat(proposalFormData.hours) > 0 && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-                      <p className="text-sm text-amber-400 font-medium">
-                        ✅ Hai selezionato <strong>{formatHoursFromDecimal(proposalFormData.hours)}</strong> per il <strong>{proposalFormData.recoveryDate ? new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT') : '...'}</strong>
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2117,7 +2205,7 @@ const RecuperiOre = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Seleziona l'orario ({formatHoursFromDecimal(proposalFormData.hours)})
+                      Seleziona l'orario ({formatHoursFromDecimal(hoursMinutesToDecimal(proposalFormData.hours, proposalFormData.minutes).toString())})
                     </label>
 
                     {/* Slot suggeriti */}
@@ -2150,7 +2238,8 @@ const RecuperiOre = () => {
                           value={proposalFormData.startTime}
                           onChange={(e) => {
                             const newStartTime = e.target.value;
-                            const newEndTime = calculateEndTime(newStartTime, proposalFormData.hours);
+                            const totalHoursDecimal = hoursMinutesToDecimal(proposalFormData.hours, proposalFormData.minutes);
+                            const newEndTime = calculateEndTime(newStartTime, totalHoursDecimal.toString());
                             setProposalFormData({
                               ...proposalFormData,
                               startTime: newStartTime,
@@ -2168,12 +2257,12 @@ const RecuperiOre = () => {
                           onChange={(e) => {
                             const newEndTime = e.target.value;
                             const calculatedHours = calculateHours(proposalFormData.startTime, newEndTime);
-                            const requestedHours = parseFloat(proposalFormData.hours);
+                            const requestedHoursDecimal = hoursMinutesToDecimal(proposalFormData.hours, proposalFormData.minutes);
 
-                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHours) > 0.01) {
-                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(proposalFormData.hours)} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
+                            if (calculatedHours && Math.abs(parseFloat(calculatedHours) - requestedHoursDecimal) > 0.01) {
+                              alert(`Il range orario deve corrispondere ESATTAMENTE alle ${formatHoursFromDecimal(requestedHoursDecimal.toString())} richieste. Range selezionato: ${formatHoursFromDecimal(calculatedHours)}`);
                               // Reimposta endTime calcolato automaticamente
-                              const autoEndTime = calculateEndTime(proposalFormData.startTime, proposalFormData.hours);
+                              const autoEndTime = calculateEndTime(proposalFormData.startTime, requestedHoursDecimal.toString());
                               setProposalFormData({
                                 ...proposalFormData,
                                 endTime: autoEndTime || ''
@@ -2244,6 +2333,7 @@ const RecuperiOre = () => {
                         startTime: '',
                         endTime: '',
                         hours: '',
+                        minutes: '0',
                         reason: '',
                         notes: ''
                       });
