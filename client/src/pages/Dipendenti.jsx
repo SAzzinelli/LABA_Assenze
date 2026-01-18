@@ -979,7 +979,7 @@ const Employees = () => {
                 </div>
 
                 {/* Presenze e Ferie */}
-                <div className="bg-slate-700 rounded-lg p-4 md:col-span-2">
+                <div className="bg-zinc-800 rounded-lg p-4 md:col-span-2 border border-zinc-700">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Clock className="h-5 w-5 mr-2 text-amber-400" />
                     Presenze e Ferie
@@ -1014,7 +1014,7 @@ const Employees = () => {
             {detailActiveTab === 'balance' && (
               <div className="space-y-6">
                 {/* Banca Ore Attuale */}
-                <div className="bg-slate-700 rounded-lg p-6">
+                <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <DollarSign className="h-5 w-5 mr-2 text-slate-400" />
                     Banca Ore Attuale
@@ -1053,7 +1053,7 @@ const Employees = () => {
                 </div>
 
                 {/* Ultime Fluttuazioni */}
-                <div className="bg-slate-700 rounded-lg p-6">
+                <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Activity className="h-5 w-5 mr-2 text-amber-400" />
                     Ultime Fluttuazioni
@@ -1373,7 +1373,7 @@ const Employees = () => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-700 rounded-lg p-6">
+                <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
                   <div className="text-center">
                     <Clock className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                     <h4 className="text-lg font-semibold text-white mb-2">Orario Non Configurato</h4>

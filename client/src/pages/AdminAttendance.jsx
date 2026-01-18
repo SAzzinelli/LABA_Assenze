@@ -1814,7 +1814,7 @@ const AdminAttendance = () => {
                 <p className="text-slate-300">
                   Sei sicuro di voler eliminare questo record di presenza?
                 </p>
-                <div className="bg-slate-700 rounded-lg p-3">
+                <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
                   <p className="text-sm text-slate-400">
                     {(() => {
                       const emp = allEmployees.find(e => e.id === recordToDelete.user_id);
@@ -1862,9 +1862,9 @@ const AdminAttendance = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
+            <div className="bg-zinc-900 rounded-lg shadow-xl w-full max-w-lg border border-zinc-800">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-600">
+              <div className="flex items-center justify-between p-6 border-b border-zinc-800">
                 <div>
                   <h3 className="text-lg font-semibold text-white">Aggiungi presenza</h3>
                   <p className="text-sm text-slate-400 mt-1">
@@ -1890,13 +1890,13 @@ const AdminAttendance = () => {
               {/* Progress Bar */}
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 1 ? 'bg-zinc-800 text-white border border-zinc-700' : 'bg-zinc-900 text-slate-400 border border-zinc-800'
                     }`}>
                     1
                   </div>
-                  <div className={`flex-1 h-1 mx-2 ${generateStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'
+                  <div className={`flex-1 h-1 mx-2 ${generateStep >= 2 ? 'bg-zinc-700' : 'bg-zinc-800'
                     }`}></div>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${generateStep >= 2 ? 'bg-zinc-800 text-white border border-zinc-700' : 'bg-zinc-900 text-slate-400 border border-zinc-800'
                     }`}>
                     2
                   </div>
@@ -1969,7 +1969,7 @@ const AdminAttendance = () => {
                         type="date"
                         value={generateForm.startDate}
                         onChange={(e) => setGenerateForm({ ...generateForm, startDate: e.target.value })}
-                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
+                        className="w-full border border-zinc-700 bg-zinc-800 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-zinc-600"
                       />
                     </div>
 
@@ -1979,13 +1979,13 @@ const AdminAttendance = () => {
                         type="date"
                         value={generateForm.endDate}
                         onChange={(e) => setGenerateForm({ ...generateForm, endDate: e.target.value })}
-                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
+                        className="w-full border border-zinc-700 bg-zinc-800 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-zinc-600"
                       />
                     </div>
                   </div>
 
                   {/* Riepilogo */}
-                  <div className="bg-slate-700 rounded-md p-4 mb-6">
+                  <div className="bg-zinc-800 rounded-md p-4 mb-6 border border-zinc-700">
                     <h4 className="text-sm font-medium text-white mb-2">Riepilogo</h4>
                     <div className="text-sm text-slate-300 space-y-1">
                       <p><span className="text-slate-400">Dipendente:</span> {
