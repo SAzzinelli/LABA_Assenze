@@ -1494,10 +1494,10 @@ const Vacation = () => {
         <div className="bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
           <button
             onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
+            className="w-full flex items-center justify-between p-4 hover:bg-zinc-800 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <Filter className="h-5 w-5 text-blue-400" />
+              <Filter className="h-5 w-5 text-slate-400" />
               <span className="text-white font-medium">Filtri e Ricerca</span>
             </div>
             {filtersCollapsed ? (
@@ -1508,7 +1508,7 @@ const Vacation = () => {
           </button>
 
           {!filtersCollapsed && (
-            <div className="border-t border-slate-700 p-4 space-y-4">
+            <div className="border-t border-zinc-800 p-4 space-y-4">
               {/* Filtro temporale per admin - solo nella vista lista */}
               {user?.role === 'admin' && activeView === 'list' && (
                 <div className="flex items-center justify-between">

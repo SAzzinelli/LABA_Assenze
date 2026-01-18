@@ -1226,7 +1226,7 @@ const LeaveRequests = () => {
       <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <button
           onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-          className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-zinc-800 transition-colors"
         >
           <div className="flex items-center space-x-3">
             <Filter className="h-5 w-5 text-slate-400" />
@@ -1240,7 +1240,7 @@ const LeaveRequests = () => {
         </button>
 
         {!filtersCollapsed && (
-          <div className="border-t border-slate-700 p-4 space-y-4">
+          <div className="border-t border-zinc-800 p-4 space-y-4">
             {/* Filtro temporale per admin - Responsive: stack verticale su mobile */}
             {user?.role === 'admin' && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
