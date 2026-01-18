@@ -50,14 +50,14 @@ const schedules = {
     { day_of_week: 0, is_working_day: false, work_type: null, start_time: null, end_time: null, break_duration: 0, break_start_time: null }
   ],
 
-  // ALESSIA: Lun-Ven 9-17 con pausa 13-14, Sabato 9-13 senza pausa
+  // ALESSIA: Lun-Ven 9-17 con pausa 13-14, Sabato 9-14 senza pausa (la 13-14 sabato è lavoro, non pausa)
   'alessia.pasqui@labafirenze.com': [
     { day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '17:00', break_duration: 60, break_start_time: '13:00' },
     { day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '17:00', break_duration: 60, break_start_time: '13:00' },
     { day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '17:00', break_duration: 60, break_start_time: '13:00' },
     { day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '17:00', break_duration: 60, break_start_time: '13:00' },
     { day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '17:00', break_duration: 60, break_start_time: '13:00' },
-    { day_of_week: 6, is_working_day: true, work_type: 'morning', start_time: '09:00', end_time: '13:00', break_duration: 0, break_start_time: null }, // Sabato senza pausa
+    { day_of_week: 6, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '14:00', break_duration: 0, break_start_time: null }, // Sabato 9-14 senza pausa (5 ore)
     { day_of_week: 0, is_working_day: false, work_type: null, start_time: null, end_time: null, break_duration: 0, break_start_time: null }
   ],
 
