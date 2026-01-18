@@ -1317,7 +1317,7 @@ const Profile = () => {
                 className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 ${
                   activeTab === tab.id
                     ? 'bg-zinc-800 text-white border-white'
-                    : 'text-slate-400 hover:bg-zinc-800/50 hover:text-white border-transparent'
+                    : 'text-white hover:bg-zinc-800/50 border-transparent'
                 }`}
               >
                 <IconComponent className="h-5 w-5 mr-2" />
