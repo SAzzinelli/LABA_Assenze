@@ -77,7 +77,7 @@ const Login = () => {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-6xl mx-auto">
-          <div className="bg-zinc-950/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-900/50 overflow-hidden">
+          <div className="bg-zinc-900 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-800 overflow-hidden">
             
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-8 text-center">
@@ -91,14 +91,14 @@ const Login = () => {
             {/* Content */}
             <div className="p-8">
             {/* Tab Switcher */}
-            <div className="flex bg-zinc-900/50 rounded-xl p-1 mb-8">
+            <div className="flex bg-zinc-800 rounded-xl p-1 mb-8 border border-zinc-700">
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isLogin 
                     ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg' 
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    : 'text-slate-400 hover:text-white hover:bg-zinc-800/50'
                 }`}
               >
                 Login
@@ -109,7 +109,7 @@ const Login = () => {
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   !isLogin 
                     ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg' 
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    : 'text-slate-400 hover:text-white hover:bg-zinc-800/50'
                 }`}
               >
                 Registrati
@@ -138,7 +138,7 @@ const Login = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-zinc-600 transition-all"
                       placeholder="hr@labafirenze.com"
                       required
                     />
