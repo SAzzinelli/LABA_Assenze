@@ -1118,10 +1118,10 @@ const RecuperiOre = () => {
                             })}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-blue-300 text-sm mb-2">
+                        <div className="flex items-center gap-2 text-slate-300 text-sm mb-2">
                           <Clock className="h-4 w-4" />
                           <span>Dalle {recovery.start_time} alle {recovery.end_time}</span>
-                          <span className="text-blue-400 font-semibold ml-2">({formatHours(recovery.hours)})</span>
+                          <span className="text-slate-300 font-semibold ml-2">({formatHours(recovery.hours)})</span>
                         </div>
                         {recovery.reason && (
                           <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
@@ -1279,8 +1279,8 @@ const RecuperiOre = () => {
                   </div>
 
                   {recoveryFormData.recoveryDate && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                      <p className="text-sm text-blue-400">
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
+                      <p className="text-sm text-slate-300">
                         📅 Data selezionata: <strong>{new Date(recoveryFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
                       </p>
                     </div>
