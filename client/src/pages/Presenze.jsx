@@ -19,6 +19,7 @@ const Attendance = () => {
   const [remainingDays, setRemainingDays] = useState(0);
   const [workSchedules, setWorkSchedules] = useState([]);
   const [permissions104, setPermissions104] = useState([]); // Permessi 104 approvati
+  const [permissionsMap, setPermissionsMap] = useState({}); // Permessi approvati per date (per badge blu)
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAttendanceDetails, setShowAttendanceDetails] = useState(false);
@@ -66,7 +67,7 @@ const Attendance = () => {
 
       try {
         // 1. Carica i dati di base (incluso fetchCurrentHours per popolare i KPI)
-        await Promise.all([
+        const attendanceData = await Promise.all([
           fetchAttendance(),
           fetchHoursBalance(),
           fetchTotalBalance(),
@@ -77,6 +78,11 @@ const Attendance = () => {
 
         // 2. Carica i dati real-time dall'endpoint PRIMA di calcolare localmente
         await fetchCurrentHours();
+
+        // 3. Recupera permessi per tutte le date visualizzate
+        if (attendanceData[0] && attendanceData[0].length > 0) {
+          await fetchPermissionsForDates(attendanceData[0]);
+        }
 
         // 3. Calcola IMMEDIATAMENTE le ore in tempo reale (come backup/aggiornamento)
         // Solo se workSchedules è disponibile, altrimenti usa i dati dall'endpoint
@@ -203,6 +209,10 @@ const Attendance = () => {
         const data = await response.json();
         const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
         setAttendance(sortedData);
+        // Recupera permessi per tutte le date visualizzate
+        if (sortedData.length > 0) {
+          await fetchPermissionsForDates(sortedData);
+        }
         return sortedData;
       } else {
         console.error('Attendance fetch failed:', response.status);
@@ -358,6 +368,42 @@ const Attendance = () => {
       const checkDate = new Date(dateStr);
       return checkDate >= start && checkDate <= end;
     });
+  };
+
+  // Recupera permessi approvati per tutte le date visualizzate
+  const fetchPermissionsForDates = async (attendanceRecords) => {
+    try {
+      if (!attendanceRecords || attendanceRecords.length === 0) {
+        setPermissionsMap({});
+        return;
+      }
+
+      // Estrai tutte le date uniche
+      const dates = [...new Set(attendanceRecords.map(r => r.date))];
+
+      // Recupera permessi per ogni data
+      const permissionsMapNew = {};
+      
+      for (const date of dates) {
+        try {
+          const response = await apiCall(`/api/leave-requests/permission-hours?userId=${user?.id}&date=${date}`);
+          if (response.ok) {
+            const data = await response.json();
+            // L'endpoint restituisce solo permessi normali (non 104), quindi se totalPermissionHours > 0, c'è un permesso
+            if (data.totalPermissionHours > 0) {
+              permissionsMapNew[date] = true;
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching permission for ${date}:`, err);
+        }
+      }
+
+      setPermissionsMap(permissionsMapNew);
+      console.log('📋 Permissions map updated:', Object.keys(permissionsMapNew).length, 'permessi trovati');
+    } catch (error) {
+      console.error('Error fetching permissions for dates:', error);
+    }
   };
 
   const calculateKPIs = (attendanceData = attendance) => {
@@ -857,7 +903,7 @@ const Attendance = () => {
   };
 
 
-  function computeStatusInfo(record = {}) {
+  function computeStatusInfo(record = {}, hasPermission = false) {
     const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0, is_vacation } = record;
     const hasWorked = actual_hours > 0;
 
@@ -866,7 +912,8 @@ const Attendance = () => {
       yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
       red: 'bg-red-500/20 text-red-300 border border-red-400/30',
       gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30',
-      purple: 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
+      purple: 'bg-purple-500/20 text-purple-300 border border-purple-400/30',
+      blue: 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
     };
 
     // Controlla prima se è in ferie (is_vacation o leave_type === 'vacation')
@@ -881,8 +928,8 @@ const Attendance = () => {
     if (is_justified_absence && leave_type === 'permission' && hasWorked) {
       return {
         text: 'Presente (con permesso)',
-        colorClass: 'text-green-400',
-        badgeClass: badgeClasses.green
+        colorClass: hasPermission ? 'text-blue-400' : 'text-green-400',
+        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green
       };
     }
 
@@ -912,8 +959,8 @@ const Attendance = () => {
     if (hasWorked) {
       return {
         text: 'Presente',
-        colorClass: 'text-green-400',
-        badgeClass: badgeClasses.green
+        colorClass: hasPermission ? 'text-blue-400' : 'text-green-400',
+        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green
       };
     }
 
@@ -934,7 +981,8 @@ const Attendance = () => {
   }
 
   const getStatusColor = (record) => {
-    return computeStatusInfo(record).colorClass;
+    const hasPermission = record.date ? permissionsMap[record.date] || false : false;
+    return computeStatusInfo(record, hasPermission).colorClass;
   };
 
   const getStatusText = (record) => {
