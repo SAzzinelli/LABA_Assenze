@@ -801,7 +801,7 @@ const Profile = () => {
       )}
 
       {/* Tab dei giorni */}
-      <div className="flex space-x-3 bg-slate-800 p-2 rounded-xl">
+      <div className="flex space-x-3 bg-zinc-800 p-2 rounded-xl border border-zinc-700">
         {Object.entries(dayNames).map(([dayKey, dayName]) => (
           <button
             key={dayKey}
@@ -819,7 +819,7 @@ const Profile = () => {
 
 
       {/* Contenuto del giorno selezionato */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
         <div className="flex items-center justify-between mb-6">
           <h4 className="text-lg font-semibold text-white">{dayNames[selectedDay]}</h4>
           <button
@@ -1133,7 +1133,7 @@ const Profile = () => {
 
       {/* Form cambio password */}
       <form onSubmit={handleChangePassword} className="space-y-6">
-        <div className="bg-slate-700/50 rounded-lg p-6 space-y-6">
+        <div className="bg-zinc-800 rounded-lg p-6 space-y-6 border border-zinc-700">
           {/* Password attuale */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -1144,7 +1144,7 @@ const Profile = () => {
                 type={showPasswords.current ? 'text' : 'password'}
                 value={passwordData.currentPassword}
                 onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 pr-10 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 placeholder="Inserisci la password attuale"
                 required
               />
@@ -1172,7 +1172,7 @@ const Profile = () => {
                 type={showPasswords.new ? 'text' : 'password'}
                 value={passwordData.newPassword}
                 onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 pr-10 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 placeholder="Inserisci la nuova password (min. 6 caratteri)"
                 required
                 minLength={6}
@@ -1204,7 +1204,7 @@ const Profile = () => {
                 type={showPasswords.confirm ? 'text' : 'password'}
                 value={passwordData.confirmPassword}
                 onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                className="w-full px-3 py-2 pr-10 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 pr-10 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 placeholder="Ripeti la nuova password"
                 required
                 minLength={6}
