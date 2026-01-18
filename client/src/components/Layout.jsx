@@ -402,7 +402,6 @@ const Layout = ({ children }) => {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Main content */}
       <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
