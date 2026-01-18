@@ -259,7 +259,7 @@ const Layout = ({ children }) => {
                   onClick={handleClick}
                   className={`group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:shadow-md'
                   }`}
                 >
@@ -276,7 +276,7 @@ const Layout = ({ children }) => {
           <div className="flex-shrink-0 p-4 border-t border-slate-700">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {user?.role === 'admin' ? 'HR' : `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`}
                   </span>
@@ -355,7 +355,7 @@ const Layout = ({ children }) => {
                       to={item.href}
                       className={`group flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors ${
                         isActive
-                          ? 'bg-indigo-600 text-white'
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                           : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                       }`}
                       onClick={() => setSidebarOpen(false)}
@@ -374,7 +374,7 @@ const Layout = ({ children }) => {
             <div className="flex-shrink-0 p-4 border-t border-slate-700">
               <div className="flex items-center mb-3">
                 <div className="flex-shrink-0">
-                  <div className="h-10 w-10 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
                     <span className="text-white font-bold text-sm">
                       {user?.role === 'admin' ? 'HR' : `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`}
                     </span>
@@ -408,7 +408,7 @@ const Layout = ({ children }) => {
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-slate-800 border-b border-slate-700 shadow-lg">
           <button
-            className="px-3 sm:px-4 py-3 border-r border-slate-700 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="px-3 sm:px-4 py-3 border-r border-slate-700 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}
             aria-label="Apri menu"
           >
