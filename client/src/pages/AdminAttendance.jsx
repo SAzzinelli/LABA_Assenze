@@ -636,7 +636,7 @@ const AdminAttendance = () => {
   const getStatusColor = (status, hasPermission = false) => {
     // Se c'è un permesso e lo status è 'present' o 'completed', usa blu
     if (hasPermission && (status === 'present' || status === 'completed')) {
-      return 'bg-blue-900 text-blue-100 border-blue-700';
+      return 'bg-zinc-800 text-slate-300 border-zinc-700';
     }
     
     switch (status) {
@@ -647,8 +647,8 @@ const AdminAttendance = () => {
       case 'absent': return 'bg-red-900 text-red-100 border-red-700';
       case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';
       case 'vacation': return 'bg-purple-900 text-purple-100 border-purple-700';
-      case 'permission_104': return 'bg-blue-900 text-blue-100 border-blue-700';
-      case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
+      case 'permission_104': return 'bg-purple-900 text-purple-100 border-purple-700';
+      case 'holiday': return 'bg-zinc-800 text-slate-300 border-zinc-700';
       case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
       case 'on_break': return 'bg-orange-900 text-orange-100 border-orange-700';
       default: return 'bg-gray-900 text-gray-100 border-gray-700';
@@ -1269,8 +1269,8 @@ const AdminAttendance = () => {
                   Ultimo aggiornamento: {lastUpdate.toLocaleTimeString('it-IT')}
                 </p>
                 {dataLoading && (
-                  <div className="flex items-center gap-1 text-indigo-400 text-sm">
-                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent"></div>
+                  <div className="flex items-center gap-1 text-slate-400 text-sm">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-zinc-600 border-t-transparent"></div>
                     <span>Aggiornamento...</span>
                   </div>
                 )}
@@ -1304,8 +1304,8 @@ const AdminAttendance = () => {
 
           <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-zinc-800 rounded-lg border border-zinc-700">
+                <Clock className="h-6 w-6 text-slate-400" />
               </div>
               <div className="ml-4">
                 <p className="text-slate-400 text-sm">Attualmente Presenti</p>
@@ -1333,8 +1333,8 @@ const AdminAttendance = () => {
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                ? 'bg-zinc-900 text-white shadow-lg border border-zinc-700'
+                : 'text-slate-400 hover:text-white hover:bg-zinc-800'
                 }`}
             >
               <CalendarDays className="h-4 w-4" />
@@ -1343,8 +1343,8 @@ const AdminAttendance = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                ? 'bg-zinc-900 text-white shadow-lg border border-zinc-700'
+                : 'text-slate-400 hover:text-white hover:bg-zinc-800'
                 }`}
             >
               <BarChart3 className="h-4 w-4" />
@@ -1355,7 +1355,7 @@ const AdminAttendance = () => {
 
         {/* Filtri e Export - Solo in Cronologia */}
         {activeTab === 'history' && (
-          <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+          <div className="bg-zinc-900 rounded-lg p-6 mb-6 border border-zinc-800">
             <div className="flex flex-col sm:flex-row items-end gap-4">
               <div className="flex-1 min-w-0">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Cerca Dipendente</label>
@@ -1366,7 +1366,7 @@ const AdminAttendance = () => {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Nome o cognome..."
-                    className="w-full pl-10 pr-3 py-2 h-[42px] bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-3 py-2 h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
               </div>
@@ -1376,7 +1376,7 @@ const AdminAttendance = () => {
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 >
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -1391,7 +1391,7 @@ const AdminAttendance = () => {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 >
                   {Array.from({ length: 5 }, (_, i) => {
                     const year = new Date().getFullYear() - 2 + i;
@@ -1411,7 +1411,7 @@ const AdminAttendance = () => {
                   onClick={handleDownloadMonthlyReportExcel}
                   disabled={downloadingExcel}
                   className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 h-[42px] text-sm font-medium transition whitespace-nowrap ${downloadingExcel
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                    ? 'bg-zinc-800 text-slate-400 cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-500'
                     }`}
                 >
@@ -1424,8 +1424,8 @@ const AdminAttendance = () => {
         )}
 
         {/* Presenze - Responsive: cards on mobile, table on lg+ */}
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-700">
+        <div className="bg-zinc-900 rounded-lg border border-zinc-800 overflow-hidden">
+          <div className="px-6 py-4 border-b border-zinc-800">
             <h2 className="text-xl font-semibold text-white flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
               {activeTab === 'today' ? 'Presenze di Oggi' : 'Cronologia Presenze'}
@@ -1454,22 +1454,22 @@ const AdminAttendance = () => {
               const hasAnyPermission = hasPermission || hasPermissionToday;
               
               return (
-                <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 transition-colors">
+                <div key={record.id || record.user_id} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 sm:p-4 hover:bg-zinc-900 transition-colors">
                   <div className="flex items-center justify-between mb-2 gap-2">
                     <div className="font-semibold text-white truncate text-sm sm:text-base flex-1 min-w-0">{name}</div>
                     <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status, hasAnyPermission)}`}>{getStatusText(realTime.status)}</span>
                   </div>
                   <div className="text-slate-400 text-xs sm:text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
-                    <div className="bg-slate-700/50 rounded-lg p-2">
+                    <div className="bg-zinc-800/50 rounded-lg p-2 border border-zinc-700/50">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Attese</div>
                       <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.expectedHours)}</div>
                     </div>
-                    <div className="bg-slate-700/50 rounded-lg p-2">
+                    <div className="bg-zinc-800/50 rounded-lg p-2 border border-zinc-700/50">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Effettive</div>
                       <div className="font-mono text-white text-xs sm:text-sm font-semibold">{formatHours(realTime.actualHours)}</div>
                     </div>
-                    <div className="bg-slate-700/50 rounded-lg p-2">
+                    <div className="bg-zinc-800/50 rounded-lg p-2 border border-zinc-700/50">
                       <div className="text-slate-400 text-[10px] sm:text-xs mb-1">Saldo</div>
                       <div className={`font-mono font-bold text-xs sm:text-sm ${realTime.balanceHours > 0 ? 'text-green-400' : realTime.balanceHours < 0 ? 'text-red-400' : 'text-slate-400'}`}>{realTime.balanceHours > 0 ? '+' : ''}{formatHours(realTime.balanceHours)}</div>
                     </div>
@@ -1485,7 +1485,7 @@ const AdminAttendance = () => {
                       <>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
-                          className="p-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded-lg transition-colors border border-blue-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                           title="Modifica"
                         >
                           <Edit3 className="h-4 w-4" />
@@ -1510,7 +1510,7 @@ const AdminAttendance = () => {
             <div className="inline-block min-w-full align-middle">
               <div className="overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5 sm:rounded-lg">
                 <table className="min-w-full divide-y divide-slate-700">
-                  <thead className="bg-slate-700">
+                  <thead className="bg-zinc-800">
                     <tr>
                       <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Dipendente</th>
                       <th className="text-left py-3 px-3 sm:py-4 sm:px-6 font-medium text-slate-300 text-xs sm:text-sm">Data</th>
@@ -1610,10 +1610,10 @@ const AdminAttendance = () => {
                       const hasAnyPermission = hasPermission || hasPermissionToday;
 
                       return (
-                        <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                        <tr key={record.id || record.user_id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
                           <td className="py-3 px-2 sm:py-4 sm:px-6 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="h-6 w-6 sm:h-8 sm:w-8 bg-slate-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                              <div className="h-6 w-6 sm:h-8 sm:w-8 bg-zinc-800 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0 border border-zinc-700">
                                 <User className="h-3 w-3 sm:h-4 sm:w-4 text-slate-300" />
                               </div>
                               <div className="min-w-0">
@@ -1657,7 +1657,7 @@ const AdminAttendance = () => {
                                 disabled={record.is_realtime || record.is_vacation}
                                 className={`p-2 rounded-lg transition-colors ${record.is_realtime || record.is_vacation
                                   ? 'text-slate-500 cursor-not-allowed opacity-50'
-                                  : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/20'
+                                  : 'text-white hover:text-slate-200 hover:bg-zinc-800'
                                   }`}
                                 title={record.is_realtime ? "Dati real-time non modificabili" : record.is_vacation ? "Giorno di ferie non modificabile" : "Modifica record"}
                               >
@@ -1719,7 +1719,7 @@ const AdminAttendance = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md mx-4 border border-zinc-800">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Modifica Record Presenza</h3>
                 <button
@@ -1749,7 +1749,7 @@ const AdminAttendance = () => {
                       }
                     }}
                     placeholder="0:00"
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   <p className="text-xs text-slate-400 mt-1">Formato: HH:MM (es. 8:30 per 8 ore e 30 minuti)</p>
                 </div>
@@ -1759,7 +1759,7 @@ const AdminAttendance = () => {
                   <textarea
                     value={editForm.notes}
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     rows="3"
                     placeholder="Aggiungi note..."
                   />
@@ -1796,7 +1796,7 @@ const AdminAttendance = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md mx-4 border border-zinc-800">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Conferma Eliminazione</h3>
                 <button
@@ -1917,7 +1917,7 @@ const AdminAttendance = () => {
                     <select
                       value={generateForm.employeeId}
                       onChange={(e) => setGenerateForm({ ...generateForm, employeeId: e.target.value })}
-                      className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     >
                       <option value="">Seleziona dipendente</option>
                       {allEmployees.map((emp) => (
