@@ -825,7 +825,7 @@ const RecuperiOre = () => {
             ? 'bg-gradient-to-br from-red-900/30 to-red-800/20 border-red-500/50 shadow-lg shadow-red-500/10' 
             : totalBalance > 0 
             ? 'bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 shadow-lg shadow-green-500/10' 
-            : 'bg-zinc-950/50 border-zinc-900'}`}>
+            : 'bg-zinc-900/50 border-zinc-800'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Saldo Banca Ore</h3>
               <div className={`p-2 rounded-lg ${totalBalance < 0 ? 'bg-red-500/20' : totalBalance > 0 ? 'bg-green-500/20' : 'bg-slate-700'}`}>
@@ -841,7 +841,7 @@ const RecuperiOre = () => {
           </div>
 
           {/* Recuperi Attivi */}
-          <div className="bg-zinc-950/50 border border-zinc-900 rounded-xl p-6">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Recuperi Attivi</h3>
               <div className="p-2 rounded-lg bg-blue-500/20">
@@ -905,7 +905,7 @@ const RecuperiOre = () => {
 
         {/* Spiegazione Processo Recupero Ore */}
         {totalBalance < 0 && (
-          <div className="bg-zinc-950/50 border border-zinc-900 rounded-xl p-6">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center mb-4">
               <Info className="h-6 w-6 mr-3 text-blue-400" />
               <h3 className="text-lg font-bold text-white">Come Funziona il Recupero Ore</h3>
@@ -1002,7 +1002,7 @@ const RecuperiOre = () => {
 
         {/* Recuperi Programmati */}
         {(approvedRecoveries.length > 0 || pendingRecoveries.length > 0 || proposedRecoveries.length > 0) ? (
-          <div className="bg-zinc-950/50 border border-zinc-900 rounded-xl p-6">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-white flex items-center mb-2">
                 <Timer className="h-6 w-6 mr-3 text-blue-400" />

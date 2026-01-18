@@ -223,7 +223,7 @@ const Layout = ({ children }) => {
     <div className="min-h-screen bg-black flex">
       {/* Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 transform transition-transform duration-300 ease-in-out">
-        <div className="flex flex-col flex-grow bg-black border-r border-zinc-900 shadow-xl">
+        <div className="flex flex-col flex-grow bg-zinc-950 border-r border-zinc-900 shadow-xl">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 py-4">
             <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
@@ -260,7 +260,7 @@ const Layout = ({ children }) => {
                   className={`group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out transform hover:scale-105 ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
-                      : 'text-slate-300 hover:bg-slate-700 hover:text-white hover:shadow-md'
+                      : 'text-slate-300 hover:bg-zinc-900 hover:text-white hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center">
@@ -292,7 +292,7 @@ const Layout = ({ children }) => {
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-2 p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700"
+                className="ml-2 p-1 rounded text-slate-400 hover:text-white hover:bg-zinc-900"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -310,7 +310,7 @@ const Layout = ({ children }) => {
           style={{ opacity: sidebarOpen ? 0.5 : 0 }}
           onClick={() => setSidebarOpen(false)}
         />
-        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-black transform transition-all duration-300 ease-in-out ${
+        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-zinc-950 transform transition-all duration-300 ease-in-out ${
           sidebarOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
         }`}>
             <div className="absolute top-0 right-0 -mr-12 pt-2">
@@ -356,7 +356,7 @@ const Layout = ({ children }) => {
                       className={`group flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors ${
                         isActive
                           ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
-                          : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                          : 'text-slate-300 hover:bg-zinc-900 hover:text-white'
                       }`}
                       onClick={() => setSidebarOpen(false)}
                     >
@@ -406,7 +406,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-black border-b border-zinc-900 shadow-lg">
+        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-zinc-950 border-b border-zinc-900 shadow-lg">
           <button
             className="px-3 sm:px-4 py-3 border-r border-zinc-900 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}
@@ -449,7 +449,7 @@ const Layout = ({ children }) => {
                     />
                     
                     {/* Sidebar - Responsive: full width su mobile, w-96 su desktop */}
-                    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-zinc-950 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
+                    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-zinc-900 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
                       <div className="flex flex-col h-full">
                         {/* Header */}
                         <div className="p-6 border-b border-zinc-900">
@@ -516,7 +516,7 @@ const Layout = ({ children }) => {
                                                 e.stopPropagation();
                                                 markAsUnread(notification.id);
                                               }}
-                                              className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                                              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded transition-colors"
                                               title="Segna come non letta"
                                             >
                                               <EyeOff className="h-3.5 w-3.5" />
@@ -527,7 +527,7 @@ const Layout = ({ children }) => {
                                                 e.stopPropagation();
                                                 markAsRead(notification.id);
                                               }}
-                                              className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                                              className="p-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded transition-colors"
                                               title="Segna come letta"
                                             >
                                               <Eye className="h-3.5 w-3.5" />

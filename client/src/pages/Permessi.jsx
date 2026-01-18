@@ -1154,7 +1154,7 @@ const LeaveRequests = () => {
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header Mobile-First: Design completamente diverso su mobile */}
       {/* Mobile: Header compatto con titolo e icona */}
-      <div className="lg:hidden bg-zinc-950 rounded-xl p-4 sticky top-16 z-20 shadow-xl border border-zinc-900/50">
+      <div className="lg:hidden bg-zinc-900 rounded-xl p-4 sticky top-16 z-20 shadow-xl border border-zinc-800/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -1178,7 +1178,7 @@ const LeaveRequests = () => {
       </div>
 
       {/* Desktop: Header migliorato con migliore UX */}
-      <div className="hidden lg:block bg-zinc-950 rounded-xl p-6 shadow-xl border border-zinc-900/50">
+      <div className="hidden lg:block bg-zinc-900 rounded-xl p-6 shadow-xl border border-zinc-800/50">
         <div className="flex flex-row items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-3">
@@ -1223,7 +1223,7 @@ const LeaveRequests = () => {
       </div>
 
       {/* Filtri Collassabili */}
-      <div className="bg-zinc-950 rounded-lg overflow-hidden">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <button
           onClick={() => setFiltersCollapsed(!filtersCollapsed)}
           className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"

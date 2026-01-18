@@ -1290,7 +1290,7 @@ const AdminAttendance = () => {
 
         {/* Statistiche */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-zinc-950 rounded-lg p-6 border border-zinc-900">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600" />
@@ -1302,7 +1302,7 @@ const AdminAttendance = () => {
             </div>
           </div>
 
-          <div className="bg-zinc-950 rounded-lg p-6 border border-zinc-900">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Clock className="h-6 w-6 text-blue-600" />
@@ -1314,7 +1314,7 @@ const AdminAttendance = () => {
             </div>
           </div>
 
-          <div className="bg-zinc-950 rounded-lg p-6 border border-zinc-900">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
                 <AlertCircle className="h-6 w-6 text-red-600" />
@@ -1329,7 +1329,7 @@ const AdminAttendance = () => {
 
         {/* Tabs */}
         <div className="mb-6">
-          <div className="flex space-x-1 bg-zinc-950 p-1 rounded-lg border border-zinc-900">
+          <div className="flex space-x-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'

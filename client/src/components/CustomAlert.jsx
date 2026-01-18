@@ -85,7 +85,7 @@ const CustomAlert = ({
       
       {/* Alert Modal */}
       <div className={`
-        relative bg-zinc-950 border rounded-lg p-6 max-w-md w-full mx-4
+        relative bg-zinc-900 border rounded-lg p-6 max-w-md w-full mx-4
         transform transition-all duration-200
         ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}
         ${getBgColor()}

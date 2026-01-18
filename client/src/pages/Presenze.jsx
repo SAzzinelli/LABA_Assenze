@@ -1146,7 +1146,7 @@ const Attendance = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           {/* TOTALE ORE LAVORATE */}
-          <div className="bg-zinc-950 rounded-lg p-3 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Ore Lavorate</p>
@@ -1163,7 +1163,7 @@ const Attendance = () => {
           </div>
 
           {/* DA LAVORARE OGGI */}
-          <div className="bg-zinc-950 rounded-lg p-3 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Da lavorare oggi</p>
@@ -1178,7 +1178,7 @@ const Attendance = () => {
           </div>
 
           {/* GIORNI LAVORATI */}
-          <div className="bg-zinc-950 rounded-lg p-3 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni Lavorati</p>
@@ -1193,7 +1193,7 @@ const Attendance = () => {
           </div>
 
           {/* GIORNI RIMANENTI */}
-          <div className="bg-zinc-950 rounded-lg p-3 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-3 sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-xs sm:text-sm uppercase mb-1">Giorni Rimanenti</p>

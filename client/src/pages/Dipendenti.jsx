@@ -399,7 +399,7 @@ const Employees = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-zinc-950 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
@@ -482,7 +482,7 @@ const Employees = () => {
           <div
             key={employee.id}
             onClick={() => handleViewDetails(employee)}
-            className="bg-zinc-950 rounded-xl p-4 border border-zinc-900 hover:border-zinc-800 transition-all hover:shadow-md"
+            className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-all hover:shadow-md"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">

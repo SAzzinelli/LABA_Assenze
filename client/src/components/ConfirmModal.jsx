@@ -20,7 +20,7 @@ const ConfirmModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="relative max-w-md w-full mx-4 bg-zinc-950 rounded-lg shadow-xl border-2 border-red-500/30">
+      <div className="relative max-w-md w-full mx-4 bg-zinc-900 rounded-lg shadow-xl border-2 border-red-500/30">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-900">
           <div className="flex items-center space-x-3">

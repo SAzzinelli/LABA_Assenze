@@ -167,7 +167,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="firstName"
             value={formData.firstName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -179,7 +179,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="lastName"
             value={formData.lastName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -191,7 +191,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="birthDate"
             value={formData.birthDate}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -203,7 +203,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="nome.cognome@labafirenze.com"
             required
           />
@@ -216,7 +216,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="confirmEmail"
             value={formData.confirmEmail}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="conferma la tua email"
             required
           />
@@ -229,7 +229,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -241,7 +241,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -253,7 +253,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
           />
         </div>
@@ -265,7 +265,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="+39 333 123 4567"
             required
           />
@@ -555,7 +555,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-950 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-900">
           <div>
