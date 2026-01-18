@@ -5121,14 +5121,58 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
 
     console.log(`🔍 Query result: ${attendanceRecords?.length || 0} records, error: ${monthlyError ? JSON.stringify(monthlyError) : 'none'}`);
 
+    // IMPORTANTE: Trova ferie che si sovrappongono al mese PRIMA di contare i giorni lavorati
+    // così possiamo escluderle dal conteggio
+    const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+    const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+    
+    const { data: approvedLeaves } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date, type')
+      .eq('user_id', userId)
+      .eq('status', 'approved')
+      .in('type', ['vacation', 'sick_leave'])
+      .lte('start_date', monthEnd)  // Inizia prima o durante il mese
+      .gte('end_date', monthStart);  // Finisce durante o dopo il mese
+
+    // Crea un Set con tutte le date di ferie/malattia nel mese
+    const vacationDatesInMonth = new Set();
+    if (approvedLeaves && approvedLeaves.length > 0) {
+      const monthStartDate = new Date(monthStart);
+      const monthEndDate = new Date(monthEnd);
+
+      approvedLeaves.forEach(leave => {
+        const start = new Date(leave.start_date);
+        const end = new Date(leave.end_date);
+
+        // Calcola i giorni nel range che cadono nel mese corrente
+        const actualStart = start < monthStartDate ? monthStartDate : start;
+        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
+
+        if (actualStart <= actualEnd) {
+          // Aggiungi tutte le date del periodo di ferie al Set
+          for (let d = new Date(actualStart); d <= actualEnd; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            vacationDatesInMonth.add(dateStr);
+          }
+        }
+      });
+      
+      console.log(`🏖️ Trovati ${approvedLeaves.length} periodi di ferie/malattia che si sovrappongono al mese, per un totale di ${vacationDatesInMonth.size} giorni nel mese`);
+    }
+
     // Conta giorni unici: se esiste un record, è un giorno lavorato
+    // IMPORTANTE: Escludi i giorni di ferie dal conteggio dei giorni lavorati
     let daysWithAttendance = 0;
     if (attendanceRecords && !monthlyError) {
       if (attendanceRecords.length > 0) {
         const uniqueDays = new Set(attendanceRecords.map(record => record.date));
-        daysWithAttendance = uniqueDays.size;
+        // Filtra i giorni di ferie dal conteggio
+        const workedDays = Array.from(uniqueDays).filter(date => !vacationDatesInMonth.has(date));
+        daysWithAttendance = workedDays.length;
         console.log(`📊 Found ${attendanceRecords.length} attendance records for ${uniqueDays.size} unique days in month ${currentMonth}/${currentYear}`);
         console.log(`📊 Unique dates:`, Array.from(uniqueDays).sort());
+        console.log(`📊 Days worked (excluding vacations): ${daysWithAttendance} (excluded ${uniqueDays.size - workedDays.length} vacation days)`);
       } else {
         console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear} (query returned empty array)`);
         // FALLBACK: Prova query alternativa senza filtri di data per vedere se ci sono record
@@ -5144,8 +5188,9 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
             return recordDate.getFullYear() === currentYear && recordDate.getMonth() + 1 === currentMonth;
           });
           const uniqueDays = new Set(monthRecords.map(record => record.date));
-          daysWithAttendance = uniqueDays.size;
-          console.log(`🔧 Fallback: Found ${monthRecords.length} records in month, ${uniqueDays.size} unique days`);
+          const workedDays = Array.from(uniqueDays).filter(date => !vacationDatesInMonth.has(date));
+          daysWithAttendance = workedDays.length;
+          console.log(`🔧 Fallback: Found ${monthRecords.length} records in month, ${workedDays.length} worked days (excluding ${uniqueDays.size - workedDays.length} vacation days)`);
         }
       }
     } else if (monthlyError) {
@@ -5161,38 +5206,8 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       daysWithAttendance = fallbackCount || 0;
     }
 
-    // Count approved leave DAYS in this month (not just requests count, but actual days)
-    const { data: approvedLeaves } = await supabase
-      .from('leave_requests')
-      .select('start_date, end_date, type')
-      .eq('user_id', userId)
-      .eq('status', 'approved')
-      .in('type', ['vacation', 'sick_leave'])
-      .gte('start_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
-      .lte('start_date', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
-
-    // Calcola i giorni effettivi di permessi/ferie/malattia nel mese
-    let approvedLeaveDays = 0;
-    if (approvedLeaves && approvedLeaves.length > 0) {
-      const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
-      const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-
-      approvedLeaves.forEach(leave => {
-        const start = new Date(leave.start_date);
-        const end = new Date(leave.end_date);
-        const monthStartDate = new Date(monthStart);
-        const monthEndDate = new Date(monthEnd);
-
-        // Calcola i giorni nel range che cadono nel mese corrente
-        const actualStart = start < monthStartDate ? monthStartDate : start;
-        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
-
-        if (actualStart <= actualEnd) {
-          const daysDiff = Math.ceil((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
-          approvedLeaveDays += daysDiff;
-        }
-      });
-    }
+    // Calcola i giorni effettivi di permessi/ferie/malattia nel mese (per il conteggio totale)
+    const approvedLeaveDays = vacationDatesInMonth.size;
 
     // Monthly presences = days with attendance + approved leave days (giorni effettivi)
     const monthlyPresences = (daysWithAttendance || 0) + (approvedLeaveDays || 0);
