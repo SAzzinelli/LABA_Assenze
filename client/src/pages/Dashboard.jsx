@@ -840,7 +840,7 @@ const Dashboard = () => {
               <span className="text-slate-300 text-sm">Livello Gay</span>
               <span className="text-white font-bold text-lg">100%</span>
             </div>
-            <div className="w-full bg-slate-700 rounded-full h-6 overflow-hidden">
+            <div className="w-full bg-zinc-800 rounded-full h-6 overflow-hidden">
               <div 
                 className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 h-full flex items-center justify-center text-white font-bold text-xs animate-pulse"
                 style={{ width: '100%' }}
