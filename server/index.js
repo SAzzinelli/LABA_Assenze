@@ -2222,21 +2222,134 @@ app.get('/api/attendance/hours-balance', authenticateToken, async (req, res) => 
       return balance < 0 ? sum + Math.abs(balance) : sum;
     }, 0);
 
-    // Calcola workingDays considerando anche il calcolo real-time di oggi
-    let workingDays = attendance.filter(record => (record.actual_hours || 0) > 0).length;
-    let absentDays = attendance.filter(record => (record.actual_hours || 0) === 0).length;
+    // Recupera ferie, festività e orari di lavoro per filtrare correttamente i giorni lavorati
+    const monthStartForFilter = `${targetYear}-${targetMonth.toString().padStart(2, '0')}-01`;
+    const monthEndForFilter = `${targetYear}-${(targetMonth + 1).toString().padStart(2, '0')}-01`;
+    
+    // Recupera ferie approvate nel mese
+    const { data: approvedLeavesForFilter } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date, type')
+      .eq('user_id', targetUserId)
+      .eq('status', 'approved')
+      .in('type', ['vacation', 'sick_leave'])
+      .lte('start_date', monthEndForFilter)
+      .gte('end_date', monthStartForFilter);
+
+    const vacationDatesForFilter = new Set();
+    if (approvedLeavesForFilter && approvedLeavesForFilter.length > 0) {
+      const monthStartDate = new Date(monthStartForFilter);
+      const monthEndDate = new Date(monthEndForFilter);
+      approvedLeavesForFilter.forEach(leave => {
+        const start = new Date(leave.start_date);
+        const end = new Date(leave.end_date);
+        const actualStart = start < monthStartDate ? monthStartDate : start;
+        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
+        if (actualStart <= actualEnd) {
+          for (let d = new Date(actualStart); d <= actualEnd; d.setDate(d.getDate() + 1)) {
+            vacationDatesForFilter.add(d.toISOString().split('T')[0]);
+          }
+        }
+      });
+    }
+
+    // Recupera festività
+    const { data: holidaysForBalance } = await supabase
+      .from('holidays')
+      .select('date')
+      .gte('date', monthStartForFilter)
+      .lt('date', monthEndForFilter);
+
+    const holidayDatesForBalance = new Set();
+    if (holidaysForBalance && holidaysForBalance.length > 0) {
+      holidaysForBalance.forEach(holiday => {
+        holidayDatesForBalance.add(holiday.date);
+      });
+    }
+
+    // Crea mappa giorni lavorativi
+    const workingDaysMapForBalance = {};
+    if (workSchedules && workSchedules.length > 0) {
+      workSchedules.forEach(schedule => {
+        if (schedule.is_working_day) {
+          workingDaysMapForBalance[schedule.day_of_week] = true;
+        }
+      });
+    }
+
+    // Calcola workingDays escludendo ferie, festività, giorni non lavorativi e giorni con actual_hours = 0
+    let workingDays = attendance.filter(record => {
+      const date = new Date(record.date);
+      const dayOfWeek = date.getDay();
+      const dateStr = record.date;
+      
+      // Escludi giorni di ferie
+      if (vacationDatesForFilter.has(dateStr)) {
+        return false;
+      }
+      
+      // Escludi festività
+      if (holidayDatesForBalance.has(dateStr)) {
+        return false;
+      }
+      
+      // Escludi giorni non lavorativi (sabato/domenica se non lavorativi)
+      if (!workingDaysMapForBalance[dayOfWeek]) {
+        return false;
+      }
+      
+      // Escludi giorni con actual_hours = 0
+      if (!record.actual_hours || record.actual_hours <= 0) {
+        return false;
+      }
+      
+      return true;
+    }).length;
 
     // Se abbiamo calcolo real-time per oggi, aggiungilo ai workingDays se > 0
+    // MA solo se oggi NON è un giorno di ferie, festività o non lavorativo
     if (hasRealTimeCalculation && isCurrentMonth && realTimeActualHours > 0) {
-      // Controlla se oggi è già nel database
       const todayInDb = attendance.find(record => record.date === today);
       if (!todayInDb) {
-        // Oggi non è nel database ma abbiamo ore real-time > 0, aggiungilo
-        workingDays += 1;
-        console.log(`📊 Added today to workingDays (real-time): ${realTimeActualHours.toFixed(2)}h`);
+        // Verifica che oggi sia un giorno lavorativo valido
+        const todayDayOfWeek = now.getUTCDay();
+        const isTodayWorkingDay = workingDaysMapForBalance[todayDayOfWeek];
+        const isTodayVacation = vacationDatesForFilter.has(today);
+        const isTodayHoliday = holidayDatesForBalance.has(today);
+        
+        if (isTodayWorkingDay && !isTodayVacation && !isTodayHoliday) {
+          workingDays += 1;
+          console.log(`📊 Added today to workingDays (real-time): ${realTimeActualHours.toFixed(2)}h`);
+        } else {
+          console.log(`📊 Today excluded from workingDays: workingDay=${isTodayWorkingDay}, vacation=${isTodayVacation}, holiday=${isTodayHoliday}`);
+        }
       }
-      // Se oggi è nel database, workingDays è già corretto
     }
+
+    // Calcola absentDays (giorni con actual_hours = 0 ma che sono giorni lavorativi)
+    let absentDays = attendance.filter(record => {
+      const date = new Date(record.date);
+      const dayOfWeek = date.getDay();
+      const dateStr = record.date;
+      
+      // Escludi giorni di ferie (non sono assenze)
+      if (vacationDatesForFilter.has(dateStr)) {
+        return false;
+      }
+      
+      // Escludi festività (non sono assenze)
+      if (holidayDatesForBalance.has(dateStr)) {
+        return false;
+      }
+      
+      // Escludi giorni non lavorativi (non sono assenze)
+      if (!workingDaysMapForBalance[dayOfWeek]) {
+        return false;
+      }
+      
+      // Conta solo giorni con actual_hours = 0 che sono giorni lavorativi
+      return (!record.actual_hours || record.actual_hours <= 0);
+    }).length;
 
     console.log(`📊 Hours balance calculation (hybrid):`, {
       totalActualHours,
@@ -3119,56 +3232,11 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         console.log(`🔍 Schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}, break: ${todaySchedule.break_duration}min`);
       }
 
-      // Se non trova schedule, crea automaticamente quelli di default
+      // Se non trova schedule, NON creare automaticamente quelli di default
+      // Gli orari devono essere impostati manualmente dall'admin per evitare sovrascritture
       if (!todaySchedule || !user.work_schedules || user.work_schedules.length === 0) {
-        console.log(`🔧 [current] Creating default schedules for user ${user.id} (${user.first_name})...`);
-
-        const defaultSchedules = [
-          { user_id: user.id, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 2, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 3, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 4, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 5, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 },
-          { user_id: user.id, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }
-        ];
-
-        // Usa upsert invece di insert per evitare errori se gli schedule esistono già
-        const { error: createError } = await supabase
-          .from('work_schedules')
-          .upsert(defaultSchedules, {
-            onConflict: 'user_id,day_of_week',
-            ignoreDuplicates: false // Se esistono già, li aggiorna (ma non dovrebbe essere necessario)
-          });
-
-        if (createError) {
-          // Se l'errore è "duplicate key", ignoralo silenziosamente (gli schedule esistono già)
-          if (createError.code === '23505') {
-            console.log(`ℹ️ [current] Default schedules already exist for ${user.first_name}, skipping...`);
-          } else {
-            console.error(`❌ [current] Failed to create default schedules for ${user.first_name}:`, createError);
-          }
-          return {
-            user_id: user.id,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            name: `${user.first_name} ${user.last_name}`,
-            department: user.department || 'Non specificato',
-            is_working_day: false,
-            status: 'non_working_day',
-            actual_hours: 0,
-            expected_hours: 0,
-            balance_hours: 0,
-            permission_end_time: null
-          };
-        }
-
-        console.log(`✅ [current] Default schedules created for ${user.first_name}!`);
-
-        // Usa lo schedule di oggi dai default appena creati
-        const newTodaySchedule = defaultSchedules.find(s => s.day_of_week === userDayOfWeek);
-        if (!newTodaySchedule || !newTodaySchedule.is_working_day) {
-          return {
+        console.log(`⚠️ [current] Nessun orario trovato per ${user.first_name} ${user.last_name} (user_id: ${user.id}). Gli orari devono essere impostati manualmente dall'admin.`);
+        return {
             user_id: user.id,
             first_name: user.first_name,
             last_name: user.last_name,
@@ -4182,61 +4250,11 @@ app.get('/api/attendance/current-hours', authenticateToken, async (req, res) => 
       .single();
 
     if (scheduleError || !schedule) {
-      console.log(`❌ [current-hours] No schedule found:`, scheduleError);
-      console.log(`🔧 [current-hours] Creating default schedules for user ${userId}...`);
-
-      // Crea orari di default per tutti i giorni
-      const defaultSchedules = [
-        { user_id: userId, day_of_week: 1, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Lunedì
-        { user_id: userId, day_of_week: 2, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Martedì
-        { user_id: userId, day_of_week: 3, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Mercoledì
-        { user_id: userId, day_of_week: 4, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Giovedì
-        { user_id: userId, day_of_week: 5, is_working_day: true, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Venerdì
-        { user_id: userId, day_of_week: 6, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }, // Sabato
-        { user_id: userId, day_of_week: 0, is_working_day: false, start_time: '09:00', end_time: '18:00', break_duration: 60 }  // Domenica
-      ];
-
-      // Usa upsert invece di insert per evitare errori se gli schedule esistono già
-      const { error: createError } = await supabase
-        .from('work_schedules')
-        .upsert(defaultSchedules, {
-          onConflict: 'user_id,day_of_week',
-          ignoreDuplicates: false
-        });
-
-      if (createError) {
-        // Se l'errore è "duplicate key", ignoralo silenziosamente (gli schedule esistono già)
-        if (createError.code === '23505') {
-          console.log(`ℹ️ [current-hours] Default schedules already exist for user ${userId}, skipping...`);
-        } else {
-          console.error(`❌ [current-hours] Failed to create default schedules:`, createError);
-        }
-        return res.json({
-          isWorkingDay: false,
-          message: 'Nessun orario di lavoro per oggi'
-        });
-      }
-
-      console.log(`✅ [current-hours] Default schedules created! Retrying...`);
-
-      // Riprova a recuperare lo schedule
-      const { data: retrySchedule, error: retryError } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('day_of_week', dayOfWeek)
-        .eq('is_working_day', true)
-        .single();
-
-      if (retryError || !retrySchedule) {
-        return res.json({
-          isWorkingDay: false,
-          message: 'Nessun orario di lavoro per oggi'
-        });
-      }
-
-      // Usa il nuovo schedule
-      schedule = retrySchedule;
+      console.log(`⚠️ [current-hours] Nessun orario trovato per user ${userId}. Gli orari devono essere impostati manualmente dall'admin.`);
+      return res.json({
+        isWorkingDay: false,
+        message: 'Nessun orario di lavoro configurato. Contattare l\'admin per configurare gli orari.'
+      });
     }
 
     console.log(`✅ [current-hours] Schedule found: ${schedule.start_time}-${schedule.end_time}, break: ${schedule.break_duration}min`);
@@ -5114,7 +5132,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
 
     const { data: attendanceRecords, error: monthlyError } = await supabase
       .from('attendance')
-      .select('date')
+      .select('date, actual_hours')
       .eq('user_id', userId)
       .gte('date', monthStart)
       .lt('date', monthEnd);
@@ -5159,24 +5177,93 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       console.log(`🏖️ Trovati ${approvedLeaves.length} periodi di ferie/malattia che si sovrappongono al mese, per un totale di ${vacationDatesInMonth.size} giorni nel mese`);
     }
 
+    // Recupera gli orari di lavoro per escludere i giorni non lavorativi
+    const { data: workSchedulesForFilter, error: scheduleErrorForFilter } = await supabase
+      .from('work_schedules')
+      .select('day_of_week, is_working_day')
+      .eq('user_id', userId);
+
+    const workingDaysMapForFilter = {};
+    if (workSchedulesForFilter && !scheduleErrorForFilter) {
+      workSchedulesForFilter.forEach(schedule => {
+        if (schedule.is_working_day) {
+          workingDaysMapForFilter[schedule.day_of_week] = true;
+        }
+      });
+    }
+
+    // Recupera le festività del mese per escluderle
+    const { data: holidaysForFilter } = await supabase
+      .from('holidays')
+      .select('date')
+      .gte('date', monthStart)
+      .lt('date', monthEnd);
+
+    const holidayDatesForFilter = new Set();
+    if (holidaysForFilter && holidaysForFilter.length > 0) {
+      holidaysForFilter.forEach(holiday => {
+        holidayDatesForFilter.add(holiday.date);
+      });
+    }
+
     // Conta giorni unici: se esiste un record, è un giorno lavorato
-    // IMPORTANTE: Escludi i giorni di ferie dal conteggio dei giorni lavorati
+    // IMPORTANTE: Escludi i giorni di ferie, i giorni non lavorativi (sabato/domenica), le festività e i giorni con actual_hours = 0
     let daysWithAttendance = 0;
     if (attendanceRecords && !monthlyError) {
       if (attendanceRecords.length > 0) {
+        // Filtra i record per escludere:
+        // 1. Giorni di ferie
+        // 2. Giorni non lavorativi (sabato/domenica se non lavorativi)
+        // 3. Festività
+        // 4. Giorni con actual_hours = 0 (potrebbe essere un giorno non lavorativo o un permesso giornata intera)
+        const workedDays = attendanceRecords
+          .filter(record => {
+            const date = new Date(record.date);
+            const dayOfWeek = date.getDay(); // 0 = Domenica, 6 = Sabato
+            const dateStr = record.date;
+            
+            // Escludi giorni di ferie
+            if (vacationDatesInMonth.has(dateStr)) {
+              return false;
+            }
+            
+            // Escludi festività
+            if (holidayDatesForFilter.has(dateStr)) {
+              return false;
+            }
+            
+            // Escludi giorni non lavorativi (sabato/domenica se non lavorativi)
+            if (!workingDaysMapForFilter[dayOfWeek]) {
+              return false;
+            }
+            
+            // Escludi giorni con actual_hours = 0 (potrebbe essere un giorno non lavorativo o un permesso giornata intera)
+            if (!record.actual_hours || record.actual_hours <= 0) {
+              return false;
+            }
+            
+            return true;
+          })
+          .map(record => record.date);
+        
+        // Conta giorni unici
+        const uniqueWorkedDays = new Set(workedDays);
+        daysWithAttendance = uniqueWorkedDays.size;
+        
         const uniqueDays = new Set(attendanceRecords.map(record => record.date));
-        // Filtra i giorni di ferie dal conteggio
-        const workedDays = Array.from(uniqueDays).filter(date => !vacationDatesInMonth.has(date));
-        daysWithAttendance = workedDays.length;
         console.log(`📊 Found ${attendanceRecords.length} attendance records for ${uniqueDays.size} unique days in month ${currentMonth}/${currentYear}`);
         console.log(`📊 Unique dates:`, Array.from(uniqueDays).sort());
-        console.log(`📊 Days worked (excluding vacations): ${daysWithAttendance} (excluded ${uniqueDays.size - workedDays.length} vacation days)`);
+        console.log(`📊 Days worked (excluding vacations, non-working days, holidays, zero hours): ${daysWithAttendance}`);
+        console.log(`📊 Excluded: ${uniqueDays.size - uniqueWorkedDays.size} days (vacations: ${Array.from(uniqueDays).filter(d => vacationDatesInMonth.has(d)).length}, non-working: ${Array.from(uniqueDays).filter(d => {
+          const date = new Date(d);
+          return !workingDaysMapForFilter[date.getDay()];
+        }).length}, holidays: ${Array.from(uniqueDays).filter(d => holidayDatesForFilter.has(d)).length}, zero hours: ${attendanceRecords.filter(r => !r.actual_hours || r.actual_hours <= 0).length})`);
       } else {
         console.log(`⚠️ No attendance records found for month ${currentMonth}/${currentYear} (query returned empty array)`);
         // FALLBACK: Prova query alternativa senza filtri di data per vedere se ci sono record
         const { data: allRecords, error: allError } = await supabase
           .from('attendance')
-          .select('date')
+          .select('date, actual_hours')
           .eq('user_id', userId)
           .limit(100);
         console.log(`🔧 Fallback query: found ${allRecords?.length || 0} total records for user (first 100)`);
@@ -5185,10 +5272,26 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
             const recordDate = new Date(r.date);
             return recordDate.getFullYear() === currentYear && recordDate.getMonth() + 1 === currentMonth;
           });
-          const uniqueDays = new Set(monthRecords.map(record => record.date));
-          const workedDays = Array.from(uniqueDays).filter(date => !vacationDatesInMonth.has(date));
-          daysWithAttendance = workedDays.length;
-          console.log(`🔧 Fallback: Found ${monthRecords.length} records in month, ${workedDays.length} worked days (excluding ${uniqueDays.size - workedDays.length} vacation days)`);
+          
+          // Applica gli stessi filtri del codice principale
+          const workedDays = monthRecords
+            .filter(record => {
+              const date = new Date(record.date);
+              const dayOfWeek = date.getDay();
+              const dateStr = record.date;
+              
+              if (vacationDatesInMonth.has(dateStr)) return false;
+              if (holidayDatesForFilter.has(dateStr)) return false;
+              if (!workingDaysMapForFilter[dayOfWeek]) return false;
+              if (!record.actual_hours || record.actual_hours <= 0) return false;
+              
+              return true;
+            })
+            .map(record => record.date);
+          
+          const uniqueWorkedDays = new Set(workedDays);
+          daysWithAttendance = uniqueWorkedDays.size;
+          console.log(`🔧 Fallback: Found ${monthRecords.length} records in month, ${uniqueWorkedDays.size} worked days`);
         }
       }
     } else if (monthlyError) {
@@ -5207,8 +5310,9 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
     // Calcola i giorni effettivi di permessi/ferie/malattia nel mese (per il conteggio totale)
     const approvedLeaveDays = vacationDatesInMonth.size;
 
-    // Monthly presences = days with attendance + approved leave days (giorni effettivi)
-    const monthlyPresences = (daysWithAttendance || 0) + (approvedLeaveDays || 0);
+    // Monthly presences = SOLO giorni lavorati (NON includere le ferie nel conteggio)
+    // Le ferie sono già conteggiate separatamente come "approvedLeaveDays"
+    const monthlyPresences = daysWithAttendance || 0;
 
     // Recupera le festività del mese per escluderle dai giorni lavorativi attesi
     const { data: holidays } = await supabase
