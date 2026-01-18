@@ -891,7 +891,7 @@ const Vacation = () => {
 
       {/* Gestione Periodi Ferie (solo admin) */}
       {user?.role === 'admin' && showPeriodsManagement && (
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-white flex items-center">
               <Calendar className="h-6 w-6 mr-3 text-purple-400" />
