@@ -580,7 +580,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               disabled={!validateCurrentStep()}
               className={`flex items-center px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg border ${
                 validateCurrentStep()
-                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700 hover:shadow-xl border-indigo-500/30'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white hover:from-blue-600 hover:to-blue-800 hover:shadow-xl border-blue-500/30'
                   : 'bg-zinc-800/50 text-slate-500 cursor-not-allowed border-zinc-700/30'
               }`}
             >
