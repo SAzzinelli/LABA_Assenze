@@ -1240,7 +1240,7 @@ const Profile = () => {
           <button
             type="submit"
             disabled={changingPassword}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center font-medium"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center font-medium"
           >
             {changingPassword ? (
               <>
