@@ -1787,7 +1787,15 @@ const AdminAttendance = () => {
 
         {/* Modale Conferma Eliminazione */}
         {showDeleteConfirm && recordToDelete && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowDeleteConfirm(false);
+                setRecordToDelete(null);
+              }
+            }}
+          >
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4 border border-slate-700">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Conferma Eliminazione</h3>
@@ -1846,7 +1854,14 @@ const AdminAttendance = () => {
 
         {/* Modale Genera Presenze */}
         {showGenerateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowGenerateModal(false);
+              }
+            }}
+          >
             <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-slate-600">
