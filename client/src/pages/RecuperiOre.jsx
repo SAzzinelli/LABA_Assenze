@@ -822,7 +822,7 @@ const RecuperiOre = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Saldo Banca Ore - Card principale */}
           <div className={`rounded-xl p-6 border-2 transition-all ${totalBalance < 0 
-            ? 'bg-gradient-to-br from-red-900/15 to-red-800/10 border-red-500/30 shadow-lg shadow-red-500/5' 
+            ? 'bg-red-900 border-red-500 shadow-lg shadow-red-500/5' 
             : totalBalance > 0 
             ? 'bg-gradient-to-br from-green-900/15 to-green-800/10 border-green-500/30 shadow-lg shadow-green-500/5' 
             : 'bg-zinc-900 border-zinc-800'}`}>
@@ -841,7 +841,7 @@ const RecuperiOre = () => {
           </div>
 
           {/* Recuperi Attivi */}
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Recuperi Attivi</h3>
               <div className="p-2 rounded-lg bg-zinc-800/50">
@@ -905,7 +905,7 @@ const RecuperiOre = () => {
 
         {/* Spiegazione Processo Recupero Ore */}
         {totalBalance < 0 && (
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center mb-4">
               <Info className="h-6 w-6 mr-3 text-slate-400" />
               <h3 className="text-lg font-bold text-white">Come Funziona il Recupero Ore</h3>
@@ -1002,7 +1002,7 @@ const RecuperiOre = () => {
 
         {/* Recuperi Programmati */}
         {(approvedRecoveries.length > 0 || pendingRecoveries.length > 0 || proposedRecoveries.length > 0) ? (
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-white flex items-center mb-2">
                 <Timer className="h-6 w-6 mr-3 text-slate-400" />
