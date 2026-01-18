@@ -787,7 +787,7 @@ const Profile = () => {
         <button
           onClick={handleSaveSchedule}
           disabled={isLoadingSchedule}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors flex items-center"
+          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center"
         >
           <Save className="h-4 w-4 mr-2" />
           {isLoadingSchedule ? 'Caricamento...' : 'Salva Orario'}
