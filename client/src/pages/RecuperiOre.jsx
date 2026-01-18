@@ -822,7 +822,7 @@ const RecuperiOre = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Saldo Banca Ore - Card principale */}
           <div className={`rounded-xl p-6 border-2 transition-all ${totalBalance < 0 
-            ? 'bg-red-900/70 border-red-500 shadow-lg shadow-red-500/5' 
+            ? 'bg-red-900/50 border-red-500 shadow-lg shadow-red-500/5' 
             : totalBalance > 0 
             ? 'bg-gradient-to-br from-green-900/15 to-green-800/10 border-green-500/30 shadow-lg shadow-green-500/5' 
             : 'bg-zinc-900 border-zinc-800'}`}>
