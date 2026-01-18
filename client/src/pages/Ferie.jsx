@@ -698,7 +698,7 @@ const Vacation = () => {
             onClick={() => user?.role === 'admin' ? setShowAdminCreateModal(true) : setShowNewRequest(true)}
             disabled={user?.role !== 'admin' && availablePeriods.length === 0}
             className={`p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg ${user?.role !== 'admin' && availablePeriods.length === 0
-              ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+              ? 'bg-zinc-800 text-slate-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
               }`}
             aria-label="Aggiungi ferie"
@@ -806,7 +806,7 @@ const Vacation = () => {
                 onClick={() => setShowNewRequest(true)}
                 disabled={availablePeriods.length === 0}
                 className={`px-6 py-3 rounded-lg transition-colors flex items-center ${availablePeriods.length === 0
-                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                  ? 'bg-zinc-800 text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
                   }`}
                 title={availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Nuova Richiesta'}
@@ -915,7 +915,7 @@ const Vacation = () => {
           ) : (
             <div className="space-y-4">
               {vacationPeriods.map(period => (
-                <div key={period.id} className="bg-slate-700 rounded-lg p-6">
+                <div key={period.id} className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
@@ -1019,7 +1019,7 @@ const Vacation = () => {
                         ? 'bg-purple-600 border-purple-500 text-white'
                         : periodFormStep > step
                           ? 'bg-green-600 border-green-500 text-white'
-                          : 'bg-slate-700 border-slate-600 text-slate-400'
+                          : 'bg-zinc-800 border-zinc-700 text-slate-400'
                         }`}>
                         {periodFormStep > step ? (
                           <CheckCircle className="h-5 w-5" />
@@ -1036,7 +1036,7 @@ const Vacation = () => {
                       </span>
                     </div>
                     {step < 4 && (
-                      <div className={`flex-1 h-0.5 mx-2 ${periodFormStep > step ? 'bg-green-600' : 'bg-slate-700'
+                      <div className={`flex-1 h-0.5 mx-2 ${periodFormStep > step ? 'bg-green-600' : 'bg-zinc-800'
                         }`} />
                     )}
                   </React.Fragment>
@@ -1069,7 +1069,7 @@ const Vacation = () => {
                       onChange={handlePeriodInputChange}
                       required
                       placeholder="Es: Periodo Estivo 2025"
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                     <p className="text-xs text-slate-400 mt-1">Un nome descrittivo per identificare questo periodo</p>
                   </div>
@@ -1085,7 +1085,7 @@ const Vacation = () => {
                         value={periodFormData.startDate}
                         onChange={handlePeriodInputChange}
                         required
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-slate-400 mt-1">Da quando si possono inviare richieste</p>
                     </div>
@@ -1101,7 +1101,7 @@ const Vacation = () => {
                         onChange={handlePeriodInputChange}
                         required
                         min={periodFormData.startDate || ''}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-slate-400 mt-1">Fino a quando si possono inviare richieste</p>
                       {periodFormData.startDate && periodFormData.endDate && periodFormData.startDate > periodFormData.endDate && (
@@ -1136,7 +1136,7 @@ const Vacation = () => {
                         value={periodFormData.vacationStartDate}
                         onChange={handlePeriodInputChange}
                         required
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-slate-400 mt-1">Da quando si possono prendere le ferie</p>
                     </div>
@@ -1152,7 +1152,7 @@ const Vacation = () => {
                         onChange={handlePeriodInputChange}
                         required
                         min={periodFormData.vacationStartDate || ''}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-slate-400 mt-1">Fino a quando si possono prendere le ferie</p>
                       {periodFormData.vacationStartDate && periodFormData.vacationEndDate && periodFormData.vacationStartDate > periodFormData.vacationEndDate && (
@@ -1196,7 +1196,7 @@ const Vacation = () => {
                         onChange={handlePeriodInputChange}
                         min="1"
                         placeholder="Lasciare vuoto per illimitato"
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                       <p className="text-xs text-slate-400 mt-1">Limite massimo di dipendenti in ferie contemporaneamente (opzionale)</p>
                     </div>
@@ -1284,7 +1284,7 @@ const Vacation = () => {
                       onChange={handlePeriodInputChange}
                       rows={3}
                       placeholder="Note aggiuntive sul periodo..."
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
