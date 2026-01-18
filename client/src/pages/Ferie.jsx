@@ -689,7 +689,7 @@ const Vacation = () => {
       <div className="lg:hidden bg-zinc-900 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Plane className="h-5 w-5 text-blue-400 flex-shrink-0" />
+            <Plane className="h-5 w-5 text-slate-400 flex-shrink-0" />
             <h1 className="text-lg font-bold text-white truncate">
               {user?.role === 'admin' ? 'Ferie' : 'Le Mie Ferie'}
             </h1>
@@ -699,7 +699,7 @@ const Vacation = () => {
             disabled={user?.role !== 'admin' && availablePeriods.length === 0}
             className={`p-2 rounded-lg transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg ${user?.role !== 'admin' && availablePeriods.length === 0
               ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
               }`}
             aria-label="Aggiungi ferie"
             title={user?.role !== 'admin' && availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Aggiungi ferie'}
@@ -713,7 +713,7 @@ const Vacation = () => {
           <button
             onClick={() => setActiveView('list')}
             className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'list'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
               : 'text-slate-400'
               }`}
           >
@@ -723,7 +723,7 @@ const Vacation = () => {
           <button
             onClick={() => setActiveView('calendar')}
             className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'calendar'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
               : 'text-slate-400'
               }`}
           >
@@ -749,7 +749,7 @@ const Vacation = () => {
         <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Plane className="h-8 w-8 mr-3 text-blue-400 flex-shrink-0" />
+              <Plane className="h-8 w-8 mr-3 text-slate-400 flex-shrink-0" />
               <span className="truncate">{user?.role === 'admin' ? 'Gestione Ferie' : 'Le Mie Ferie'}</span>
             </h1>
             <p className="text-slate-400 mt-2 text-base">
@@ -765,7 +765,7 @@ const Vacation = () => {
               <button
                 onClick={() => setActiveView('list')}
                 className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'list'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
@@ -775,7 +775,7 @@ const Vacation = () => {
               <button
                 onClick={() => setActiveView('calendar')}
                 className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'calendar'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
@@ -807,7 +807,7 @@ const Vacation = () => {
                 disabled={availablePeriods.length === 0}
                 className={`px-6 py-3 rounded-lg transition-colors flex items-center ${availablePeriods.length === 0
                   ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
                   }`}
                 title={availablePeriods.length === 0 ? 'Nessun periodo aperto per le ferie' : 'Nuova Richiesta'}
               >
@@ -825,9 +825,9 @@ const Vacation = () => {
           <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-white">Totale Giorni</h3>
-              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0" />
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400 flex-shrink-0" />
             </div>
-            <p className="text-2xl sm:text-3xl font-bold text-blue-400">{vacationBalance.totalDays}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-slate-300">{vacationBalance.totalDays}</p>
             <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
           </div>
 
@@ -874,9 +874,9 @@ const Vacation = () => {
 
       {/* Mostra periodi disponibili */}
       {user?.role !== 'admin' && availablePeriods.length > 0 && (
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
           <div className="flex items-center mb-2">
-            <Calendar className="h-5 w-5 text-blue-400 mr-2" />
+            <Calendar className="h-5 w-5 text-slate-400 mr-2" />
             <p className="text-blue-300 font-semibold">Periodi di richiesta ferie aperti:</p>
           </div>
           <div className="space-y-2 mt-2">

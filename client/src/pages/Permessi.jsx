@@ -1157,8 +1157,8 @@ const LeaveRequests = () => {
       <div className="lg:hidden bg-zinc-900 rounded-xl p-4 sticky top-16 z-20 shadow-xl border border-zinc-800/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
+            <div className="p-2 bg-zinc-800/50 rounded-lg">
+              <FileText className="h-5 w-5 text-slate-400 flex-shrink-0" />
             </div>
             <h1 className="text-lg font-bold text-white truncate">
               {user?.role === 'admin' ? 'Permessi' : 'I Miei Permessi'}
@@ -1182,8 +1182,8 @@ const LeaveRequests = () => {
         <div className="flex flex-row items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2.5 bg-blue-500/20 rounded-xl">
-                <FileText className="h-7 w-7 text-blue-400 flex-shrink-0" />
+              <div className="p-2.5 bg-zinc-800/50 rounded-xl">
+                <FileText className="h-7 w-7 text-slate-400 flex-shrink-0" />
               </div>
               <h1 className="text-3xl font-bold text-white">
                 {user?.role === 'admin' ? 'Gestione Permessi' : 'I Miei Permessi'}
@@ -1229,7 +1229,7 @@ const LeaveRequests = () => {
           className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
         >
           <div className="flex items-center space-x-3">
-            <Filter className="h-5 w-5 text-blue-400" />
+            <Filter className="h-5 w-5 text-slate-400" />
             <span className="text-white font-medium">Filtri e Ricerca</span>
           </div>
           {filtersCollapsed ? (
@@ -1246,7 +1246,7 @@ const LeaveRequests = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                    <Calendar className="h-5 w-5 text-slate-400 flex-shrink-0" />
                     <span className="text-white font-medium text-sm sm:text-base">Filtro per periodo:</span>
                   </div>
                   <button
@@ -1308,7 +1308,7 @@ const LeaveRequests = () => {
           <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
-                <FileText className="h-6 w-6 mr-2 text-blue-400" />
+                <FileText className="h-6 w-6 mr-2 text-slate-400" />
                 Nuova Richiesta Permesso
               </h2>
               <button
@@ -1404,10 +1404,10 @@ const LeaveRequests = () => {
 
               {/* Mostra ore calcolate automaticamente */}
               {(formData.type === 'full_day' && fullDayHours !== null) || (formData.type !== 'full_day' && calculatePermissionHours() > 0) ? (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-blue-400 mr-2" />
-                    <span className="text-blue-300 font-medium">
+                    <Clock className="h-5 w-5 text-slate-400 mr-2" />
+                    <span className="text-slate-300 font-medium">
                       Ore di permesso calcolate: {formatHoursReadable(formData.type === 'full_day' ? fullDayHours : calculatePermissionHours())}
                     </span>
                   </div>
@@ -1575,7 +1575,7 @@ const LeaveRequests = () => {
                           {/* Row Superiore: Utente e Label Stato */}
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
                             {user?.role === 'admin' && (
-                              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/20">
+                              <div className="flex items-center gap-1.5 bg-zinc-800/50 text-slate-300 px-2 py-0.5 rounded-md border border-zinc-700">
                                 <User className="w-3 h-3" />
                                 <span className="text-xs font-bold truncate max-w-[150px]">
                                   {request.submittedBy || (request.user?.first_name ? `${request.user.first_name} ${request.user.last_name}` : 'Dipendente')}

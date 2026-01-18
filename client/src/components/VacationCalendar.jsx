@@ -205,7 +205,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
           {/* Titolo e mese/anno - Mobile friendly */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400 flex-shrink-0" />
+              <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-slate-400 flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <h2 className="text-base sm:text-xl font-bold text-white truncate">
                   {monthNames[currentMonth]} {currentYear}
@@ -225,7 +225,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
           </button>
           <button
             onClick={goToToday}
-                className="px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
+                className="px-2 sm:px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white text-xs sm:text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] font-medium"
           >
                 <span className="hidden sm:inline">OGGI</span>
                 <span className="sm:hidden">Oggi</span>
@@ -267,9 +267,9 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">Giorni</p>
-                <p className="text-lg sm:text-2xl font-bold text-blue-400">{monthStats.totalDays}</p>
+                <p className="text-lg sm:text-2xl font-bold text-slate-300">{monthStats.totalDays}</p>
         </div>
-              <Plane className="h-4 w-4 sm:h-8 sm:w-8 text-blue-400 flex-shrink-0 mx-auto sm:mx-0 mt-1 sm:mt-0" />
+              <Plane className="h-4 w-4 sm:h-8 sm:w-8 text-slate-400 flex-shrink-0 mx-auto sm:mx-0 mt-1 sm:mt-0" />
             </div>
           </div>
         </div>
@@ -287,17 +287,17 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             className={`
               rounded-lg p-3 cursor-pointer transition-colors border
               ${day.hasAdminCreated 
-                ? 'bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/50' 
+                ? 'bg-purple-900/20 border-purple-500/30 hover:bg-purple-800/30' 
                 : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700'}
               ${day.isToday ? 'ring-2 ring-blue-500' : ''}
-              ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600/20 ring-2 ring-blue-500' : ''}
+              ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-zinc-800/50 ring-2 ring-zinc-700' : ''}
             `}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
                 <div className={`
                   w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm
-                  ${day.isToday ? 'bg-blue-500 text-white' : 'bg-zinc-800 text-slate-200'}
+                  ${day.isToday ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white' : 'bg-zinc-800 text-slate-200'}
                 `}>
                   {day.date.getDate()}
                 </div>
@@ -356,7 +356,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
                       e.stopPropagation();
                       openDetailsModal(day.date, day.requests);
                     }}
-                    className="text-xs text-blue-400 hover:text-blue-300 text-center py-1 w-full cursor-pointer hover:underline"
+                    className="text-xs text-slate-400 hover:text-slate-300 text-center py-1 w-full cursor-pointer hover:underline"
                   >
                     + {day.requests.length - 3} altra/e richiesta/e
                   </button>

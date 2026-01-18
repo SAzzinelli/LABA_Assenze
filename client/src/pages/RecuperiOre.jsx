@@ -844,11 +844,11 @@ const RecuperiOre = () => {
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Recuperi Attivi</h3>
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <Timer className="h-5 w-5 text-blue-400" />
+              <div className="p-2 rounded-lg bg-zinc-800/50">
+                <Timer className="h-5 w-5 text-slate-400" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-blue-400 mb-1">
+            <p className="text-3xl font-bold text-slate-300 mb-1">
               {approvedRecoveries.length + pendingRecoveries.length + proposedRecoveries.length}
             </p>
             <p className="text-xs text-slate-400 font-medium">Richieste programmate</p>
@@ -907,15 +907,15 @@ const RecuperiOre = () => {
         {totalBalance < 0 && (
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-center mb-4">
-              <Info className="h-6 w-6 mr-3 text-blue-400" />
+              <Info className="h-6 w-6 mr-3 text-slate-400" />
               <h3 className="text-lg font-bold text-white">Come Funziona il Recupero Ore</h3>
             </div>
             
             <div className="space-y-4">
               {/* Timeline Richiesta Dipendente */}
-              <div className="border-l-2 border-blue-500 pl-4 space-y-3">
+              <div className="border-l-2 border-zinc-700 pl-4 space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center mt-0.5">
                     <span className="text-white text-xs font-bold">1</span>
                   </div>
                   <div className="flex-1">
@@ -973,7 +973,7 @@ const RecuperiOre = () => {
                 </div>
                 
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center mt-0.5">
                     <span className="text-white text-xs font-bold">2</span>
                   </div>
                   <div className="flex-1">
@@ -1005,7 +1005,7 @@ const RecuperiOre = () => {
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-white flex items-center mb-2">
-                <Timer className="h-6 w-6 mr-3 text-blue-400" />
+                <Timer className="h-6 w-6 mr-3 text-slate-400" />
                 Recuperi Programmati
               </h3>
               <p className="text-sm text-slate-400 ml-9">
@@ -1100,15 +1100,15 @@ const RecuperiOre = () => {
             {proposedRecoveries.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="h-5 w-5 text-blue-400" />
-                  <h4 className="text-base font-semibold text-blue-400">Proposte dall'amministratore ({proposedRecoveries.length})</h4>
+                  <AlertCircle className="h-5 w-5 text-slate-400" />
+                  <h4 className="text-base font-semibold text-slate-300">Proposte dall'amministratore ({proposedRecoveries.length})</h4>
                 </div>
                 {proposedRecoveries.map((recovery) => (
-                  <div key={recovery.id} className="bg-blue-500/10 border-l-4 border-blue-500 rounded-lg p-4 hover:bg-blue-500/15 transition-colors">
+                  <div key={recovery.id} className="bg-zinc-900/50 border-l-4 border-zinc-700 rounded-lg p-4 hover:bg-zinc-900/70 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="h-4 w-4 text-blue-400" />
+                          <Calendar className="h-4 w-4 text-slate-400" />
                           <div className="text-white font-semibold">
                             {new Date(recovery.recovery_date).toLocaleDateString('it-IT', {
                               weekday: 'long',

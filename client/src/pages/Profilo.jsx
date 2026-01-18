@@ -795,8 +795,8 @@ const Profile = () => {
       </div>
       
       {isLoadingSchedule && (
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-          <p className="text-blue-300 text-sm">Caricamento orario di lavoro dal database...</p>
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+          <p className="text-slate-300 text-sm">Caricamento orario di lavoro dal database...</p>
         </div>
       )}
 
@@ -864,8 +864,8 @@ const Profile = () => {
                   onClick={() => handleWorkTypeChange('afternoon')}
                   className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
                     workSchedule[selectedDay].workType === 'afternoon'
-                      ? 'bg-blue-500/20 border-2 border-blue-400/50 text-blue-300'
-                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                      ? 'bg-zinc-800/50 border-2 border-zinc-700 text-slate-300'
+                      : 'bg-zinc-900/30 border-2 border-zinc-800 text-slate-400 hover:border-zinc-700 hover:text-slate-300'
                   }`}
                 >
                   <Moon className="h-4 w-4 mr-2 inline" />
@@ -960,7 +960,7 @@ const Profile = () => {
               {(workSchedule[selectedDay].workType === 'afternoon' || workSchedule[selectedDay].workType === 'full') && (
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-                    <Moon className="h-4 w-4 mr-2 text-blue-400" />
+                    <Moon className="h-4 w-4 mr-2 text-slate-400" />
                     Orario Pomeriggio
                   </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -997,8 +997,8 @@ const Profile = () => {
       </div>
 
 
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-        <p className="text-blue-300 text-sm">
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+        <p className="text-slate-300 text-sm">
           <strong>Nota:</strong> L'orario di lavoro impostato sarà visibile all'amministratore nella sezione dipendenti e verrà utilizzato per calcolare le ore di presenza e assenze.
         </p>
       </div>
@@ -1266,8 +1266,8 @@ const Profile = () => {
             </svg>
           </div>
           <div className="ml-3">
-            <h4 className="text-sm font-medium text-blue-300">Suggerimenti per una password sicura</h4>
-            <ul className="mt-2 text-sm text-blue-200 list-disc list-inside space-y-1">
+            <h4 className="text-sm font-medium text-slate-300">Suggerimenti per una password sicura</h4>
+            <ul className="mt-2 text-sm text-slate-300 list-disc list-inside space-y-1">
               <li>Usa almeno 6 caratteri</li>
               <li>Combina lettere maiuscole e minuscole</li>
               <li>Includi numeri e caratteri speciali</li>

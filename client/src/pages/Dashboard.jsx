@@ -850,7 +850,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="bg-yellow-500/20 border-2 border-yellow-500 rounded-lg p-3">
+          <div className="bg-yellow-500/10 border-2 border-yellow-500/50 rounded-lg p-3">
             <p className="text-yellow-200 text-sm font-semibold text-center">
               ⚠️ Il GAYometro rileva valori costantemente al massimo! Giorno dopo giorno, sempre al 100%! 🌈
             </p>
@@ -867,9 +867,9 @@ const Dashboard = () => {
             {overtimeBalance !== null && (
               <div className={`rounded-lg p-6 border-2 transition-all ${
                 overtimeBalance.balance < 0 
-                  ? 'bg-red-900/20 border-red-500/50' 
+                  ? 'bg-red-900/10 border-red-500/30' 
                   : overtimeBalance.balance > 0 
-                  ? 'bg-green-900/20 border-green-500/50' 
+                  ? 'bg-green-900/10 border-green-500/30' 
                   : 'bg-zinc-900 border-zinc-800'
               }`}>
                 <div 
@@ -1015,10 +1015,10 @@ const Dashboard = () => {
                         eventDate.setHours(0, 0, 0, 0);
                         const daysDiff = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
                         const colorClasses = {
-                          green: 'bg-green-500/10 border-green-500/30',
-                          red: 'bg-red-500/10 border-red-500/30',
-                          blue: 'bg-blue-500/10 border-blue-500/30',
-                          purple: 'bg-purple-500/10 border-purple-500/30'
+                          green: 'bg-green-500/8 border-green-500/20',
+                          red: 'bg-red-500/8 border-red-500/20',
+                          blue: 'bg-blue-500/8 border-blue-500/20',
+                          purple: 'bg-purple-500/8 border-purple-500/20'
                         };
                         
                         return (
@@ -1071,7 +1071,7 @@ const Dashboard = () => {
         <>
           {/* Sezione In Malattia Oggi - Solo se ci sono dipendenti malati */}
           {sickToday.length > 0 && (
-            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6 mb-6">
+            <div className="bg-red-900/10 border border-red-500/20 rounded-lg p-6 mb-6">
               <div 
                 className="flex items-center justify-between mb-4 cursor-pointer"
                 onClick={() => setSickTodayCollapsed(!sickTodayCollapsed)}
@@ -1089,7 +1089,7 @@ const Dashboard = () => {
               {!sickTodayCollapsed && (
                 <div className="space-y-3">
                 {sickToday.map((person) => (
-                  <div key={person.user_id} className="bg-red-800/20 rounded-lg p-4">
+                  <div key={person.user_id} className="bg-red-800/10 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">

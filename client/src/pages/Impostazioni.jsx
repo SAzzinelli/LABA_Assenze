@@ -562,8 +562,8 @@ const Settings = () => {
               </div>
             )}
             {permission === 'default' && (
-              <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                <p className="text-blue-300 text-sm">
+              <div className="mt-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg">
+                <p className="text-slate-300 text-sm">
                   💡 Clicca su "Abilita" per richiedere il permesso per le notifiche. Il browser mostrerà un prompt per confermare.
                 </p>
               </div>
