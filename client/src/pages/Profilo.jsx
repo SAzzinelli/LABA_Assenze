@@ -553,7 +553,7 @@ const Profile = () => {
             className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
               isEditing 
                 ? 'bg-slate-600 hover:bg-slate-500 text-white' 
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
             }`}
           >
             {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
@@ -656,14 +656,14 @@ const Profile = () => {
               checked={formData.has104}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500 disabled:opacity-50"
+              className="h-4 w-4 text-blue-600 bg-zinc-800 border-zinc-700 rounded focus:ring-blue-500 disabled:opacity-50"
             />
             <span className="ml-2 text-slate-300">Legge 104 (Permessi speciali)</span>
           </label>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-            <Calendar className="h-4 w-4 mr-2 text-indigo-400" />
+            <Calendar className="h-4 w-4 mr-2 text-slate-400" />
             Data Assunzione
           </label>
           <input
@@ -677,7 +677,7 @@ const Profile = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-            <MapPin className="h-4 w-4 mr-2 text-indigo-400" />
+            <MapPin className="h-4 w-4 mr-2 text-slate-400" />
             Sede di Lavoro
           </label>
           <select
@@ -697,7 +697,7 @@ const Profile = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center">
-            <FileText className="h-4 w-4 mr-2 text-indigo-400" />
+            <FileText className="h-4 w-4 mr-2 text-slate-400" />
             Tipo di Contratto
           </label>
           <select
@@ -808,8 +808,8 @@ const Profile = () => {
             onClick={() => setSelectedDay(dayKey)}
             className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
               selectedDay === dayKey
-                ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
-                : 'text-slate-400 hover:text-white border-2 border-slate-600 hover:border-slate-500'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg transform scale-105'
+                : 'text-slate-400 hover:text-white border-2 border-zinc-700 hover:border-zinc-600'
             }`}
           >
             {dayName.slice(0, 3).toUpperCase()}
@@ -1086,7 +1086,7 @@ const Profile = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-xl font-bold text-white flex items-center">
-            <Key className="h-6 w-6 mr-3 text-indigo-400" />
+            <Key className="h-6 w-6 mr-3 text-slate-400" />
             Cambio Password
           </h3>
           <p className="text-slate-400 mt-2 text-sm">
@@ -1295,7 +1295,7 @@ const Profile = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <User className="h-8 w-8 mr-3 text-indigo-400" />
+              <User className="h-8 w-8 mr-3 text-slate-400" />
               Profilo Personale
             </h1>
             <p className="text-slate-400 mt-2">
@@ -1316,8 +1316,8 @@ const Profile = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 ${
                   activeTab === tab.id
-                    ? 'bg-indigo-600/10 text-indigo-400 border-indigo-400'
-                    : 'text-slate-300 hover:bg-slate-700/50 border-transparent'
+                    ? 'bg-zinc-800/50 text-slate-300 border-zinc-700'
+                    : 'text-slate-300 hover:bg-zinc-800/50 border-transparent'
                 }`}
               >
                 <IconComponent className="h-5 w-5 mr-2" />

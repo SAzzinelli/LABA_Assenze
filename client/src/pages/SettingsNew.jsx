@@ -483,11 +483,11 @@ const Settings = () => {
         
         <div className="bg-slate-700 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Upload className="h-5 w-5 mr-2 text-blue-400" />
+            <Upload className="h-5 w-5 mr-2 text-slate-400" />
             Ripristina Dati
           </h3>
           <p className="text-slate-400 mb-4">Carica un file di backup per ripristinare i dati</p>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+          <button className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-4 py-2 rounded-lg transition-colors">
             <Upload className="h-4 w-4 mr-2 inline" />
             Carica Backup
           </button>
