@@ -1306,7 +1306,7 @@ const Attendance = () => {
                     <div className="flex justify-center gap-3 pt-3">
                       <button
                         onClick={() => handleViewAttendanceDetails(todayAttendance)}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors flex items-center gap-2"
                       >
                         <Eye className="h-4 w-4" />
                         Visualizza Dettagli
@@ -1366,7 +1366,7 @@ const Attendance = () => {
                 disabled={selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()}
                 className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
                   ? 'bg-slate-600 text-slate-400 cursor-not-allowed opacity-50'
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white cursor-pointer'
                   }`}
               >
                 Oggi

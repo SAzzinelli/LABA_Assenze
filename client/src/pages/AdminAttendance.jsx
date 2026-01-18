@@ -1270,7 +1270,7 @@ const AdminAttendance = () => {
                 </p>
                 {dataLoading && (
                   <div className="flex items-center gap-1 text-indigo-400 text-sm">
-                    <div className="animate-spin rounded-full h-3 w-3 border border-indigo-400 border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-3 w-3 border border-blue-400 border-t-transparent"></div>
                     <span>Aggiornamento...</span>
                   </div>
                 )}
@@ -1279,7 +1279,7 @@ const AdminAttendance = () => {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setShowGenerateModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-white"
               >
                 <Plus className="h-4 w-4" />
                 Aggiungi presenza
@@ -1333,7 +1333,7 @@ const AdminAttendance = () => {
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'today'
-                ? 'bg-indigo-600 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white hover:bg-slate-700'
                 }`}
             >
@@ -1343,7 +1343,7 @@ const AdminAttendance = () => {
             <button
               onClick={() => setActiveTab('history')}
               className={`px-6 py-3 rounded-md transition-colors flex items-center gap-2 ${activeTab === 'history'
-                ? 'bg-indigo-600 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
                 : 'text-slate-400 hover:text-white hover:bg-slate-700'
                 }`}
             >
@@ -1775,7 +1775,7 @@ const AdminAttendance = () => {
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Save className="h-4 w-4" />
                   Salva
@@ -1969,7 +1969,7 @@ const AdminAttendance = () => {
                         type="date"
                         value={generateForm.startDate}
                         onChange={(e) => setGenerateForm({ ...generateForm, startDate: e.target.value })}
-                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
 
@@ -1979,7 +1979,7 @@ const AdminAttendance = () => {
                         type="date"
                         value={generateForm.endDate}
                         onChange={(e) => setGenerateForm({ ...generateForm, endDate: e.target.value })}
-                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full border border-slate-600 bg-slate-700 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>

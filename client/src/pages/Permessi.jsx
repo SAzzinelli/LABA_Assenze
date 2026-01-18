@@ -1157,8 +1157,8 @@ const LeaveRequests = () => {
       <div className="lg:hidden bg-slate-800 rounded-xl p-4 sticky top-16 z-20 shadow-xl border border-slate-700/50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="p-2 bg-indigo-500/20 rounded-lg">
-              <FileText className="h-5 w-5 text-indigo-400 flex-shrink-0" />
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-400 flex-shrink-0" />
             </div>
             <h1 className="text-lg font-bold text-white truncate">
               {user?.role === 'admin' ? 'Permessi' : 'I Miei Permessi'}
@@ -1182,8 +1182,8 @@ const LeaveRequests = () => {
         <div className="flex flex-row items-start justify-between gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2.5 bg-indigo-500/20 rounded-xl">
-                <FileText className="h-7 w-7 text-indigo-400 flex-shrink-0" />
+              <div className="p-2.5 bg-blue-500/20 rounded-xl">
+                <FileText className="h-7 w-7 text-blue-400 flex-shrink-0" />
               </div>
               <h1 className="text-3xl font-bold text-white">
                 {user?.role === 'admin' ? 'Gestione Permessi' : 'I Miei Permessi'}
@@ -1213,7 +1213,7 @@ const LeaveRequests = () => {
           {user?.role !== 'admin' && (
             <button
               onClick={() => setShowNewRequest(true)}
-              className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25 font-semibold"
+              className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-6 py-3 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25 font-semibold"
             >
               <Plus className="h-5 w-5" />
               Aggiungi
@@ -1251,7 +1251,7 @@ const LeaveRequests = () => {
                   </div>
                   <button
                     onClick={goToToday}
-                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] w-full sm:w-auto"
+                    className="px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white text-sm rounded-lg transition-colors touch-manipulation min-h-[44px] w-full sm:w-auto"
                   >
                     OGGI
                   </button>
@@ -1404,9 +1404,9 @@ const LeaveRequests = () => {
 
               {/* Mostra ore calcolate automaticamente */}
               {(formData.type === 'full_day' && fullDayHours !== null) || (formData.type !== 'full_day' && calculatePermissionHours() > 0) ? (
-                <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                   <div className="flex items-center">
-                    <Clock className="h-5 w-5 text-indigo-400 mr-2" />
+                    <Clock className="h-5 w-5 text-blue-400 mr-2" />
                     <span className="text-indigo-300 font-medium">
                       Ore di permesso calcolate: {formatHoursReadable(formData.type === 'full_day' ? fullDayHours : calculatePermissionHours())}
                     </span>
@@ -1466,7 +1466,7 @@ const LeaveRequests = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 sm:px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation min-h-[44px] flex items-center justify-center"
+                  className="px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation min-h-[44px] flex items-center justify-center"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Invia Richiesta
@@ -1552,7 +1552,7 @@ const LeaveRequests = () => {
 
                   // Card Design (Reused)
                   return (
-                    <div key={request.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:bg-slate-800/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
+                    <div key={request.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-blue-500/30 transition-all hover:shadow-lg hover:shadow-blue-500/5 hover:bg-slate-800/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
                       <div className="flex flex-col sm:flex-row gap-4">
 
                         {/* SINISTRA: Data e Status Icon */}
@@ -1686,7 +1686,7 @@ const LeaveRequests = () => {
                                     setModificationRequest({ reason: '', requestedChanges: '' });
                                     setShowRequestModificationDialog(true);
                                   }}
-                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-indigo-500"
+                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-700 text-slate-300 hover:text-white rounded-lg transition-all font-medium text-xs gap-1.5 border border-slate-600 hover:border-blue-500"
                                 >
                                   <MessageSquare className="h-3.5 w-3.5" />
                                   Richiedi Modifica

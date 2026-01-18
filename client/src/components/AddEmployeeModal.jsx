@@ -581,8 +581,8 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
               return (
                 <div key={step.id} className="flex flex-col items-center">
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
-                    isCompleted ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' :
-                    isActive ? 'border-indigo-600 text-indigo-600 bg-indigo-600/20' :
+                    isCompleted ? 'bg-gradient-to-r from-blue-500 to-blue-700 border-blue-600 text-white shadow-lg' :
+                    isActive ? 'border-blue-600 text-blue-600 bg-blue-600/20' :
                     'border-slate-600 text-slate-400'
                   }`}>
                     {isCompleted ? <CheckCircle className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
@@ -636,7 +636,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                 disabled={!validateCurrentStep()}
                 className={`px-6 py-2 rounded-lg transition-colors flex items-center ${
                   validateCurrentStep()
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white'
                     : 'bg-slate-600 text-slate-400 cursor-not-allowed'
                 }`}
               >

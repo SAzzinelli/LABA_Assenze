@@ -391,7 +391,7 @@ const Employees = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -412,7 +412,7 @@ const Employees = () => {
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
+            className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
             Aggiungi Dipendente
@@ -438,7 +438,7 @@ const Employees = () => {
             <button
               onClick={() => setViewMode('list')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                 : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Lista"
@@ -448,7 +448,7 @@ const Employees = () => {
             <button
               onClick={() => setViewMode('card')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'card'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                 : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Card"
