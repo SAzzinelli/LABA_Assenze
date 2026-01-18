@@ -1559,7 +1559,7 @@ const RecuperiOre = () => {
                           {/* CENTRO: Dettagli */}
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/20">
                                 <User className="w-3 h-3" />
                                 <span className="text-xs font-bold truncate max-w-[150px]">
                                   {recovery.users?.first_name} {recovery.users?.last_name}
@@ -1929,7 +1929,7 @@ const RecuperiOre = () => {
                   const isCredit = employee.balance > 0;
                   const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
                     isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
-                      'border-l-slate-500 hover:border-indigo-500/30 hover:shadow-indigo-500/5';
+                      'border-l-slate-500 hover:border-blue-500/30 hover:shadow-blue-500/5';
 
                   const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
                   const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';

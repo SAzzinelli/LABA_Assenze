@@ -1229,7 +1229,7 @@ const LeaveRequests = () => {
           className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
         >
           <div className="flex items-center space-x-3">
-            <Filter className="h-5 w-5 text-indigo-400" />
+            <Filter className="h-5 w-5 text-blue-400" />
             <span className="text-white font-medium">Filtri e Ricerca</span>
           </div>
           {filtersCollapsed ? (
@@ -1308,7 +1308,7 @@ const LeaveRequests = () => {
           <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
-                <FileText className="h-6 w-6 mr-2 text-indigo-400" />
+                <FileText className="h-6 w-6 mr-2 text-blue-400" />
                 Nuova Richiesta Permesso
               </h2>
               <button
@@ -1407,7 +1407,7 @@ const LeaveRequests = () => {
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                   <div className="flex items-center">
                     <Clock className="h-5 w-5 text-blue-400 mr-2" />
-                    <span className="text-indigo-300 font-medium">
+                    <span className="text-blue-300 font-medium">
                       Ore di permesso calcolate: {formatHoursReadable(formData.type === 'full_day' ? fullDayHours : calculatePermissionHours())}
                     </span>
                   </div>
@@ -1575,7 +1575,7 @@ const LeaveRequests = () => {
                           {/* Row Superiore: Utente e Label Stato */}
                           <div className="flex flex-wrap items-center gap-2 mb-1.5">
                             {user?.role === 'admin' && (
-                              <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/20">
                                 <User className="w-3 h-3" />
                                 <span className="text-xs font-bold truncate max-w-[150px]">
                                   {request.submittedBy || (request.user?.first_name ? `${request.user.first_name} ${request.user.last_name}` : 'Dipendente')}
@@ -1591,7 +1591,7 @@ const LeaveRequests = () => {
                           </div>
 
                           {/* Titolo e Orari */}
-                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
+                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">
                             {getPermissionTypeText(request)}
                           </h3>
 
@@ -1727,7 +1727,7 @@ const LeaveRequests = () => {
               {/* SECTION 2: IMMINENTI (Future/Today, Approved only) */}
               <div className="bg-slate-800 rounded-lg p-4 mb-4">
                 <h2 className="text-xl font-bold text-white flex items-center mb-4">
-                  <Calendar className="h-6 w-6 mr-3 text-indigo-400" />
+                  <Calendar className="h-6 w-6 mr-3 text-blue-400" />
                   In Programma
                 </h2>
                 {futureRequests.length > 0 ? renderRequestList(futureRequests) : (
