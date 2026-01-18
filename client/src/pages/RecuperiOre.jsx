@@ -1169,18 +1169,16 @@ const RecuperiOre = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Ore</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max={Math.floor(Math.abs(totalBalance))}
+                        <select
                           value={recoveryFormData.hours}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
-                            setRecoveryFormData({ ...recoveryFormData, hours: val });
-                          }}
-                          placeholder="0"
+                          onChange={(e) => setRecoveryFormData({ ...recoveryFormData, hours: e.target.value === '' ? '' : parseInt(e.target.value) || '' })}
                           className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
-                        />
+                        >
+                          <option value="">Seleziona ore</option>
+                          {Array.from({ length: Math.min(8, Math.floor(Math.abs(totalBalance))) }, (_, i) => i + 1).map(hours => (
+                            <option key={hours} value={hours}>{hours} {hours === 1 ? 'ora' : 'ore'}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Minuti</label>
@@ -2129,18 +2127,21 @@ const RecuperiOre = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Ore</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max={activeTab === 'debt' ? Math.floor(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0)) : undefined}
+                        <select
                           value={proposalFormData.hours}
-                          onChange={(e) => {
-                            const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0);
-                            setProposalFormData({ ...proposalFormData, hours: val });
-                          }}
-                          placeholder="0"
+                          onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value === '' ? '' : parseInt(e.target.value) || '' })}
                           className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
-                        />
+                        >
+                          <option value="">Seleziona ore</option>
+                          {(() => {
+                            const maxHours = activeTab === 'debt' 
+                              ? Math.min(8, Math.floor(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0)))
+                              : 8;
+                            return Array.from({ length: maxHours }, (_, i) => i + 1).map(hours => (
+                              <option key={hours} value={hours}>{hours} {hours === 1 ? 'ora' : 'ore'}</option>
+                            ));
+                          })()}
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs text-slate-400 mb-1">Minuti</label>
