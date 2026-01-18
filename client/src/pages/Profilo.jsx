@@ -585,7 +585,7 @@ const Profile = () => {
             value={formData.firstName}
             onChange={handleInputChange}
             disabled={!isEditing || user?.role === 'admin'}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           />
         </div>
         <div>
@@ -596,7 +596,7 @@ const Profile = () => {
             value={formData.lastName}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           />
         </div>
         <div>
@@ -607,7 +607,7 @@ const Profile = () => {
             value={formData.email}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           />
         </div>
         <div>
@@ -618,7 +618,7 @@ const Profile = () => {
             value={formData.phone}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           />
         </div>
         <div>
@@ -629,7 +629,7 @@ const Profile = () => {
             value={formData.birthDate}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-75 disabled:text-slate-300"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-75 disabled:text-slate-300"
           />
         </div>
         <div>
@@ -639,7 +639,7 @@ const Profile = () => {
             value={formData.department}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           >
             <option value="">Seleziona dipartimento</option>
             <option value="Amministrazione">Amministrazione</option>
@@ -656,7 +656,7 @@ const Profile = () => {
               checked={formData.has104}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="h-4 w-4 text-blue-600 bg-zinc-800 border-zinc-700 rounded focus:ring-blue-500 disabled:opacity-50"
+              className="h-4 w-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600 disabled:opacity-50"
             />
             <span className="ml-2 text-slate-300">Legge 104 (Permessi speciali)</span>
           </label>
@@ -672,7 +672,7 @@ const Profile = () => {
             value={formData.hireDate}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-75 disabled:text-slate-300"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-75 disabled:text-slate-300"
           />
         </div>
         <div>
@@ -705,7 +705,7 @@ const Profile = () => {
             value={formData.contractType}
             onChange={handleInputChange}
             disabled={!isEditing}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 disabled:opacity-50"
           >
             <option value="">Seleziona tipo contratto</option>
             <option value="Full Time - Indeterminato">Full Time - Indeterminato</option>
@@ -730,7 +730,7 @@ const Profile = () => {
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors"
           >
             <Save className="h-4 w-4 mr-2 inline" />
             Salva Modifiche
@@ -808,7 +808,7 @@ const Profile = () => {
             onClick={() => setSelectedDay(dayKey)}
             className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
               selectedDay === dayKey
-                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg transform scale-105'
+                ? 'bg-zinc-900 text-white shadow-lg transform scale-105 border-2 border-zinc-600'
                 : 'text-slate-400 hover:text-white border-2 border-zinc-700 hover:border-zinc-600'
             }`}
           >
@@ -903,7 +903,7 @@ const Profile = () => {
                       const { end } = parseTimeRange(workSchedule[selectedDay].morning);
                         handleWorkScheduleChange('morning', formatTimeRange(e.target.value, end));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                   <div>
@@ -915,7 +915,7 @@ const Profile = () => {
                       const { start } = parseTimeRange(workSchedule[selectedDay].morning);
                         handleWorkScheduleChange('morning', formatTimeRange(start, e.target.value));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                 </div>
@@ -938,7 +938,7 @@ const Profile = () => {
                       const { end } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
                         handleWorkScheduleChange('lunchBreak', formatTimeRange(e.target.value, end));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                   <div>
@@ -950,7 +950,7 @@ const Profile = () => {
                       const { start } = parseTimeRange(workSchedule[selectedDay].lunchBreak);
                         handleWorkScheduleChange('lunchBreak', formatTimeRange(start, e.target.value));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                 </div>
@@ -973,7 +973,7 @@ const Profile = () => {
                       const { end } = parseTimeRange(workSchedule[selectedDay].afternoon);
                         handleWorkScheduleChange('afternoon', formatTimeRange(e.target.value, end));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                   <div>
@@ -985,7 +985,7 @@ const Profile = () => {
                       const { start } = parseTimeRange(workSchedule[selectedDay].afternoon);
                         handleWorkScheduleChange('afternoon', formatTimeRange(start, e.target.value));
                     }}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   </div>
                 </div>
