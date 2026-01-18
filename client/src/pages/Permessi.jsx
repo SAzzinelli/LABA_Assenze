@@ -2065,9 +2065,27 @@ const LeaveRequests = () => {
 
       {/* Modal Richiesta Modifica (Dipendente) */}
       {showRequestModificationDialog && selectedRequest && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowRequestModificationDialog(false);
+              setSelectedRequest(null);
+            }
+          }}
+        >
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => {
+                setShowRequestModificationDialog(false);
+                setSelectedRequest(null);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+              aria-label="Chiudi"
+            >
+              <XCircle className="h-6 w-6" />
+            </button>
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center pr-8">
               <MessageSquare className="h-5 w-5 mr-2 text-amber-400" />
               Richiedi Modifica Permesso
             </h3>
