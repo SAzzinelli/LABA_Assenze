@@ -271,7 +271,7 @@ export const PermessiSkeleton = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header Mobile */}
-      <div className="lg:hidden bg-slate-800 rounded-lg p-4">
+      <div className="lg:hidden bg-zinc-900 rounded-lg p-4 border border-zinc-800">
         <div className="flex items-center justify-between mb-3">
           <SkeletonBase className="h-6 w-32" />
           <SkeletonBase className="h-10 w-10 rounded-lg" />
@@ -283,7 +283,7 @@ export const PermessiSkeleton = () => {
       </div>
 
       {/* Header Desktop */}
-      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
+      <div className="hidden lg:block bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between">
           <div>
             <SkeletonBase className="h-9 w-64 mb-2" />
