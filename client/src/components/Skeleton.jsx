@@ -3,7 +3,7 @@ import React from 'react';
 // Skeleton base con animazione
 const SkeletonBase = ({ className = '', ...props }) => (
   <div
-    className={`animate-pulse bg-slate-700 rounded ${className}`}
+    className={`animate-pulse bg-zinc-800 rounded ${className}`}
     {...props}
   />
 );
@@ -13,7 +13,7 @@ export const CardSkeleton = ({ count = 1 }) => {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-slate-800 rounded-lg p-3 sm:p-6">
+        <div key={i} className="bg-zinc-900 rounded-lg p-3 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
               <SkeletonBase className="h-3 w-24 mb-2" />
@@ -34,7 +34,7 @@ export const TableRowSkeleton = ({ count = 5, columns = 5 }) => {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <tr key={i} className="border-b border-slate-700">
+        <tr key={i} className="border-b border-zinc-800">
           {Array.from({ length: columns }).map((_, j) => (
             <td key={j} className="py-4 px-6">
               <SkeletonBase className="h-4 w-full max-w-[120px]" />
@@ -51,7 +51,7 @@ export const ListCardSkeleton = ({ count = 3 }) => {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div key={i} className="bg-zinc-900 rounded-lg p-4 border border-zinc-800">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <SkeletonBase className="h-10 w-10 rounded-full" />
@@ -75,7 +75,7 @@ export const ListCardSkeleton = ({ count = 3 }) => {
 // Skeleton per sezione con header
 export const SectionSkeleton = ({ showHeader = true, children }) => {
   return (
-    <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+    <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
       {showHeader && (
         <div className="mb-6">
           <SkeletonBase className="h-6 w-48 mb-2" />
@@ -90,7 +90,7 @@ export const SectionSkeleton = ({ showHeader = true, children }) => {
 // Skeleton per pagina Presenze
 export const PresenzeSkeleton = () => {
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
+    <div className="min-h-screen bg-black text-white p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -133,7 +133,7 @@ export const BancaOreSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <SkeletonBase className="h-9 w-48 mb-2" />
         <SkeletonBase className="h-5 w-96" />
       </div>
@@ -167,7 +167,7 @@ export const RecuperiOreSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <SkeletonBase className="h-9 w-48 mb-2" />
         <SkeletonBase className="h-5 w-96" />
       </div>
@@ -199,7 +199,7 @@ export const PageSkeleton = ({ showHeader = true, showCards = true, showTable = 
   return (
     <div className="space-y-6">
       {showHeader && (
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-zinc-900 rounded-lg p-6">
           <SkeletonBase className="h-9 w-48 mb-2" />
           <SkeletonBase className="h-5 w-96" />
         </div>
@@ -225,7 +225,7 @@ export const FerieSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <SkeletonBase className="h-9 w-48 mb-2" />
@@ -240,7 +240,7 @@ export const FerieSkeleton = () => {
       </div>
 
       {/* Filtri Collassabili */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <div className="p-4 flex items-center justify-between">
           <SkeletonBase className="h-5 w-32" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -290,7 +290,7 @@ export const PermessiSkeleton = () => {
             <SkeletonBase className="h-5 w-96" />
           </div>
           <div className="flex gap-4">
-            <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex bg-zinc-800 rounded-lg p-1">
               <SkeletonBase className="h-10 w-32 rounded-md" />
               <SkeletonBase className="h-10 w-32 rounded-md" />
             </div>
@@ -300,7 +300,7 @@ export const PermessiSkeleton = () => {
       </div>
 
       {/* Filtri Collassabili */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <div className="p-4 flex items-center justify-between">
           <SkeletonBase className="h-5 w-32" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -312,7 +312,7 @@ export const PermessiSkeleton = () => {
         <SkeletonBase className="h-6 w-48 mb-4" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-lg p-3 bg-slate-700/80 border border-slate-600/50 border-l-4">
+            <div key={i} className="rounded-lg p-3 bg-zinc-800/80 border border-zinc-700/50 border-l-4">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <SkeletonBase className="h-5 w-5 rounded-full" />
@@ -324,26 +324,26 @@ export const PermessiSkeleton = () => {
                 <SkeletonBase className="h-12 w-24 rounded-lg" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                <div className="bg-slate-600/50 rounded-lg p-2">
+                <div className="bg-zinc-800/50 rounded-lg p-2">
                   <SkeletonBase className="h-3 w-24 mb-2" />
                   <SkeletonBase className="h-5 w-32" />
                 </div>
-                <div className="bg-slate-600/50 rounded-lg p-2">
+                <div className="bg-zinc-800/50 rounded-lg p-2">
                   <SkeletonBase className="h-3 w-20 mb-2" />
                   <SkeletonBase className="h-5 w-24" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                <div className="bg-slate-600/50 rounded-lg p-2">
+                <div className="bg-zinc-800/50 rounded-lg p-2">
                   <SkeletonBase className="h-3 w-28 mb-1" />
                   <SkeletonBase className="h-3 w-40" />
                 </div>
-                <div className="bg-slate-600/50 rounded-lg p-2">
+                <div className="bg-zinc-800/50 rounded-lg p-2">
                   <SkeletonBase className="h-3 w-24 mb-1" />
                   <SkeletonBase className="h-3 w-36" />
                 </div>
               </div>
-              <div className="flex gap-1.5 pt-2 border-t border-slate-600/50">
+              <div className="flex gap-1.5 pt-2 border-t border-zinc-700/50">
                 <SkeletonBase className="h-9 w-24 rounded-lg" />
                 <SkeletonBase className="h-9 w-24 rounded-lg" />
               </div>
@@ -360,7 +360,7 @@ export const Permessi104Skeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <SkeletonBase className="h-9 w-48 mb-2" />
@@ -371,7 +371,7 @@ export const Permessi104Skeleton = () => {
       </div>
 
       {/* KPI Card - Saldo 104 */}
-      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-5 w-40" />
           <SkeletonBase className="h-6 w-6 rounded-full" />
@@ -381,7 +381,7 @@ export const Permessi104Skeleton = () => {
       </div>
 
       {/* Filtri */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <div className="p-4 flex items-center justify-between">
           <SkeletonBase className="h-5 w-32" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -389,14 +389,14 @@ export const Permessi104Skeleton = () => {
       </div>
 
       {/* Lista Richieste */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-6 w-48" />
           <SkeletonBase className="h-4 w-24" />
         </div>
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
+            <div key={i} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
@@ -421,7 +421,7 @@ export const DashboardEmployeeSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <SkeletonBase className="h-9 w-48 mb-2" />
         <SkeletonBase className="h-5 w-96" />
       </div>
@@ -434,7 +434,7 @@ export const DashboardEmployeeSkeleton = () => {
       {/* Grid 2 colonne: Banca Ore/Ferie e Eventi */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Banca Ore */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-4">
             <SkeletonBase className="h-6 w-32" />
             <SkeletonBase className="h-5 w-5 rounded" />
@@ -444,7 +444,7 @@ export const DashboardEmployeeSkeleton = () => {
         </div>
 
         {/* Ferie */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-4">
             <SkeletonBase className="h-6 w-24" />
             <SkeletonBase className="h-5 w-5 rounded" />
@@ -462,14 +462,14 @@ export const DashboardEmployeeSkeleton = () => {
         </div>
 
         {/* Eventi Imminenti */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-4">
             <SkeletonBase className="h-6 w-40" />
             <SkeletonBase className="h-5 w-5 rounded" />
           </div>
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="p-3 rounded-lg border border-slate-600">
+              <div key={i} className="p-3 rounded-lg border border-zinc-800">
                 <div className="flex items-center justify-between">
                   <div>
                     <SkeletonBase className="h-4 w-32 mb-1" />
@@ -491,13 +491,13 @@ export const DashboardAdminSkeleton = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <SkeletonBase className="h-9 w-48 mb-2" />
         <SkeletonBase className="h-5 w-96" />
       </div>
 
       {/* Sezione In Malattia Oggi */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-6 w-40" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -508,7 +508,7 @@ export const DashboardAdminSkeleton = () => {
       </div>
 
       {/* Recuperi Imminenti */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between mb-4">
           <SkeletonBase className="h-6 w-48" />
           <SkeletonBase className="h-4 w-32" />
@@ -517,7 +517,7 @@ export const DashboardAdminSkeleton = () => {
       </div>
 
       {/* Presenti adesso */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between mb-6">
           <SkeletonBase className="h-6 w-40" />
           <SkeletonBase className="h-5 w-5 rounded" />
@@ -530,7 +530,7 @@ export const DashboardAdminSkeleton = () => {
       {/* Grid Richieste Recenti e In programma oggi */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Richieste Recenti */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-6">
             <SkeletonBase className="h-6 w-40" />
             <SkeletonBase className="h-5 w-5 rounded" />
@@ -539,7 +539,7 @@ export const DashboardAdminSkeleton = () => {
         </div>
 
         {/* In programma oggi */}
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
           <div className="flex items-center justify-between mb-4">
             <SkeletonBase className="h-6 w-40" />
             <SkeletonBase className="h-5 w-5 rounded" />

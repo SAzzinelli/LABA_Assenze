@@ -686,7 +686,7 @@ const Vacation = () => {
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header Mobile-First: Design completamente diverso su mobile */}
       {/* Mobile: Header compatto sticky con toggle vista */}
-      <div className="lg:hidden bg-slate-800 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
+      <div className="lg:hidden bg-zinc-900 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Plane className="h-5 w-5 text-blue-400 flex-shrink-0" />
@@ -745,7 +745,7 @@ const Vacation = () => {
       </div>
 
       {/* Desktop: Header tradizionale */}
-      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
+      <div className="hidden lg:block bg-zinc-900 rounded-lg p-6">
         <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-white flex items-center">

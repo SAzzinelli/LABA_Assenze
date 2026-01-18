@@ -1209,7 +1209,7 @@ const Attendance = () => {
         </div>
 
         {/* Today's Status */}
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
           <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center">
             <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Stato Oggi
@@ -1299,7 +1299,7 @@ const Attendance = () => {
                       </span>
                     </div>
                     {(currentHours?.balanceHours || 0) < 0 && (
-                      <div className="text-xs text-slate-400 mt-2 p-2 bg-slate-800 rounded">
+                      <div className="text-xs text-slate-400 mt-2 p-2 bg-zinc-900 rounded">
                         💡 Mancano {formatHours(Math.abs(currentHours?.balanceHours || 0))} per completare la giornata
                       </div>
                     )}
@@ -1320,7 +1320,7 @@ const Attendance = () => {
         </div>
 
         {/* Attendance History - Responsive: cards on mobile, table on lg+ */}
-        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+        <div className="bg-zinc-900 rounded-lg p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
             <h2 className="text-xl font-bold flex items-center">
               <Calendar className="h-5 w-5 mr-2" />

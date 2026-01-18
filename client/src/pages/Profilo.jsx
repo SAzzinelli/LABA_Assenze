@@ -746,14 +746,14 @@ const Profile = () => {
             Permessi Legge 104
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-800 rounded-lg p-4">
+            <div className="bg-zinc-900 rounded-lg p-4">
               <div className="text-slate-400 text-sm mb-1">Usati questo mese</div>
               <div className="text-2xl font-bold text-white">
                 {permissions104.usedThisMonth}
               </div>
               <div className="text-slate-400 text-xs">di {permissions104.maxPerMonth} disponibili</div>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4">
+            <div className="bg-zinc-900 rounded-lg p-4">
               <div className="text-slate-400 text-sm mb-1">Rimanenti</div>
               <div className={`text-2xl font-bold ${
                 permissions104.remaining > 0 ? 'text-green-400' : 'text-red-400'
@@ -762,7 +762,7 @@ const Profile = () => {
               </div>
               <div className="text-slate-400 text-xs">permessi disponibili</div>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4">
+            <div className="bg-zinc-900 rounded-lg p-4">
               <div className="text-slate-400 text-sm mb-1">Limite mensile</div>
               <div className="text-2xl font-bold text-amber-400">
                 {permissions104.maxPerMonth}

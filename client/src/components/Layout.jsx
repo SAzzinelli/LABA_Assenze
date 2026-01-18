@@ -223,7 +223,7 @@ const Layout = ({ children }) => {
     <div className="min-h-screen bg-black flex">
       {/* Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 transform transition-transform duration-300 ease-in-out">
-        <div className="flex flex-col flex-grow bg-zinc-950 border-r border-zinc-900 shadow-xl">
+        <div className="flex flex-col flex-grow bg-zinc-900 border-r border-zinc-800 shadow-xl">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 py-4">
             <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
@@ -310,7 +310,7 @@ const Layout = ({ children }) => {
           style={{ opacity: sidebarOpen ? 0.5 : 0 }}
           onClick={() => setSidebarOpen(false)}
         />
-        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-zinc-950 transform transition-all duration-300 ease-in-out ${
+        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-zinc-900 transform transition-all duration-300 ease-in-out ${
           sidebarOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
         }`}>
             <div className="absolute top-0 right-0 -mr-12 pt-2">
@@ -406,7 +406,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-zinc-950 border-b border-zinc-900 shadow-lg">
+        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-zinc-900 border-b border-zinc-800 shadow-lg">
           <button
             className="px-3 sm:px-4 py-3 border-r border-zinc-900 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}

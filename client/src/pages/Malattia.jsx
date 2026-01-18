@@ -328,7 +328,7 @@ const SickLeave = () => {
     <div className="space-y-4 sm:space-y-6 pb-20 sm:pb-0">
       {/* Header Mobile-First: Design completamente diverso su mobile */}
       {/* Mobile: Header compatto con titolo e icona */}
-      <div className="lg:hidden bg-slate-800 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
+      <div className="lg:hidden bg-zinc-900 rounded-lg p-4 sticky top-16 z-20 shadow-lg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Heart className="h-5 w-5 text-red-400 flex-shrink-0" />
@@ -373,7 +373,7 @@ const SickLeave = () => {
       </div>
 
       {/* Desktop: Header tradizionale */}
-      <div className="hidden lg:block bg-slate-800 rounded-lg p-6">
+      <div className="hidden lg:block bg-zinc-900 rounded-lg p-6">
         <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-white flex items-center">
@@ -440,7 +440,7 @@ const SickLeave = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Heart className="h-6 w-6 mr-2 text-red-400" />
@@ -566,7 +566,7 @@ const SickLeave = () => {
       )}
 
       {/* Filtri Collassabili */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden">
         <button
           onClick={() => setFiltersCollapsed(!filtersCollapsed)}
           className="w-full flex items-center justify-between p-4 hover:bg-slate-700 transition-colors"
@@ -643,7 +643,7 @@ const SickLeave = () => {
       </div>
 
       {/* Requests List */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <h2 className="text-xl font-bold text-white flex items-center mb-6">
           <FileText className="h-6 w-6 mr-3 text-slate-400" />
           {user?.role === 'admin' ? 'Gestione Richieste Malattia' : 'Storico Richieste Malattia'}

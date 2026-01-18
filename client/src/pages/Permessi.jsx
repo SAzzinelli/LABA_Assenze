@@ -1305,7 +1305,7 @@ const LeaveRequests = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => e.target === e.currentTarget && setShowNewRequest(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <FileText className="h-6 w-6 mr-2 text-blue-400" />
@@ -1552,7 +1552,7 @@ const LeaveRequests = () => {
 
                   // Card Design (Reused)
                   return (
-                    <div key={request.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-blue-500/30 transition-all hover:shadow-lg hover:shadow-blue-500/5 hover:bg-slate-800/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
+                    <div key={request.id} className={`group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 hover:border-blue-500/30 transition-all hover:shadow-lg hover:shadow-blue-500/5 hover:bg-zinc-900/80 ${isPending ? 'border-l-4 border-l-yellow-500' : ''}`}>
                       <div className="flex flex-col sm:flex-row gap-4">
 
                         {/* SINISTRA: Data e Status Icon */}
