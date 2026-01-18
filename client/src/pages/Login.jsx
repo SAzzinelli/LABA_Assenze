@@ -80,7 +80,7 @@ const Login = () => {
           <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
             
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-center">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-8 text-center">
               <div className="h-16 w-16 bg-white rounded-xl flex items-center justify-center mx-auto mb-4 p-2">
                 <img src="/logoSito.svg" alt="LABA Logo" className="h-12 w-12" />
               </div>
@@ -97,7 +97,7 @@ const Login = () => {
                 onClick={() => setIsLogin(true)}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isLogin 
-                    ? 'bg-blue-600 text-white shadow-lg' 
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg' 
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                 }`}
               >
@@ -108,7 +108,7 @@ const Login = () => {
                 onClick={() => setIsLogin(false)}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   !isLogin 
-                    ? 'bg-blue-600 text-white shadow-lg' 
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg' 
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                 }`}
               >
@@ -173,7 +173,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center disabled:opacity-50"
                 >
                   {loading ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -197,7 +197,7 @@ const Login = () => {
       {/* Footer */}
       <div className="text-center py-4">
         <p className="text-slate-500 text-sm">
-          © LABA Firenze 2025 - Sviluppato con 💙 da Simone Azzinelli
+          © LABA Firenze 2026 - Sviluppato con 💙 da Simone Azzinelli
         </p>
       </div>
     </div>
