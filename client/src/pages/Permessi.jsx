@@ -1864,7 +1864,7 @@ const LeaveRequests = () => {
       {showEditDialog && selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowEditDialog(false)} />
-          <div className="relative bg-slate-800 border border-slate-600 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white mb-4">Modifica Permesso</h3>
             <p className="text-slate-300 mb-4 text-sm">
               Modifica gli orari o le ore di permesso per correggere eventuali discrepanze.
@@ -1990,31 +1990,31 @@ const LeaveRequests = () => {
               )}
 
               {/* Mostra le ore calcolate automaticamente */}
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
                 <div className="flex items-center mb-2">
-                  <Clock className="h-5 w-5 text-blue-400 mr-2" />
-                  <span className="text-blue-300 font-medium">Ore di Permesso (calcolate automaticamente)</span>
+                  <Clock className="h-5 w-5 text-slate-400 mr-2" />
+                  <span className="text-slate-300 font-medium">Ore di Permesso (calcolate automaticamente)</span>
                 </div>
                 {calculatedHours !== null ? (
                   <div>
-                    <p className="text-blue-200 text-lg font-semibold">
+                    <p className="text-slate-200 text-lg font-semibold">
                       {formatHoursReadable(calculatedHours)}
                     </p>
-                    <p className="text-blue-300 text-xs mt-1">
+                    <p className="text-slate-400 text-xs mt-1">
                       Le ore verranno calcolate automaticamente in base all'orario di lavoro del dipendente
                     </p>
                   </div>
                 ) : selectedRequest.hours ? (
                   <div>
-                    <p className="text-blue-200 text-lg font-semibold">
+                    <p className="text-slate-200 text-lg font-semibold">
                       Attuali: {selectedRequest.hours}h ({formatHoursReadable(selectedRequest.hours)})
                     </p>
-                    <p className="text-blue-300 text-xs mt-1">
+                    <p className="text-slate-400 text-xs mt-1">
                       Modifica l'orario sopra per ricalcolare automaticamente le ore
                     </p>
                   </div>
                 ) : (
-                  <p className="text-blue-300 text-sm">
+                  <p className="text-slate-400 text-sm">
                     Modifica l'orario per vedere le ore calcolate automaticamente
                   </p>
                 )}
@@ -2024,13 +2024,13 @@ const LeaveRequests = () => {
             <div className="flex gap-3 justify-end mt-6">
               <button
                 onClick={() => setShowEditDialog(false)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] border border-zinc-700"
               >
                 Annulla
               </button>
               <button
                 onClick={handleEditPermission}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors touch-manipulation min-h-[44px] flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Salva Modifiche
