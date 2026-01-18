@@ -455,7 +455,7 @@ const Layout = ({ children }) => {
                         <div className="p-6 border-b border-zinc-900">
                           <div className="flex items-center justify-between">
                             <h3 className="text-xl font-bold text-white flex items-center">
-                              <Bell className="h-6 w-6 mr-3 text-blue-400" />
+                              <Bell className="h-6 w-6 mr-3 text-slate-400" />
                               Notifiche
                             </h3>
                             <button
@@ -466,7 +466,7 @@ const Layout = ({ children }) => {
                             </button>
                           </div>
                           {unreadCount > 0 && (
-                            <p className="text-sm text-blue-400 mt-2">
+                            <p className="text-sm text-slate-400 mt-2">
                               {unreadCount} notifiche non lette
                             </p>
                           )}
@@ -492,8 +492,8 @@ const Layout = ({ children }) => {
                                   onClick={() => handleNotificationClick(notification)}
                                   className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                                     notification.is_read 
-                                      ? 'opacity-60 bg-transparent border border-zinc-900' 
-                                      : 'bg-blue-900/30 border border-blue-500/50 shadow-lg'
+                                      ? 'opacity-60 bg-zinc-800 border border-zinc-700' 
+                                      : 'bg-zinc-800 border border-zinc-600 shadow-lg'
                                   }`}
                                   style={{
                                     animationDelay: `${index * 50}ms`,
@@ -502,7 +502,7 @@ const Layout = ({ children }) => {
                                 >
                                   <div className="flex items-start space-x-3">
                                     {!notification.is_read && (
-                                      <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0 bg-blue-400" />
+                                      <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0 bg-slate-400" />
                                     )}
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start justify-between mb-1">
