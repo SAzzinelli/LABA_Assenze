@@ -121,10 +121,10 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
-        <div className="bg-slate-800 sm:rounded-lg p-4 sm:p-6 w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto">
+        <div className="bg-zinc-900 sm:rounded-lg p-4 sm:p-6 w-full h-full sm:h-auto sm:max-w-2xl sm:max-h-[90vh] overflow-y-auto border border-zinc-800">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-white flex items-center">
-              <Accessibility className="h-6 w-6 mr-2 text-blue-400" />
+              <Accessibility className="h-6 w-6 mr-2 text-slate-400" />
               Registra Permesso 104 per Dipendente
             </h3>
             <button 
@@ -155,7 +155,7 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.userId}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 >
                   <option value="">-- Seleziona un dipendente --</option>
                   {employees.map(emp => (
@@ -177,7 +177,7 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.date}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 />
               </div>
 
@@ -191,24 +191,24 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.notes}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                   placeholder="Note opzionali (es. contattato telefonicamente, ecc.)"
                 />
               </div>
 
               {/* Info Box */}
               {selectedEmployee && (
-                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
                   <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+                    <AlertCircle className="h-5 w-5 text-slate-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="text-sm text-blue-200">
+                      <p className="text-sm text-slate-300">
                         <strong>Dipendente:</strong> {selectedEmployee.name} 🔵
                       </p>
-                      <p className="text-sm text-blue-200 mt-1">
+                      <p className="text-sm text-slate-300 mt-1">
                         Il permesso 104 verrà <strong>registrato come approvato</strong> (giorno intero) e il dipendente riceverà notifica ed email.
                       </p>
-                      <p className="text-sm text-blue-200 mt-1">
+                      <p className="text-sm text-slate-300 mt-1">
                         <strong>Importante:</strong> Non andrà in debito orario per questo giorno.
                       </p>
                     </div>
@@ -217,18 +217,18 @@ const AdminCreate104PermissionModal = ({ isOpen, onClose, onSuccess }) => {
               )}
 
               {/* Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-zinc-800">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
                   disabled={loading}
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={loading}
                 >
                   {loading ? (

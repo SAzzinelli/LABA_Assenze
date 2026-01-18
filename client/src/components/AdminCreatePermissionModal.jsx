@@ -349,7 +349,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.userId}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
               >
                 <option value="">-- Seleziona un dipendente --</option>
                 {employees.map(emp => (
@@ -372,7 +372,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.date}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
               />
               <p className="text-xs text-slate-400 mt-1">
                 Il permesso si applica solo a questo giorno specifico
@@ -391,7 +391,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                     value={formData.permissionType}
                     onChange={handleInputChange}
                     required
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                   >
                     <option value="">-- Seleziona tipo permesso --</option>
                     <option value="full_day">Giornata completa</option>
@@ -400,7 +400,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   </select>
                   
                   {calculatedHours !== null && (
-                    <p className="text-xs text-indigo-400 mt-2">
+                    <p className="text-xs text-slate-400 mt-2">
                       Ore calcolate: {calculatedHours.toFixed(2)}h
                     </p>
                   )}
@@ -424,7 +424,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                       name="entryTime"
                       value={formData.entryTime}
                       onChange={handleInputChange}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                     />
                   </div>
                 )}
@@ -439,7 +439,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                       name="exitTime"
                       value={formData.exitTime}
                       onChange={handleInputChange}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                     />
                   </div>
                 )}
@@ -455,7 +455,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.reason}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 placeholder="Es. Visita medica, Motivi personali, ecc."
               />
             </div>
@@ -470,21 +470,21 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={2}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 placeholder="Note opzionali (es. contattato telefonicamente, ecc.)"
               />
             </div>
 
             {/* Info Box */}
             {selectedEmployee && (
-              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+              <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
                 <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-slate-400 mr-2 mt-0.5" />
                   <div>
-                    <p className="text-sm text-blue-200">
+                    <p className="text-sm text-slate-300">
                       <strong>Dipendente:</strong> {selectedEmployee.name}
                     </p>
-                    <p className="text-sm text-blue-200 mt-1">
+                    <p className="text-sm text-slate-300 mt-1">
                       La richiesta verrà <strong>auto-approvata</strong> e il dipendente riceverà una <strong>notifica</strong> e una <strong>email</strong> di conferma.
                     </p>
                   </div>
@@ -497,7 +497,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
                 disabled={loading}
               >
                 Annulla
