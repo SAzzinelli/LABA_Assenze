@@ -806,7 +806,7 @@ const Dashboard = () => {
                     )}
                     <p className="text-2xl sm:text-3xl font-bold text-white mt-2">{stat.value}</p>
                     {stat.subLabel && (
-                      <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full bg-slate-700 text-slate-200">
+                      <span className="inline-flex items-center mt-2 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-full bg-white/20 text-white">
                         {stat.subLabel}
                       </span>
                     )}
@@ -867,9 +867,9 @@ const Dashboard = () => {
             {overtimeBalance !== null && (
               <div className={`rounded-lg p-6 border-2 transition-all ${
                 overtimeBalance.balance < 0 
-                  ? 'bg-red-900/20 border-red-500/30' 
+                  ? 'bg-red-900/50 border-red-500/30' 
                   : overtimeBalance.balance > 0 
-                  ? 'bg-green-900/20 border-green-500/30' 
+                  ? 'bg-green-900/50 border-green-500/30' 
                   : 'bg-zinc-900 border-zinc-800'
               }`}>
                 <div 
@@ -898,7 +898,7 @@ const Dashboard = () => {
                         e.stopPropagation();
                         navigate('/banca-ore');
                       }}
-                      className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                      className="text-sm text-white/80 hover:text-white font-medium"
                     >
                       Dettagli →
                     </button>
@@ -943,7 +943,7 @@ const Dashboard = () => {
                         e.stopPropagation();
                         navigate('/ferie');
                       }}
-                      className="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
+                      className="text-sm text-white/80 hover:text-white font-medium"
                     >
                       Dettagli →
                     </button>
