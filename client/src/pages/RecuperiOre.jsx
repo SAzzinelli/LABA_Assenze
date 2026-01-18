@@ -871,7 +871,7 @@ const RecuperiOre = () => {
 
         {/* Alert Box - Solo se c'è debito */}
         {totalBalance < 0 && (
-          <div className="bg-orange-600/80 border-l-4 border-orange-400 rounded-lg p-5">
+          <div className="bg-orange-600/20 border-l-4 border-orange-400 rounded-lg p-5">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-6 w-6 text-amber-400 mt-0.5" />
