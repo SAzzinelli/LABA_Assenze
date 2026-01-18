@@ -1306,8 +1306,8 @@ const Profile = () => {
       </div>
 
       {/* Tab orizzontali */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
-        <nav className="flex border-b border-slate-700">
+      <div className="bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800">
+        <nav className="flex border-b border-zinc-800">
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -1316,8 +1316,8 @@ const Profile = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center px-6 py-4 text-left transition-colors border-b-2 ${
                   activeTab === tab.id
-                    ? 'bg-zinc-800/50 text-slate-300 border-zinc-700'
-                    : 'text-slate-300 hover:bg-zinc-800/50 border-transparent'
+                    ? 'bg-zinc-800 text-white border-white'
+                    : 'text-slate-400 hover:bg-zinc-800/50 hover:text-white border-transparent'
                 }`}
               >
                 <IconComponent className="h-5 w-5 mr-2" />
