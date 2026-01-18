@@ -136,7 +136,7 @@ const Employees = () => {
   const getWorkTypeIcon = (workType) => {
     switch (workType) {
       case 'morning': return <Sun className="h-4 w-4 text-yellow-400" />;
-      case 'afternoon': return <Moon className="h-4 w-4 text-blue-400" />;
+      case 'afternoon': return <Moon className="h-4 w-4 text-slate-400" />;
       case 'full': return <Clock className="h-4 w-4 text-purple-400" />;
       default: return <X className="h-4 w-4 text-slate-400" />;
     }
@@ -391,7 +391,7 @@ const Employees = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600"></div>
       </div>
     );
   }
