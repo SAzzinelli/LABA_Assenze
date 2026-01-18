@@ -922,7 +922,7 @@ const Employees = () => {
                 {/* Informazioni Personali */}
                 <div className="bg-slate-700 rounded-lg p-4">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <User className="h-5 w-5 mr-2 text-indigo-400" />
+                    <User className="h-5 w-5 mr-2 text-blue-400" />
                     Informazioni Personali
                   </h4>
                   <div className="space-y-3">
