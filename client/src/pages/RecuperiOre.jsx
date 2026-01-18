@@ -1355,7 +1355,7 @@ const RecuperiOre = () => {
                               onClick={() => handleSelectTimeSlot(slot)}
                               className={`px-3 py-2 rounded-lg border transition-colors text-sm ${recoveryFormData.startTime === slot.startTime && recoveryFormData.endTime === slot.endTime
                                 ? 'bg-amber-500 border-amber-400 text-white'
-                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                                : 'bg-zinc-800 border-zinc-700 text-slate-300 hover:bg-zinc-700'
                                 }`}
                             >
                               {slot.label}
@@ -1651,7 +1651,7 @@ const RecuperiOre = () => {
                                   }
                                 }
                               }}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-slate-600 font-medium text-[10px] gap-1"
+                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
                             >
                               <Trash2 className="h-3 w-3" />
                               Elimina
@@ -1756,7 +1756,7 @@ const RecuperiOre = () => {
                                     }
                                   }
                                 }}
-                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-slate-700 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-slate-600 font-medium text-[10px] gap-1"
+                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
                               >
                                 <Trash2 className="h-3 w-3" />
                                 Elimina
@@ -2042,7 +2042,7 @@ const RecuperiOre = () => {
                       ? 'bg-red-500/10 border-red-500/20'
                       : employee.balance > 0
                         ? 'bg-green-500/10 border-green-500/20'
-                        : 'bg-slate-700/50 border-slate-600'
+                        : 'bg-zinc-800/50 border-zinc-700'
                       }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -2398,7 +2398,7 @@ const RecuperiOre = () => {
                               onClick={() => handleSelectProposalTimeSlot(slot)}
                               className={`px-3 py-2 rounded-lg border transition-colors text-sm ${proposalFormData.startTime === slot.startTime && proposalFormData.endTime === slot.endTime
                                 ? 'bg-amber-500 border-amber-400 text-white'
-                                : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                                : 'bg-zinc-800 border-zinc-700 text-slate-300 hover:bg-zinc-700'
                                 }`}
                             >
                               {slot.label}
