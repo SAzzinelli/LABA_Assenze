@@ -1105,9 +1105,41 @@ const RecuperiOre = () => {
 
         {/* Modal Crea Richiesta Recupero */}
         {showRecoveryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-bold text-white mb-4">Nuova Richiesta Recupero Ore</h3>
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowRecoveryModal(false);
+                setRecoveryStep(1);
+                setRecoveryFormData({
+                  recoveryDate: '',
+                  hours: '',
+                  minutes: '0',
+                  reason: '',
+                  notes: ''
+                });
+              }
+            }}
+          >
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => {
+                  setShowRecoveryModal(false);
+                  setRecoveryStep(1);
+                  setRecoveryFormData({
+                    recoveryDate: '',
+                    hours: '',
+                    minutes: '0',
+                    reason: '',
+                    notes: ''
+                  });
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+                aria-label="Chiudi"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-4 pr-8">Nuova Richiesta Recupero Ore</h3>
 
               {/* Indicatore step */}
               <div className="flex items-center justify-center mb-6 gap-2">
@@ -1991,9 +2023,27 @@ const RecuperiOre = () => {
       {/* Modal Approva Recupero */}
       {
         showApproveRecoveryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-white mb-4">Approva Richiesta Recupero</h3>
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowApproveRecoveryModal(false);
+                setSelectedRecoveryId(null);
+              }
+            }}
+          >
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <button
+                onClick={() => {
+                  setShowApproveRecoveryModal(false);
+                  setSelectedRecoveryId(null);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+                aria-label="Chiudi"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-4 pr-8">Approva Richiesta Recupero</h3>
               <p className="text-slate-300 mb-6">Sei sicuro di voler approvare questa richiesta di recupero ore?</p>
               <div className="flex gap-3 justify-end">
                 <button
@@ -2020,9 +2070,29 @@ const RecuperiOre = () => {
       {/* Modal Rifiuta Recupero */}
       {
         showRejectRecoveryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-white mb-4">Rifiuta Richiesta Recupero</h3>
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowRejectRecoveryModal(false);
+                setSelectedRecoveryId(null);
+                setRejectionReason('');
+              }
+            }}
+          >
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <button
+                onClick={() => {
+                  setShowRejectRecoveryModal(false);
+                  setSelectedRecoveryId(null);
+                  setRejectionReason('');
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+                aria-label="Chiudi"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-4 pr-8">Rifiuta Richiesta Recupero</h3>
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">Motivo del rifiuto</label>
@@ -2061,9 +2131,49 @@ const RecuperiOre = () => {
       {/* Modal Proponi Recupero */}
       {
         showProposeRecoveryModal && selectedEmployeeForProposal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-bold text-white mb-4">
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowProposeRecoveryModal(false);
+                setSelectedEmployeeForProposal(null);
+                setProposalStep(1);
+                setProposalFormData({
+                  recoveryDate: '',
+                  startTime: '',
+                  endTime: '',
+                  hours: '',
+                  minutes: '0',
+                  reason: '',
+                  notes: ''
+                });
+                setProposalSuggestedTimeSlots([]);
+              }
+            }}
+          >
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => {
+                  setShowProposeRecoveryModal(false);
+                  setSelectedEmployeeForProposal(null);
+                  setProposalStep(1);
+                  setProposalFormData({
+                    recoveryDate: '',
+                    startTime: '',
+                    endTime: '',
+                    hours: '',
+                    minutes: '0',
+                    reason: '',
+                    notes: ''
+                  });
+                  setProposalSuggestedTimeSlots([]);
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"
+                aria-label="Chiudi"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-4 pr-8">
                 Proponi Recupero per {selectedEmployeeForProposal.first_name} {selectedEmployeeForProposal.last_name}
               </h3>
 
@@ -2341,9 +2451,29 @@ const RecuperiOre = () => {
       {/* Modal Aggiungi Ore */}
       {
         showAddHoursModal && selectedEmployeeForAddHours && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-bold text-white mb-4">
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowAddHoursModal(false);
+                setSelectedEmployeeForAddHours(null);
+                setAddHoursFormData({ hours: '', minutes: '' });
+              }
+            }}
+          >
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => {
+                  setShowAddHoursModal(false);
+                  setSelectedEmployeeForAddHours(null);
+                  setAddHoursFormData({ hours: '', minutes: '' });
+                }}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"
+                aria-label="Chiudi"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+              <h3 className="text-xl font-bold text-white mb-4 pr-8">
                 Aggiungi Ore a Credito
               </h3>
               <p className="text-slate-300 text-sm mb-4">
