@@ -1546,7 +1546,7 @@ const RecuperiOre = () => {
                     const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                     return (
-                      <div key={recovery.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 hover:bg-slate-800/80 border-l-4 border-l-amber-500">
+                      <div key={recovery.id} className="group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 hover:bg-zinc-900/80 border-l-4 border-l-amber-500">
                         <div className="flex flex-col sm:flex-row gap-4">
                           {/* SINISTRA: Data Icon */}
                           <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
@@ -1588,7 +1588,7 @@ const RecuperiOre = () => {
                             </div>
 
                             {recovery.reason && (
-                              <div className="mt-2 text-[11px] bg-slate-900/30 p-2 rounded border border-slate-700/50 max-w-md">
+                              <div className="mt-2 text-[11px] bg-zinc-950/30 p-2 rounded border border-zinc-800/50 max-w-md">
                                 <p className="text-slate-400 line-clamp-1">
                                   <span className="font-semibold text-slate-500 mr-1 uppercase tracking-tighter text-[9px]">Motivo:</span>
                                   {recovery.reason}
@@ -1693,7 +1693,7 @@ const RecuperiOre = () => {
                       const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                       return (
-                        <div key={recovery.id} className="group bg-slate-800/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
+                        <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
                               <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-green-500/10 text-green-400 border border-green-500/20">
@@ -1775,7 +1775,7 @@ const RecuperiOre = () => {
       })()}
 
       {/* Tab Navigation */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white flex items-center">
             <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
@@ -1832,7 +1832,7 @@ const RecuperiOre = () => {
             {employeesWithDebt.length > 0 ? (
               <div className="space-y-3">
                 {employeesWithDebt.map((employee) => (
-                  <div key={employee.id} className="group bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-slate-800/80 border-l-4 border-l-red-500">
+                  <div key={employee.id} className="group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-zinc-900/80 border-l-4 border-l-red-500">
                     <div className="flex flex-col sm:flex-row gap-4">
 
                       {/* SINISTRA: Icona Utente Grande */}
@@ -1936,7 +1936,7 @@ const RecuperiOre = () => {
                   const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 
                   return (
-                    <div key={employee.id} className={`group bg-slate-800 rounded-xl border border-slate-700/50 p-4 transition-all hover:shadow-lg hover:bg-slate-800/80 border-l-4 ${borderClass}`}>
+                    <div key={employee.id} className={`group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
                       <div className="flex flex-col sm:flex-row gap-4">
                         {/* SINISTRA: Icona Utente Grande */}
                         <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">

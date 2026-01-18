@@ -108,7 +108,7 @@ const CustomAlert = ({
           {showCancel && (
             <button
               onClick={handleClose}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
             >
               {cancelText}
             </button>

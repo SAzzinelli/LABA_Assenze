@@ -48,7 +48,7 @@ const ConfirmModal = ({
         <div className="flex justify-end space-x-3 p-6 border-t border-zinc-900">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 rounded-lg font-medium transition-colors"
+            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-slate-300 border border-zinc-700 rounded-lg font-medium transition-colors"
           >
             {cancelText}
           </button>

@@ -218,7 +218,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           <button
             onClick={goToPreviousMonth}
-                className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Mese precedente"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -232,7 +232,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
           </button>
           <button
             onClick={goToNextMonth}
-                className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Mese successivo"
           >
             <ChevronRight className="h-4 w-4" />
@@ -243,7 +243,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
 
         {/* Statistiche del mese - Compatte su mobile */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <div className="bg-slate-700 rounded-lg p-2 sm:p-4 text-center sm:text-left">
+          <div className="bg-zinc-800 rounded-lg p-2 sm:p-4 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">Approvate</p>
@@ -253,7 +253,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             </div>
           </div>
           
-          <div className="bg-slate-700 rounded-lg p-2 sm:p-4 text-center sm:text-left">
+          <div className="bg-zinc-800 rounded-lg p-2 sm:p-4 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">In Attesa</p>
@@ -263,7 +263,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             </div>
           </div>
           
-          <div className="bg-slate-700 rounded-lg p-2 sm:p-4 text-center sm:text-left">
+          <div className="bg-zinc-800 rounded-lg p-2 sm:p-4 text-center sm:text-left">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1">
                 <p className="text-slate-400 text-[10px] sm:text-sm mb-1">Giorni</p>
@@ -288,7 +288,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               rounded-lg p-3 cursor-pointer transition-colors border
               ${day.hasAdminCreated 
                 ? 'bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/50' 
-                : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}
+                : 'bg-zinc-800 border-zinc-700 hover:bg-zinc-700'}
               ${day.isToday ? 'ring-2 ring-blue-500' : ''}
               ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600/20 ring-2 ring-blue-500' : ''}
             `}
@@ -297,7 +297,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
               <div className="flex items-center gap-3">
                 <div className={`
                   w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm
-                  ${day.isToday ? 'bg-blue-500 text-white' : 'bg-slate-600 text-slate-200'}
+                  ${day.isToday ? 'bg-blue-500 text-white' : 'bg-zinc-800 text-slate-200'}
                 `}>
                   {day.date.getDate()}
                 </div>
