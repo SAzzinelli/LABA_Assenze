@@ -5123,9 +5123,7 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
 
     // IMPORTANTE: Trova ferie che si sovrappongono al mese PRIMA di contare i giorni lavorati
     // così possiamo escluderle dal conteggio
-    const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
-    const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-    
+    // (monthStart e monthEnd sono già dichiarati sopra)
     const { data: approvedLeaves } = await supabase
       .from('leave_requests')
       .select('start_date, end_date, type')
