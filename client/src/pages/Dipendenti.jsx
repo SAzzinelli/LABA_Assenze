@@ -403,7 +403,7 @@ const Employees = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Users className="h-8 w-8 mr-3 text-indigo-400" />
+              <Users className="h-8 w-8 mr-3 text-blue-400" />
               Gestione Dipendenti
             </h1>
             <p className="text-slate-400 mt-2">
@@ -486,7 +486,7 @@ const Employees = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {employee.name.split(' ').map(n => n[0]).join('')}
                   </span>
@@ -506,7 +506,7 @@ const Employees = () => {
             <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
-                className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
+                className="flex-1 py-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
                 title="Modifica"
               >
                 Modifica
@@ -542,7 +542,7 @@ const Employees = () => {
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                  <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
                     <span className="text-white font-bold text-sm">
                       {employee.name.split(' ').map(n => n[0]).join('')}
                     </span>
@@ -646,7 +646,7 @@ const Employees = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium shadow-sm transition-all hover:scale-105 ${employee.department === 'Amministrazione'
-                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
                         : employee.department === 'Segreteria'
                           ? 'bg-purple-500/20 text-purple-300 border border-purple-400/30'
                           : employee.department === 'Orientamento'
@@ -665,7 +665,7 @@ const Employees = () => {
                             e.stopPropagation();
                             handleEditEmployee(employee);
                           }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 hover:border-indigo-400/50 transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/30 hover:border-blue-400/50 transition-all duration-200 hover:scale-105"
                           title="Modifica"
                         >
                           <Edit className="h-4 w-4" />
@@ -830,7 +830,7 @@ const Employees = () => {
                   name="has104"
                   checked={formData.has104}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+                  className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
                 />
                 <label className="ml-2 text-sm text-slate-300">Beneficiario Legge 104</label>
               </div>
