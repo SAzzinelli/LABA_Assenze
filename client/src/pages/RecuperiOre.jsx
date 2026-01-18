@@ -2174,31 +2174,6 @@ const RecuperiOre = () => {
                   )}
                 </div>
               )}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
-                    />
-                    {activeTab === 'debt' && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Debito dipendente: <span className="text-red-400 font-semibold">{formatHours(Math.abs(selectedEmployeeForProposal.debtHours || selectedEmployeeForProposal.totalBalance || 0))}</span>
-                      </p>
-                    )}
-                    {activeTab === 'proposals' && (
-                      <p className="text-xs text-slate-400 mt-1">
-                        Saldo attuale: <span className={`font-semibold ${(selectedEmployeeForProposal.balance || 0) < 0 ? 'text-red-400' :
-                          (selectedEmployeeForProposal.balance || 0) > 0 ? 'text-green-400' : 'text-slate-400'
-                          }`}>
-                          {formatHours(selectedEmployeeForProposal.balance || 0)}
-                        </span>
-                        {selectedEmployeeForProposal.balance !== undefined && (
-                          <span className="text-xs text-slate-500 ml-2">
-                            (puoi proporre qualsiasi quantità di straordinari)
-                          </span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-
-                </div>
-              )}
 
               {/* Step 3: Orario */}
               {proposalStep === 3 && (
