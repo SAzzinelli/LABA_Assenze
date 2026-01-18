@@ -79,8 +79,17 @@ const wsManager = new WebSocketManager(server);
 const PORT = process.env.PORT || 3000;
 
 // Supabase configuration
-const supabaseUrl = process.env.SUPABASE_URL || 'https://gojhljczpwbjxbbrtrlq.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'sb_secret_s7Vzh0AtPEaEv3f3VmkIEg_3ZqBhGsS';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ ERRORE CRITICO: Le variabili SUPABASE_URL e SUPABASE_SERVICE_KEY devono essere impostate!');
+  console.error('   Assicurati che il file .env contenga:');
+  console.error('   SUPABASE_URL=...');
+  console.error('   SUPABASE_SERVICE_KEY=...');
+  process.exit(1);
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // JWT Secret
@@ -10472,6 +10481,46 @@ app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
     res.json({ success: true, message: 'Tutte le notifiche sono state marcate come lette' });
   } catch (error) {
     console.error('Mark all notifications as read error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Mark notification as unread
+app.put('/api/notifications/:id/unread', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Verifica che la notifica appartenga all'utente
+    const { data: notification, error: fetchError } = await supabase
+      .from('notifications')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !notification) {
+      return res.status(404).json({ error: 'Notifica non trovata' });
+    }
+
+    if (notification.user_id !== userId) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Segna come non letta
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: false })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error marking notification as unread:', error);
+      return res.status(500).json({ error: 'Errore nel marcare la notifica come non letta' });
+    }
+
+    res.json({ success: true, message: 'Notifica marcata come non letta' });
+  } catch (error) {
+    console.error('Mark notification as unread error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
