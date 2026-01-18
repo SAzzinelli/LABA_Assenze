@@ -5211,6 +5211,30 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       });
     }
 
+    // IMPORTANTE: Crea un Set con tutte le date di ferie/malattia approvate per escluderle dai giorni lavorativi attesi
+    const vacationDates = new Set();
+    if (approvedLeaves && approvedLeaves.length > 0) {
+      const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+      const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
+      const monthStartDate = new Date(monthStart);
+      const monthEndDate = new Date(monthEnd);
+
+      approvedLeaves.forEach(leave => {
+        const start = new Date(leave.start_date);
+        const end = new Date(leave.end_date);
+        const actualStart = start < monthStartDate ? monthStartDate : start;
+        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
+
+        if (actualStart <= actualEnd) {
+          // Aggiungi tutte le date del range di ferie/malattia al Set
+          for (let d = new Date(actualStart); d <= actualEnd; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            vacationDates.add(dateStr);
+          }
+        }
+      });
+    }
+
     // Calcola giorni lavorativi attesi del mese basandosi sull'orario di lavoro dell'utente
     const { data: workSchedules, error: scheduleError } = await supabase
       .from('work_schedules')
@@ -5231,20 +5255,20 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       const firstDay = new Date(currentYear, currentMonth - 1, 1);
       const lastDay = new Date(currentYear, currentMonth, 0);
 
-      // Conta i giorni lavorativi nel mese ESCLUDENDO le festività
+      // Conta i giorni lavorativi nel mese ESCLUDENDO le festività E le ferie approvate
       for (let day = 1; day <= lastDay.getDate(); day++) {
         const date = new Date(currentYear, currentMonth - 1, day);
         const dateStr = date.toISOString().split('T')[0];
         const dayOfWeekJS = date.getDay(); // 0 = domenica, 1 = lunedì, 6 = sabato
 
         // Il database usa day_of_week: 0=domenica, 1=lunedì, ..., 6=sabato (stesso formato di JS getDay())
-        // Verifica se è un giorno lavorativo E non è una festività
-        if (workingDaysMap[dayOfWeekJS] && !holidayDates.has(dateStr)) {
+        // Verifica se è un giorno lavorativo E non è una festività E non è una ferie approvata
+        if (workingDaysMap[dayOfWeekJS] && !holidayDates.has(dateStr) && !vacationDates.has(dateStr)) {
           expectedMonthlyPresences++;
         }
       }
 
-      console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId} (escluse ${holidayDates.size} festività)`);
+      console.log(`📅 Calcolati ${expectedMonthlyPresences} giorni lavorativi attesi per il mese ${currentMonth}/${currentYear} per utente ${userId} (escluse ${holidayDates.size} festività e ${vacationDates.size} giorni di ferie/malattia)`);
       console.log(`📅 Working days map:`, workingDaysMap);
       console.log(`📅 monthlyPresences: ${monthlyPresences}, expectedMonthlyPresences: ${expectedMonthlyPresences}, remainingDays: ${Math.max(0, expectedMonthlyPresences - monthlyPresences)}`);
     } else {
@@ -5256,13 +5280,13 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
         const date = new Date(currentYear, currentMonth - 1, day);
         const dateStr = date.toISOString().split('T')[0];
         const dayOfWeek = date.getDay();
-        // Lunedì = 1, Venerdì = 5 E non è una festività
-        if (dayOfWeek >= 1 && dayOfWeek <= 5 && !holidayDates.has(dateStr)) {
+        // Lunedì = 1, Venerdì = 5 E non è una festività E non è una ferie approvata
+        if (dayOfWeek >= 1 && dayOfWeek <= 5 && !holidayDates.has(dateStr) && !vacationDates.has(dateStr)) {
           workingDays++;
         }
       }
       expectedMonthlyPresences = workingDays;
-      console.log(`⚠️ Nessun orario trovato per utente ${userId}, usato fallback: ${expectedMonthlyPresences} giorni (escluse ${holidayDates.size} festività)`);
+      console.log(`⚠️ Nessun orario trovato per utente ${userId}, usato fallback: ${expectedMonthlyPresences} giorni (escluse ${holidayDates.size} festività e ${vacationDates.size} giorni di ferie/malattia)`);
     }
 
     // Get user workplace from profile
