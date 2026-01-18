@@ -2966,6 +2966,8 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       .eq('status', 'approved')
       .lte('start_date', today)
       .gte('end_date', today);
+    
+    console.log(`🕐 Permessi oggi:`, permissionsToday?.length || 0, 'permessi totali');
 
     // Crea una mappa user_id -> array di permessi (per gestire test mode per utente)
     const permissionsMap = {};
@@ -3074,6 +3076,32 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
           department: user.department || 'Non specificato',
           is_working_day: true,
           status: 'vacation',
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0,
+          permission_end_time: null
+        };
+      }
+
+      // Controlla se ha un permesso per la data dell'utente (usa la data dell'utente se in test mode)
+      const userPermissions = permissionsMap[user.id]?.filter(p =>
+        userToday >= p.start_date && userToday <= p.end_date
+      ) || [];
+
+      // Se ha un permesso per giornata intera, NON è presente
+      const hasFullDayPermission = userPermissions.some(p => 
+        p.permission_type === 'full_day' || p.permission_type === 'giornata_intera'
+      );
+      if (hasFullDayPermission) {
+        console.log(`🚫 ${user.first_name} ${user.last_name} ha permesso giornata intera oggi → NON presente`);
+        return {
+          user_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          name: `${user.first_name} ${user.last_name}`,
+          department: user.department || 'Non specificato',
+          is_working_day: true,
+          status: 'permission',
           actual_hours: 0,
           expected_hours: 0,
           balance_hours: 0,
@@ -3202,18 +3230,19 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       const expectedHours = calculateExpectedHoursForSchedule({ start_time: start_time, end_time: end_time, break_duration }); // NON modificare per permessi early_exit/late_entry!
 
       // Controlla se c'è un permesso per la data dell'utente (usa la data dell'utente se in test mode)
-      const userPermissions = permissionsMap[user.id]?.filter(p =>
+      // NOTA: userPermissions è già stato filtrato sopra, ma qui lo ricreiamo per il calcolo orario
+      const userPermissionsForCalculation = permissionsMap[user.id]?.filter(p =>
         userToday >= p.start_date && userToday <= p.end_date
       ) || [];
 
       let permissionData = null;
-      if (userPermissions.length > 0) {
+      if (userPermissionsForCalculation.length > 0) {
         let totalHours = 0;
         let exitTime = null;
         let entryTime = null;
         const permissionTypes = new Set();
 
-        userPermissions.forEach(perm => {
+        userPermissionsForCalculation.forEach(perm => {
           totalHours += parseFloat(perm.hours || 0);
           if (perm.permission_type === 'early_exit' && perm.exit_time) {
             permissionTypes.add('early_exit');
@@ -3264,6 +3293,52 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
       // Calculate real-time hours (same logic as employee page)
       let actualHours = 0;
       let status = 'not_started';
+
+      // IMPORTANTE: Se c'è un permesso orario (entrata posticipata o uscita anticipata),
+      // controlla se siamo nelle ore del permesso. Se sì, NON è presente.
+      if (permissionData) {
+        // ENTRATA POSTICIPATA: non presente fino all'ora di entrata
+        if (permissionData.entry_time) {
+          const [entryHour, entryMin] = permissionData.entry_time.split(':').map(Number);
+          if (userCurrentHour < entryHour || (userCurrentHour === entryHour && userCurrentMinute < entryMin)) {
+            console.log(`🚫 ${user.first_name} ${user.last_name} ha permesso entrata posticipata alle ${permissionData.entry_time}, ora è ${userCurrentHour}:${userCurrentMinute} → NON presente`);
+            return {
+              user_id: user.id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              name: `${user.first_name} ${user.last_name}`,
+              department: user.department || 'Non specificato',
+              is_working_day: true,
+              status: 'permission',
+              actual_hours: 0,
+              expected_hours: expectedHours,
+              balance_hours: -permissionData.hours,
+              permission_end_time: null
+            };
+          }
+        }
+        
+        // USCITA ANTICIPATA: non presente dopo l'ora di uscita
+        if (permissionData.exit_time) {
+          const [exitHour, exitMin] = permissionData.exit_time.split(':').map(Number);
+          if (userCurrentHour > exitHour || (userCurrentHour === exitHour && userCurrentMinute >= exitMin)) {
+            console.log(`🚫 ${user.first_name} ${user.last_name} ha permesso uscita anticipata alle ${permissionData.exit_time}, ora è ${userCurrentHour}:${userCurrentMinute} → NON presente`);
+            return {
+              user_id: user.id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+              name: `${user.first_name} ${user.last_name}`,
+              department: user.department || 'Non specificato',
+              is_working_day: true,
+              status: 'permission',
+              actual_hours: 0,
+              expected_hours: expectedHours,
+              balance_hours: -permissionData.hours,
+              permission_end_time: permissionData.exit_time
+            };
+          }
+        }
+      }
 
       // Controlla se ha iniziato (usa effectiveStartHour per late_entry e userCurrentHour per test mode)
       if (userCurrentHour < effectiveStartHour || (userCurrentHour === effectiveStartHour && userCurrentMinute < effectiveStartMin)) {
@@ -3361,6 +3436,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
 
     // Modalità predefinita: restituisci i presenti ora (working/on_break/present) E anche ferie/malattia/permessi 104
     // Include anche completed per mostrare chi ha finito la giornata
+    // IMPORTANTE: Escludi status 'permission' (permessi giornata intera o orari) dalla lista "presenti"
     const presentNow = currentAttendance.filter(emp =>
       emp.is_working_day && (
         emp.status === 'working' ||
@@ -3370,7 +3446,7 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
         emp.status === 'sick_leave' ||
         emp.status === 'permission_104' ||
         emp.status === 'completed'
-      )
+      ) && emp.status !== 'permission' // Escludi esplicitamente i permessi
     );
 
     console.log(`🔍 Present now: ${presentNow.length}`);

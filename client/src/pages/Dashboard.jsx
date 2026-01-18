@@ -1201,13 +1201,20 @@ const Dashboard = () => {
                 person.status === 'on_break' || 
                 person.status === 'vacation' ||
                 person.status === 'sick_leave' ||
-                person.status === 'permission_104';
+                person.status === 'permission_104' ||
+                person.status === 'completed';
+              
+              // IMPORTANTE: Escludi esplicitamente i permessi (giornata intera o orari)
+              const shouldExclude = person.status === 'permission';
               
               if (person.status === 'vacation') {
                 console.log('🏖️ [Dashboard] Trovato dipendente in ferie:', person.name, person.status);
               }
+              if (person.status === 'permission') {
+                console.log('🚫 [Dashboard] Escluso dipendente con permesso:', person.name, person.status);
+              }
               
-              return shouldInclude;
+              return shouldInclude && !shouldExclude;
             });
             
             console.log('🔍 [Dashboard] presentNow filtered:', presentNow.length, 'dipendenti');
