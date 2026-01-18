@@ -245,29 +245,6 @@ option {
   color: #f8fafc !important;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="tel"],
-input[type="date"],
-textarea,
-select {
-  color: #f8fafc !important;
-  background-color: #1e293b !important;
-  border-color: #475569 !important;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="tel"]:focus,
-input[type="date"]:focus,
-textarea:focus,
-select:focus {
-  color: #f8fafc !important;
-  background-color: #1e293b !important;
-  border-color: #6366f1 !important;
-}
 
 label {
   color: #cbd5e1 !important;
