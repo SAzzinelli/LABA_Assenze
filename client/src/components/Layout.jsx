@@ -292,7 +292,7 @@ const Layout = ({ children }) => {
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-2 p-1 rounded text-slate-400 hover:text-white hover:bg-zinc-900"
+                className="ml-2 p-1 rounded text-white hover:text-slate-200 hover:bg-zinc-800 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -428,7 +428,7 @@ const Layout = ({ children }) => {
               <div className="relative">
                 <button 
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className="bg-black p-2 sm:p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white relative touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="bg-black p-2 sm:p-1 rounded-full text-white hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white relative touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors"
                   aria-label={`Notifiche${unreadCount > 0 ? ` (${unreadCount} non lette)` : ''}`}
                 >
                   <Bell className="h-5 w-5 sm:h-6 sm:w-6" />
