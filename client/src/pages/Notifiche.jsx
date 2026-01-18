@@ -152,13 +152,13 @@ const Notifiche = () => {
   };
 
   const getNotificationBg = (notification, isRead) => {
-    // Non lette: fondo blu + pallino blu
-    // Lette: no fondo, meno opache, no pallino
+    // Non lette: fondo zinc con bordo più evidente
+    // Lette: fondo zinc più opaco
     if (isRead) {
-      return 'opacity-60 bg-transparent border border-slate-700';
+      return 'opacity-60 bg-zinc-900 border border-zinc-800';
     }
-    // Non lette: fondo blu
-    return 'bg-blue-900/30 border border-blue-500/50';
+    // Non lette: fondo zinc con bordo più evidente
+    return 'bg-zinc-900 border border-zinc-700';
   };
 
   const filteredNotifications = filterUnread 
@@ -170,11 +170,11 @@ const Notifiche = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Bell className="h-8 w-8 mr-3 text-indigo-400" />
+              <Bell className="h-8 w-8 mr-3 text-slate-400" />
               Notifiche
             </h1>
             <p className="text-slate-400 mt-2">
@@ -191,8 +191,8 @@ const Notifiche = () => {
               onClick={() => setFilterUnread(!filterUnread)}
               className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
                 filterUnread
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
               }`}
             >
               <Filter className="h-4 w-4 mr-2" />
@@ -214,10 +214,10 @@ const Notifiche = () => {
       </div>
 
       {/* Lista Notifiche */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-700"></div>
           </div>
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12">
@@ -248,7 +248,7 @@ const Notifiche = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           {!notification.is_read && (
-                            <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+                            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
                           )}
                           <h3 className={`font-semibold ${notification.is_read ? 'text-slate-300' : 'text-white'}`}>
                             {notification.title}
@@ -299,7 +299,7 @@ const Notifiche = () => {
                           e.stopPropagation();
                           markAsUnread(notification.id);
                         }}
-                        className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                        className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
                         title="Segna come non letta"
                       >
                         <EyeOff className="h-4 w-4" />
@@ -310,7 +310,7 @@ const Notifiche = () => {
                           e.stopPropagation();
                           markAsRead(notification.id);
                         }}
-                        className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                        className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
                         title="Segna come letta"
                       >
                         <Eye className="h-4 w-4" />
