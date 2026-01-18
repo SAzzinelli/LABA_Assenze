@@ -360,7 +360,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           };
 
           return (
-            <div key={day} className="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+            <div key={day} className="bg-zinc-800/50 rounded-lg p-4 border border-zinc-700">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-medium text-white">{dayNames[day]}</h4>
                 <label className="flex items-center space-x-2 cursor-pointer">
@@ -433,7 +433,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
         <p className="text-slate-400">Controlla i dati inseriti prima di procedere</p>
       </div>
 
-      <div className="bg-slate-700 rounded-lg p-6 space-y-4">
+      <div className="bg-zinc-800 rounded-lg p-6 space-y-4 border border-zinc-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
@@ -565,8 +565,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             disabled={currentStep === 1}
             className={`flex items-center px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
               currentStep === 1 
-                ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed border border-slate-600/30' 
-                : 'bg-slate-600/80 text-white hover:bg-slate-500/80 border border-slate-500/30 hover:border-slate-400/50'
+                ? 'bg-zinc-800/50 text-slate-500 cursor-not-allowed border border-zinc-700/30' 
+                : 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-600'
             }`}
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -581,7 +581,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               className={`flex items-center px-8 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg border ${
                 validateCurrentStep()
                   ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-700 hover:to-blue-700 hover:shadow-xl border-indigo-500/30'
-                  : 'bg-slate-700/50 text-slate-500 cursor-not-allowed border-slate-600/30'
+                  : 'bg-zinc-800/50 text-slate-500 cursor-not-allowed border-zinc-700/30'
               }`}
             >
               Avanti
