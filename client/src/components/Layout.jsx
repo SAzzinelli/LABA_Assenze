@@ -220,10 +220,10 @@ const Layout = ({ children }) => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-900 flex">
+    <div className="min-h-screen bg-black flex">
       {/* Sidebar */}
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 transform transition-transform duration-300 ease-in-out">
-        <div className="flex flex-col flex-grow bg-slate-800 border-r border-slate-700 shadow-xl">
+        <div className="flex flex-col flex-grow bg-black border-r border-zinc-900 shadow-xl">
           {/* Logo */}
           <div className="flex items-center flex-shrink-0 px-6 py-4">
             <div className="h-8 w-8 bg-white rounded-lg flex items-center justify-center p-1">
@@ -273,7 +273,7 @@ const Layout = ({ children }) => {
           </nav>
 
           {/* User Profile */}
-          <div className="flex-shrink-0 p-4 border-t border-slate-700">
+          <div className="flex-shrink-0 p-4 border-t border-zinc-900">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
@@ -310,8 +310,8 @@ const Layout = ({ children }) => {
           style={{ opacity: sidebarOpen ? 0.5 : 0 }}
           onClick={() => setSidebarOpen(false)}
         />
-        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-slate-800 transform transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+        <div className={`relative flex-1 flex flex-col w-full sm:max-w-xs bg-black transform transition-all duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
         }`}>
             <div className="absolute top-0 right-0 -mr-12 pt-2">
               <button
@@ -371,7 +371,7 @@ const Layout = ({ children }) => {
             </div>
             
             {/* User Profile e Logout - Mobile */}
-            <div className="flex-shrink-0 p-4 border-t border-slate-700">
+            <div className="flex-shrink-0 p-4 border-t border-zinc-900">
               <div className="flex items-center mb-3">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
@@ -406,7 +406,7 @@ const Layout = ({ children }) => {
       {/* Main content */}
       <div className="lg:pl-64 flex flex-col flex-1 min-h-screen">
         {/* Top bar */}
-        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-slate-800 border-b border-slate-700 shadow-lg">
+        <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-black border-b border-zinc-900 shadow-lg">
           <button
             className="px-3 sm:px-4 py-3 border-r border-slate-700 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}
@@ -428,7 +428,7 @@ const Layout = ({ children }) => {
               <div className="relative">
                 <button 
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className="bg-slate-800 p-2 sm:p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white relative touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  className="bg-black p-2 sm:p-1 rounded-full text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white relative touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
                   aria-label={`Notifiche${unreadCount > 0 ? ` (${unreadCount} non lette)` : ''}`}
                 >
                   <Bell className="h-5 w-5 sm:h-6 sm:w-6" />

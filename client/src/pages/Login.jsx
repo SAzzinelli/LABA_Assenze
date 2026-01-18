@@ -73,11 +73,11 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-950 to-black flex flex-col">
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-6xl mx-auto">
-          <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
+          <div className="bg-zinc-950/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-zinc-900/50 overflow-hidden">
             
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-blue-700 p-8 text-center">
@@ -91,7 +91,7 @@ const Login = () => {
             {/* Content */}
             <div className="p-8">
             {/* Tab Switcher */}
-            <div className="flex bg-slate-700/50 rounded-xl p-1 mb-8">
+            <div className="flex bg-zinc-900/50 rounded-xl p-1 mb-8">
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}

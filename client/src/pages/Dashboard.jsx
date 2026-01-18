@@ -769,7 +769,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-950 rounded-lg p-6">
         <h1 className="text-3xl font-bold text-white">Dashboard</h1>
         <p className="text-slate-400 mt-2">
           {user?.role === 'admin' 
@@ -796,7 +796,7 @@ const Dashboard = () => {
               <div 
                 key={stat.key} 
                 onClick={stat.onClick}
-                className="bg-slate-800 rounded-lg p-4 sm:p-6 cursor-pointer active:bg-slate-700 transition-colors"
+                className="bg-zinc-950 rounded-lg p-4 sm:p-6 cursor-pointer active:bg-zinc-900 transition-colors"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -835,7 +835,7 @@ const Dashboard = () => {
             </div>
           </div>
           
-          <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
+          <div className="bg-black/50 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-slate-300 text-sm">Livello Gay</span>
               <span className="text-white font-bold text-lg">100%</span>
@@ -870,7 +870,7 @@ const Dashboard = () => {
                   ? 'bg-red-900/20 border-red-500/50' 
                   : overtimeBalance.balance > 0 
                   ? 'bg-green-900/20 border-green-500/50' 
-                  : 'bg-slate-800 border-slate-700'
+                  : 'bg-zinc-950 border-zinc-900'
               }`}>
                 <div 
                   className="flex items-center justify-between mb-4 cursor-pointer"
@@ -928,7 +928,7 @@ const Dashboard = () => {
 
             {/* Saldo Ferie */}
             {vacationBalance && (
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+              <div className="bg-zinc-950 rounded-lg p-6 border border-zinc-900">
                 <div 
                   className="flex items-center justify-between mb-4 cursor-pointer"
                   onClick={() => setFerieCollapsed(!ferieCollapsed)}
