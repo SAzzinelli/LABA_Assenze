@@ -3258,10 +3258,6 @@ app.get('/api/attendance/current', authenticateToken, async (req, res) => {
             balance_hours: 0,
             permission_end_time: null
           };
-        }
-
-        todaySchedule = newTodaySchedule;
-        console.log(`🔍 Using new schedule: ${todaySchedule.start_time}-${todaySchedule.end_time}`);
       }
 
       // Se c'è una presenza salvata per oggi, controllare se la giornata è completata
