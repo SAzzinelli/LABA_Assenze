@@ -403,7 +403,7 @@ const Employees = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Users className="h-8 w-8 mr-3 text-blue-400" />
+              <Users className="h-8 w-8 mr-3 text-slate-400" />
               Gestione Dipendenti
             </h1>
             <p className="text-slate-400 mt-2">
@@ -421,7 +421,7 @@ const Employees = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+      <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 border border-zinc-800">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -430,15 +430,15 @@ const Employees = () => {
               placeholder="Cerca dipendenti..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-10 pr-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600"
             />
           </div>
           {/* Toggle Vista - Solo Desktop */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-700 rounded-lg p-1">
+          <div className="hidden md:flex items-center gap-2 bg-zinc-800 rounded-lg p-1 border border-zinc-700">
             <button
               onClick={() => setViewMode('list')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'list'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                ? 'bg-zinc-900 text-white border border-zinc-700'
                 : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Lista"
@@ -448,7 +448,7 @@ const Employees = () => {
             <button
               onClick={() => setViewMode('card')}
               className={`px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${viewMode === 'card'
-                ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                ? 'bg-zinc-900 text-white border border-zinc-700'
                 : 'text-slate-300 hover:text-white'
                 }`}
               title="Vista Card"
@@ -456,7 +456,7 @@ const Employees = () => {
               <LayoutGrid className="h-4 w-4" />
             </button>
           </div>
-          <button onClick={() => setFiltersOpen(v => !v)} className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center">
+          <button onClick={() => setFiltersOpen(v => !v)} className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center border border-zinc-700">
             <Filter className="h-5 w-5 mr-2" />
             Filtri
           </button>
@@ -465,7 +465,7 @@ const Employees = () => {
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm text-slate-300 mb-1">Reparto</label>
-              <input value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Es. Amministrazione" />
+              <input value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white" placeholder="Es. Amministrazione" />
             </div>
             <label className="flex items-center gap-2 mt-2 sm:mt-7">
               <input type="checkbox" checked={only104} onChange={e => setOnly104(e.target.checked)} className="h-4 w-4" />
@@ -486,7 +486,7 @@ const Employees = () => {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
+                <div className="h-10 w-10 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700">
                   <span className="text-white font-bold text-sm">
                     {employee.name.split(' ').map(n => n[0]).join('')}
                   </span>
@@ -497,16 +497,16 @@ const Employees = () => {
                 </div>
               </div>
               {employee.has104 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white border border-blue-400">104</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white border border-purple-400">104</span>
               )}
             </div>
             <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600">{employee.department}</span>
+              <span className="px-2 py-1 rounded-full bg-zinc-800 text-slate-300 border border-zinc-700">{employee.department}</span>
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
-                className="flex-1 py-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/30 touch-manipulation min-h-[44px] text-sm font-medium"
+                className="flex-1 py-2 bg-zinc-800 text-white border border-zinc-700 rounded-lg hover:bg-zinc-700 touch-manipulation min-h-[44px] text-sm font-medium"
                 title="Modifica"
               >
                 Modifica
@@ -538,11 +538,11 @@ const Employees = () => {
             <div
               key={employee.id}
               onClick={() => handleViewDetails(employee)}
-              className="bg-slate-800 rounded-xl p-4 border border-slate-700 hover:border-slate-500 transition-all hover:shadow-md cursor-pointer"
+              className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-all hover:shadow-md cursor-pointer"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center">
-                  <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center">
+                  <div className="h-10 w-10 bg-zinc-800 rounded-full flex items-center justify-center border border-zinc-700">
                     <span className="text-white font-bold text-sm">
                       {employee.name.split(' ').map(n => n[0]).join('')}
                     </span>
@@ -552,7 +552,7 @@ const Employees = () => {
                   </div>
                 </div>
                 {employee.has104 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-600 text-white border border-blue-400">104</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white border border-purple-400">104</span>
                 )}
               </div>
               <div className="mb-3 flex items-center justify-between text-sm">
@@ -561,7 +561,7 @@ const Employees = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleEditEmployee(employee); }}
-                  className="flex-1 py-2 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-lg hover:bg-indigo-500/30 flex items-center justify-center"
+                  className="flex-1 py-2 bg-zinc-800 text-white border border-zinc-700 rounded-lg hover:bg-zinc-700 flex items-center justify-center"
                   title="Modifica"
                 >
                   <Edit className="h-4 w-4" />
@@ -595,10 +595,10 @@ const Employees = () => {
 
       {/* Desktop Table - Visibile quando viewMode === 'list' */}
       {viewMode === 'list' && (
-        <div className="bg-slate-800 rounded-lg overflow-hidden hidden md:block">
+        <div className="bg-zinc-900 rounded-lg overflow-hidden hidden md:block border border-zinc-800">
           <div className="overflow-x-auto hover:overflow-hidden">
             <table className="w-full">
-              <thead className="bg-slate-700">
+              <thead className="bg-zinc-800">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider w-1/3">
                     Nome
@@ -611,16 +611,16 @@ const Employees = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-zinc-800">
                 {filteredEmployees.map((employee) => (
                   <tr
                     key={employee.id}
-                    className="hover:bg-slate-700/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
+                    className="hover:bg-zinc-800/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:scale-[1.01]"
                     onClick={() => handleViewDetails(employee)}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 bg-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="h-10 w-10 bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 border border-zinc-700">
                           <span className="text-white font-bold text-sm">
                             {employee.name.split(' ').map(n => n[0]).join('')}
                           </span>
@@ -631,7 +631,7 @@ const Employees = () => {
                               {employee.name}
                             </div>
                             {employee.has104 && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400 flex-shrink-0">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-600 text-white border border-purple-400 flex-shrink-0">
                                 104
                               </span>
                             )}
@@ -887,7 +887,7 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('details')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  ? 'bg-zinc-900 text-white border border-zinc-700'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
@@ -897,7 +897,7 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('balance')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  ? 'bg-zinc-900 text-white border border-zinc-700'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
@@ -907,7 +907,7 @@ const Employees = () => {
               <button
                 onClick={() => setDetailActiveTab('schedule')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  ? 'bg-zinc-900 text-white border border-zinc-700'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
