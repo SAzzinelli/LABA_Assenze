@@ -21,7 +21,9 @@ import {
   CheckCircle,
   XCircle,
   Accessibility,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -83,6 +85,27 @@ const Layout = ({ children }) => {
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Marca notifica come non letta
+  const markAsUnread = async (notificationId) => {
+    try {
+      const response = await apiCall(`/api/notifications/${notificationId}/unread`, {
+        method: 'PUT'
+      });
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, is_read: false } : n)
+        );
+        setUnreadCount(prev => prev + 1);
+      } else if (response.status === 401) {
+        // Token scaduto, fai logout automatico
+        logout();
+        window.location.href = '/login';
+      }
+    } catch (error) {
+      console.error('Error marking notification as unread:', error);
     }
   };
 
@@ -476,9 +499,36 @@ const Layout = ({ children }) => {
                                       <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0 bg-blue-400" />
                                     )}
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold text-white mb-1">
-                                        {notification.title}
-                                      </p>
+                                      <div className="flex items-start justify-between mb-1">
+                                        <p className="text-sm font-semibold text-white">
+                                          {notification.title}
+                                        </p>
+                                        <div className="flex items-center space-x-1 ml-2">
+                                          {notification.is_read ? (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                markAsUnread(notification.id);
+                                              }}
+                                              className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                                              title="Segna come non letta"
+                                            >
+                                              <EyeOff className="h-3.5 w-3.5" />
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                markAsRead(notification.id);
+                                              }}
+                                              className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                                              title="Segna come letta"
+                                            >
+                                              <Eye className="h-3.5 w-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
                                       <div className="text-sm text-slate-300 mb-2 space-y-3" dangerouslySetInnerHTML={{
                                         __html: (() => {
                                           let msg = notification.message;

@@ -63,6 +63,21 @@ const Notifiche = () => {
     }
   };
 
+  const markAsUnread = async (notificationId) => {
+    try {
+      const response = await apiCall(`/api/notifications/${notificationId}/unread`, {
+        method: 'PUT'
+      });
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, is_read: false } : n)
+        );
+      }
+    } catch (error) {
+      console.error('Error marking as unread:', error);
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
@@ -278,14 +293,25 @@ const Notifiche = () => {
 
                   {/* Azioni */}
                   <div className="flex items-center space-x-2 ml-4">
-                    {!notification.is_read && (
+                    {notification.is_read ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsUnread(notification.id);
+                        }}
+                        className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                        title="Segna come non letta"
+                      >
+                        <EyeOff className="h-4 w-4" />
+                      </button>
+                    ) : (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           markAsRead(notification.id);
                         }}
                         className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                        title="Segna come letto"
+                        title="Segna come letta"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
