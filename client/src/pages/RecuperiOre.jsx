@@ -1517,8 +1517,8 @@ const RecuperiOre = () => {
         <div className="flex items-start">
           <Info className="h-5 w-5 text-slate-400 mr-3 mt-0.5" />
           <div>
-            <h4 className="text-sm font-bold text-blue-300 mb-1">Elaborazione Banca Ore</h4>
-            <p className="text-xs text-blue-400/80 leading-relaxed">
+            <h4 className="text-sm font-bold text-slate-300 mb-1">Elaborazione Banca Ore</h4>
+            <p className="text-xs text-slate-300 leading-relaxed">
               Le ore delle richieste approvate verranno aggiunte automaticamente al saldo banca ore del dipendente solo <strong>dopo il passaggio della data e dell'orario di fine</strong> della sessione di recupero/straordinario. Finché non vengono elaborate, le vedrai in questo elenco come "Approvata (Programmata)".
             </p>
           </div>
@@ -1559,7 +1559,7 @@ const RecuperiOre = () => {
                           {/* CENTRO: Dettagli */}
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <div className="flex items-center gap-1.5 bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/20">
+                              <div className="flex items-center gap-1.5 bg-zinc-800/50 text-slate-300 px-2 py-0.5 rounded-md border border-zinc-700">
                                 <User className="w-3 h-3" />
                                 <span className="text-xs font-bold truncate max-w-[150px]">
                                   {recovery.users?.first_name} {recovery.users?.last_name}
@@ -1626,7 +1626,7 @@ const RecuperiOre = () => {
                             )}
 
                             {recovery.status === 'proposed' && (
-                              <div className="text-xs text-blue-400 font-medium text-center py-2 italic">
+                              <div className="text-xs text-slate-400 font-medium text-center py-2 italic">
                                 In attesa del dipendente
                               </div>
                             )}
@@ -1798,7 +1798,7 @@ const RecuperiOre = () => {
           <button
             onClick={() => setActiveTab('proposals')}
             className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
-              ? 'text-blue-400 border-blue-400'
+              ? 'text-slate-300 border-zinc-700'
               : 'text-slate-400 border-transparent hover:text-slate-300'
               }`}
           >
@@ -1929,7 +1929,7 @@ const RecuperiOre = () => {
                   const isCredit = employee.balance > 0;
                   const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
                     isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
-                      'border-l-slate-500 hover:border-blue-500/30 hover:shadow-blue-500/5';
+                      'border-l-slate-500 hover:border-zinc-700/50 hover:shadow-zinc-900/5';
 
                   const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
                   const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
@@ -1999,7 +1999,7 @@ const RecuperiOre = () => {
                               setProposalSuggestedTimeSlots([]);
                               setShowProposeRecoveryModal(true);
                             }}
-                            className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
+                            className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Proponi
@@ -2315,8 +2315,8 @@ const RecuperiOre = () => {
                   </div>
 
                   {proposalFormData.recoveryDate && (
-                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                      <p className="text-sm text-blue-400">
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
+                      <p className="text-sm text-slate-300">
                         📅 Data selezionata: <strong>{new Date(proposalFormData.recoveryDate).toLocaleDateString('it-IT')}</strong>
                       </p>
                     </div>
