@@ -128,7 +128,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <User className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
+        <User className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Informazioni Personali</h3>
         <p className="text-slate-400">Inserisci i tuoi dati personali</p>
       </div>
@@ -249,7 +249,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           name="has104"
           checked={formData.has104}
           onChange={handleInputChange}
-          className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
+          className="h-4 w-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600"
         />
         <label className="ml-2 text-sm text-slate-300">
           Beneficiario Legge 104
@@ -261,7 +261,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Building2 className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
+        <Building2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Informazioni Lavorative</h3>
         <p className="text-slate-400">Inserisci i tuoi dati lavorativi</p>
       </div>
@@ -342,7 +342,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Calendar className="h-12 w-12 text-indigo-400 mx-auto mb-4" />
+        <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Orario di Lavoro</h3>
         <p className="text-slate-400">Configura il tuo orario di lavoro settimanale</p>
       </div>
@@ -368,7 +368,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                     type="checkbox"
                     checked={schedule.isWorking}
                     onChange={(e) => handleWorkScheduleChange(day, 'isWorking', e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600 focus:ring-2"
+                    className="w-4 h-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600 focus:ring-2"
                   />
                   <span className="text-slate-300">Giorno lavorativo</span>
                 </label>
@@ -416,8 +416,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
         })}
       </div>
 
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-        <p className="text-blue-300 text-sm">
+      <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+        <p className="text-slate-300 text-sm">
           <strong>Nota:</strong> L'orario configurato verrà utilizzato per il calcolo automatico delle presenze. 
           Potrai modificarlo successivamente nelle impostazioni del tuo profilo.
         </p>
@@ -437,7 +437,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <User className="h-5 w-5 mr-2 text-indigo-400" />
+              <User className="h-5 w-5 mr-2 text-slate-400" />
               Informazioni Personali
             </h4>
             <div className="space-y-2 text-sm">
@@ -451,7 +451,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
 
           <div>
             <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Building2 className="h-5 w-5 mr-2 text-indigo-400" />
+              <Building2 className="h-5 w-5 mr-2 text-slate-400" />
               Informazioni Lavorative
             </h4>
             <div className="space-y-2 text-sm">
@@ -464,7 +464,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
 
         <div className="mt-6">
           <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-indigo-400" />
+            <Calendar className="h-5 w-5 mr-2 text-slate-400" />
             Orario di Lavoro
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -482,7 +482,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               if (!schedule.isWorking) return null;
 
               return (
-                <div key={day} className="bg-slate-600/50 rounded-lg p-3">
+                <div key={day} className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-700">
                   <p className="text-white font-medium">{dayNames[day]}</p>
                   <p className="text-slate-300 text-sm">
                     {schedule.startTime} - {schedule.endTime}
@@ -499,8 +499,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
         </div>
       </div>
 
-      <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
-        <p className="text-blue-300 text-sm">
+      <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+        <p className="text-slate-300 text-sm">
           <strong>Nota:</strong> Una volta completata la registrazione, riceverai le credenziali per accedere al sistema HR.
         </p>
       </div>
@@ -520,8 +520,8 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             return (
               <div key={step.id} className="flex flex-col items-center">
                 <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
-                  isCompleted ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' :
-                  isActive ? 'border-indigo-600 text-indigo-600 bg-indigo-600/20' :
+                  isCompleted ? 'bg-zinc-800 border-zinc-700 text-white shadow-lg' :
+                  isActive ? 'border-zinc-700 text-slate-300 bg-zinc-900' :
                   'border-slate-600 text-slate-400'
                 }`}>
                   {isCompleted ? <CheckCircle className="h-6 w-6" /> : <Icon className="h-6 w-6" />}
@@ -529,7 +529,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                 <div className="mt-3 text-center">
                   <p className={`text-sm font-semibold transition-colors duration-300 ${
                     isActive ? 'text-white' : 
-                    isCompleted ? 'text-indigo-400' : 'text-slate-400'
+                    isCompleted ? 'text-slate-300' : 'text-slate-400'
                   }`}>
                     {step.title}
                   </p>
@@ -541,7 +541,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                 </div>
                 {index < steps.length - 1 && (
                   <div className={`absolute top-6 left-full w-16 h-0.5 transition-colors duration-300 ${
-                    isCompleted ? 'bg-indigo-600' : 'bg-slate-600'
+                    isCompleted ? 'bg-zinc-700' : 'bg-zinc-800'
                   }`} style={{ transform: 'translateX(50%)' }} />
                 )}
               </div>

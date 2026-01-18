@@ -154,7 +154,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <User className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+        <User className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Informazioni Personali</h3>
         <p className="text-slate-400">Inserisci i dati personali del dipendente</p>
       </div>
@@ -278,7 +278,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
           name="has104"
           checked={formData.has104}
           onChange={handleInputChange}
-          className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
+          className="h-4 w-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600"
         />
         <label className="ml-2 text-sm text-slate-300">
           Beneficiario Legge 104
@@ -290,7 +290,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
   const renderStep2 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Building2 className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+        <Building2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Informazioni Lavorative</h3>
         <p className="text-slate-400">Inserisci i dati lavorativi del dipendente</p>
       </div>
@@ -395,7 +395,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
   const renderStep3 = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <Calendar className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+        <Calendar className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <h3 className="text-xl font-semibold text-white mb-2">Orario di Lavoro</h3>
         <p className="text-slate-400">Configura l'orario di lavoro settimanale del dipendente</p>
       </div>
@@ -421,7 +421,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                     type="checkbox"
                     checked={schedule.isWorking}
                     onChange={(e) => handleWorkScheduleChange(day, 'isWorking', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-zinc-600 focus:ring-2"
+                    className="w-4 h-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600 focus:ring-2"
                   />
                   <span className="text-slate-300">Giorno lavorativo</span>
                 </label>
@@ -482,7 +482,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <User className="h-5 w-5 mr-2 text-blue-400" />
+              <User className="h-5 w-5 mr-2 text-slate-400" />
               Informazioni Personali
             </h4>
             <div className="space-y-2 text-sm">
@@ -496,7 +496,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
 
           <div>
             <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Building2 className="h-5 w-5 mr-2 text-blue-400" />
+              <Building2 className="h-5 w-5 mr-2 text-slate-400" />
               Informazioni Lavorative
             </h4>
             <div className="space-y-2 text-sm">
@@ -514,7 +514,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
 
         <div>
           <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Calendar className="h-5 w-5 mr-2 text-indigo-400" />
+            <Calendar className="h-5 w-5 mr-2 text-slate-400" />
             Orario di Lavoro
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
