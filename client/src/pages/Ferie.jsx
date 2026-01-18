@@ -709,11 +709,11 @@ const Vacation = () => {
         </div>
 
         {/* Toggle Vista - Full width su mobile */}
-        <div className="flex bg-slate-700 rounded-lg p-1 mb-2">
+        <div className="flex bg-zinc-800 rounded-lg p-1 mb-2">
           <button
             onClick={() => setActiveView('list')}
             className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'list'
-              ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+              ? 'bg-zinc-900 text-white'
               : 'text-slate-400'
               }`}
           >
@@ -723,7 +723,7 @@ const Vacation = () => {
           <button
             onClick={() => setActiveView('calendar')}
             className={`flex-1 px-3 py-2 rounded-md transition-colors flex items-center justify-center text-sm touch-manipulation min-h-[44px] ${activeView === 'calendar'
-              ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+              ? 'bg-zinc-900 text-white'
               : 'text-slate-400'
               }`}
           >
@@ -761,11 +761,11 @@ const Vacation = () => {
           </div>
           <div className="flex flex-row items-center gap-4 flex-shrink-0">
             {/* Toggle Vista */}
-            <div className="flex bg-slate-700 rounded-lg p-1">
+            <div className="flex bg-zinc-800 rounded-lg p-1">
               <button
                 onClick={() => setActiveView('list')}
                 className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'list'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  ? 'bg-zinc-900 text-white'
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
@@ -775,7 +775,7 @@ const Vacation = () => {
               <button
                 onClick={() => setActiveView('calendar')}
                 className={`px-4 py-2 rounded-md transition-colors flex items-center text-sm ${activeView === 'calendar'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
+                  ? 'bg-zinc-900 text-white'
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
@@ -822,7 +822,7 @@ const Vacation = () => {
       {/* Vacation Balance - GIORNI (non ore) - Solo per dipendenti */}
       {user?.role !== 'admin' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 border border-zinc-800">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-white">Totale Giorni</h3>
               <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400 flex-shrink-0" />
@@ -831,7 +831,7 @@ const Vacation = () => {
             <p className="text-slate-400 text-xs sm:text-sm mt-1">Giorni di ferie annuali</p>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 border border-zinc-800">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Utilizzati</h3>
               <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-400 flex-shrink-0" />
@@ -840,7 +840,7 @@ const Vacation = () => {
             <p className="text-slate-400 text-xs sm:text-sm mt-1">Ferie già godute</p>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 border border-zinc-800">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-white">Giorni Rimanenti</h3>
               <Sun className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-400 flex-shrink-0" />
@@ -849,7 +849,7 @@ const Vacation = () => {
             <p className="text-slate-400 text-xs sm:text-sm mt-1">Disponibili per richieste</p>
           </div>
 
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 border border-zinc-800">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-lg font-semibold text-white">In Attesa</h3>
               <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 flex-shrink-0" />
@@ -992,7 +992,7 @@ const Vacation = () => {
             }
           }}
         >
-          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
+          <div className="bg-zinc-900 rounded-lg p-4 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-4 border border-zinc-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <Calendar className="h-6 w-6 mr-2 text-purple-400" />
