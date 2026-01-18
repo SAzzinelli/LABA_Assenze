@@ -740,7 +740,7 @@ const Profile = () => {
 
       {/* Sezione Permessi 104 - Solo per chi ha 104 */}
       {formData.has104 && (
-        <div className="bg-slate-700 rounded-lg p-6 mt-6">
+        <div className="bg-zinc-800 rounded-lg p-6 mt-6 border border-zinc-700">
           <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
             <CheckSquare className="h-5 w-5 mr-2 text-amber-400" />
             Permessi Legge 104
@@ -854,7 +854,7 @@ const Profile = () => {
                   className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
                     workSchedule[selectedDay].workType === 'morning'
                       ? 'bg-yellow-500/20 border-2 border-yellow-400/50 text-yellow-300'
-                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                      : 'bg-zinc-800/20 border-2 border-zinc-700/50 text-slate-400 hover:border-zinc-600 hover:text-slate-300'
                   }`}
                 >
                   <Sun className="h-4 w-4 mr-2 inline" />
@@ -876,7 +876,7 @@ const Profile = () => {
                   className={`px-6 py-3 rounded-full font-medium transition-all duration-200 ${
                     workSchedule[selectedDay].workType === 'full'
                       ? 'bg-purple-500/20 border-2 border-purple-400/50 text-purple-300'
-                      : 'bg-slate-600/20 border-2 border-slate-600/50 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                      : 'bg-zinc-800/20 border-2 border-zinc-700/50 text-slate-400 hover:border-zinc-600 hover:text-slate-300'
                   }`}
                 >
                   <Clock className="h-4 w-4 mr-2 inline" />
