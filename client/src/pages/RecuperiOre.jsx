@@ -822,7 +822,7 @@ const RecuperiOre = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Saldo Banca Ore - Card principale */}
           <div className={`rounded-xl p-6 border-2 transition-all ${totalBalance < 0 
-            ? 'bg-red-900 border-red-500 shadow-lg shadow-red-500/5' 
+            ? 'bg-red-900/70 border-red-500 shadow-lg shadow-red-500/5' 
             : totalBalance > 0 
             ? 'bg-gradient-to-br from-green-900/15 to-green-800/10 border-green-500/30 shadow-lg shadow-green-500/5' 
             : 'bg-zinc-900 border-zinc-800'}`}>
@@ -871,7 +871,7 @@ const RecuperiOre = () => {
 
         {/* Alert Box - Solo se c'è debito */}
         {totalBalance < 0 && (
-          <div className="bg-gradient-to-r from-amber-900/15 via-orange-900/10 to-amber-900/15 border-l-4 border-amber-500/50 rounded-lg p-5">
+          <div className="bg-orange-600/80 border-l-4 border-orange-400 rounded-lg p-5">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-6 w-6 text-amber-400 mt-0.5" />
