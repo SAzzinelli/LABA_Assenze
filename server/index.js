@@ -5224,29 +5224,9 @@ app.get('/api/attendance/user-stats', authenticateToken, async (req, res) => {
       });
     }
 
-    // IMPORTANTE: Crea un Set con tutte le date di ferie/malattia approvate per escluderle dai giorni lavorativi attesi
-    const vacationDates = new Set();
-    if (approvedLeaves && approvedLeaves.length > 0) {
-      const monthStart = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
-      const monthEnd = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`;
-      const monthStartDate = new Date(monthStart);
-      const monthEndDate = new Date(monthEnd);
-
-      approvedLeaves.forEach(leave => {
-        const start = new Date(leave.start_date);
-        const end = new Date(leave.end_date);
-        const actualStart = start < monthStartDate ? monthStartDate : start;
-        const actualEnd = end >= monthEndDate ? new Date(monthEndDate.getTime() - 1) : end;
-
-        if (actualStart <= actualEnd) {
-          // Aggiungi tutte le date del range di ferie/malattia al Set
-          for (let d = new Date(actualStart); d <= actualEnd; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
-            vacationDates.add(dateStr);
-          }
-        }
-      });
-    }
+    // IMPORTANTE: Usa lo stesso Set di date di ferie già calcolato sopra (vacationDatesInMonth)
+    // per escluderle dai giorni lavorativi attesi
+    const vacationDates = vacationDatesInMonth;
 
     // Calcola giorni lavorativi attesi del mese basandosi sull'orario di lavoro dell'utente
     const { data: workSchedules, error: scheduleError } = await supabase
