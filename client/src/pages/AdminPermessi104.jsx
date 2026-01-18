@@ -210,11 +210,11 @@ const AdminPermessi104 = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center">
-              <Accessibility className="h-8 w-8 mr-3 text-blue-400" />
+              <Accessibility className="h-8 w-8 mr-3 text-slate-400" />
               Gestione Permessi Legge 104
             </h1>
             <p className="text-slate-400 mt-2">
@@ -224,7 +224,7 @@ const AdminPermessi104 = () => {
           
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+            className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
             Aggiungi
@@ -233,15 +233,15 @@ const AdminPermessi104 = () => {
       </div>
 
       {/* Lista Dipendenti con 104 */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <h2 className="text-xl font-bold mb-4 flex items-center">
-          <Users className="h-5 w-5 mr-2 text-blue-400" />
+          <Users className="h-5 w-5 mr-2 text-slate-400" />
           Dipendenti con Legge 104
         </h2>
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600"></div>
           </div>
         ) : employees104.length === 0 ? (
           <div className="text-center py-12">
@@ -251,10 +251,10 @@ const AdminPermessi104 = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {requestsByEmployee.map(({ employee, usedThisMonth, remaining, allRequests }) => (
-              <div key={employee.id} className="bg-slate-700 rounded-lg p-4 border-2 border-blue-500/30">
+              <div key={employee.id} className="bg-zinc-800 rounded-lg p-4 border-2 border-zinc-700">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                    <div className="h-10 w-10 bg-purple-600 rounded-full flex items-center justify-center mr-3 border border-purple-500">
                       <Accessibility className="h-5 w-5 text-white" />
                     </div>
                     <div>
@@ -265,11 +265,11 @@ const AdminPermessi104 = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="bg-slate-800 rounded p-2">
+                  <div className="bg-zinc-900 rounded p-2 border border-zinc-800">
                     <p className="text-xs text-slate-400">Usati</p>
-                    <p className="text-lg font-bold text-blue-400">{usedThisMonth}/3</p>
+                    <p className="text-lg font-bold text-slate-300">{usedThisMonth}/3</p>
                   </div>
-                  <div className="bg-slate-800 rounded p-2">
+                  <div className="bg-zinc-900 rounded p-2 border border-zinc-800">
                     <p className="text-xs text-slate-400">Rimanenti</p>
                     <p className={`text-lg font-bold ${
                       remaining > 0 ? 'text-green-400' : 'text-red-400'
@@ -280,7 +280,7 @@ const AdminPermessi104 = () => {
                 </div>
 
                 {allRequests.length > 0 && (
-                  <div className="border-t border-slate-600 pt-3 mt-3">
+                  <div className="border-t border-zinc-800 pt-3 mt-3">
                     <p className="text-xs text-slate-400 mb-2">Ultimi permessi:</p>
                     <div className="space-y-1">
                       {allRequests.slice(0, 3).map(req => {
@@ -310,15 +310,15 @@ const AdminPermessi104 = () => {
       </div>
 
       {/* Lista completa richieste 104 */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <h2 className="text-xl font-bold mb-4 flex items-center">
-          <Calendar className="h-5 w-5 mr-2 text-blue-400" />
+          <Calendar className="h-5 w-5 mr-2 text-slate-400" />
           Tutte le Richieste 104
         </h2>
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600"></div>
           </div>
         ) : requests.length === 0 ? (
           <div className="text-center py-12">
@@ -341,11 +341,11 @@ const AdminPermessi104 = () => {
                   : request.user?.name || request.submittedBy || 'Dipendente';
                 
                 return (
-              <div key={request.id} className="bg-slate-700 rounded-lg p-4 border border-blue-500/30">
+              <div key={request.id} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <Accessibility className="h-5 w-5 text-blue-400" />
+                      <Accessibility className="h-5 w-5 text-purple-400" />
                       <span className="font-semibold text-white">
                         {userName}
                       </span>
@@ -371,7 +371,7 @@ const AdminPermessi104 = () => {
                         ) : 'Data non disponibile'}
                       </span>
                       {request.days_requested && (
-                        <span className="text-xs text-blue-300 ml-2">
+                        <span className="text-xs text-slate-400 ml-2">
                           ({request.days_requested} {request.days_requested === 1 ? 'giorno' : 'giorni'})
                         </span>
                       )}
@@ -409,7 +409,7 @@ const AdminPermessi104 = () => {
                   <div className="flex items-center space-x-2 ml-4">
                     <button
                       onClick={() => handleEdit(request)}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
                       title="Modifica permesso"
                     >
                       <Edit className="h-4 w-4" />
@@ -456,7 +456,7 @@ const AdminPermessi104 = () => {
       {/* Dialog Eliminazione */}
       {showDeleteDialog && selectedRequest && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 border-2 border-red-500/30">
+          <div className="bg-zinc-900 rounded-lg p-6 max-w-md w-full mx-4 border-2 border-red-500/30">
             <div className="flex items-center mb-4">
               <AlertCircle className="h-6 w-6 text-red-400 mr-2" />
               <h3 className="text-xl font-bold text-white">Conferma Eliminazione</h3>
@@ -466,7 +466,7 @@ const AdminPermessi104 = () => {
               Sei sicuro di voler eliminare questo permesso 104?
             </p>
             
-            <div className="bg-slate-700 rounded p-3 mb-4">
+            <div className="bg-zinc-800 rounded p-3 mb-4 border border-zinc-700">
               <p className="text-sm text-slate-400 mb-1">Dipendente:</p>
               <p className="text-white font-semibold">
                 {selectedRequest.users?.first_name && selectedRequest.users?.last_name
@@ -481,7 +481,7 @@ const AdminPermessi104 = () => {
                     ? `dal ${new Date(selectedRequest.start_date).toLocaleDateString('it-IT')} al ${new Date(selectedRequest.end_date).toLocaleDateString('it-IT')}`
                     : 'Data non disponibile'}
                 {selectedRequest.days_requested && (
-                  <span className="ml-2 text-blue-300">
+                  <span className="ml-2 text-slate-400">
                     ({selectedRequest.days_requested} {selectedRequest.days_requested === 1 ? 'giorno' : 'giorni'})
                   </span>
                 )}
@@ -498,7 +498,7 @@ const AdminPermessi104 = () => {
                   setShowDeleteDialog(false);
                   setSelectedRequest(null);
                 }}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
               >
                 Annulla
               </button>
