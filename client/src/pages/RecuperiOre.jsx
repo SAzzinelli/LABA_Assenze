@@ -903,6 +903,103 @@ const RecuperiOre = () => {
           </div>
         )}
 
+        {/* Spiegazione Processo Recupero Ore */}
+        {totalBalance < 0 && (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <div className="flex items-center mb-4">
+              <Info className="h-6 w-6 mr-3 text-blue-400" />
+              <h3 className="text-lg font-bold text-white">Come Funziona il Recupero Ore</h3>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Timeline Richiesta Dipendente */}
+              <div className="border-l-2 border-blue-500 pl-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">1</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">Fai una Richiesta</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Compila il form con data, ore e orario desiderato. La richiesta viene inviata all'amministratore per l'approvazione.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">2</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">In Attesa di Approvazione</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      La tua richiesta è in attesa. L'amministratore la esaminerà e potrà approvarla o rifiutarla.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">3</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">Approvata</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Una volta approvata, lavora negli orari indicati. Le ore recuperate verranno aggiunte automaticamente al tuo saldo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Separatore */}
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-slate-700"></div>
+                <span className="text-xs text-slate-500 font-medium">OPPURE</span>
+                <div className="flex-1 h-px bg-slate-700"></div>
+              </div>
+
+              {/* Timeline Proposta Admin */}
+              <div className="border-l-2 border-purple-500 pl-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">1</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">L'Admin Propone un Recupero</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      L'amministratore può proporti direttamente un recupero ore con data, orario e durata specifici.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">2</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">Accetta o Rifiuta</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Puoi accettare la proposta (diventa automaticamente approvata) o rifiutarla se non ti va bene.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                    <span className="text-white text-xs font-bold">3</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-white mb-1">Recupero Confermato</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Se accetti, lavora negli orari proposti. Le ore verranno aggiunte al tuo saldo dopo il recupero.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Recuperi Programmati */}
         {(approvedRecoveries.length > 0 || pendingRecoveries.length > 0 || proposedRecoveries.length > 0) ? (
           <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
