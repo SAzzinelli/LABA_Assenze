@@ -557,7 +557,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-zinc-950 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
+        <div className="flex items-center justify-between p-6 border-b border-zinc-900">
           <div>
             <h2 className="text-2xl font-bold text-white">Aggiungi Dipendente</h2>
             <p className="text-slate-400 mt-1">Step {currentStep} di {steps.length}</p>
@@ -571,7 +571,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
         </div>
 
         {/* Progress Bar */}
-        <div className="px-6 py-4 border-b border-slate-700">
+        <div className="px-6 py-4 border-b border-zinc-900">
           <div className="flex items-center justify-center space-x-8">
             {steps.map((step, index) => {
               const Icon = step.icon;

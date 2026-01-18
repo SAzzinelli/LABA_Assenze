@@ -493,7 +493,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
             )}
 
             {/* Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-slate-700">
+            <div className="flex justify-end space-x-3 pt-4 border-t border-zinc-900">
               <button
                 type="button"
                 onClick={onClose}
