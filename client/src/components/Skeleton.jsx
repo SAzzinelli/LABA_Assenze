@@ -178,7 +178,7 @@ export const RecuperiOreSkeleton = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-zinc-900 rounded-lg p-4">
         <div className="flex gap-2">
           <SkeletonBase className="h-10 w-32 rounded-lg" />
           <SkeletonBase className="h-10 w-32 rounded-lg" />
@@ -248,7 +248,7 @@ export const FerieSkeleton = () => {
       </div>
 
       {/* Vista Lista/Calendario Toggle */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-zinc-900 rounded-lg p-4">
         <div className="flex gap-2">
           <SkeletonBase className="h-10 w-32 rounded-lg" />
           <SkeletonBase className="h-10 w-32 rounded-lg" />
@@ -256,7 +256,7 @@ export const FerieSkeleton = () => {
       </div>
 
       {/* Lista Richieste */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-zinc-900 rounded-lg p-4">
         <SkeletonBase className="h-6 w-48 mb-4" />
         <div className="space-y-3">
           <ListCardSkeleton count={4} />
@@ -276,7 +276,7 @@ export const PermessiSkeleton = () => {
           <SkeletonBase className="h-6 w-32" />
           <SkeletonBase className="h-10 w-10 rounded-lg" />
         </div>
-        <div className="flex bg-slate-700 rounded-lg p-1">
+        <div className="flex bg-zinc-800 rounded-lg p-1">
           <SkeletonBase className="h-10 flex-1 rounded-md" />
           <SkeletonBase className="h-10 flex-1 rounded-md" />
         </div>
@@ -308,7 +308,7 @@ export const PermessiSkeleton = () => {
       </div>
 
       {/* Lista Richieste - Card Permessi */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-zinc-900 rounded-lg p-4">
         <SkeletonBase className="h-6 w-48 mb-4" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
