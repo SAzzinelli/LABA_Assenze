@@ -138,17 +138,59 @@ async function fixAttendanceFromJan7() {
 
       // Calcola expected_hours basandosi sull'orario corretto
       const newExpectedHours = calculateExpectedHoursForSchedule(schedule);
-      const newBalanceHours = (record.actual_hours || 0) - newExpectedHours;
+      
+      // Verifica se ci sono permessi approvati per questo giorno
+      const { data: permissions, error: permError } = await supabase
+        .from('leave_requests')
+        .select('hours, permission_type, entry_time, exit_time, start_date, end_date')
+        .eq('user_id', record.user_id)
+        .eq('status', 'approved')
+        .eq('type', 'permission')
+        .lte('start_date', record.date)
+        .gte('end_date', record.date);
 
-      // Aggiorna solo se c'è una differenza significativa
+      let newActualHours = newExpectedHours; // Default: hanno lavorato tutto il giorno
+      
+      if (permissions && permissions.length > 0 && !permError) {
+        // Ci sono permessi approvati - calcola actual_hours considerando i permessi
+        let totalPermissionHours = 0;
+        permissions.forEach(perm => {
+          totalPermissionHours += parseFloat(perm.hours || 0);
+        });
+        
+        // Se è permesso giornata intera, actual_hours = 0
+        const hasFullDayPermission = permissions.some(p => p.permission_type === 'full_day' || p.permission_type === 'giornata_intera');
+        if (hasFullDayPermission) {
+          newActualHours = 0;
+        } else {
+          // Permesso orario: sottrai le ore di permesso da expected_hours
+          newActualHours = Math.max(0, newExpectedHours - totalPermissionHours);
+        }
+      } else {
+        // Nessun permesso: hanno lavorato tutto il giorno secondo il loro orario
+        // Se actual_hours > expected_hours senza permessi, è un errore - correggilo
+        if ((record.actual_hours || 0) > newExpectedHours + 0.1) {
+          // Errore: actual_hours è maggiore di expected_hours senza permessi
+          newActualHours = newExpectedHours;
+        } else {
+          // Mantieni actual_hours esistente se è <= expected_hours (potrebbero esserci ritardi/assenze)
+          newActualHours = record.actual_hours || newExpectedHours;
+        }
+      }
+      
+      const newBalanceHours = newActualHours - newExpectedHours;
+
+      // Aggiorna se c'è una differenza significativa
       const expectedDiff = Math.abs((record.expected_hours || 0) - newExpectedHours);
+      const actualDiff = Math.abs((record.actual_hours || 0) - newActualHours);
       const balanceDiff = Math.abs((record.balance_hours || 0) - newBalanceHours);
 
-      if (expectedDiff > 0.01 || balanceDiff > 0.01) {
+      if (expectedDiff > 0.01 || actualDiff > 0.01 || balanceDiff > 0.01) {
         const { error: updateError } = await supabase
           .from('attendance')
           .update({
             expected_hours: Math.round(newExpectedHours * 10) / 10,
+            actual_hours: Math.round(newActualHours * 10) / 10,
             balance_hours: Math.round(newBalanceHours * 10) / 10
           })
           .eq('id', record.id);
@@ -158,7 +200,8 @@ async function fixAttendanceFromJan7() {
           errorCount++;
         } else {
           const dayName = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][dayOfWeek];
-          console.log(`✅ ${employee.first_name} ${employee.last_name} ${record.date} (${dayName}): expected ${(record.expected_hours || 0).toFixed(1)}h → ${newExpectedHours.toFixed(1)}h, balance ${(record.balance_hours || 0).toFixed(1)}h → ${newBalanceHours.toFixed(1)}h`);
+          const permInfo = permissions && permissions.length > 0 ? ` (con permesso: ${permissions.map(p => p.hours + 'h').join(', ')})` : '';
+          console.log(`✅ ${employee.first_name} ${employee.last_name} ${record.date} (${dayName}): expected ${(record.expected_hours || 0).toFixed(1)}h → ${newExpectedHours.toFixed(1)}h, actual ${(record.actual_hours || 0).toFixed(1)}h → ${newActualHours.toFixed(1)}h${permInfo}, balance ${(record.balance_hours || 0).toFixed(1)}h → ${newBalanceHours.toFixed(1)}h`);
           fixedCount++;
         }
       } else {
