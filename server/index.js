@@ -801,21 +801,51 @@ app.post('/api/auth/register', async (req, res) => {
         };
       });
     } else {
-      // Fallback: orari di default se non forniti
-      workSchedulesToCreate = [
-        { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null },
-        { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null }
-      ];
+      // IMPORTANTE: Verifica che il dipendente NON abbia già orari prima di crearne di default
+      // Questo previene sovrascritture accidentali durante deploy/restart
+      const { data: existingSchedules, error: checkError } = await supabase
+        .from('work_schedules')
+        .select('id')
+        .eq('user_id', newUser.id)
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking existing schedules:', checkError);
+        console.log('⚠️ Dipendente creato ma verifica orari fallita - NON creo orari di default per sicurezza');
+        workSchedulesToCreate = []; // Non creare orari se la verifica fallisce
+      } else if (existingSchedules && existingSchedules.length > 0) {
+        // Il dipendente ha già orari - NON creare orari di default per evitare sovrascritture
+        console.log(`⚠️ Dipendente ${newUser.id} ha già orari configurati - NON creo orari di default`);
+        workSchedulesToCreate = []; // Non creare orari se esistono già
+      } else {
+        // Solo se NON ha orari esistenti, crea orari di default per nuovo dipendente
+        console.log(`ℹ️ Creazione orari di default per nuovo dipendente ${newUser.id} (nessun orario esistente)`);
+        workSchedulesToCreate = [
+          { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null },
+          { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null }
+        ];
+      }
     }
 
-    const { error: schedulesError } = await supabase
-      .from('work_schedules')
-      .insert(workSchedulesToCreate);
+    // Inserisci gli orari solo se ce ne sono da creare (workSchedulesToCreate non è vuoto)
+    if (workSchedulesToCreate && workSchedulesToCreate.length > 0) {
+      const { error: schedulesError } = await supabase
+        .from('work_schedules')
+        .insert(workSchedulesToCreate);
+
+      if (schedulesError) {
+        console.error('Work schedule creation error:', schedulesError);
+        // Non bloccare la creazione del dipendente se fallisce la creazione degli orari
+        console.log('⚠️ Dipendente creato ma orari non salvati');
+      }
+    } else {
+      console.log('ℹ️ Nessun orario da creare (dipendente ha già orari o verifica fallita)');
+    }
 
     if (schedulesError) {
       console.error('Work schedules creation error:', schedulesError);
@@ -1367,24 +1397,41 @@ app.post('/api/employees', authenticateToken, async (req, res) => {
         console.log('⚠️ Dipendente creato ma orari non salvati');
       }
     } else {
-      // Crea orari di default se non forniti (usa formato numerico: 0=domenica, 1=lunedì, etc.)
-      const defaultSchedules = [
-        { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
-        { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null },
-        { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null }
-      ];
-
-      const { error: defaultScheduleError } = await supabase
+      // IMPORTANTE: Verifica che il dipendente NON abbia già orari prima di crearne di default
+      // Questo previene sovrascritture accidentali durante deploy/restart
+      const { data: existingSchedules, error: checkError } = await supabase
         .from('work_schedules')
-        .insert(defaultSchedules);
+        .select('id')
+        .eq('user_id', newUser.id)
+        .limit(1);
 
-      if (defaultScheduleError) {
-        console.error('Default work schedule creation error:', defaultScheduleError);
-        console.log('⚠️ Dipendente creato ma orari di default non salvati');
+      if (checkError) {
+        console.error('Error checking existing schedules:', checkError);
+        console.log('⚠️ Dipendente creato ma verifica orari fallita - NON creo orari di default per sicurezza');
+      } else if (existingSchedules && existingSchedules.length > 0) {
+        // Il dipendente ha già orari - NON creare orari di default per evitare sovrascritture
+        console.log(`⚠️ Dipendente ${newUser.id} ha già orari configurati - NON creo orari di default`);
+      } else {
+        // Solo se NON ha orari esistenti, crea orari di default per nuovo dipendente
+        console.log(`ℹ️ Creazione orari di default per nuovo dipendente ${newUser.id} (nessun orario esistente)`);
+        const defaultSchedules = [
+          { user_id: newUser.id, day_of_week: 1, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 2, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 3, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 4, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 5, is_working_day: true, work_type: 'full_day', start_time: '09:00', end_time: '18:00', break_duration: 60, break_start_time: '13:00' },
+          { user_id: newUser.id, day_of_week: 6, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null },
+          { user_id: newUser.id, day_of_week: 0, is_working_day: false, work_type: 'full_day', start_time: null, end_time: null, break_duration: 0, break_start_time: null }
+        ];
+
+        const { error: defaultScheduleError } = await supabase
+          .from('work_schedules')
+          .insert(defaultSchedules);
+
+        if (defaultScheduleError) {
+          console.error('Default work schedule creation error:', defaultScheduleError);
+          console.log('⚠️ Dipendente creato ma orari di default non salvati');
+        }
       }
     }
 
