@@ -408,7 +408,7 @@ const Layout = ({ children }) => {
         {/* Top bar */}
         <div className="sticky top-0 z-10 flex-shrink-0 flex h-14 sm:h-16 bg-zinc-900 border-b border-zinc-800 shadow-lg">
           <button
-            className="px-3 sm:px-4 py-3 border-r border-zinc-900 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="px-3 sm:px-4 py-3 border-r border-zinc-900 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-zinc-600 lg:hidden touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setSidebarOpen(true)}
             aria-label="Apri menu"
           >

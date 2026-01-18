@@ -1274,7 +1274,7 @@ const RecuperiOre = () => {
                       value={recoveryFormData.recoveryDate}
                       onChange={(e) => setRecoveryFormData({ ...recoveryFormData, recoveryDate: e.target.value })}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-lg"
                     />
                   </div>
 
@@ -1301,7 +1301,7 @@ const RecuperiOre = () => {
                         <select
                           value={recoveryFormData.hours}
                           onChange={(e) => setRecoveryFormData({ ...recoveryFormData, hours: e.target.value === '' ? '' : parseInt(e.target.value) || '' })}
-                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
+                          className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-base"
                         >
                           <option value="">Seleziona ore</option>
                           {Array.from({ length: Math.min(8, Math.floor(Math.abs(totalBalance))) }, (_, i) => i + 1).map(hours => (
@@ -1314,7 +1314,7 @@ const RecuperiOre = () => {
                         <select
                           value={recoveryFormData.minutes}
                           onChange={(e) => setRecoveryFormData({ ...recoveryFormData, minutes: e.target.value })}
-                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
+                          className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-base"
                         >
                           <option value="0">0 min</option>
                           <option value="30">30 min</option>
@@ -1382,7 +1382,7 @@ const RecuperiOre = () => {
                               endTime: newEndTime || ''
                             });
                           }}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                         />
                       </div>
                       <div>
@@ -1411,7 +1411,7 @@ const RecuperiOre = () => {
                               endTime: newEndTime
                             });
                           }}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                         />
                       </div>
                     </div>
@@ -1432,7 +1432,7 @@ const RecuperiOre = () => {
                       value={recoveryFormData.reason}
                       onChange={(e) => setRecoveryFormData({ ...recoveryFormData, reason: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                       placeholder="Motivo della richiesta di recupero ore..."
                     />
                   </div>
@@ -1443,7 +1443,7 @@ const RecuperiOre = () => {
                       value={recoveryFormData.notes}
                       onChange={(e) => setRecoveryFormData({ ...recoveryFormData, notes: e.target.value })}
                       rows={2}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                       placeholder="Note aggiuntive..."
                     />
                   </div>
@@ -2197,7 +2197,7 @@ const RecuperiOre = () => {
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder="Motivo del rifiuto (opzionale)..."
                   />
                 </div>
@@ -2310,7 +2310,7 @@ const RecuperiOre = () => {
                       value={proposalFormData.recoveryDate}
                       onChange={(e) => setProposalFormData({ ...proposalFormData, recoveryDate: e.target.value })}
                       min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-lg"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-lg"
                     />
                   </div>
 
@@ -2337,7 +2337,7 @@ const RecuperiOre = () => {
                         <select
                           value={proposalFormData.hours}
                           onChange={(e) => setProposalFormData({ ...proposalFormData, hours: e.target.value === '' ? '' : parseInt(e.target.value) || '' })}
-                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
+                          className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-base"
                         >
                           <option value="">Seleziona ore</option>
                           {(() => {
@@ -2355,7 +2355,7 @@ const RecuperiOre = () => {
                         <select
                           value={proposalFormData.minutes}
                           onChange={(e) => setProposalFormData({ ...proposalFormData, minutes: e.target.value })}
-                          className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-base"
+                          className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 text-base"
                         >
                           <option value="0">0 min</option>
                           <option value="30">30 min</option>
@@ -2425,7 +2425,7 @@ const RecuperiOre = () => {
                               endTime: newEndTime || ''
                             });
                           }}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                         />
                       </div>
                       <div>
@@ -2454,7 +2454,7 @@ const RecuperiOre = () => {
                               endTime: newEndTime
                             });
                           }}
-                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                         />
                       </div>
                     </div>
@@ -2475,7 +2475,7 @@ const RecuperiOre = () => {
                       value={proposalFormData.reason}
                       onChange={(e) => setProposalFormData({ ...proposalFormData, reason: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                       placeholder="Motivo della proposta di recupero ore..."
                     />
                   </div>
@@ -2486,7 +2486,7 @@ const RecuperiOre = () => {
                       value={proposalFormData.notes}
                       onChange={(e) => setProposalFormData({ ...proposalFormData, notes: e.target.value })}
                       rows={2}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                       placeholder="Note aggiuntive..."
                     />
                   </div>
@@ -2596,7 +2596,7 @@ const RecuperiOre = () => {
                           setAddHoursFormData({ ...addHoursFormData, hours: val.toString() });
                         }}
                         placeholder="0"
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
                       />
                     </div>
                     <div>
@@ -2612,7 +2612,7 @@ const RecuperiOre = () => {
                           setAddHoursFormData({ ...addHoursFormData, minutes: val.toString() });
                         }}
                         placeholder="0"
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
+                        className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500 text-lg"
                       />
                     </div>
                   </div>
@@ -2634,7 +2634,7 @@ const RecuperiOre = () => {
                     value={addHoursFormData.date}
                     onChange={(e) => setAddHoursFormData({ ...addHoursFormData, date: e.target.value })}
                     max={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
 
@@ -2646,7 +2646,7 @@ const RecuperiOre = () => {
                     value={addHoursFormData.reason}
                     onChange={(e) => setAddHoursFormData({ ...addHoursFormData, reason: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="Motivo dell'aggiunta delle ore..."
                   />
                 </div>
@@ -2659,7 +2659,7 @@ const RecuperiOre = () => {
                     value={addHoursFormData.notes}
                     onChange={(e) => setAddHoursFormData({ ...addHoursFormData, notes: e.target.value })}
                     rows={2}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="Note aggiuntive..."
                   />
                 </div>

@@ -466,7 +466,7 @@ const SickLeave = () => {
                     value={formData.startDate}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                 </div>
                 <div>
@@ -479,7 +479,7 @@ const SickLeave = () => {
                     value={formData.endDate}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                 </div>
               </div>
@@ -495,7 +495,7 @@ const SickLeave = () => {
                   onChange={handleInputChange}
                   placeholder="Es. Influenza, mal di testa, infortunio..."
                   required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
@@ -509,7 +509,7 @@ const SickLeave = () => {
                   value={formData.doctor}
                   onChange={handleInputChange}
                   placeholder="Nome del medico curante"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
@@ -522,7 +522,7 @@ const SickLeave = () => {
                   name="medicalCertificate"
                   onChange={handleInputChange}
                   accept=".pdf,.jpg,.jpeg,.png"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
                 <p className="text-slate-400 text-sm mt-1">
                   Formati supportati: PDF, JPG, PNG (max 5MB)
@@ -539,7 +539,7 @@ const SickLeave = () => {
                   onChange={handleInputChange}
                   rows={3}
                   placeholder="Note aggiuntive sulla malattia..."
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
@@ -627,7 +627,7 @@ const SickLeave = () => {
                 placeholder="Cerca per motivo, medico, note o stato..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="flex-1 px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500"
               />
               {searchTerm && (
                 <button

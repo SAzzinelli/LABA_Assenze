@@ -167,7 +167,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="firstName"
             value={formData.firstName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -179,7 +179,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="lastName"
             value={formData.lastName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -191,7 +191,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="birthDate"
             value={formData.birthDate}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -203,7 +203,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="nome.cognome@labafirenze.com"
             required
           />
@@ -216,7 +216,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="confirmEmail"
             value={formData.confirmEmail}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="conferma la tua email"
             required
           />
@@ -229,7 +229,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -241,7 +241,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -253,7 +253,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -265,7 +265,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="+39 333 123 4567"
             required
           />
@@ -278,7 +278,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
           name="has104"
           checked={formData.has104}
           onChange={handleInputChange}
-          className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+          className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
         />
         <label className="ml-2 text-sm text-slate-300">
           Beneficiario Legge 104
@@ -303,7 +303,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
               name="department"
               value={formData.department}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer custom-select"
               required
             >
               <option value="">Seleziona dipartimento</option>
@@ -326,7 +326,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
               name="workplace"
               value={formData.workplace}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer custom-select"
               required
             >
               <option value="">Seleziona sede</option>
@@ -349,7 +349,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
               name="contractType"
               value={formData.contractType}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer custom-select"
               required
             >
               <option value="">Seleziona tipo contratto</option>
@@ -372,7 +372,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
               name="role"
               value={formData.role}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer custom-select"
               required
             >
               <option value="employee">Dipendente</option>
@@ -421,7 +421,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                     type="checkbox"
                     checked={schedule.isWorking}
                     onChange={(e) => handleWorkScheduleChange(day, 'isWorking', e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-slate-600 border-slate-500 rounded focus:ring-zinc-600 focus:ring-2"
                   />
                   <span className="text-slate-300">Giorno lavorativo</span>
                 </label>
@@ -435,7 +435,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                       type="time"
                       value={schedule.startTime}
                       onChange={(e) => handleWorkScheduleChange(day, 'startTime', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
                   <div>
@@ -444,7 +444,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                       type="time"
                       value={schedule.endTime}
                       onChange={(e) => handleWorkScheduleChange(day, 'endTime', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
                   <div>
@@ -452,7 +452,7 @@ const AddEmployeeModal = ({ isOpen, onClose, onAddEmployee, loading, onError }) 
                     <select
                       value={schedule.breakDuration}
                       onChange={(e) => handleWorkScheduleChange(day, 'breakDuration', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer custom-select"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer custom-select"
                     >
                       <option value={0}>Nessuna pausa</option>
                       <option value={30}>30 minuti</option>

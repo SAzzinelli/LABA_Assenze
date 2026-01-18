@@ -279,7 +279,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.monday}
                     onChange={(e) => setFormData({...formData, monday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -294,7 +294,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.tuesday}
                     onChange={(e) => setFormData({...formData, tuesday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -309,7 +309,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.wednesday}
                     onChange={(e) => setFormData({...formData, wednesday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -324,7 +324,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.thursday}
                     onChange={(e) => setFormData({...formData, thursday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -339,7 +339,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.friday}
                     onChange={(e) => setFormData({...formData, friday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -354,7 +354,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.saturday}
                     onChange={(e) => setFormData({...formData, saturday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -369,7 +369,7 @@ const OrariLavoro = () => {
                     max="12"
                     value={formData.sunday}
                     onChange={(e) => setFormData({...formData, sunday: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
               </div>

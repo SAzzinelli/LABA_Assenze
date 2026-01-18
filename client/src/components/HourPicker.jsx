@@ -53,9 +53,9 @@ const HourPicker = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`
-            w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg
+            w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg
             text-left text-white placeholder-slate-400
-            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+            focus:outline-none focus:ring-2 focus:ring-zinc-600 focus:border-transparent
             transition-colors duration-200
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-600 cursor-pointer'}
             ${isOpen ? 'ring-2 ring-indigo-500 border-transparent' : ''}

@@ -1284,7 +1284,7 @@ const LeaveRequests = () => {
                 placeholder="Cerca per motivo, dipendente, note o stato..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="flex-1 px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600"
               />
               {searchTerm && (
                 <button
@@ -1329,7 +1329,7 @@ const LeaveRequests = () => {
                   value={formData.type}
                   onChange={handleInputChange}
                   required
-                  className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 >
                   <option value="uscita_anticipata">Uscita Anticipata</option>
                   <option value="entrata_posticipata">Entrata Posticipata</option>
@@ -1356,7 +1356,7 @@ const LeaveRequests = () => {
                   value={formData.permissionDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 />
               </div>
 
@@ -1371,7 +1371,7 @@ const LeaveRequests = () => {
                     value={formData.exitTime}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     {workSchedule
@@ -1392,7 +1392,7 @@ const LeaveRequests = () => {
                     value={formData.entryTime}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     {workSchedule
@@ -1451,7 +1451,7 @@ const LeaveRequests = () => {
                   onChange={handleInputChange}
                   rows={3}
                   placeholder="Note aggiuntive sul permesso..."
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 />
               </div>
 
@@ -1774,7 +1774,7 @@ const LeaveRequests = () => {
             <textarea
               value={approvalNotes}
               onChange={(e) => setApprovalNotes(e.target.value)}
-              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 resize-none"
               rows={3}
               placeholder="Note per l'approvazione..."
             />
@@ -1806,7 +1806,7 @@ const LeaveRequests = () => {
             <textarea
               value={rejectionNotes}
               onChange={(e) => setRejectionNotes(e.target.value)}
-              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 resize-none"
               rows={3}
               placeholder="Motivo del rifiuto..."
             />
@@ -1838,7 +1838,7 @@ const LeaveRequests = () => {
             <textarea
               value={cancellationReason}
               onChange={(e) => setCancellationReason(e.target.value)}
-              className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 resize-none"
+              className="w-full p-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 resize-none"
               rows={3}
               placeholder="Motivo dell'annullamento..."
             />
@@ -1916,7 +1916,7 @@ const LeaveRequests = () => {
                       }
                     }
                   }}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 />
                 <p className="text-slate-400 text-xs mt-1">
                   Data attuale: {selectedRequest.permissionDate || selectedRequest.startDate || selectedRequest.start_date || 'Non impostata'}
@@ -1943,7 +1943,7 @@ const LeaveRequests = () => {
                         calculateEditHours(newEntryTime, editFormData.exitTime, { ...selectedRequest, workSchedule: schedule });
                       }
                     }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     Orario attuale: {formatTimeWithoutSeconds(selectedRequest.entryTime || selectedRequest.entry_time) || 'Non impostato'}
@@ -1976,7 +1976,7 @@ const LeaveRequests = () => {
                         calculateEditHours(editFormData.entryTime, newExitTime, { ...selectedRequest, workSchedule: schedule });
                       }
                     }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                   <p className="text-slate-400 text-xs mt-1">
                     Orario attuale: {formatTimeWithoutSeconds(selectedRequest.exitTime || selectedRequest.exit_time) || 'Non impostato'}
@@ -2106,7 +2106,7 @@ const LeaveRequests = () => {
                   value={modificationRequest.reason}
                   onChange={(e) => setModificationRequest({ ...modificationRequest, reason: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   placeholder="Spiega perché vuoi modificare questo permesso..."
                 />
               </div>
@@ -2119,7 +2119,7 @@ const LeaveRequests = () => {
                   value={modificationRequest.requestedChanges}
                   onChange={(e) => setModificationRequest({ ...modificationRequest, requestedChanges: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   placeholder="Descrivi le modifiche che vorresti (es. cambiare orario di uscita, modificare le ore...)"
                 />
               </div>

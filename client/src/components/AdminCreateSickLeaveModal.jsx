@@ -156,7 +156,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.userId}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="">-- Seleziona un dipendente --</option>
                 {employees.map(emp => (
@@ -179,7 +179,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.startDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
               <div>
@@ -192,7 +192,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.endDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                 onChange={handleInputChange}
                 required
                 rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 placeholder="Es. Influenza, Infortunio, Covid-19, ecc."
               />
             </div>
@@ -223,7 +223,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                 name="medicalCode"
                 value={formData.medicalCode}
                 onChange={handleInputChange}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 placeholder="Es. 123456789012345"
               />
               <p className="text-xs text-slate-400 mt-1">
@@ -241,7 +241,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                 name="doctor"
                 value={formData.doctor}
                 onChange={handleInputChange}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 placeholder="Es. Dr. Rossi / Ospedale Santa Maria"
               />
             </div>
@@ -256,7 +256,7 @@ const AdminCreateSickLeaveModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={2}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 placeholder="Note opzionali (es. contattato telefonicamente, prognosi, ecc.)"
               />
             </div>

@@ -422,7 +422,7 @@ const Permessi104 = () => {
                 placeholder="Cerca per note o data..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-zinc-600"
               />
               {searchTerm && (
                 <button
@@ -571,7 +571,7 @@ const Permessi104 = () => {
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value, endDate: e.target.value || formData.endDate })}
                   required
                   min={new Date().toISOString().split('T')[0]}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 />
               </div>
 
@@ -586,7 +586,7 @@ const Permessi104 = () => {
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   required
                   min={formData.startDate || new Date().toISOString().split('T')[0]}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 />
                 <p className="text-xs text-slate-400 mt-1">
                   Puoi richiedere anche più giorni consecutivi (max {absence104Balance.remainingDays} giorni disponibili)
@@ -630,7 +630,7 @@ const Permessi104 = () => {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                   placeholder="Es. Assistenza per visita medica..."
                 />
               </div>

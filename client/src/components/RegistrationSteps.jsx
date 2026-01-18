@@ -142,7 +142,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="firstName"
             value={formData.firstName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -155,7 +155,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="lastName"
             value={formData.lastName}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -168,7 +168,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="birthDate"
             value={formData.birthDate}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -181,7 +181,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="nome.cognome@labafirenze.com"
             required
           />
@@ -195,7 +195,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="confirmEmail"
             value={formData.confirmEmail}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="conferma la tua email"
             required
           />
@@ -209,7 +209,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -222,7 +222,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="confirmPassword"
             value={formData.confirmPassword}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             required
           />
         </div>
@@ -235,7 +235,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="+39 333 123 4567"
             required
           />
@@ -249,7 +249,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
           name="has104"
           checked={formData.has104}
           onChange={handleInputChange}
-          className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+          className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
         />
         <label className="ml-2 text-sm text-slate-300">
           Beneficiario Legge 104
@@ -274,7 +274,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               name="department"
               value={formData.department}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer"
               required
             >
               <option value="">Seleziona dipartimento</option>
@@ -297,7 +297,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               name="workplace"
               value={formData.workplace}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer"
               required
             >
               <option value="">Seleziona sede</option>
@@ -320,7 +320,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
               name="contractType"
               value={formData.contractType}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none cursor-pointer"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer"
               required
             >
               <option value="">Seleziona tipo contratto</option>
@@ -368,7 +368,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                     type="checkbox"
                     checked={schedule.isWorking}
                     onChange={(e) => handleWorkScheduleChange(day, 'isWorking', e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500 focus:ring-2"
+                    className="w-4 h-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600 focus:ring-2"
                   />
                   <span className="text-slate-300">Giorno lavorativo</span>
                 </label>
@@ -382,7 +382,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                       type="time"
                       value={schedule.startTime}
                       onChange={(e) => handleWorkScheduleChange(day, 'startTime', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
                   <div>
@@ -391,7 +391,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                       type="time"
                       value={schedule.endTime}
                       onChange={(e) => handleWorkScheduleChange(day, 'endTime', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
                   <div>
@@ -405,7 +405,7 @@ const RegistrationSteps = ({ onRegister, loading }) => {
                       step="15"
                       value={schedule.breakDuration}
                       onChange={(e) => handleWorkScheduleChange(day, 'breakDuration', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                     <p className="text-xs text-slate-400 mt-1">La pausa sarà automaticamente a metà giornata</p>
                   </div>

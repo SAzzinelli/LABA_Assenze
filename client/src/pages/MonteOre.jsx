@@ -355,7 +355,7 @@ const MonteOre = () => {
           <select
             value={filters.year}
             onChange={(e) => setFilters({...filters, year: e.target.value})}
-            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="2024">2024</option>
             <option value="2025">2025</option>
@@ -365,7 +365,7 @@ const MonteOre = () => {
           <select
             value={filters.month}
             onChange={(e) => setFilters({...filters, month: e.target.value})}
-            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="">Tutti i mesi</option>
             <option value="1">Gennaio</option>
@@ -385,7 +385,7 @@ const MonteOre = () => {
           <select
             value={filters.type}
             onChange={(e) => setFilters({...filters, type: e.target.value})}
-            className="w-full h-[42px] bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full h-[42px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="">Tutti i tipi</option>
             <option value="accrual">Maturate</option>
@@ -484,7 +484,7 @@ const MonteOre = () => {
                   min="0"
                   value={formData.hours}
                   onChange={(e) => setFormData({...formData, hours: e.target.value})}
-                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   required
                 />
               </div>
@@ -497,7 +497,7 @@ const MonteOre = () => {
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({...formData, date: e.target.value})}
-                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   required
                 />
               </div>
@@ -510,7 +510,7 @@ const MonteOre = () => {
                   type="text"
                   value={formData.reason}
                   onChange={(e) => setFormData({...formData, reason: e.target.value})}
-                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   placeholder={modalType === 'add' ? 'Es. Straordinario progetto urgente' : 'Es. Permesso recupero ore'}
                   required
                 />
@@ -524,7 +524,7 @@ const MonteOre = () => {
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows="3"
-                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   placeholder="Note aggiuntive..."
                 />
               </div>

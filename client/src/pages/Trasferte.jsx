@@ -401,7 +401,7 @@ const Trasferte = () => {
                     type="text"
                     value={formData.destination}
                     onChange={(e) => setFormData({...formData, destination: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -414,7 +414,7 @@ const Trasferte = () => {
                     type="text"
                     value={formData.purpose}
                     onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -429,7 +429,7 @@ const Trasferte = () => {
                     type="date"
                     value={formData.departure_date}
                     onChange={(e) => setFormData({...formData, departure_date: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -442,7 +442,7 @@ const Trasferte = () => {
                     type="date"
                     value={formData.return_date}
                     onChange={(e) => setFormData({...formData, return_date: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -459,7 +459,7 @@ const Trasferte = () => {
                     min="0"
                     value={formData.travel_hours}
                     onChange={(e) => setFormData({...formData, travel_hours: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
                 
@@ -473,7 +473,7 @@ const Trasferte = () => {
                     min="0"
                     value={formData.event_hours}
                     onChange={(e) => setFormData({...formData, event_hours: e.target.value})}
-                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -486,7 +486,7 @@ const Trasferte = () => {
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows="3"
-                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-600 bg-gray-700 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-zinc-600 focus:border-blue-500"
                 />
               </div>
               

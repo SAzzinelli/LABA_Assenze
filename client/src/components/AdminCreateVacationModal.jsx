@@ -159,7 +159,7 @@ const AdminCreateVacationModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.userId}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
               >
                 <option value="">-- Seleziona un dipendente --</option>
                 {employees.map(emp => (
@@ -182,7 +182,7 @@ const AdminCreateVacationModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.startDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -195,7 +195,7 @@ const AdminCreateVacationModal = ({ isOpen, onClose, onSuccess }) => {
                   value={formData.endDate}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 />
               </div>
             </div>
@@ -219,7 +219,7 @@ const AdminCreateVacationModal = ({ isOpen, onClose, onSuccess }) => {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-zinc-600 focus:border-transparent"
                 placeholder="Es. Ferie estive, Viaggio in Spagna, ecc."
               />
             </div>

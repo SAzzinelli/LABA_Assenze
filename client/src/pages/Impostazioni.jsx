@@ -237,7 +237,7 @@ const Settings = () => {
             type="text"
             value={settings.company.name}
             onChange={(e) => handleSettingChange('company', 'name', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -246,7 +246,7 @@ const Settings = () => {
             type="text"
             value={settings.company.address}
             onChange={(e) => handleSettingChange('company', 'address', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -255,7 +255,7 @@ const Settings = () => {
             type="text"
             value={settings.company.vat}
             onChange={(e) => handleSettingChange('company', 'vat', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -264,7 +264,7 @@ const Settings = () => {
             type="tel"
             value={settings.company.phone}
             onChange={(e) => handleSettingChange('company', 'phone', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -273,7 +273,7 @@ const Settings = () => {
             type="email"
             value={settings.company.email}
             onChange={(e) => handleSettingChange('company', 'email', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -282,7 +282,7 @@ const Settings = () => {
             type="url"
             value={settings.company.website}
             onChange={(e) => handleSettingChange('company', 'website', e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
       </div>
@@ -646,7 +646,7 @@ const Settings = () => {
                   <select
                     value={settings.emailManagement.selectedEmployee}
                     onChange={(e) => handleSettingChange('emailManagement', 'selectedEmployee', e.target.value)}
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 appearance-none cursor-pointer"
                   >
                   <option value="">Seleziona un dipendente</option>
                     {settings.emailManagement.employees.map(emp => (
@@ -670,7 +670,7 @@ const Settings = () => {
                   <textarea
                     value={settings.emailManagement.customMessage}
                     onChange={(e) => handleSettingChange('emailManagement', 'customMessage', e.target.value)}
-                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
                 rows="6"
                 placeholder="Scrivi il messaggio che vuoi inviare al dipendente..."
               />

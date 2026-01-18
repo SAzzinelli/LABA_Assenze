@@ -134,7 +134,7 @@ const Settings = () => {
             type="text"
             value={settings.profile.firstName}
             onChange={(e) => handleSettingChange('profile', 'firstName', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -143,7 +143,7 @@ const Settings = () => {
             type="text"
             value={settings.profile.lastName}
             onChange={(e) => handleSettingChange('profile', 'lastName', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -152,7 +152,7 @@ const Settings = () => {
             type="email"
             value={settings.profile.email}
             onChange={(e) => handleSettingChange('profile', 'email', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -161,11 +161,11 @@ const Settings = () => {
             type="tel"
             value={settings.profile.phone}
             onChange={(e) => handleSettingChange('profile', 'phone', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -173,7 +173,7 @@ const Settings = () => {
           <select
             value={settings.profile.department}
             onChange={(e) => handleSettingChange('profile', 'department', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="">Seleziona dipartimento</option>
             <option value="Amministrazione">Amministrazione</option>
@@ -188,7 +188,7 @@ const Settings = () => {
             type="date"
             value={settings.profile.hireDate}
             onChange={(e) => handleSettingChange('profile', 'hireDate', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -197,7 +197,7 @@ const Settings = () => {
             type="text"
             value={settings.profile.officeLocation}
             onChange={(e) => handleSettingChange('profile', 'officeLocation', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="Via Roma, 123 - Firenze"
           />
         </div>
@@ -207,7 +207,7 @@ const Settings = () => {
             type="text"
             value={settings.profile.workingHours}
             onChange={(e) => handleSettingChange('profile', 'workingHours', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="9:00-18:00"
           />
         </div>
@@ -216,7 +216,7 @@ const Settings = () => {
           <select
             value={settings.profile.contractType}
             onChange={(e) => handleSettingChange('profile', 'contractType', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="full-time">Tempo Pieno</option>
             <option value="part-time">Part Time</option>
@@ -237,7 +237,7 @@ const Settings = () => {
             type="text"
             value={settings.company.companyName}
             onChange={(e) => handleSettingChange('company', 'companyName', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -246,7 +246,7 @@ const Settings = () => {
             type="text"
             value={settings.company.address}
             onChange={(e) => handleSettingChange('company', 'address', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -255,7 +255,7 @@ const Settings = () => {
             type="text"
             value={settings.company.vatNumber}
             onChange={(e) => handleSettingChange('company', 'vatNumber', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -264,7 +264,7 @@ const Settings = () => {
             type="tel"
             value={settings.company.phone}
             onChange={(e) => handleSettingChange('company', 'phone', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -273,7 +273,7 @@ const Settings = () => {
             type="email"
             value={settings.company.email}
             onChange={(e) => handleSettingChange('company', 'email', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -282,7 +282,7 @@ const Settings = () => {
             type="url"
             value={settings.company.website}
             onChange={(e) => handleSettingChange('company', 'website', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -291,7 +291,7 @@ const Settings = () => {
             type="text"
             value={settings.company.workingHours}
             onChange={(e) => handleSettingChange('company', 'workingHours', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -300,7 +300,7 @@ const Settings = () => {
             type="text"
             value={settings.company.lunchBreak}
             onChange={(e) => handleSettingChange('company', 'lunchBreak', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           />
         </div>
         <div>
@@ -317,7 +317,7 @@ const Settings = () => {
                       : settings.company.workingDays.filter(d => d !== day);
                     handleSettingChange('company', 'workingDays', days);
                   }}
-                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-indigo-500"
+                  className="h-4 w-4 text-indigo-600 bg-slate-700 border-slate-600 rounded focus:ring-zinc-600"
                 />
                 <span className="ml-2 text-slate-300 capitalize">{day}</span>
               </label>
@@ -396,7 +396,7 @@ const Settings = () => {
           <select
             value={settings.system.language}
             onChange={(e) => handleSettingChange('system', 'language', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="it">Italiano</option>
             <option value="en">English</option>
@@ -409,7 +409,7 @@ const Settings = () => {
           <select
             value={settings.system.dateFormat}
             onChange={(e) => handleSettingChange('system', 'dateFormat', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
             <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -421,7 +421,7 @@ const Settings = () => {
           <select
             value={settings.system.timeFormat}
             onChange={(e) => handleSettingChange('system', 'timeFormat', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="24h">24 ore</option>
             <option value="12h">12 ore (AM/PM)</option>
@@ -432,7 +432,7 @@ const Settings = () => {
           <select
             value={settings.system.currency}
             onChange={(e) => handleSettingChange('system', 'currency', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="EUR">EUR (€)</option>
             <option value="USD">USD ($)</option>
@@ -444,7 +444,7 @@ const Settings = () => {
           <select
             value={settings.system.backupFrequency}
             onChange={(e) => handleSettingChange('system', 'backupFrequency', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
           >
             <option value="hourly">Ogni Ora</option>
             <option value="daily">Giornaliero</option>
@@ -458,7 +458,7 @@ const Settings = () => {
             type="text"
             value={settings.system.maintenanceWindow}
             onChange={(e) => handleSettingChange('system', 'maintenanceWindow', e.target.value)}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
             placeholder="02:00-04:00"
           />
         </div>
