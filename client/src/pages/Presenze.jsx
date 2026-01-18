@@ -5,7 +5,7 @@ import {
   calculateRealTimeHours
 } from '../utils/hoursCalculation';
 import { useAuthStore } from '../utils/store';
-import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw, Filter } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, TrendingUp, TrendingDown, Users, AlertCircle, Eye, RefreshCcw, Filter, Accessibility, Minus } from 'lucide-react';
 
 const Attendance = () => {
   const { user, apiCall } = useAuthStore();
@@ -903,33 +903,81 @@ const Attendance = () => {
   };
 
 
+  // Funzione per ottenere l'icona dello status (stesso stile di Admin)
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'present': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'working': return <Clock className="h-4 w-4" />;
+      case 'not_started': return <Clock className="h-4 w-4" />;
+      case 'absent': return <XCircle className="h-4 w-4" />;
+      case 'sick_leave': return <AlertCircle className="h-4 w-4" />;
+      case 'permission_104': return <Accessibility className="h-4 w-4" />;
+      case 'holiday': return <Calendar className="h-4 w-4" />;
+      case 'non_working_day': return <Minus className="h-4 w-4" />;
+      case 'on_break': return <Clock className="h-4 w-4 text-orange-500" />;
+      default: return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  // Funzione per ottenere il testo dello status (stesso stile di Admin)
+  const getStatusTextFromStatus = (status) => {
+    switch (status) {
+      case 'present': return 'Presente';
+      case 'completed': return 'Giornata terminata';
+      case 'working': return 'Al lavoro';
+      case 'not_started': return 'Non iniziato';
+      case 'absent': return 'Assente';
+      case 'sick_leave': return 'In malattia';
+      case 'permission_104': return 'Permesso 104';
+      case 'holiday': return 'Festivo';
+      case 'non_working_day': return 'Non lavorativo';
+      case 'on_break': return 'In Pausa';
+      default: return 'Sconosciuto';
+    }
+  };
+
   function computeStatusInfo(record = {}, hasPermission = false) {
-    const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0, is_vacation } = record;
+    const { actual_hours = 0, is_justified_absence, leave_type, is_absent, expected_hours = 0, is_vacation, status } = record;
     const hasWorked = actual_hours > 0;
 
+    // Se c'è uno status esplicito (da real-time), usalo
+    if (status) {
+      const statusText = getStatusTextFromStatus(status);
+      const statusColor = getStatusColorFromStatus(status, hasPermission);
+      return {
+        text: statusText,
+        colorClass: statusColor.split(' ')[1], // Estrai solo la classe text-*
+        badgeClass: statusColor,
+        icon: getStatusIcon(status)
+      };
+    }
+
     const badgeClasses = {
-      green: 'bg-green-500/20 text-green-300 border border-green-400/30',
-      yellow: 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30',
-      red: 'bg-red-500/20 text-red-300 border border-red-400/30',
-      gray: 'bg-slate-500/20 text-slate-300 border border-slate-400/30',
-      purple: 'bg-purple-500/20 text-purple-300 border border-purple-400/30',
-      blue: 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+      green: 'bg-green-900 text-green-100 border-green-700',
+      yellow: 'bg-yellow-900 text-yellow-100 border-yellow-700',
+      red: 'bg-red-900 text-red-100 border-red-700',
+      gray: 'bg-gray-900 text-gray-100 border-gray-700',
+      purple: 'bg-purple-900 text-purple-100 border-purple-700',
+      blue: 'bg-blue-900 text-blue-100 border-blue-700'
     };
 
     // Controlla prima se è in ferie (is_vacation o leave_type === 'vacation')
     if (is_vacation || leave_type === 'vacation') {
       return {
         text: 'In Ferie',
-        colorClass: 'text-purple-400',
-        badgeClass: badgeClasses.purple
+        colorClass: 'text-purple-100',
+        badgeClass: badgeClasses.purple,
+        icon: getStatusIcon('holiday')
       };
     }
 
     if (is_justified_absence && leave_type === 'permission' && hasWorked) {
       return {
         text: 'Presente (con permesso)',
-        colorClass: hasPermission ? 'text-blue-400' : 'text-green-400',
-        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green
+        colorClass: hasPermission ? 'text-blue-100' : 'text-green-100',
+        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green,
+        icon: getStatusIcon('present')
       };
     }
 
@@ -942,16 +990,18 @@ const Attendance = () => {
 
       return {
         text: `Assente (${leaveTypeText})`,
-        colorClass: 'text-yellow-400',
-        badgeClass: badgeClasses.yellow
+        colorClass: 'text-yellow-100',
+        badgeClass: leave_type === 'sick_leave' ? badgeClasses.red : badgeClasses.yellow,
+        icon: leave_type === 'sick_leave' ? getStatusIcon('sick_leave') : getStatusIcon('absent')
       };
     }
 
     if (is_absent) {
       return {
         text: 'Assente',
-        colorClass: 'text-red-400',
-        badgeClass: badgeClasses.red
+        colorClass: 'text-red-100',
+        badgeClass: badgeClasses.red,
+        icon: getStatusIcon('absent')
       };
     }
 
@@ -959,8 +1009,9 @@ const Attendance = () => {
     if (hasWorked) {
       return {
         text: 'Presente',
-        colorClass: hasPermission ? 'text-blue-400' : 'text-green-400',
-        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green
+        colorClass: hasPermission ? 'text-blue-100' : 'text-green-100',
+        badgeClass: hasPermission ? badgeClasses.blue : badgeClasses.green,
+        icon: getStatusIcon('present')
       };
     }
 
@@ -968,17 +1019,42 @@ const Attendance = () => {
     if (expected_hours === 0) {
       return {
         text: 'Non lavorativo',
-        colorClass: 'text-gray-400',
-        badgeClass: badgeClasses.gray
+        colorClass: 'text-gray-100',
+        badgeClass: badgeClasses.gray,
+        icon: getStatusIcon('non_working_day')
       };
     }
 
     return {
       text: 'Presente',
-      colorClass: 'text-green-400',
-      badgeClass: badgeClasses.green
+      colorClass: 'text-green-100',
+      badgeClass: badgeClasses.green,
+      icon: getStatusIcon('present')
     };
   }
+
+  // Funzione helper per ottenere il colore dello status (stesso stile di Admin)
+  const getStatusColorFromStatus = (status, hasPermission = false) => {
+    // Se c'è un permesso e lo status è 'present' o 'completed', usa blu
+    if (hasPermission && (status === 'present' || status === 'completed')) {
+      return 'bg-blue-900 text-blue-100 border-blue-700';
+    }
+    
+    switch (status) {
+      case 'present': return 'bg-green-900 text-green-100 border-green-700';
+      case 'completed': return 'bg-green-800 text-green-200 border-green-600';
+      case 'working': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
+      case 'not_started': return 'bg-yellow-900 text-yellow-100 border-yellow-700';
+      case 'absent': return 'bg-red-900 text-red-100 border-red-700';
+      case 'sick_leave': return 'bg-red-900 text-red-100 border-red-700';
+      case 'vacation': return 'bg-purple-900 text-purple-100 border-purple-700';
+      case 'permission_104': return 'bg-blue-900 text-blue-100 border-blue-700';
+      case 'holiday': return 'bg-blue-900 text-blue-100 border-blue-700';
+      case 'non_working_day': return 'bg-gray-900 text-gray-100 border-gray-700';
+      case 'on_break': return 'bg-orange-900 text-orange-100 border-orange-700';
+      default: return 'bg-gray-900 text-gray-100 border-gray-700';
+    }
+  };
 
   const getStatusColor = (record) => {
     const hasPermission = record.date ? permissionsMap[record.date] || false : false;
@@ -1357,36 +1433,45 @@ const Attendance = () => {
                     <div className="font-semibold text-white text-sm sm:text-base">
                       {new Date(record.date).toLocaleDateString('it-IT')}
                     </div>
-                    <div className={`text-[10px] sm:text-xs font-bold px-2 py-1 rounded-full border flex-shrink-0 ${(() => {
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${(() => {
                       const today = new Date().toISOString().split('T')[0];
                       const isToday = record.date === today;
+                      const hasPermission = permissionsMap[record.date] || false;
+                      
                       // Per oggi, usa direttamente currentHours.status se disponibile
                       if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
-                        return getStatusColor({
-                          ...record,
-                          actual_hours: currentHours.actualHours || 0,
-                          expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
-                          status: currentHours.status
-                        });
+                        return getStatusColorFromStatus(currentHours.status, hasPermission);
                       }
-                      return getStatusColor(record);
+                      
+                      // Per altri giorni, calcola lo status
+                      const statusInfo = computeStatusInfo(record, hasPermission);
+                      return statusInfo.badgeClass;
                     })()}`}>
                       {(() => {
                         const today = new Date().toISOString().split('T')[0];
                         const isToday = record.date === today;
+                        const hasPermission = permissionsMap[record.date] || false;
+                        
                         // Per oggi, usa direttamente currentHours.status se disponibile
                         if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
-                          const statusRecord = {
-                            ...record,
-                            actual_hours: currentHours.actualHours || 0,
-                            expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
-                            status: currentHours.status
-                          };
-                          return getStatusText(statusRecord);
+                          return (
+                            <>
+                              {getStatusIcon(currentHours.status)}
+                              <span className="ml-1">{getStatusTextFromStatus(currentHours.status)}</span>
+                            </>
+                          );
                         }
-                        return getStatusText(record);
+                        
+                        // Per altri giorni, calcola lo status
+                        const statusInfo = computeStatusInfo(record, hasPermission);
+                        return (
+                          <>
+                            {statusInfo.icon}
+                            <span className="ml-1">{statusInfo.text}</span>
+                          </>
+                        );
                       })()}
-                    </div>
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
                     <div className="bg-slate-700/50 rounded-lg p-2">
@@ -1538,34 +1623,43 @@ const Attendance = () => {
                         {new Date(record.date).toLocaleDateString('it-IT')}
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`font-semibold ${(() => {
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${(() => {
                           const today = new Date().toISOString().split('T')[0];
                           const isToday = record.date === today;
+                          const hasPermission = permissionsMap[record.date] || false;
+                          
                           // Per oggi, usa direttamente currentHours.status se disponibile
                           if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
-                            return getStatusColor({
-                              ...record,
-                              actual_hours: currentHours.actualHours || 0,
-                              expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
-                              status: currentHours.status
-                            });
+                            return getStatusColorFromStatus(currentHours.status, hasPermission);
                           }
-                          return getStatusColor(record);
+                          
+                          // Per altri giorni, calcola lo status
+                          const statusInfo = computeStatusInfo(record, hasPermission);
+                          return statusInfo.badgeClass;
                         })()}`}>
                           {(() => {
                             const today = new Date().toISOString().split('T')[0];
                             const isToday = record.date === today;
+                            const hasPermission = permissionsMap[record.date] || false;
+                            
                             // Per oggi, usa direttamente currentHours.status se disponibile
                             if (isToday && currentHours?.status && currentHours?.isWorkingDay) {
-                              const statusRecord = {
-                                ...record,
-                                actual_hours: currentHours.actualHours || 0,
-                                expected_hours: currentHours.contractHours || currentHours.expectedHours || 0,
-                                status: currentHours.status
-                              };
-                              return getStatusText(statusRecord);
+                              return (
+                                <>
+                                  {getStatusIcon(currentHours.status)}
+                                  <span className="ml-1">{getStatusTextFromStatus(currentHours.status)}</span>
+                                </>
+                              );
                             }
-                            return getStatusText(record);
+                            
+                            // Per altri giorni, calcola lo status
+                            const statusInfo = computeStatusInfo(record, hasPermission);
+                            return (
+                              <>
+                                {statusInfo.icon}
+                                <span className="ml-1">{statusInfo.text}</span>
+                              </>
+                            );
                           })()}
                         </span>
                       </td>

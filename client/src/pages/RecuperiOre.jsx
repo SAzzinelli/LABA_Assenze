@@ -818,106 +818,102 @@ const RecuperiOre = () => {
           </div>
         </div>
 
-        {/* KPI Cards - Saldo Banca Ore */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Saldo Totale */}
-          <div className={`rounded-lg p-6 ${totalBalance < 0 ? 'bg-red-900/20 border border-red-500/30' : totalBalance > 0 ? 'bg-green-900/20 border border-green-500/30' : 'bg-slate-800 border border-slate-700'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-400">Saldo Banca Ore</h3>
-              <Clock className={`h-5 w-5 ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-slate-400'}`} />
+        {/* KPI Cards - Layout migliorato */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Saldo Banca Ore - Card principale */}
+          <div className={`rounded-xl p-6 border-2 transition-all ${totalBalance < 0 
+            ? 'bg-gradient-to-br from-red-900/30 to-red-800/20 border-red-500/50 shadow-lg shadow-red-500/10' 
+            : totalBalance > 0 
+            ? 'bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 shadow-lg shadow-green-500/10' 
+            : 'bg-slate-800/50 border-slate-600'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Saldo Banca Ore</h3>
+              <div className={`p-2 rounded-lg ${totalBalance < 0 ? 'bg-red-500/20' : totalBalance > 0 ? 'bg-green-500/20' : 'bg-slate-700'}`}>
+                <Wallet className={`h-5 w-5 ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-slate-400'}`} />
+              </div>
             </div>
-            <p className={`text-2xl font-bold ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-white'}`}>
-              {totalBalance < 0 ? '-' : '+'}{formatHours(Math.abs(totalBalance))}
+            <p className={`text-3xl font-bold mb-1 ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-white'}`}>
+              {totalBalance < 0 ? '-' : totalBalance > 0 ? '+' : ''}{formatHours(Math.abs(totalBalance))}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              {totalBalance < 0 ? 'Debito da recuperare' : totalBalance > 0 ? 'Credito disponibile' : 'In pari'}
+            <p className={`text-xs font-medium ${totalBalance < 0 ? 'text-red-300/80' : totalBalance > 0 ? 'text-green-300/80' : 'text-slate-400'}`}>
+              {totalBalance < 0 ? 'Debito da recuperare' : totalBalance > 0 ? 'Credito disponibile' : 'Saldo in pari'}
             </p>
           </div>
 
-          {/* Debito */}
-
-
-          {/* Credito */}
-          {totalBalance > 0 && (
-            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-green-300">Credito Disponibile</h3>
-                <CheckCircle className="h-5 w-5 text-green-400" />
+          {/* Recuperi Attivi */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Recuperi Attivi</h3>
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Timer className="h-5 w-5 text-blue-400" />
               </div>
-              <p className="text-2xl font-bold text-green-400">
-                {formatHours(totalBalance)}
-              </p>
-              <p className="text-xs text-green-300/70 mt-1">Ore disponibili</p>
             </div>
-          )}
-
-          {/* Recuperi Totali */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-400">Recuperi Attivi</h3>
-              <Timer className="h-5 w-5 text-blue-400" />
-            </div>
-            <p className="text-2xl font-bold text-blue-400">
+            <p className="text-3xl font-bold text-blue-400 mb-1">
               {approvedRecoveries.length + pendingRecoveries.length + proposedRecoveries.length}
             </p>
-            <p className="text-xs text-slate-500 mt-1">Richieste programmate</p>
+            <p className="text-xs text-slate-400 font-medium">Richieste programmate</p>
           </div>
-        </div>
 
-        {/* Sezione Informazioni e Azioni */}
-        {totalBalance < 0 && (
-          <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-500/40 rounded-lg p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex-1">
-                <div className="flex items-center mb-3">
-                  <AlertCircle className="h-6 w-6 mr-3 text-amber-400" />
-                  <h3 className="text-xl font-bold text-white">Hai un debito da recuperare</h3>
-                </div>
-                <div className="space-y-2 text-amber-100">
-                  <p className="text-base">
-                    Il tuo saldo banca ore è <span className="font-bold text-amber-300">{formatHours(Math.abs(totalBalance))}</span> in negativo.
-                  </p>
-                  <p className="text-sm text-amber-200/80">
-                    Puoi richiedere di recuperare queste ore attraverso straordinari concordati con l'amministratore.
-                    Una volta approvata la richiesta, potrai lavorare negli orari indicati per compensare il debito.
-                  </p>
-                </div>
-              </div>
+          {/* Pulsante CTA - Solo se c'è debito */}
+          {totalBalance < 0 && (
+            <div className="sm:col-span-2 lg:col-span-1 flex items-center">
               <button
                 onClick={() => setShowRecoveryModal(true)}
-                className="flex items-center justify-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors min-h-[48px] font-semibold shadow-lg hover:shadow-xl"
+                className="w-full h-full flex flex-col items-center justify-center px-6 py-4 bg-gradient-to-br from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl border border-amber-500/50 min-h-[120px]"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                Nuova Richiesta Recupero
+                <Plus className="h-8 w-8 mb-2" />
+                <span className="text-base">Nuova Richiesta</span>
+                <span className="text-xs opacity-90">Recupero Ore</span>
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Alert Box - Solo se c'è debito */}
+        {totalBalance < 0 && (
+          <div className="bg-gradient-to-r from-amber-900/40 via-orange-900/30 to-amber-900/40 border-l-4 border-amber-500 rounded-lg p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-amber-400 mt-0.5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-white mb-2">Hai un debito da recuperare</h3>
+                <p className="text-amber-100 text-sm leading-relaxed">
+                  Il tuo saldo banca ore è <span className="font-bold text-amber-300">{formatHours(Math.abs(totalBalance))}</span> in negativo.
+                  Puoi richiedere di recuperare queste ore attraverso straordinari concordati con l'amministratore.
+                  Una volta approvata la richiesta, potrai lavorare negli orari indicati per compensare il debito.
+                </p>
+              </div>
             </div>
           </div>
         )}
 
         {/* Messaggio se in regola */}
         {totalBalance >= 0 && (approvedRecoveries.length === 0 && pendingRecoveries.length === 0 && proposedRecoveries.length === 0) && (
-          <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-6 text-center">
-            <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Banca Ore in Regola</h3>
-            <p className="text-slate-400">
-              Non hai debiti da recuperare. Il tuo saldo è {totalBalance > 0 ? `positivo di ${formatHours(totalBalance)}` : 'in pari'}.
-            </p>
+          <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/20 border-l-4 border-green-500 rounded-lg p-6">
+            <div className="flex items-center gap-4">
+              <CheckCircle className="h-8 w-8 text-green-400 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-bold text-white mb-1">Banca Ore in Regola</h3>
+                <p className="text-slate-300 text-sm">
+                  Non hai debiti da recuperare. Il tuo saldo è {totalBalance > 0 ? `positivo di ${formatHours(totalBalance)}` : 'in pari'}.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Recuperi Programmati */}
         {(approvedRecoveries.length > 0 || pendingRecoveries.length > 0 || proposedRecoveries.length > 0) ? (
-          <div className="bg-slate-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-white flex items-center mb-1">
-                  <Timer className="h-6 w-6 mr-3 text-blue-400" />
-                  Recuperi Programmati
-                </h3>
-                <p className="text-sm text-slate-400 ml-9">
-                  Le tue richieste di recupero ore e le proposte dell'amministratore
-                </p>
-              </div>
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-white flex items-center mb-2">
+                <Timer className="h-6 w-6 mr-3 text-blue-400" />
+                Recuperi Programmati
+              </h3>
+              <p className="text-sm text-slate-400 ml-9">
+                Le tue richieste di recupero ore e le proposte dell'amministratore
+              </p>
             </div>
 
             {approvedRecoveries.length > 0 && (
