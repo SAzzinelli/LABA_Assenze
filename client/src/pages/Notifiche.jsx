@@ -152,13 +152,13 @@ const Notifiche = () => {
   };
 
   const getNotificationBg = (notification, isRead) => {
-    // Non lette: fondo zinc con bordo più evidente
-    // Lette: fondo zinc più opaco
+    // Non lette: fondo zinc-800 con bordo più evidente
+    // Lette: fondo zinc-800 più opaco con bordo più sottile
     if (isRead) {
-      return 'opacity-60 bg-zinc-900 border border-zinc-800';
+      return 'opacity-60 bg-zinc-800 border border-zinc-700';
     }
-    // Non lette: fondo zinc con bordo più evidente
-    return 'bg-zinc-900 border border-zinc-700';
+    // Non lette: fondo zinc-800 con bordo più evidente
+    return 'bg-zinc-800 border border-zinc-600';
   };
 
   const filteredNotifications = filterUnread 
