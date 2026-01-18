@@ -94,6 +94,10 @@ const AdminAttendance = () => {
   // Permessi con ore (entrata/uscita) per oggi
   const [permissionsHoursToday, setPermissionsHoursToday] = useState({});
 
+  // Permessi approvati per tutte le date visualizzate (per cambiare colore badge)
+  // Struttura: { "userId_date": true } se c'è un permesso approvato
+  const [permissionsMap, setPermissionsMap] = useState({});
+
   // Saldi banca ore per tutti i dipendenti
   const [employeeBalances, setEmployeeBalances] = useState({});
 
@@ -183,6 +187,8 @@ const AdminAttendance = () => {
         const data = await response.json();
         console.log('📊 Attendance data for today:', data);
         setAttendance(data);
+        // Recupera permessi per oggi
+        await fetchPermissionsForDates(data);
       }
       setLastUpdate(new Date());
     } catch (error) {
@@ -559,11 +565,58 @@ const AdminAttendance = () => {
       if (response.ok) {
         const data = await response.json();
         setAttendanceHistory(data);
+        // Recupera permessi per tutte le date visualizzate
+        await fetchPermissionsForDates(data);
       }
     } catch (error) {
       console.error('Error fetching attendance history:', error);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  // Recupera permessi approvati per tutte le date visualizzate
+  const fetchPermissionsForDates = async (attendanceRecords) => {
+    try {
+      if (!attendanceRecords || attendanceRecords.length === 0) {
+        setPermissionsMap({});
+        return;
+      }
+
+      // Estrai tutte le date uniche e user_id
+      const dateUserPairs = new Set();
+      attendanceRecords.forEach(record => {
+        if (record.user_id && record.date) {
+          dateUserPairs.add(`${record.user_id}_${record.date}`);
+        }
+        if (record.users?.id && record.date) {
+          dateUserPairs.add(`${record.users.id}_${record.date}`);
+        }
+      });
+
+      // Recupera permessi per ogni coppia user_id + date
+      const permissionsMapNew = {};
+      
+      for (const pair of dateUserPairs) {
+        const [userId, date] = pair.split('_');
+        try {
+          const response = await apiCall(`/api/leave-requests/permission-hours?userId=${userId}&date=${date}`);
+          if (response.ok) {
+            const data = await response.json();
+            // L'endpoint restituisce solo permessi normali (non 104), quindi se totalPermissionHours > 0, c'è un permesso
+            if (data.totalPermissionHours > 0) {
+              permissionsMapNew[pair] = true;
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching permission for ${pair}:`, err);
+        }
+      }
+
+      setPermissionsMap(permissionsMapNew);
+      console.log('📋 Permissions map updated:', Object.keys(permissionsMapNew).length, 'permessi trovati');
+    } catch (error) {
+      console.error('Error fetching permissions for dates:', error);
     }
   };
 
@@ -580,7 +633,12 @@ const AdminAttendance = () => {
     return `${hours < 0 ? '-' : ''}${h}h ${m}m`;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status, hasPermission = false) => {
+    // Se c'è un permesso e lo status è 'present' o 'completed', usa blu
+    if (hasPermission && (status === 'present' || status === 'completed')) {
+      return 'bg-blue-900 text-blue-100 border-blue-700';
+    }
+    
     switch (status) {
       case 'present': return 'bg-green-900 text-green-100 border-green-700';
       case 'completed': return 'bg-green-800 text-green-200 border-green-600';
@@ -1384,11 +1442,22 @@ const AdminAttendance = () => {
                 status: record.status
               } : calculateRealTimeHoursForRecord(record);
               const name = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'N/A';
+              // Verifica se c'è un permesso approvato per questo dipendente e data
+              const userId = record.user_id || record.users?.id;
+              const dateKey = userId && record.date ? `${userId}_${record.date}` : null;
+              const hasPermission = dateKey ? permissionsMap[dateKey] || false : false;
+              
+              // Per oggi, verifica anche permissionsHoursToday
+              const today = getTodayLocal();
+              const isToday = record.date === today;
+              const hasPermissionToday = isToday && userId && permissionsHoursToday[userId] && permissionsHoursToday[userId].hours > 0;
+              const hasAnyPermission = hasPermission || hasPermissionToday;
+              
               return (
                 <div key={record.id || record.user_id} className="rounded-xl border border-slate-700 bg-slate-800/50 p-3 sm:p-4 hover:bg-slate-800 transition-colors">
                   <div className="flex items-center justify-between mb-2 gap-2">
                     <div className="font-semibold text-white truncate text-sm sm:text-base flex-1 min-w-0">{name}</div>
-                    <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status)}`}>{getStatusText(realTime.status)}</span>
+                    <span className={`px-2 py-1 rounded-full text-[10px] sm:text-xs border flex-shrink-0 ${getStatusColor(realTime.status, hasAnyPermission)}`}>{getStatusText(realTime.status)}</span>
                   </div>
                   <div className="text-slate-400 text-xs sm:text-sm mb-3">{new Date(record.date).toLocaleDateString('it-IT')}</div>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
@@ -1524,9 +1593,21 @@ const AdminAttendance = () => {
                           expectedHours: finalExpectedHours,
                           actualHours: finalActualHours,
                           balanceHours: finalBalanceHours,
-                          department: ''
+                          department: '',
+                          userId: record.user_id || record.users?.id
                         };
                       }
+
+                      // Verifica se c'è un permesso approvato per questo dipendente e data
+                      const userId = displayData.userId || record.user_id || record.users?.id;
+                      const dateKey = userId && displayData.date ? `${userId}_${displayData.date}` : null;
+                      const hasPermission = dateKey ? permissionsMap[dateKey] || false : false;
+                      
+                      // Per oggi, verifica anche permissionsHoursToday
+                      const today = getTodayLocal();
+                      const isToday = displayData.date === today;
+                      const hasPermissionToday = isToday && userId && permissionsHoursToday[userId] && permissionsHoursToday[userId].hours > 0;
+                      const hasAnyPermission = hasPermission || hasPermissionToday;
 
                       return (
                         <tr key={record.id || record.user_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
@@ -1554,7 +1635,7 @@ const AdminAttendance = () => {
                             </div>
                           </td>
                           <td className="py-3 px-2 sm:py-4 sm:px-4">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status)}`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayData.status, hasAnyPermission)}`}>
                               {getStatusIcon(displayData.status)}
                               <span className="ml-1">{getStatusText(displayData.status)}</span>
                             </span>
