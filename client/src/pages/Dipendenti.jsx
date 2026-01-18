@@ -845,7 +845,7 @@ const Employees = () => {
               </button>
               <button
                 onClick={handleUpdateEmployee}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center"
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors flex items-center"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Salva Modifiche
@@ -861,12 +861,12 @@ const Employees = () => {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => e.target === e.currentTarget && setShowDetailsModal(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto border border-zinc-800">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white flex items-center">
                 Dettagli Dipendente - {selectedEmployee.name}
                 {selectedEmployee.has104 && (
-                  <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white border border-blue-400">
+                  <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-600 text-white border border-purple-400">
                     Legge 104
                   </span>
                 )}
@@ -920,9 +920,9 @@ const Employees = () => {
             {detailActiveTab === 'details' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Informazioni Personali */}
-                <div className="bg-slate-700 rounded-lg p-4">
+                <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <User className="h-5 w-5 mr-2 text-blue-400" />
+                    <User className="h-5 w-5 mr-2 text-slate-400" />
                     Informazioni Personali
                   </h4>
                   <div className="space-y-3">
@@ -955,7 +955,7 @@ const Employees = () => {
                 </div>
 
                 {/* Informazioni Lavorative */}
-                <div className="bg-slate-700 rounded-lg p-4">
+                <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Briefcase className="h-5 w-5 mr-2 text-green-400" />
                     Informazioni Lavorative
@@ -985,21 +985,21 @@ const Employees = () => {
                     Presenze e Ferie
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-slate-600 rounded-lg p-3">
+                    <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
                       <div className="text-slate-400 text-sm">Ferie Godute</div>
                       <div className="text-2xl font-bold text-white">
                         {selectedEmployee.usedVacationDays || 0}
                       </div>
                       <div className="text-slate-400 text-xs">giorni</div>
                     </div>
-                    <div className="bg-slate-600 rounded-lg p-3">
+                    <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
                       <div className="text-slate-400 text-sm">Ferie Rimanenti</div>
                       <div className="text-2xl font-bold text-white">
                         {(selectedEmployee.totalVacationDays || 0) - (selectedEmployee.usedVacationDays || 0)}
                       </div>
                       <div className="text-slate-400 text-xs">giorni</div>
                     </div>
-                    <div className="bg-slate-600 rounded-lg p-3">
+                    <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
                       <div className="text-slate-400 text-sm">Totale Ferie</div>
                       <div className="text-2xl font-bold text-white">
                         {selectedEmployee.totalVacationDays || 0}
@@ -1016,7 +1016,7 @@ const Employees = () => {
                 {/* Banca Ore Attuale */}
                 <div className="bg-slate-700 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-indigo-400" />
+                    <DollarSign className="h-5 w-5 mr-2 text-slate-400" />
                     Banca Ore Attuale
                   </h4>
                   <div className="flex items-center justify-center py-8">
@@ -1142,7 +1142,7 @@ const Employees = () => {
                           }
 
                           return (
-                            <div key={index} className="bg-slate-600 rounded-lg p-4">
+                            <div key={index} className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 text-slate-400 mr-3" />
@@ -1195,7 +1195,7 @@ const Employees = () => {
                                           <p className="text-xs text-amber-300 font-semibold mb-1">
                                             💰 Aggiunta manuale: +{manualCreditInfo?.toFixed(2) || '0'}h
                                           </p>
-                                          <p className="text-xs text-blue-300">
+                                          <p className="text-xs text-slate-400">
                                             🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h
                                             <span className="text-green-300"> ({permissionReductionInfo.recovered.toFixed(2)}h recuperate)</span>
                                           </p>
@@ -1228,9 +1228,9 @@ const Employees = () => {
               selectedEmployee.workSchedule ? (
                 <div className="space-y-6">
                   {/* Orario Settimanale */}
-                  <div className="bg-slate-700 rounded-lg p-6">
+                  <div className="bg-zinc-800 rounded-lg p-6 border border-zinc-700">
                     <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                      <Clock className="h-5 w-5 mr-2 text-blue-400" />
+                      <Clock className="h-5 w-5 mr-2 text-slate-400" />
                       Orario Settimanale
                     </h4>
 
@@ -1359,7 +1359,7 @@ const Employees = () => {
                           if (!daySchedule || daySchedule.active) return null;
 
                           return (
-                            <div key={dayKey} className="bg-slate-800 border border-slate-600 rounded-lg p-3">
+                            <div key={dayKey} className="bg-zinc-900 border border-zinc-700 rounded-lg p-3">
                               <div className="flex items-center justify-between mb-2">
                                 <h6 className="font-medium text-slate-400 text-sm">{dayNames[dayKey]}</h6>
                                 <div className="w-3 h-3 rounded-full bg-slate-500"></div>
