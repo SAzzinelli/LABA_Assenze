@@ -114,11 +114,11 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full mx-4 border-2 border-blue-500/30 max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-2 border-zinc-800 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <Calendar className="h-6 w-6 text-blue-400 mr-2" />
+            <Calendar className="h-6 w-6 text-slate-400 mr-2" />
             <h2 className="text-2xl font-bold text-white">Modifica Permesso 104</h2>
           </div>
           <button
@@ -130,8 +130,8 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
         </div>
 
         {/* Info Dipendente */}
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-300 mb-1">Dipendente:</p>
+        <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4 mb-6">
+          <p className="text-sm text-slate-300 mb-1">Dipendente:</p>
           <p className="text-white font-semibold">
             {request.users?.first_name && request.users?.last_name
               ? `${request.users.first_name} ${request.users.last_name}`
@@ -151,9 +151,9 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
               name="startDate"
               value={formData.startDate}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 bg-slate-700 border ${
-                errors.startDate ? 'border-red-500' : 'border-slate-600'
-              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`w-full px-3 py-2 bg-zinc-800 border ${
+                errors.startDate ? 'border-red-500' : 'border-zinc-700'
+              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600`}
               required
             />
             {errors.startDate && (
@@ -174,9 +174,9 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
               name="endDate"
               value={formData.endDate}
               onChange={handleInputChange}
-              className={`w-full px-3 py-2 bg-slate-700 border ${
-                errors.endDate ? 'border-red-500' : 'border-slate-600'
-              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`w-full px-3 py-2 bg-zinc-800 border ${
+                errors.endDate ? 'border-red-500' : 'border-zinc-700'
+              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600`}
               required
             />
             {errors.endDate && (
@@ -199,9 +199,9 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
               onChange={handleInputChange}
               min="1"
               max="3"
-              className={`w-full px-3 py-2 bg-slate-700 border ${
-                errors.daysRequested ? 'border-red-500' : 'border-slate-600'
-              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`w-full px-3 py-2 bg-zinc-800 border ${
+                errors.daysRequested ? 'border-red-500' : 'border-zinc-700'
+              } rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600`}
               required
             />
             {errors.daysRequested && (
@@ -225,7 +225,7 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
               value={formData.notes}
               onChange={handleInputChange}
               rows="3"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
               placeholder="Aggiungi note o motivazioni..."
             />
           </div>
@@ -243,14 +243,14 @@ const Edit104PermissionModal = ({ isOpen, onClose, request, onSubmit }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
             >
               Annulla
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-4 w-4 mr-2" />
               {loading ? 'Salvataggio...' : 'Salva Modifiche'}
