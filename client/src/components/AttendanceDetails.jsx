@@ -159,7 +159,7 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-        <div className="bg-slate-800 rounded-lg p-8 max-w-2xl w-full mx-4">
+        <div className="bg-zinc-950 rounded-lg p-8 max-w-2xl w-full mx-4">
           <div className="flex items-center justify-center">
             <RefreshCw className="h-6 w-6 animate-spin text-indigo-400 mr-3" />
             <span className="text-white">Caricamento dettagli presenze...</span>
@@ -171,7 +171,7 @@ const AttendanceDetails = ({ userId, date, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-950 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">
             Dettagli Presenze - {new Date(date).toLocaleDateString('it-IT')}

@@ -449,7 +449,7 @@ const Layout = ({ children }) => {
                     />
                     
                     {/* Sidebar - Responsive: full width su mobile, w-96 su desktop */}
-                    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
+                    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-zinc-950 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out">
                       <div className="flex flex-col h-full">
                         {/* Header */}
                         <div className="p-6 border-b border-slate-700">

@@ -198,7 +198,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
   const monthStats = getMonthStats();
 
   return (
-    <div className="bg-slate-800 rounded-lg overflow-x-hidden">
+    <div className="bg-zinc-950 rounded-lg overflow-x-hidden">
       {/* Header compatto mobile - Stack verticale con navigazione compatta */}
       <div className="p-3 sm:p-6">
         <div className="flex flex-col gap-3 mb-4 sm:mb-6">
@@ -388,8 +388,8 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
                 ${day.isCurrentMonth 
                   ? day.hasAdminCreated 
                     ? 'bg-purple-900/40 border-purple-500/50 hover:bg-purple-800/50' 
-                    : 'bg-slate-800 border-slate-600 hover:bg-slate-600'
-                  : 'bg-slate-900 text-slate-500 border-slate-600'}
+                    : 'bg-zinc-950 border-zinc-900 hover:bg-zinc-900'
+                  : 'bg-black text-slate-500 border-zinc-900'}
                 ${day.isToday ? 'ring-2 ring-blue-500' : ''}
                 ${selectedDate && day.date.toDateString() === selectedDate.toDateString() ? 'bg-blue-600' : ''}
               `}
@@ -468,7 +468,7 @@ const VacationCalendar = ({ vacationRequests = [], onDateClick }) => {
             }
           }}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-zinc-950 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white flex items-center">
