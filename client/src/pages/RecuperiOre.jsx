@@ -1127,7 +1127,7 @@ const RecuperiOre = () => {
                           <div className="text-slate-400 text-xs mt-2 pl-6">{recovery.reason}</div>
                         )}
                         {recovery.notes && (
-                          <div className="text-blue-200 text-xs mt-2 pl-6 italic bg-blue-500/10 p-2 rounded">{recovery.notes}</div>
+                          <div className="text-slate-300 text-xs mt-2 pl-6 italic bg-zinc-900/50 p-2 rounded">{recovery.notes}</div>
                         )}
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
@@ -1513,9 +1513,9 @@ const RecuperiOre = () => {
         </h1>
       </div>
 
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 mb-6">
         <div className="flex items-start">
-          <Info className="h-5 w-5 text-blue-400 mr-3 mt-0.5" />
+          <Info className="h-5 w-5 text-slate-400 mr-3 mt-0.5" />
           <div>
             <h4 className="text-sm font-bold text-blue-300 mb-1">Elaborazione Banca Ore</h4>
             <p className="text-xs text-blue-400/80 leading-relaxed">
