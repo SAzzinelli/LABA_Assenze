@@ -1218,7 +1218,7 @@ const RecuperiOre = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
               <button
                 onClick={() => {
                   setShowRecoveryModal(false);
@@ -2129,7 +2129,7 @@ const RecuperiOre = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md relative">
               <button
                 onClick={() => {
                   setShowApproveRecoveryModal(false);
@@ -2177,7 +2177,7 @@ const RecuperiOre = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md relative">
               <button
                 onClick={() => {
                   setShowRejectRecoveryModal(false);
@@ -2248,7 +2248,7 @@ const RecuperiOre = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
               <button
                 onClick={() => {
                   setShowProposeRecoveryModal(false);
@@ -2558,7 +2558,7 @@ const RecuperiOre = () => {
               }
             }}
           >
-            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+            <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
               <button
                 onClick={() => {
                   setShowAddHoursModal(false);
