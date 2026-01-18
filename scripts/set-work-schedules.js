@@ -10,14 +10,17 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+// Accetta credenziali da variabili d'ambiente o da argomenti della command line
+const supabaseUrl = process.env.SUPABASE_URL || process.argv[2];
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.argv[3];
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ ERRORE: Le variabili SUPABASE_URL e SUPABASE_SERVICE_KEY devono essere impostate nel file .env');
-  console.error('   Assicurati che il file .env contenga:');
-  console.error('   SUPABASE_URL=...');
-  console.error('   SUPABASE_SERVICE_KEY=...');
+  console.error('❌ ERRORE: Le variabili SUPABASE_URL e SUPABASE_SERVICE_KEY devono essere impostate');
+  console.error('   Opzione 1: Crea un file .env con:');
+  console.error('     SUPABASE_URL=...');
+  console.error('     SUPABASE_SERVICE_KEY=...');
+  console.error('   Opzione 2: Passa le credenziali come argomenti:');
+  console.error('     node scripts/set-work-schedules.js <SUPABASE_URL> <SUPABASE_SERVICE_KEY>');
   process.exit(1);
 }
 
