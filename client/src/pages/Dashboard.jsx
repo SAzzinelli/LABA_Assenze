@@ -865,13 +865,31 @@ const Dashboard = () => {
           <div className="space-y-4">
             {/* Banca Ore */}
             {overtimeBalance !== null && (
-              <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+              <div className={`rounded-lg p-6 border-2 transition-all ${
+                overtimeBalance.balance < 0 
+                  ? 'bg-red-900/20 border-red-500/50' 
+                  : overtimeBalance.balance > 0 
+                  ? 'bg-green-900/20 border-green-500/50' 
+                  : 'bg-slate-800 border-slate-700'
+              }`}>
                 <div 
                   className="flex items-center justify-between mb-4 cursor-pointer"
                   onClick={() => setBancaOreCollapsed(!bancaOreCollapsed)}
                 >
-                  <h3 className="text-lg font-bold text-white flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-amber-400" />
+                  <h3 className={`text-lg font-bold flex items-center ${
+                    overtimeBalance.balance < 0 
+                      ? 'text-red-300' 
+                      : overtimeBalance.balance > 0 
+                      ? 'text-green-300' 
+                      : 'text-white'
+                  }`}>
+                    <DollarSign className={`h-5 w-5 mr-2 ${
+                      overtimeBalance.balance < 0 
+                        ? 'text-red-400' 
+                        : overtimeBalance.balance > 0 
+                        ? 'text-green-400' 
+                        : 'text-amber-400'
+                    }`} />
                     Banca Ore
                   </h3>
                   <div className="flex items-center gap-2">
