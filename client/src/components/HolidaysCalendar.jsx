@@ -76,7 +76,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
 
   if (loading) {
     return (
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center">
           <Calendar className="h-6 w-6 mr-3 text-green-400" />
           Giorni Festivi A.A. 2025/2026
@@ -87,7 +87,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6">
+    <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
       <div 
         className="flex items-center justify-between cursor-pointer mb-4"
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -122,7 +122,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
                 className={`p-3 rounded-lg border ${
                   isToday
                     ? 'bg-green-900/30 border-green-500'
-                    : 'bg-slate-700/50 border-slate-600'
+                    : 'bg-zinc-800/50 border-zinc-700'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -157,7 +157,7 @@ const HolidaysCalendar = ({ year = new Date().getFullYear() }) => {
         </div>
       )}
 
-          <div className="mt-4 pt-4 border-t border-slate-600">
+          <div className="mt-4 pt-4 border-t border-zinc-800">
             <div className="flex items-center justify-between text-sm text-slate-400">
               <span>Totale giorni festivi A.A. 2025/2026:</span>
               <span className="font-semibold text-white">{holidays.length} giorni</span>

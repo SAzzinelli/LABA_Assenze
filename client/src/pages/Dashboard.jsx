@@ -982,7 +982,7 @@ const Dashboard = () => {
           </div>
 
           {/* Eventi Imminenti */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          <div className="bg-zinc-900 rounded-lg p-6 border border-zinc-800">
             <div 
               className="flex items-center justify-between cursor-pointer mb-4"
               onClick={() => setEventsCollapsed(!eventsCollapsed)}
