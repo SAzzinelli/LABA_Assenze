@@ -886,8 +886,8 @@ const Employees = () => {
             <div className="flex space-x-1 bg-slate-700 p-1 rounded-lg mb-6">
               <button
                 onClick={() => setDetailActiveTab('details')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
-                  ? 'bg-indigo-600 text-white'
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
@@ -896,8 +896,8 @@ const Employees = () => {
               </button>
               <button
                 onClick={() => setDetailActiveTab('balance')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
-                  ? 'bg-indigo-600 text-white'
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
@@ -906,8 +906,8 @@ const Employees = () => {
               </button>
               <button
                 onClick={() => setDetailActiveTab('schedule')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
-                  ? 'bg-indigo-600 text-white'
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white'
                   : 'text-slate-300 hover:text-white hover:bg-slate-600'
                   }`}
               >
