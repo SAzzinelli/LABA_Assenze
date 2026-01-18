@@ -822,13 +822,13 @@ const RecuperiOre = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Saldo Banca Ore - Card principale */}
           <div className={`rounded-xl p-6 border-2 transition-all ${totalBalance < 0 
-            ? 'bg-gradient-to-br from-red-900/30 to-red-800/20 border-red-500/50 shadow-lg shadow-red-500/10' 
+            ? 'bg-gradient-to-br from-red-900/15 to-red-800/10 border-red-500/30 shadow-lg shadow-red-500/5' 
             : totalBalance > 0 
-            ? 'bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/50 shadow-lg shadow-green-500/10' 
-            : 'bg-zinc-900/50 border-zinc-800'}`}>
+            ? 'bg-gradient-to-br from-green-900/15 to-green-800/10 border-green-500/30 shadow-lg shadow-green-500/5' 
+            : 'bg-zinc-900 border-zinc-800'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Saldo Banca Ore</h3>
-              <div className={`p-2 rounded-lg ${totalBalance < 0 ? 'bg-red-500/20' : totalBalance > 0 ? 'bg-green-500/20' : 'bg-slate-700'}`}>
+              <div className={`p-2 rounded-lg ${totalBalance < 0 ? 'bg-red-500/10' : totalBalance > 0 ? 'bg-green-500/10' : 'bg-zinc-800'}`}>
                 <Wallet className={`h-5 w-5 ${totalBalance < 0 ? 'text-red-400' : totalBalance > 0 ? 'text-green-400' : 'text-slate-400'}`} />
               </div>
             </div>
@@ -871,7 +871,7 @@ const RecuperiOre = () => {
 
         {/* Alert Box - Solo se c'è debito */}
         {totalBalance < 0 && (
-          <div className="bg-gradient-to-r from-amber-900/40 via-orange-900/30 to-amber-900/40 border-l-4 border-amber-500 rounded-lg p-5">
+          <div className="bg-gradient-to-r from-amber-900/15 via-orange-900/10 to-amber-900/15 border-l-4 border-amber-500/50 rounded-lg p-5">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-6 w-6 text-amber-400 mt-0.5" />

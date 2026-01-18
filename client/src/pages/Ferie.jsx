@@ -494,13 +494,13 @@ const Vacation = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'approved':
-        return 'bg-green-500/20 text-green-300 border-green-400/30';
+        return 'bg-green-500/10 text-green-300 border-green-400/20';
       case 'rejected':
-        return 'bg-red-500/20 text-red-300 border-red-400/30';
+        return 'bg-red-500/10 text-red-300 border-red-400/20';
       case 'pending':
-        return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30';
+        return 'bg-yellow-500/10 text-yellow-300 border-yellow-400/20';
       default:
-        return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
+        return 'bg-zinc-800/50 text-slate-300 border-zinc-700';
     }
   };
 
@@ -862,7 +862,7 @@ const Vacation = () => {
 
       {/* Avviso periodi disponibili */}
       {user?.role !== 'admin' && availablePeriods.length === 0 && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+        <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-lg p-4">
           <div className="flex items-center">
             <AlertCircle className="h-5 w-5 text-yellow-400 mr-2" />
             <p className="text-yellow-300">
