@@ -665,7 +665,7 @@ const Employees = () => {
                             e.stopPropagation();
                             handleEditEmployee(employee);
                           }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-lg hover:bg-blue-500/30 hover:border-blue-400/50 transition-all duration-200 hover:scale-105"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 text-white border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-all duration-200 hover:scale-105"
                           title="Modifica"
                         >
                           <Edit className="h-4 w-4" />
@@ -729,7 +729,7 @@ const Employees = () => {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => e.target === e.currentTarget && setShowEditModal(false)}
         >
-          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+          <div className="bg-zinc-900 rounded-lg p-6 w-full max-w-md mx-4 border border-zinc-800">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white">Modifica Dipendente</h3>
               <button
@@ -749,7 +749,7 @@ const Employees = () => {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
                 <div>
@@ -759,7 +759,7 @@ const Employees = () => {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
               </div>
@@ -830,7 +830,7 @@ const Employees = () => {
                   name="has104"
                   checked={formData.has104}
                   onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                  className="h-4 w-4 text-zinc-600 bg-zinc-800 border-zinc-700 rounded focus:ring-zinc-600"
                 />
                 <label className="ml-2 text-sm text-slate-300">Beneficiario Legge 104</label>
               </div>
@@ -839,7 +839,7 @@ const Employees = () => {
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700"
               >
                 Annulla
               </button>
@@ -883,12 +883,12 @@ const Employees = () => {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex space-x-1 bg-slate-700 p-1 rounded-lg mb-6">
+            <div className="flex space-x-1 bg-zinc-800 p-1 rounded-lg mb-6 border border-zinc-700">
               <button
                 onClick={() => setDetailActiveTab('details')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'details'
                   ? 'bg-zinc-900 text-white border border-zinc-700'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  : 'text-slate-300 hover:text-white hover:bg-zinc-800'
                   }`}
               >
                 <User className="h-4 w-4 inline mr-2" />
@@ -898,7 +898,7 @@ const Employees = () => {
                 onClick={() => setDetailActiveTab('balance')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'balance'
                   ? 'bg-zinc-900 text-white border border-zinc-700'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  : 'text-slate-300 hover:text-white hover:bg-zinc-800'
                   }`}
               >
                 <DollarSign className="h-4 w-4 inline mr-2" />
@@ -908,7 +908,7 @@ const Employees = () => {
                 onClick={() => setDetailActiveTab('schedule')}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${detailActiveTab === 'schedule'
                   ? 'bg-zinc-900 text-white border border-zinc-700'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+                  : 'text-slate-300 hover:text-white hover:bg-zinc-800'
                   }`}
               >
                 <Clock className="h-4 w-4 inline mr-2" />

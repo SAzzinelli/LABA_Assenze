@@ -1951,7 +1951,7 @@ const AdminAttendance = () => {
                           alert('Seleziona un dipendente per continuare');
                         }
                       }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-md transition-colors flex items-center gap-2"
                     >
                       Avanti
                     </button>
@@ -2026,7 +2026,7 @@ const AdminAttendance = () => {
                           alert('Seleziona entrambe le date per continuare');
                         }
                       }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-md transition-colors flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
                       Aggiungi presenza
