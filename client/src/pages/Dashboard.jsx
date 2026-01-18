@@ -867,9 +867,9 @@ const Dashboard = () => {
             {overtimeBalance !== null && (
               <div className={`rounded-lg p-6 border-2 transition-all ${
                 overtimeBalance.balance < 0 
-                  ? 'bg-red-900/10 border-red-500/30' 
+                  ? 'bg-red-900/20 border-red-500/30' 
                   : overtimeBalance.balance > 0 
-                  ? 'bg-green-900/10 border-green-500/30' 
+                  ? 'bg-green-900/20 border-green-500/30' 
                   : 'bg-zinc-900 border-zinc-800'
               }`}>
                 <div 
