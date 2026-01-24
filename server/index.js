@@ -11664,27 +11664,55 @@ async function processCompletedRecoveries() {
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
     // Trova tutti i recuperi che devono essere processati:
-    // 1. Recuperi approvati (status = 'approved') con data/orario passati e balance_added = false
-    // 2. Recuperi completati (status = 'completed') con balance_added = false (da processare una volta)
-    const { data: completedRecoveries, error } = await supabase
+    // 1. Recuperi completati (status = 'completed') con balance_added = false - PROCESSA SEMPRE
+    // 2. Recuperi approvati (status = 'approved') con data/orario passati e balance_added = false
+    
+    // Prima cerca i recuperi completati (da processare sempre)
+    const { data: completedStatusRecoveries, error: completedError } = await supabase
       .from('recovery_requests')
       .select('*')
+      .eq('status', 'completed')
+      .eq('balance_added', false);
+    
+    // Poi cerca i recuperi approvati con data passata
+    const { data: approvedRecoveries, error: approvedError } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('status', 'approved')
       .eq('balance_added', false)
-      .or('status.eq.completed,and(status.eq.approved,recovery_date.lte.' + today + ')');
+      .lte('recovery_date', today);
+    
+    if (completedError || approvedError) {
+      console.error('Error fetching completed recoveries:', completedError || approvedError);
+      return;
+    }
+    
+    // Combina i due array (rimuovi duplicati se ce ne sono)
+    const completedRecoveries = [
+      ...(completedStatusRecoveries || []),
+      ...(approvedRecoveries || [])
+    ];
+    
+    // Rimuovi duplicati per ID
+    const uniqueRecoveries = completedRecoveries.filter((recovery, index, self) =>
+      index === self.findIndex(r => r.id === recovery.id)
+    );
 
     if (error) {
       console.error('Error fetching completed recoveries:', error);
       return;
     }
 
-    if (!completedRecoveries || completedRecoveries.length === 0) {
+    if (!uniqueRecoveries || uniqueRecoveries.length === 0) {
       return;
     }
 
-    console.log(`🔄 Processing ${completedRecoveries.length} completed recoveries...`);
+    console.log(`🔄 Processing ${uniqueRecoveries.length} completed recoveries...`);
+    console.log(`   - ${completedStatusRecoveries?.length || 0} con status='completed'`);
+    console.log(`   - ${approvedRecoveries?.length || 0} con status='approved' e data passata`);
     console.log(`📅 Today: ${today}, Current time: ${currentTime}`);
 
-    for (const recovery of completedRecoveries) {
+    for (const recovery of uniqueRecoveries) {
       const recoveryDateStr = recovery.recovery_date; // Stringa nel formato "YYYY-MM-DD"
       const recoveryTime = recovery.end_time; // Fine recupero (formato "HH:MM")
 
