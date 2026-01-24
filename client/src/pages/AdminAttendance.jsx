@@ -805,6 +805,26 @@ const AdminAttendance = () => {
       );
 
       if (!workSchedule) {
+        // Giorno non lavorativo, ma verifica se c'è un recupero/credito
+        const notes = record.notes || '';
+        const isRecovery = notes.includes('Recupero ore') || notes.includes('recupero ore');
+        const isCredit = notes.includes('credito') || notes.includes('Credito') || 
+                        notes.includes('Ricarica') || notes.includes('ricarica') ||
+                        notes.includes('Aggiunta manuale ore');
+        
+        // Se c'è un recupero/credito, mostra le ore effettive
+        if (isRecovery || isCredit || (record.actual_hours && record.actual_hours > 0)) {
+          const actual = record.actual_hours || 0;
+          const balance = record.balance_hours || 0;
+          return {
+            expectedHours: 0,
+            actualHours: actual,
+            balanceHours: balance,
+            status: isRecovery ? 'completed' : 'non_working_day',
+            isPresent: actual > 0
+          };
+        }
+        
         return {
           expectedHours: 0,
           actualHours: 0,
@@ -827,17 +847,24 @@ const AdminAttendance = () => {
 
         // Determina status in base ai dati
         // IMPORTANTE: Controlla prima se c'è una ferie approvata (is_vacation o leave_type)
+        const notes = record.notes || '';
+        const isRecovery = notes.includes('Recupero ore') || notes.includes('recupero ore');
+        const isCredit = notes.includes('credito') || notes.includes('Credito') || 
+                        notes.includes('Ricarica') || notes.includes('ricarica') ||
+                        notes.includes('Aggiunta manuale ore');
+        
         let status = 'completed';
         if (record.is_vacation || record.leave_type === 'vacation') {
           status = 'vacation';
         } else if (actual === 0 && expected > 0) {
           status = 'absent';
-        } else if (record.notes && record.notes.includes('Malattia')) {
+        } else if (notes.includes('Malattia')) {
           status = 'sick_leave';
-        } else if (record.notes && record.notes.includes('Ferie')) {
+        } else if (notes.includes('Ferie')) {
           status = 'vacation';
         } else if (expected === 0) {
-          status = 'non_working_day';
+          // Se è un giorno non lavorativo ma c'è un recupero/credito, mostra come completed
+          status = (isRecovery || isCredit || actual > 0) ? 'completed' : 'non_working_day';
         }
 
         return {
