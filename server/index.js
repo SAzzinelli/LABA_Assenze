@@ -13532,6 +13532,65 @@ app.post('/api/recovery-requests/:id/process', authenticateToken, async (req, re
   }
 });
 
+// Endpoint per resettare balance_added di un recupero (admin only, per fix manuali)
+app.post('/api/recovery-requests/:id/reset-balance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+    const recoveryId = parseInt(id);
+
+    if (isNaN(recoveryId)) {
+      return res.status(400).json({ error: 'ID recupero non valido' });
+    }
+
+    console.log(`🔄 [RESET BALANCE] Resetting balance_added for recovery ${recoveryId}...`);
+
+    // Recupera il recupero
+    const { data: recovery, error: recoveryError } = await supabase
+      .from('recovery_requests')
+      .select('*, users(id, first_name, last_name)')
+      .eq('id', recoveryId)
+      .single();
+
+    if (recoveryError || !recovery) {
+      return res.status(404).json({ error: 'Recupero non trovato' });
+    }
+
+    const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+
+    // Reset balance_added
+    const { error: updateError } = await supabase
+      .from('recovery_requests')
+      .update({ balance_added: false })
+      .eq('id', recoveryId);
+
+    if (updateError) {
+      console.error('Reset balance error:', updateError);
+      return res.status(500).json({ error: 'Errore nel reset del flag balance_added' });
+    }
+
+    console.log(`✅ Reset balance_added per recupero ${recoveryId} (${userName}, ${recovery.recovery_date}, ${recovery.hours}h)`);
+
+    res.json({
+      success: true,
+      message: `Flag balance_added resettato per recupero ${recoveryId}`,
+      recovery: {
+        id: recovery.id,
+        user: userName,
+        date: recovery.recovery_date,
+        hours: recovery.hours,
+        balance_added: false
+      }
+    });
+  } catch (error) {
+    console.error('Reset balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 // Endpoint di debug per verificare stato recuperi (admin only)
 app.get('/api/recovery-requests/debug', authenticateToken, async (req, res) => {
   try {
