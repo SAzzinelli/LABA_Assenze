@@ -11702,136 +11702,16 @@ async function processCompletedRecoveries() {
       const shouldProcess = recovery.status === 'completed' || (recovery.status === 'approved' && (isDatePast || isTimePast));
 
       if (shouldProcess) {
-        // Verifica se questo recupero è già stato processato (controlla il ledger per evitare duplicati)
-        const { data: existingLedger } = await supabase
-          .from('hours_ledger')
-          .select('id')
-          .eq('reference_id', recovery.id)
-          .eq('reference_type', 'recovery_request')
-          .single();
-
-        if (existingLedger) {
-          console.log(`   ⚠️  Recovery ${recovery.id} già processato (esiste già ledger entry), aggiorno solo balance_added...`);
-          
-          // Aggiorna solo balance_added e status se necessario
-          await supabase
-            .from('recovery_requests')
-            .update({
-              balance_added: true,
-              status: 'completed',
-              completed_at: recovery.completed_at || new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', recovery.id);
-          
-          console.log(`   ✅ Recovery ${recovery.id} aggiornato (già processato)\n`);
-          continue;
+        try {
+          const result = await processSingleRecovery(recovery);
+          if (result.alreadyProcessed) {
+            console.log(`✅ Recovery ${recovery.id} aggiornato (già processato)\n`);
+          } else {
+            console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance and overtime bank`);
+          }
+        } catch (error) {
+          console.error(`❌ Errore processamento recovery ${recovery.id}:`, error.message);
         }
-        // Aggiungi le ore al saldo
-        // Crea un record di presenza per quella data con le ore di recupero
-        const { data: existingAttendance } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('user_id', recovery.user_id)
-          .eq('date', recovery.recovery_date)
-          .single();
-
-        if (existingAttendance) {
-          // Aggiorna il record esistente aggiungendo le ore di recupero
-          const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(recovery.hours);
-          const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(recovery.hours);
-
-          await supabase
-            .from('attendance')
-            .update({
-              actual_hours: newActualHours,
-              balance_hours: newBalanceHours,
-              notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${recovery.hours}h]`
-            })
-            .eq('id', existingAttendance.id);
-        } else {
-          // Crea nuovo record
-          await supabase
-            .from('attendance')
-            .insert({
-              user_id: recovery.user_id,
-              date: recovery.recovery_date,
-              actual_hours: parseFloat(recovery.hours),
-              expected_hours: 0, // Recupero ore, non sono ore previste
-              balance_hours: parseFloat(recovery.hours),
-              notes: `Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
-            });
-        }
-
-        // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank)
-        const recoveryYear = new Date(recovery.recovery_date).getFullYear();
-        const recoveryHours = parseFloat(recovery.hours);
-        
-        // Recupera il saldo corrente della banca ore
-        const { data: currentBalance, error: balanceError } = await supabase
-          .from('current_balances')
-          .select('current_balance, total_accrued')
-          .eq('user_id', recovery.user_id)
-          .eq('category', 'overtime_bank')
-          .eq('year', recoveryYear)
-          .single();
-
-        const currentOvertimeBalance = currentBalance?.current_balance || 0;
-        const newOvertimeBalance = currentOvertimeBalance + recoveryHours;
-        const totalAccrued = (currentBalance?.total_accrued || 0) + recoveryHours;
-
-        // Inserisci movimento nel ledger
-        const { error: ledgerError } = await supabase
-          .from('hours_ledger')
-          .insert({
-            user_id: recovery.user_id,
-            transaction_date: recovery.recovery_date,
-            transaction_type: 'accrual',
-            category: 'overtime_bank',
-            hours_amount: recoveryHours,
-            description: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
-            reference_id: recovery.id,
-            reference_type: 'recovery_request',
-            running_balance: newOvertimeBalance
-          });
-
-        if (ledgerError) {
-          console.error(`❌ Errore inserimento ledger per recovery ${recovery.id}:`, ledgerError);
-        }
-
-        // Aggiorna o crea il saldo corrente della banca ore
-        const { error: balanceUpdateError } = await supabase
-          .from('current_balances')
-          .upsert({
-            user_id: recovery.user_id,
-            category: 'overtime_bank',
-            year: recoveryYear,
-            total_accrued: totalAccrued,
-            current_balance: newOvertimeBalance,
-            last_transaction_date: recovery.recovery_date,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,category,year'
-          });
-
-        if (balanceUpdateError) {
-          console.error(`❌ Errore aggiornamento banca ore per recovery ${recovery.id}:`, balanceUpdateError);
-        } else {
-          console.log(`💰 Banca ore aggiornata: ${currentOvertimeBalance}h → ${newOvertimeBalance}h (+${recoveryHours}h)`);
-        }
-
-        // Marca il recupero come completato
-        await supabase
-          .from('recovery_requests')
-          .update({
-            completed_at: new Date().toISOString(),
-            balance_added: true,
-            status: 'completed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', recovery.id);
-
-        console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance and overtime bank`);
       }
     }
   } catch (error) {
@@ -13327,6 +13207,211 @@ app.delete('/api/recovery-requests/:id', authenticateToken, async (req, res) => 
 });
 
 // Endpoint per processare manualmente i recuperi completati (admin)
+// Funzione helper per processare un singolo recupero
+async function processSingleRecovery(recovery) {
+  // Verifica se questo recupero è già stato processato (controlla il ledger per evitare duplicati)
+  const { data: existingLedger } = await supabase
+    .from('hours_ledger')
+    .select('id')
+    .eq('reference_id', recovery.id)
+    .eq('reference_type', 'recovery_request')
+    .single();
+
+  if (existingLedger) {
+    console.log(`   ⚠️  Recovery ${recovery.id} già processato (esiste già ledger entry), aggiorno solo balance_added...`);
+    
+    // Aggiorna solo balance_added e status se necessario
+    await supabase
+      .from('recovery_requests')
+      .update({
+        balance_added: true,
+        status: 'completed',
+        completed_at: recovery.completed_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', recovery.id);
+    
+    return { success: true, message: 'Recovery già processato, aggiornato solo balance_added', alreadyProcessed: true };
+  }
+
+  // Aggiungi le ore al saldo
+  // Crea un record di presenza per quella data con le ore di recupero
+  const { data: existingAttendance } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('user_id', recovery.user_id)
+    .eq('date', recovery.recovery_date)
+    .single();
+
+  if (existingAttendance) {
+    // Aggiorna il record esistente aggiungendo le ore di recupero
+    const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(recovery.hours);
+    const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(recovery.hours);
+
+    await supabase
+      .from('attendance')
+      .update({
+        actual_hours: newActualHours,
+        balance_hours: newBalanceHours,
+        notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${recovery.hours}h]`
+      })
+      .eq('id', existingAttendance.id);
+  } else {
+    // Crea nuovo record
+    await supabase
+      .from('attendance')
+      .insert({
+        user_id: recovery.user_id,
+        date: recovery.recovery_date,
+        actual_hours: parseFloat(recovery.hours),
+        expected_hours: 0, // Recupero ore, non sono ore previste
+        balance_hours: parseFloat(recovery.hours),
+        notes: `Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+      });
+  }
+
+  // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank)
+  const recoveryYear = new Date(recovery.recovery_date).getFullYear();
+  const recoveryHours = parseFloat(recovery.hours);
+  
+  // Recupera il saldo corrente della banca ore
+  const { data: currentBalance, error: balanceError } = await supabase
+    .from('current_balances')
+    .select('current_balance, total_accrued')
+    .eq('user_id', recovery.user_id)
+    .eq('category', 'overtime_bank')
+    .eq('year', recoveryYear)
+    .single();
+
+  const currentOvertimeBalance = currentBalance?.current_balance || 0;
+  const newOvertimeBalance = currentOvertimeBalance + recoveryHours;
+  const totalAccrued = (currentBalance?.total_accrued || 0) + recoveryHours;
+
+  // Inserisci movimento nel ledger
+  const { error: ledgerError } = await supabase
+    .from('hours_ledger')
+    .insert({
+      user_id: recovery.user_id,
+      transaction_date: recovery.recovery_date,
+      transaction_type: 'accrual',
+      category: 'overtime_bank',
+      hours_amount: recoveryHours,
+      description: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
+      reference_id: recovery.id,
+      reference_type: 'recovery_request',
+      running_balance: newOvertimeBalance
+    });
+
+  if (ledgerError) {
+    throw new Error(`Errore inserimento ledger: ${ledgerError.message}`);
+  }
+
+  // Aggiorna o crea il saldo corrente della banca ore
+  const { error: balanceUpdateError } = await supabase
+    .from('current_balances')
+    .upsert({
+      user_id: recovery.user_id,
+      category: 'overtime_bank',
+      year: recoveryYear,
+      total_accrued: totalAccrued,
+      current_balance: newOvertimeBalance,
+      last_transaction_date: recovery.recovery_date,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,category,year'
+    });
+
+  if (balanceUpdateError) {
+    throw new Error(`Errore aggiornamento banca ore: ${balanceUpdateError.message}`);
+  }
+
+  // Marca il recupero come completato
+  await supabase
+    .from('recovery_requests')
+    .update({
+      completed_at: recovery.completed_at || new Date().toISOString(),
+      balance_added: true,
+      status: 'completed',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', recovery.id);
+
+  return {
+    success: true,
+    message: `Recovery processato: +${recoveryHours}h aggiunte alla banca ore`,
+    oldBalance: currentOvertimeBalance,
+    newBalance: newOvertimeBalance,
+    hoursAdded: recoveryHours
+  };
+}
+
+// Endpoint per processare un singolo recupero per ID (admin only, rapido)
+app.post('/api/recovery-requests/:id/process', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+    const recoveryId = parseInt(id);
+
+    if (isNaN(recoveryId)) {
+      return res.status(400).json({ error: 'ID recupero non valido' });
+    }
+
+    console.log(`🔄 [MANUAL PROCESS] Processing recovery ${recoveryId}...`);
+
+    // Recupera il recupero
+    const { data: recovery, error: recoveryError } = await supabase
+      .from('recovery_requests')
+      .select('*, users(id, first_name, last_name)')
+      .eq('id', recoveryId)
+      .single();
+
+    if (recoveryError || !recovery) {
+      return res.status(404).json({ error: 'Recupero non trovato' });
+    }
+
+    const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : `User ${recovery.user_id}`;
+    console.log(`   User: ${userName}, Date: ${recovery.recovery_date}, Hours: ${recovery.hours}h`);
+
+    // Processa il recupero
+    const result = await processSingleRecovery(recovery);
+
+    if (result.alreadyProcessed) {
+      return res.json({
+        success: true,
+        message: `Recupero ${recoveryId} già processato, aggiornato solo balance_added`,
+        recovery: {
+          id: recovery.id,
+          user: userName,
+          date: recovery.recovery_date,
+          hours: recovery.hours
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: result.message,
+      recovery: {
+        id: recovery.id,
+        user: userName,
+        date: recovery.recovery_date,
+        hours: recovery.hours
+      },
+      balance: {
+        old: result.oldBalance,
+        new: result.newBalance,
+        added: result.hoursAdded
+      }
+    });
+  } catch (error) {
+    console.error('Process single recovery error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
