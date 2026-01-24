@@ -11671,14 +11671,20 @@ async function processCompletedRecoveries() {
     }
 
     console.log(`🔄 Processing ${completedRecoveries.length} completed recoveries...`);
+    console.log(`📅 Today: ${today}, Current time: ${currentTime}`);
 
     for (const recovery of completedRecoveries) {
-      const recoveryDate = new Date(recovery.recovery_date);
-      const recoveryTime = recovery.end_time; // Fine recupero
+      const recoveryDateStr = recovery.recovery_date; // Stringa nel formato "YYYY-MM-DD"
+      const recoveryTime = recovery.end_time; // Fine recupero (formato "HH:MM")
 
-      // Verifica se la data è passata e l'orario di fine è passato
-      const isDatePast = recoveryDate < new Date(today);
-      const isTimePast = recoveryDate.toISOString().split('T')[0] === today && recoveryTime <= currentTime;
+      console.log(`🔍 Checking recovery ${recovery.id}: date=${recoveryDateStr}, end_time=${recoveryTime}, user_id=${recovery.user_id}`);
+
+      // Verifica se la data è passata
+      const isDatePast = recoveryDateStr < today;
+      // Verifica se è oggi e l'orario di fine è passato
+      const isTimePast = recoveryDateStr === today && recoveryTime <= currentTime;
+
+      console.log(`   isDatePast: ${isDatePast}, isTimePast: ${isTimePast} (recoveryDateStr=${recoveryDateStr}, today=${today}, recoveryTime=${recoveryTime}, currentTime=${currentTime})`);
 
       if (isDatePast || isTimePast) {
         // Aggiungi le ore al saldo
@@ -13165,10 +13171,81 @@ app.post('/api/recovery-requests/process-completed', authenticateToken, async (r
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
+    console.log('🔄 [MANUAL PROCESS] Forcing process of completed recoveries...');
     await processCompletedRecoveries();
     res.json({ success: true, message: 'Recuperi completati processati' });
   } catch (error) {
     console.error('Process completed recoveries error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Endpoint per verificare lo stato di un recupero specifico (debug)
+app.get('/api/recovery-requests/:id/status', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+    const { data: recovery, error } = await supabase
+      .from('recovery_requests')
+      .select('*, users(first_name, last_name)')
+      .eq('id', id)
+      .single();
+
+    if (error || !recovery) {
+      return res.status(404).json({ error: 'Recupero non trovato' });
+    }
+
+    // Verifica se dovrebbe essere processato
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const recoveryDateStr = recovery.recovery_date;
+    const recoveryTime = recovery.end_time;
+    const isDatePast = recoveryDateStr < today;
+    const isTimePast = recoveryDateStr === today && recoveryTime <= currentTime;
+    const shouldBeProcessed = (isDatePast || isTimePast) && recovery.status === 'approved' && !recovery.balance_added;
+
+    // Verifica saldo banca ore
+    const recoveryYear = new Date(recovery.recovery_date).getFullYear();
+    const { data: balance } = await supabase
+      .from('current_balances')
+      .select('*')
+      .eq('user_id', recovery.user_id)
+      .eq('category', 'overtime_bank')
+      .eq('year', recoveryYear)
+      .single();
+
+    res.json({
+      recovery: {
+        id: recovery.id,
+        user_id: recovery.user_id,
+        user_name: recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : 'N/A',
+        recovery_date: recovery.recovery_date,
+        start_time: recovery.start_time,
+        end_time: recovery.end_time,
+        hours: recovery.hours,
+        status: recovery.status,
+        balance_added: recovery.balance_added,
+        completed_at: recovery.completed_at
+      },
+      shouldBeProcessed,
+      checks: {
+        today,
+        currentTime,
+        recoveryDateStr,
+        recoveryTime,
+        isDatePast,
+        isTimePast,
+        statusIsApproved: recovery.status === 'approved',
+        balanceNotAdded: !recovery.balance_added
+      },
+      currentBalance: balance || { current_balance: 0, message: 'Nessun saldo trovato' }
+    });
+  } catch (error) {
+    console.error('Recovery status check error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
   }
 });
