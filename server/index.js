@@ -12668,24 +12668,28 @@ async function calculateOvertimeBalance(userId, year = null) {
 
     const totalBalance = attendance && attendance.length > 0
       ? attendance.reduce((sum, record) => {
-        // Per oggi: includi solo se c'è un permesso approvato (debito già definitivo)
+        const balance = parseFloat(record.balance_hours || 0);
+        const notes = record.notes || '';
+        const isRecovery = notes.includes('Recupero ore') || notes.includes('recupero ore');
+        const isCredit = notes.includes('credito') || notes.includes('Credito') || notes.includes('Ricarica') || notes.includes('ricarica');
+        
+        // Per oggi: includi sempre se è un credito/recupero (ore positive)
+        // Escludi solo se è un debito (ore negative) e non c'è permesso approvato
         if (record.date === today) {
-          if (hasApprovedPermissionToday) {
-            const balance = parseFloat(record.balance_hours || 0);
-            console.log(`📅 Record di oggi incluso nel balance: ${balance}h (ha permesso approvato)`);
+          if (balance > 0 || isRecovery || isCredit || hasApprovedPermissionToday) {
+            // Include: crediti, recuperi, o permessi approvati (debiti definitivi)
+            console.log(`📅 Record di oggi incluso nel balance: ${balance}h (${isRecovery ? 'recupero' : isCredit ? 'credito' : hasApprovedPermissionToday ? 'permesso approvato' : 'credito ore'})`);
             return sum + balance;
           }
-          console.log(`📅 Record di oggi ESCLUSO dal balance: ${parseFloat(record.balance_hours || 0)}h (nessun permesso approvato)`);
-          return sum; // Escludi se non c'è permesso approvato
+          // Escludi solo debiti (ore negative) senza permesso approvato
+          console.log(`📅 Record di oggi ESCLUSO dal balance: ${balance}h (debito senza permesso approvato)`);
+          return sum;
         }
-        const balance = parseFloat(record.balance_hours || 0);
+        
+        // Per date passate: includi sempre
         // Log per debug: verifica se ci sono crediti ore
-        if (balance > 0 && record.notes && (record.notes.includes('credito') || record.notes.includes('Credito') || record.notes.includes('recupero') || record.notes.includes('Recupero'))) {
+        if (balance > 0 && (isRecovery || isCredit)) {
           console.log(`💰 Credit hours found for ${record.date}: +${balance}h`);
-        }
-        // Log per debug: verifica se ci sono ricariche banca ore
-        if (record.notes && (record.notes.includes('Ricarica') || record.notes.includes('ricarica'))) {
-          console.log(`💰 Ricarica banca ore trovata per ${record.date}: balance=${balance}h`);
         }
         return sum + balance;
       }, 0)
