@@ -69,6 +69,8 @@ const Dashboard = () => {
 
   // Dati per recuperi imminenti (admin) - solo per alert
   const [upcomingRecoveries, setUpcomingRecoveries] = useState([]);
+  // Recuperi approvati per oggi (per mostrare pill "recupero ore")
+  const [todayRecoveries, setTodayRecoveries] = useState([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -182,12 +184,12 @@ const Dashboard = () => {
     }
   }, [attendanceData, workSchedules, user?.role]);
 
-  // Ricalcola i dati admin quando cambiano workSchedules o currentAttendance
+  // Ricalcola i dati admin quando cambiano workSchedules, currentAttendance o todayRecoveries
   useEffect(() => {
     if (user?.role === 'admin' && workSchedules.length > 0 && currentAttendance.length > 0) {
       calculateAdminRealTimeData();
     }
-  }, [workSchedules, currentAttendance, user?.role]);
+  }, [workSchedules, currentAttendance, todayRecoveries, user?.role]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -323,6 +325,11 @@ const Dashboard = () => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
+    // Verifica se un dipendente ha un recupero approvato per oggi
+    const hasRecoveryToday = (userId) => {
+      return todayRecoveries.some(recovery => recovery.user_id === userId);
+    };
+
     // Ricalcola lo status real-time per ogni employee
     const realTimeData = currentAttendance.map(employee => {
       // IMPORTANTE: Preserva lo status per ferie, malattia, permessi 104
@@ -333,7 +340,8 @@ const Dashboard = () => {
           ...employee,
           status: employee.status,
           is_working_day: employee.is_working_day || true,
-          is_absent: false
+          is_absent: false,
+          hasRecoveryToday: hasRecoveryToday(employee.user_id)
         };
         console.log(`👤 [Dashboard] Preserved employee data:`, preserved);
         return preserved;
@@ -368,7 +376,8 @@ const Dashboard = () => {
         ...employee,
         status: finalStatus,
         is_working_day: employee.is_working_day || true,
-        is_absent: finalStatus === 'not_started' && employee.actual_hours === 0
+        is_absent: finalStatus === 'not_started' && employee.actual_hours === 0,
+        hasRecoveryToday: hasRecoveryToday(employee.user_id)
       };
     });
     
@@ -456,6 +465,14 @@ const Dashboard = () => {
         });
 
         setUpcomingRecoveries(upcoming);
+
+        // Filtra recuperi per oggi (per pill "recupero ore")
+        const todayRecoveriesList = (data || []).filter(recovery => {
+          const recoveryDate = new Date(recovery.recovery_date);
+          recoveryDate.setHours(0, 0, 0, 0);
+          return recoveryDate.getTime() === today.getTime() && !recovery.balance_added;
+        });
+        setTodayRecoveries(todayRecoveriesList);
       }
     } catch (error) {
       console.error('Error fetching upcoming recoveries:', error);
@@ -1308,6 +1325,11 @@ const Dashboard = () => {
                           <p className="text-slate-400 text-xs sm:text-sm truncate">
                             {person.department || 'N/A'}
                           </p>
+                          {person.hasRecoveryToday && (person.status === 'working' || person.status === 'on_break' || person.status === 'completed') && (
+                            <span className="inline-flex items-center mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                              recupero ore
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
