@@ -1083,30 +1083,38 @@ const Employees = () => {
                     }
 
                     // Filtra: mostra giornate con balance != 0
-                    // Include oggi solo se la giornata è conclusa O c'è un permesso approvato (balance già definitivo)
+                    // Include oggi se: giornata conclusa, permesso approvato, O recupero/credito
                     const completedRecords = balanceHistory.filter(record => {
                       const balance = record.balance_hours || 0;
                       const isToday = record.date === today;
+                      const notes = record.notes || '';
 
                       // Se non è oggi, mostra solo se balance != 0
                       if (!isToday) {
                         return balance !== 0;
                       }
 
-                      // Per oggi: escludi sempre a meno che:
-                      // 1. La giornata sia conclusa (orario di fine passato)
-                      // 2. OPPURE ci sia un permesso approvato (balance già definitivo)
+                      // Per oggi: include sempre se:
+                      // 1. Giornata conclusa (orario di fine passato)
+                      // 2. OPPURE c'è un permesso approvato (balance già definitivo)
+                      // 3. OPPURE è un recupero/credito (ore positive)
                       if (isToday) {
                         // Controlla se ci sono note che indicano un permesso approvato
-                        const hasPermission = record.notes && (
-                          record.notes.includes('Permesso approvato') ||
-                          record.notes.includes('Permesso creato dall\'admin') ||
-                          record.notes.includes('Permesso 104') ||
-                          record.notes.includes('permission_104')
+                        const hasPermission = notes && (
+                          notes.includes('Permesso approvato') ||
+                          notes.includes('Permesso creato dall\'admin') ||
+                          notes.includes('Permesso 104') ||
+                          notes.includes('permission_104')
                         );
 
-                        // Include solo se (giornata conclusa O permesso approvato) E balance != 0
-                        return balance !== 0 && (isWorkDayCompleted || hasPermission);
+                        // Controlla se è un recupero o credito
+                        const isRecovery = notes.includes('Recupero ore') || notes.includes('recupero ore');
+                        const isCredit = notes.includes('credito') || notes.includes('Credito') || 
+                                        notes.includes('Ricarica') || notes.includes('ricarica') ||
+                                        notes.includes('Aggiunta manuale ore');
+
+                        // Include se: (giornata conclusa O permesso approvato O recupero/credito) E balance != 0
+                        return balance !== 0 && (isWorkDayCompleted || hasPermission || isRecovery || isCredit || balance > 0);
                       }
 
                       return false;
