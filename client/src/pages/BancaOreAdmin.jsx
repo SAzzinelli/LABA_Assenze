@@ -11,13 +11,15 @@ import {
   Wallet,
   Settings,
   MoreVertical,
-  Shield
+  Shield,
+  Filter
 } from 'lucide-react';
 
 const BancaOreAdmin = () => {
   const { user, apiCall } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('situazione'); // 'situazione', 'debt', 'proposals', 'manual-add'
+  const [activeTab, setActiveTab] = useState('situazione'); // 'situazione', 'manual-add'
+  const [balanceFilter, setBalanceFilter] = useState('all'); // 'all', 'zero', 'debt', 'credit'
   const [employeesWithDebt, setEmployeesWithDebt] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -48,7 +50,6 @@ const BancaOreAdmin = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        await fetchDebtSummary();
         await fetchAllEmployees();
       } catch (error) {
         console.error('Error loading data:', error);
@@ -360,26 +361,6 @@ const BancaOreAdmin = () => {
             Situazione
           </button>
           <button
-            onClick={() => setActiveTab('debt')}
-            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'debt'
-              ? 'text-red-400 border-red-400'
-              : 'text-slate-400 border-transparent hover:text-slate-300'
-              }`}
-          >
-            <AlertCircle className="h-4 w-4 inline mr-2" />
-            Debiti ({employeesWithDebt.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('proposals')}
-            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'proposals'
-              ? 'text-amber-400 border-amber-400'
-              : 'text-slate-400 border-transparent hover:text-slate-300'
-              }`}
-          >
-            <Plus className="h-4 w-4 inline mr-2" />
-            Proposte ({allEmployees.length})
-          </button>
-          <button
             onClick={() => setActiveTab('manual-add')}
             className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'manual-add'
               ? 'text-red-400 border-red-400'
@@ -395,270 +376,133 @@ const BancaOreAdmin = () => {
           {/* Tab: Situazione */}
           {activeTab === 'situazione' && (
             <div>
-              <div className="mb-4">
-                <h4 className="text-lg font-semibold text-white mb-2">Situazione Banca Ore Dipendenti</h4>
-                <p className="text-sm text-slate-400">
-                  Panoramica completa del saldo banca ore di tutti i dipendenti
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-2">Situazione Banca Ore Dipendenti</h4>
+                  <p className="text-sm text-slate-400">
+                    Panoramica completa del saldo banca ore di tutti i dipendenti. Puoi proporre recuperi o straordinari a qualsiasi dipendente.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                  <select
+                    value={balanceFilter}
+                    onChange={(e) => setBalanceFilter(e.target.value)}
+                    className="px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">Tutti</option>
+                    <option value="zero">In pari</option>
+                    <option value="debt">Debito</option>
+                    <option value="credit">Credito</option>
+                  </select>
+                </div>
               </div>
 
               {loadingEmployees ? (
                 <div className="text-center py-8">
                   <div className="text-slate-400">Caricamento dipendenti...</div>
                 </div>
-              ) : allEmployees.length > 0 ? (
-                <div className="space-y-3">
-                  {allEmployees.map((employee) => {
-                    const isDebt = employee.balance < 0;
-                    const isCredit = employee.balance > 0;
-                    const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
-                      isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
-                        'border-l-slate-500 hover:border-zinc-700/50 hover:shadow-zinc-900/5';
+              ) : (() => {
+                // Filtra i dipendenti in base al filtro selezionato
+                const filteredEmployees = allEmployees.filter(employee => {
+                  if (balanceFilter === 'all') return true;
+                  if (balanceFilter === 'zero') return employee.balance === 0;
+                  if (balanceFilter === 'debt') return employee.balance < 0;
+                  if (balanceFilter === 'credit') return employee.balance > 0;
+                  return true;
+                });
 
-                    const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
-                    const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
-                    const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+                return filteredEmployees.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredEmployees.map((employee) => {
+                      const isDebt = employee.balance < 0;
+                      const isCredit = employee.balance > 0;
+                      const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
+                        isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
+                          'border-l-slate-500 hover:border-zinc-700/50 hover:shadow-zinc-900/5';
 
-                    return (
-                      <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
-                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}
-                              {employee.lastName?.[0] || employee.last_name?.[0] || ''}
-                            </div>
-                          </div>
+                      const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
+                      const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
+                      const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 
-                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
-                                  {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
-                                </span>
-                                <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                                  {employee.department || 'N/A'}
-                                </span>
+                      return (
+                        <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
+                                {employee.firstName?.[0] || employee.first_name?.[0] || ''}
+                                {employee.lastName?.[0] || employee.last_name?.[0] || ''}
                               </div>
+                            </div>
 
-                              <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-blue-300 transition-colors truncate">
-                                {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                              </h3>
-
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
-                                  <Wallet className={`w-3 h-3 ${statusColor}`} />
-                                  <span className={`font-medium ${statusColor}`}>
-                                    Saldo: {formatHours(employee.balance)}
-                                    {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                            <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                                    {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
                                   </span>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <p>Nessun dipendente disponibile</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab: Debiti */}
-          {activeTab === 'debt' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
-                <div className="text-sm text-slate-400">
-                  {employeesWithDebt.length > 0
-                    ? `Totale: ${employeesWithDebt.length} dipendenti con debito`
-                    : 'Nessun debito al momento'
-                  }
-                </div>
-              </div>
-              {employeesWithDebt.length > 0 ? (
-                <div className="space-y-3">
-                  {employeesWithDebt.map((employee) => (
-                    <div key={employee.id} className="group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-zinc-900/80 border-l-4 border-l-red-500">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-base sm:text-lg font-bold border border-red-500/30">
-                            {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
-                                Debito
-                              </span>
-                              <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                                {employee.department || 'N/A'}
-                              </span>
-                            </div>
-
-                            <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-red-400 transition-colors truncate">
-                              {employee.first_name} {employee.last_name}
-                            </h3>
-
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
-                                <Clock className="w-3 h-3 text-red-400" />
-                                <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
-                                <Wallet className="w-3 h-3 text-slate-300" />
-                                <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              setSelectedEmployeeForProposal(employee);
-                              setProposalStep(1);
-                              setProposalFormData({
-                                recoveryDate: '',
-                                startTime: '',
-                                endTime: '',
-                                hours: '',
-                                reason: '',
-                                notes: `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                              });
-                              setProposalSuggestedTimeSlots([]);
-                              setShowProposeRecoveryModal(true);
-                            }}
-                            className="flex-shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Proponi Recupero
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                  <p className="text-lg mb-2">✅ Nessun dipendente con debito nella banca ore</p>
-                  <p className="text-sm">Tutti i dipendenti sono in regola o hanno un saldo positivo.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tab: Proposte */}
-          {activeTab === 'proposals' && (
-            <div>
-              <div className="mb-4">
-                <h4 className="text-lg font-semibold text-white mb-2">Proponi a Qualsiasi Dipendente</h4>
-                <p className="text-sm text-slate-400">
-                  Puoi proporre recuperi o straordinari anche a dipendenti in pari o in positivo (es. eventi dopo cena, progetti speciali).
-                  Queste ore verranno aggiunte al saldo positivo della banca ore.
-                </p>
-              </div>
-
-              {loadingEmployees ? (
-                <div className="text-center py-8">
-                  <div className="text-slate-400">Caricamento dipendenti...</div>
-                </div>
-              ) : allEmployees.length > 0 ? (
-                <div className="space-y-3">
-                  {allEmployees.map((employee) => {
-                    const isDebt = employee.balance < 0;
-                    const isCredit = employee.balance > 0;
-                    const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
-                      isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
-                        'border-l-slate-500 hover:border-zinc-700/50 hover:shadow-zinc-900/5';
-
-                    const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
-                    const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
-                    const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
-
-                    return (
-                      <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
-                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}
-                              {employee.lastName?.[0] || employee.last_name?.[0] || ''}
-                            </div>
-                          </div>
-
-                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
-                                  {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
-                                </span>
-                                <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                                  {employee.department || 'N/A'}
-                                </span>
-                              </div>
-
-                              <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-indigo-300 transition-colors truncate">
-                                {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                              </h3>
-
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
-                                  <Wallet className={`w-3 h-3 ${statusColor}`} />
-                                  <span className={`font-medium ${statusColor}`}>
-                                    Saldo: {formatHours(employee.balance)}
-                                    {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                  <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                                    {employee.department || 'N/A'}
                                   </span>
-                                </span>
-                              </div>
-                            </div>
+                                </div>
 
-                            <button
-                              onClick={() => {
-                                setSelectedEmployeeForProposal({
-                                  id: employee.id,
-                                  first_name: employee.firstName || employee.first_name,
-                                  last_name: employee.lastName || employee.last_name,
-                                  department: employee.department,
-                                  balance: employee.balance,
-                                  debtHours: employee.debtHours || 0
-                                });
-                                setProposalStep(1);
-                                setProposalFormData({
-                                  recoveryDate: '',
-                                  startTime: '',
-                                  endTime: '',
-                                  hours: '',
-                                  reason: '',
-                                  notes: employee.balance < 0
-                                    ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
-                                    : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
-                                });
-                                setProposalSuggestedTimeSlots([]);
-                                setShowProposeRecoveryModal(true);
-                              }}
-                              className="flex-shrink-0 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              Proponi
-                            </button>
+                                <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-blue-300 transition-colors truncate">
+                                  {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                                </h3>
+
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                  <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                    <Wallet className={`w-3 h-3 ${statusColor}`} />
+                                    <span className={`font-medium ${statusColor}`}>
+                                      Saldo: {formatHours(employee.balance)}
+                                      {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                      {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployeeForProposal({
+                                    id: employee.id,
+                                    first_name: employee.firstName || employee.first_name,
+                                    last_name: employee.lastName || employee.last_name,
+                                    department: employee.department,
+                                    balance: employee.balance,
+                                    debtHours: employee.debtHours || 0
+                                  });
+                                  setProposalStep(1);
+                                  setProposalFormData({
+                                    recoveryDate: '',
+                                    startTime: '',
+                                    endTime: '',
+                                    hours: '',
+                                    reason: '',
+                                    notes: employee.balance < 0
+                                      ? `Proposta recupero per ${formatHours(employee.debtHours)} di debito`
+                                      : 'Proposta straordinario (es. evento dopo cena, progetto speciale)'
+                                  });
+                                  setProposalSuggestedTimeSlots([]);
+                                  setShowProposeRecoveryModal(true);
+                                }}
+                                className="flex-shrink-0 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs flex items-center gap-1.5"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>Proponi</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <p>Nessun dipendente disponibile</p>
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    <p>Nessun dipendente corrisponde al filtro selezionato</p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

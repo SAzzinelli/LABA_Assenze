@@ -1269,7 +1269,7 @@ const RecuperiOre = () => {
               }`}
           >
             <Clock className="h-4 w-4 inline mr-2" />
-            Da Approvare ({toApproveRequests.length})
+            Da approvare ({toApproveRequests.length})
           </button>
           <button
             onClick={() => setActiveTab('approved')}
