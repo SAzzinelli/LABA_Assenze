@@ -13363,16 +13363,50 @@ async function processSingleRecovery(recovery) {
     .single();
 
   if (existingAttendance) {
+    // IMPORTANTE: Verifica se questo recupero è già stato processato guardando le note
+    const notes = existingAttendance.notes || '';
+    const recoveryHours = parseFloat(recovery.hours);
+    const recoveryNotePattern = `[Recupero ore: +${recoveryHours}h]`;
+    const hasRecoveryNote = notes.includes(recoveryNotePattern) || 
+                            notes.includes(`Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`);
+    
+    // Se le ore sono già state aggiunte, non aggiungerle di nuovo
+    if (hasRecoveryNote) {
+      console.log(`⚠️ Recovery ${recovery.id} già processato in attendance (trovato nelle note), salto aggiunta ore`);
+      // Verifica che il balance sia corretto
+      const currentBalance = parseFloat(existingAttendance.balance_hours || 0);
+      if (currentBalance < recoveryHours) {
+        // Se il balance è minore delle ore di recupero, fixalo
+        console.log(`🔧 Balance non corretto (${currentBalance} < ${recoveryHours}), fixo...`);
+        const newBalanceHours = currentBalance + recoveryHours;
+        const { error: fixError } = await supabase
+          .from('attendance')
+          .update({
+            balance_hours: newBalanceHours,
+            actual_hours: parseFloat(existingAttendance.actual_hours || 0) + recoveryHours
+          })
+          .eq('id', existingAttendance.id);
+        
+        if (fixError) {
+          console.error(`❌ Errore fix balance:`, fixError);
+        } else {
+          console.log(`✅ Balance fixato: da ${currentBalance} a ${newBalanceHours}`);
+        }
+      }
+      // Non aggiungere le ore di nuovo, sono già state aggiunte
+      return;
+    }
+
     // Aggiorna il record esistente aggiungendo le ore di recupero
-    const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(recovery.hours);
-    const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(recovery.hours);
+    const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + recoveryHours;
+    const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + recoveryHours;
 
     const { error: updateError } = await supabase
       .from('attendance')
       .update({
         actual_hours: newActualHours,
         balance_hours: newBalanceHours,
-        notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${recovery.hours}h]`
+        notes: notes + (notes ? '\n' : '') + recoveryNotePattern
       })
       .eq('id', existingAttendance.id);
 
