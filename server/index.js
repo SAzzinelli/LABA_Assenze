@@ -11860,6 +11860,9 @@ async function processDailyOvertime() {
 
       // Inserisci movimento nel ledger
       const recordMonth = new Date(record.date).getMonth() + 1;
+      const overtimeReason = record.expected_hours === 0 
+        ? `Straordinario giornaliero: +${overtimeHours}h (giorno non lavorativo)`
+        : `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`;
       
       const { error: ledgerError } = await supabase
         .from('hours_ledger')
@@ -11869,9 +11872,8 @@ async function processDailyOvertime() {
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours: overtimeHours,
-          notes: record.expected_hours === 0 
-            ? `Straordinario giornaliero: +${overtimeHours}h (giorno non lavorativo)`
-            : `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
+          reason: overtimeReason,
+          notes: overtimeReason,
           reference_id: record.id,
           reference_type: 'attendance_overtime',
           period_year: recordYear,
@@ -12019,6 +12021,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
       // Inserisci movimento nel ledger
       const creditMonth = new Date(date).getMonth() + 1;
+      const creditReason = `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`;
       
       const { error: ledgerError } = await supabase
         .from('hours_ledger')
@@ -12028,7 +12031,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours: creditHours,
-          notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+          reason: creditReason,
+          notes: creditReason,
           reference_type: 'manual_credit',
           period_year: creditYear,
           period_month: creditMonth,
@@ -13366,6 +13370,7 @@ async function processSingleRecovery(recovery) {
 
       // Inserisci movimento nel ledger
       const recoveryMonth = new Date(recovery.recovery_date).getMonth() + 1;
+      const recoveryReason = `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`;
       
       const { error: ledgerError } = await supabase
         .from('hours_ledger')
@@ -13375,7 +13380,8 @@ async function processSingleRecovery(recovery) {
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours: recoveryHours,
-          notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
+          reason: recoveryReason,
+          notes: recoveryReason,
           reference_id: recovery.id,
           reference_type: 'recovery_request',
           period_year: recoveryYear,
@@ -13644,6 +13650,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
 
     // Inserisci movimento nel ledger
     const overtimeMonth = new Date(date).getMonth() + 1;
+    const overtimeReason = reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`;
     
     const { error: ledgerError } = await supabase
       .from('hours_ledger')
@@ -13653,7 +13660,8 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         transaction_type: 'accrual',
         category: 'overtime_bank',
         hours: overtimeHours,
-        notes: reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`,
+        reason: overtimeReason,
+        notes: overtimeReason,
         reference_id: attendance.id,
         reference_type: 'attendance_overtime',
         period_year: recordYear,
