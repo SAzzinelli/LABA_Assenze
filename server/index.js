@@ -11695,6 +11695,25 @@ async function processCompletedRecoveries() {
       return;
     }
     
+    // DEBUG: Verifica anche tutti i recuperi completati (anche con balance_added=true) per capire cosa c'è
+    const { data: allCompletedRecoveries } = await supabase
+      .from('recovery_requests')
+      .select('id, user_id, recovery_date, hours, status, balance_added')
+      .eq('status', 'completed')
+      .order('recovery_date', { ascending: false })
+      .limit(10);
+    
+    if (allCompletedRecoveries && allCompletedRecoveries.length > 0) {
+      console.log(`🔍 DEBUG: Trovati ${allCompletedRecoveries.length} recuperi con status='completed' (tutti):`, 
+        allCompletedRecoveries.map(r => ({
+          id: r.id,
+          date: r.recovery_date,
+          hours: r.hours,
+          balance_added: r.balance_added
+        }))
+      );
+    }
+    
     // Combina i due array (rimuovi duplicati se ce ne sono)
     const completedRecoveries = [
       ...(completedStatusRecoveries || []),
