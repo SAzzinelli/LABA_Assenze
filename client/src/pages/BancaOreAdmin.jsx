@@ -17,7 +17,7 @@ import {
 const BancaOreAdmin = () => {
   const { user, apiCall } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('situazione'); // 'situazione', 'debt', 'proposals'
+  const [activeTab, setActiveTab] = useState('situazione'); // 'situazione', 'debt', 'proposals', 'manual-add'
   const [employeesWithDebt, setEmployeesWithDebt] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -43,7 +43,6 @@ const BancaOreAdmin = () => {
     reason: '',
     notes: ''
   });
-  const [showEmergencyMenu, setShowEmergencyMenu] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -283,7 +282,6 @@ const BancaOreAdmin = () => {
           reason: '',
           notes: ''
         });
-        setShowEmergencyMenu(false);
       } else {
         const errorData = await response.json();
         alert(`Errore: ${errorData.error || 'Errore durante l\'aggiunta delle ore'}`);
@@ -346,38 +344,6 @@ const BancaOreAdmin = () => {
           <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 mr-3 text-green-400" />
           Banca Ore
         </h1>
-        <div className="relative">
-          <button
-            onClick={() => setShowEmergencyMenu(!showEmergencyMenu)}
-            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg transition-colors flex items-center gap-2"
-          >
-            <Shield className="h-4 w-4" />
-            <span className="text-xs font-semibold">EMERGENZA</span>
-          </button>
-          {showEmergencyMenu && (
-            <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-red-500/30 rounded-lg shadow-xl z-50 p-4">
-              <p className="text-xs text-red-400 font-semibold mb-2">⚠️ Aggiunta Ore Emergenziale</p>
-              <p className="text-xs text-slate-400 mb-3">Usa solo in casi eccezionali che non rientrano in altre casistiche. Questa funzione bypassa richieste e approvazioni.</p>
-              <button
-                onClick={() => {
-                  setShowEmergencyMenu(false);
-                  setShowAddHoursModal(true);
-                  setSelectedEmployeeForAddHours(null);
-                  setAddHoursFormData({
-                    hours: '',
-                    minutes: '',
-                    date: new Date().toISOString().split('T')[0],
-                    reason: '',
-                    notes: ''
-                  });
-                }}
-                className="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium"
-              >
-                Aggiungi Ore Manualmente
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Tab Navigation */}
@@ -413,6 +379,16 @@ const BancaOreAdmin = () => {
             <Plus className="h-4 w-4 inline mr-2" />
             Proposte ({allEmployees.length})
           </button>
+          <button
+            onClick={() => setActiveTab('manual-add')}
+            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'manual-add'
+              ? 'text-red-400 border-red-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <Shield className="h-4 w-4 inline mr-2" />
+            Aggiunta manuale
+          </button>
         </div>
 
         <div className="p-6">
@@ -444,65 +420,41 @@ const BancaOreAdmin = () => {
                     const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 
                     return (
-                      <div key={employee.id} className={`group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl font-bold border ${avatarBg}`}>
+                      <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}
                               {employee.lastName?.[0] || employee.last_name?.[0] || ''}
                             </div>
                           </div>
 
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
-                                {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
-                              </span>
-                              <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                                {employee.department || 'N/A'}
-                              </span>
-                            </div>
-
-                            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-blue-300 transition-colors">
-                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                            </h3>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Wallet className={`w-3.5 h-3.5 ${statusColor}`} />
-                                <span className={`font-medium ${statusColor}`}>
-                                  Saldo: {formatHours(employee.balance)}
-                                  {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                  {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                                  {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
                                 </span>
-                              </span>
+                                <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                                  {employee.department || 'N/A'}
+                                </span>
+                              </div>
+
+                              <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-blue-300 transition-colors truncate">
+                                {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                              </h3>
+
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Wallet className={`w-3 h-3 ${statusColor}`} />
+                                  <span className={`font-medium ${statusColor}`}>
+                                    Saldo: {formatHours(employee.balance)}
+                                    {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                  </span>
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
-                            <button
-                              onClick={() => {
-                                setSelectedEmployeeForAddHours({
-                                  id: employee.id,
-                                  first_name: employee.firstName || employee.first_name,
-                                  last_name: employee.lastName || employee.last_name,
-                                  department: employee.department,
-                                  balance: employee.balance
-                                });
-                                setShowAddHoursModal(true);
-                                setAddHoursFormData({
-                                  hours: '',
-                                  minutes: '',
-                                  date: new Date().toISOString().split('T')[0],
-                                  reason: '',
-                                  notes: ''
-                                });
-                              }}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
-                              title="Aggiunta emergenziale ore"
-                            >
-                              <Shield className="h-3.5 w-3.5" />
-                              <span className="hidden sm:inline">Emergenza</span>
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -532,41 +484,41 @@ const BancaOreAdmin = () => {
               {employeesWithDebt.length > 0 ? (
                 <div className="space-y-3">
                   {employeesWithDebt.map((employee) => (
-                    <div key={employee.id} className="group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-zinc-900/80 border-l-4 border-l-red-500">
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-2xl font-bold border border-red-500/30">
+                    <div key={employee.id} className="group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 hover:border-red-500/30 transition-all hover:shadow-lg hover:shadow-red-500/5 hover:bg-zinc-900/80 border-l-4 border-l-red-500">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-500/20 rounded-full flex items-center justify-center text-red-400 text-base sm:text-lg font-bold border border-red-500/30">
                             {employee.first_name?.[0] || ''}{employee.last_name?.[0] || ''}
                           </div>
                         </div>
 
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
-                          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
-                              Debito
-                            </span>
-                            <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                              {employee.department || 'N/A'}
-                            </span>
+                        <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-red-500/10 text-red-400 border-red-500/20">
+                                Debito
+                              </span>
+                              <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                                {employee.department || 'N/A'}
+                              </span>
+                            </div>
+
+                            <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-red-400 transition-colors truncate">
+                              {employee.first_name} {employee.last_name}
+                            </h3>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                <Clock className="w-3 h-3 text-red-400" />
+                                <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
+                              </span>
+                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                <Wallet className="w-3 h-3 text-slate-300" />
+                                <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
+                              </span>
+                            </div>
                           </div>
 
-                          <h3 className="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors">
-                            {employee.first_name} {employee.last_name}
-                          </h3>
-
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                              <Clock className="w-3.5 h-3.5 text-red-400" />
-                              <span className="font-medium text-red-300">Debito: {formatHours(employee.debtHours)}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                              <Wallet className="w-3.5 h-3.5 text-slate-300" />
-                              <span className="font-medium text-slate-300">Saldo: {formatHours(employee.totalBalance)}</span>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
                           <button
                             onClick={() => {
                               setSelectedEmployeeForProposal(employee);
@@ -582,7 +534,7 @@ const BancaOreAdmin = () => {
                               setProposalSuggestedTimeSlots([]);
                               setShowProposeRecoveryModal(true);
                             }}
-                            className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
+                            className="flex-shrink-0 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all shadow-lg shadow-amber-900/20 font-medium text-xs gap-1.5"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Proponi Recupero
@@ -631,42 +583,42 @@ const BancaOreAdmin = () => {
                     const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
 
                     return (
-                      <div key={employee.id} className={`group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <div className="flex sm:flex-col items-center sm:items-center justify-center sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl font-bold border ${avatarBg}`}>
+                      <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
                               {employee.firstName?.[0] || employee.first_name?.[0] || ''}
                               {employee.lastName?.[0] || employee.last_name?.[0] || ''}
                             </div>
                           </div>
 
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
-                                {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
-                              </span>
-                              <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
-                                {employee.department || 'N/A'}
-                              </span>
-                            </div>
-
-                            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-indigo-300 transition-colors">
-                              {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
-                            </h3>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Wallet className={`w-3.5 h-3.5 ${statusColor}`} />
-                                <span className={`font-medium ${statusColor}`}>
-                                  Saldo: {formatHours(employee.balance)}
-                                  {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                  {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                                  {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
                                 </span>
-                              </span>
-                            </div>
-                          </div>
+                                <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                                  {employee.department || 'N/A'}
+                                </span>
+                              </div>
 
-                          <div className="flex sm:flex-col items-center sm:items-end justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                              <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-indigo-300 transition-colors truncate">
+                                {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                              </h3>
+
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Wallet className={`w-3 h-3 ${statusColor}`} />
+                                  <span className={`font-medium ${statusColor}`}>
+                                    Saldo: {formatHours(employee.balance)}
+                                    {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+
                             <button
                               onClick={() => {
                                 setSelectedEmployeeForProposal({
@@ -691,10 +643,130 @@ const BancaOreAdmin = () => {
                                 setProposalSuggestedTimeSlots([]);
                                 setShowProposeRecoveryModal(true);
                               }}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
+                              className="flex-shrink-0 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20 font-medium text-xs gap-1.5"
                             >
                               <Plus className="h-3.5 w-3.5" />
                               Proponi
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  <p>Nessun dipendente disponibile</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Aggiunta manuale */}
+          {activeTab === 'manual-add' && (
+            <div>
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-white mb-2">Aggiunta Manuale Emergenziale</h4>
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-400 mb-2">⚠️ Funzione Riservata a Casi Eccezionali</p>
+                      <p className="text-sm text-slate-300 mb-2">
+                        L'aggiunta manuale di ore è una funzione <strong>emergenziale</strong> che bypassa il normale flusso di richieste, approvazioni e proposte.
+                      </p>
+                      <p className="text-sm text-slate-400 mb-3">
+                        <strong>Usa questa funzione solo quando:</strong>
+                      </p>
+                      <ul className="text-sm text-slate-400 list-disc list-inside space-y-1 mb-3">
+                        <li>La situazione non rientra in nessun'altra casistica standard</li>
+                        <li>È necessario assegnare ore immediatamente senza passare per richieste o straordinari</li>
+                        <li>Si tratta di un caso eccezionale che richiede un intervento diretto dell'amministratore</li>
+                      </ul>
+                      <p className="text-xs text-red-400 font-semibold">
+                        ⚠️ Questa funzione aggiunge ore direttamente al saldo del dipendente, saltando tutti i controlli e i flussi standard.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {loadingEmployees ? (
+                <div className="text-center py-8">
+                  <div className="text-slate-400">Caricamento dipendenti...</div>
+                </div>
+              ) : allEmployees.length > 0 ? (
+                <div className="space-y-3">
+                  {allEmployees.map((employee) => {
+                    const isDebt = employee.balance < 0;
+                    const isCredit = employee.balance > 0;
+                    const borderClass = isDebt ? 'border-l-red-500 hover:border-red-500/30 hover:shadow-red-500/5' :
+                      isCredit ? 'border-l-green-500 hover:border-green-500/30 hover:shadow-green-500/5' :
+                        'border-l-slate-500 hover:border-zinc-700/50 hover:shadow-zinc-900/5';
+
+                    const statusColor = isDebt ? 'text-red-400' : isCredit ? 'text-green-400' : 'text-slate-400';
+                    const statusBg = isDebt ? 'bg-red-500/10 border-red-500/20' : isCredit ? 'bg-green-500/10 border-green-500/20' : 'bg-slate-500/10 border-slate-500/20';
+                    const avatarBg = isDebt ? 'bg-red-500/20 text-red-400 border-red-500/30' : isCredit ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+
+                    return (
+                      <div key={employee.id} className={`group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 transition-all hover:shadow-lg hover:bg-zinc-900/80 border-l-4 ${borderClass}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border ${avatarBg}`}>
+                              {employee.firstName?.[0] || employee.first_name?.[0] || ''}
+                              {employee.lastName?.[0] || employee.last_name?.[0] || ''}
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${statusBg} ${statusColor}`}>
+                                  {isDebt ? 'Debito' : isCredit ? 'Credito' : 'In Pari'}
+                                </span>
+                                <span className="text-xs text-slate-400 border border-slate-700 px-2 py-0.5 rounded-md">
+                                  {employee.department || 'N/A'}
+                                </span>
+                              </div>
+
+                              <h3 className="text-base font-bold text-white mb-0.5 group-hover:text-red-300 transition-colors truncate">
+                                {employee.firstName || employee.first_name} {employee.lastName || employee.last_name}
+                              </h3>
+
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Wallet className={`w-3 h-3 ${statusColor}`} />
+                                  <span className={`font-medium ${statusColor}`}>
+                                    Saldo: {formatHours(employee.balance)}
+                                    {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
+                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                setSelectedEmployeeForAddHours({
+                                  id: employee.id,
+                                  first_name: employee.firstName || employee.first_name,
+                                  last_name: employee.lastName || employee.last_name,
+                                  department: employee.department,
+                                  balance: employee.balance
+                                });
+                                setShowAddHoursModal(true);
+                                setAddHoursFormData({
+                                  hours: '',
+                                  minutes: '',
+                                  date: new Date().toISOString().split('T')[0],
+                                  reason: '',
+                                  notes: ''
+                                });
+                              }}
+                              className="flex-shrink-0 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                            >
+                              <Shield className="h-3.5 w-3.5" />
+                              Aggiungi Ore
                             </button>
                           </div>
                         </div>

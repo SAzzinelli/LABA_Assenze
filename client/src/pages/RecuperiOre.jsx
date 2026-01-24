@@ -1306,122 +1306,114 @@ const RecuperiOre = () => {
                     const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                     return (
-                      <div key={recovery.id} className="group bg-zinc-900 rounded-xl border border-zinc-800/50 p-4 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 hover:bg-zinc-900/80 border-l-4 border-l-amber-500">
-                        <div className="flex flex-col sm:flex-row gap-4">
+                      <div key={recovery.id} className="group bg-zinc-900 rounded-lg border border-zinc-800/50 p-3 hover:border-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/5 hover:bg-zinc-900/80 border-l-4 border-l-amber-500">
+                        <div className="flex items-center gap-3">
                           {/* SINISTRA: Data Icon */}
-                          <div className="flex sm:flex-col items-center sm:items-start gap-3 sm:gap-2 sm:w-24 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-700/50 pb-3 sm:pb-0 sm:pr-4">
-                            <div className="p-2 rounded-xl flex flex-col items-center justify-center w-16 h-16 sm:w-20 sm:h-20 shadow-inner transition-transform bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                              <span className="text-2xl sm:text-3xl font-bold leading-none">{day}</span>
-                              <span className="text-xs font-bold uppercase tracking-wider mt-1 opacity-80">{month}</span>
+                          <div className="flex-shrink-0">
+                            <div className="p-1.5 rounded-lg flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 shadow-inner transition-transform bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              <span className="text-lg sm:text-xl font-bold leading-none">{day}</span>
+                              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
                             </div>
                           </div>
 
                           {/* CENTRO: Dettagli */}
-                          <div className="flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                              <div className="flex items-center gap-1.5 bg-zinc-800/50 text-slate-300 px-2 py-0.5 rounded-md border border-zinc-700">
-                                <User className="w-3 h-3" />
-                                <span className="text-xs font-bold truncate max-w-[150px]">
-                                  {recovery.users?.first_name} {recovery.users?.last_name}
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                  Recupero Ore
+                                </span>
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+                                  {recovery.status === 'pending' ? 'In Attesa Admin' : 'In Attesa Dipendente'}
                                 </span>
                               </div>
-                              <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
-                                {recovery.status === 'pending' ? 'In Attesa Admin' : 'In Attesa Dipendente'}
-                              </span>
-                            </div>
 
-                            <h3 className="text-lg font-bold text-white mb-1 group-hover:text-amber-300 transition-colors">
-                              {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
-                            </h3>
+                              <h3 className="text-sm font-semibold text-white mb-0.5 group-hover:text-amber-300 transition-colors truncate">
+                                {recovery.users?.first_name} {recovery.users?.last_name}
+                              </h3>
 
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Clock className="w-3.5 h-3.5 text-slate-300" />
-                                <span className="font-medium text-slate-200">{formatHours(recovery.hours)}</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Clock className="w-3.5 h-3.5 text-slate-300" />
-                                <span className="font-medium text-slate-200">
-                                  {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Clock className="w-3 h-3 text-slate-300" />
+                                  <span className="font-medium text-slate-200">{formatHours(recovery.hours)}</span>
                                 </span>
-                              </span>
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Clock className="w-3 h-3 text-slate-300" />
+                                  <span className="font-medium text-slate-200">
+                                    {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                                  </span>
+                                </span>
+                              </div>
+
+                              {recovery.reason && (
+                                <div className="mt-1 text-[10px] bg-zinc-950/30 p-1.5 rounded border border-zinc-800/50 max-w-md">
+                                  <p className="text-slate-400 line-clamp-1">
+                                    <span className="font-semibold text-slate-500 mr-1 uppercase tracking-tighter text-[8px]">Motivo:</span>
+                                    {recovery.reason}
+                                  </p>
+                                </div>
+                              )}
                             </div>
 
-                            {recovery.reason && (
-                              <div className="mt-2 text-[11px] bg-zinc-950/30 p-2 rounded border border-zinc-800/50 max-w-md">
-                                <p className="text-slate-400 line-clamp-1">
-                                  <span className="font-semibold text-slate-500 mr-1 uppercase tracking-tighter text-[9px]">Motivo:</span>
-                                  {recovery.reason}
-                                </p>
-                              </div>
-                            )}
-                          </div>
+                            {/* DESTRA: Azioni */}
+                            <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                              {recovery.status === 'pending' && (
+                                <div className="flex flex-col gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRecoveryId(recovery.id);
+                                      setShowApproveRecoveryModal(true);
+                                    }}
+                                    className="flex items-center justify-center px-3 py-1.5 bg-green-600/90 hover:bg-green-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
+                                  >
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                    Approva
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRecoveryId(recovery.id);
+                                      setRejectionReason('');
+                                      setShowRejectRecoveryModal(true);
+                                    }}
+                                    className="flex items-center justify-center px-3 py-1.5 bg-red-600/90 hover:bg-red-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                    Rifiuta
+                                  </button>
+                                </div>
+                              )}
 
-                          {/* DESTRA: Azioni */}
-                          <div className="flex sm:flex-col items-center sm:items-end justify-center gap-1.5 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[130px]">
-                            {recovery.status === 'pending' && (
-                              <div className="flex sm:flex-col gap-1.5 w-full">
-                                <button
-                                  onClick={() => {
-                                    setSelectedRecoveryId(recovery.id);
-                                    setShowApproveRecoveryModal(true);
-                                  }}
-                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-green-600/90 hover:bg-green-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
-                                >
-                                  <CheckCircle className="h-3.5 w-3.5" />
-                                  Approva
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedRecoveryId(recovery.id);
-                                    setRejectionReason('');
-                                    setShowRejectRecoveryModal(true);
-                                  }}
-                                  className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-red-600/90 hover:bg-red-600 text-white rounded-lg transition-all font-semibold text-[11px] gap-1.5 active:scale-95"
-                                >
-                                  <XCircle className="h-3.5 w-3.5" />
-                                  Rifiuta
-                                </button>
-                              </div>
-                            )}
+                              {recovery.status === 'proposed' && (
+                                <div className="text-xs text-slate-400 font-medium text-center py-2 italic">
+                                  In attesa del dipendente
+                                </div>
+                              )}
 
-                            {recovery.status === 'proposed' && (
-                              <div className="text-xs text-slate-400 font-medium text-center py-2 italic">
-                                In attesa del dipendente
-                              </div>
-                            )}
-
-                            <button
-                              onClick={async () => {
-                                if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
-                                  try {
-                                    const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
-                                      method: 'DELETE'
-                                    });
-                                    if (response.ok) {
-                                      alert('Richiesta eliminata con successo');
-                                      await fetchPendingRecoveryRequests();
-                                    } else {
-                                      const error = await response.json();
-                                      alert(error.error || 'Errore nell\'eliminazione');
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
+                                    try {
+                                      const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
+                                        method: 'DELETE'
+                                      });
+                                      if (response.ok) {
+                                        alert('Richiesta eliminata con successo');
+                                        await fetchPendingRecoveryRequests();
+                                      } else {
+                                        const error = await response.json();
+                                        alert(error.error || 'Errore nell\'eliminazione');
+                                      }
+                                    } catch (e) {
+                                      console.error('Delete error:', e);
+                                      alert('Errore nell\'eliminazione');
                                     }
-                                  } catch (e) {
-                                    console.error('Delete error:', e);
-                                    alert('Errore nell\'eliminazione');
                                   }
-                                }
-                              }}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              Elimina
-                            </button>
-
-                            <div className="hidden sm:block mt-auto w-full pt-2">
-                              <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider mb-0.5">Richiesto il:</p>
-                              <p className="text-xs text-slate-400 text-center font-medium">
-                                {new Date(recovery.created_at).toLocaleDateString('it-IT')}
-                              </p>
+                                }}
+                                className="flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Elimina
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1462,74 +1454,72 @@ const RecuperiOre = () => {
                     const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                     return (
-                      <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
-                            <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-green-500/10 text-green-400 border border-green-500/20">
-                              <span className="text-xl sm:text-2xl font-bold leading-none">{day}</span>
-                              <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
+                      <div key={recovery.id} className="group bg-zinc-900/40 rounded-lg border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="p-1.5 rounded-lg flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-green-500/10 text-green-400 border border-green-500/20">
+                              <span className="text-lg sm:text-xl font-bold leading-none">{day}</span>
+                              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
                             </div>
                           </div>
 
-                          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <div>
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/10">
-                                  <User className="w-3 h-3" />
-                                  <span className="text-[10px] font-bold truncate max-w-[120px]">
-                                    {recovery.users?.first_name} {recovery.users?.last_name}
-                                  </span>
-                                </div>
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
+                                  Recupero Ore
+                                </span>
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
                                   Approvata (Programmata)
                                 </span>
                               </div>
 
-                              <h3 className="text-base font-bold text-white group-hover:text-green-300 transition-colors">
-                                {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
+                              <h3 className="text-sm font-semibold text-white mb-0.5 group-hover:text-green-300 transition-colors truncate">
+                                {recovery.users?.first_name} {recovery.users?.last_name}
                               </h3>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 sm:pr-4">
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Clock className="w-3 h-3 text-green-400" />
-                                <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
-                              </span>
-                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                <Clock className="w-3 h-3 text-green-400" />
-                                <span className="font-semibold text-slate-200">
-                                  {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
                                 </span>
-                              </span>
+                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <span className="font-semibold text-slate-200">
+                                    {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                                  </span>
+                                </span>
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
-                            <button
-                              onClick={async () => {
-                                if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
-                                  try {
-                                    const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
-                                      method: 'DELETE'
-                                    });
-                                    if (response.ok) {
-                                      alert('Richiesta eliminata con successo');
-                                      await fetchPendingRecoveryRequests();
-                                    } else {
-                                      const error = await response.json();
-                                      alert(error.error || 'Errore nell\'eliminazione');
+                            <div className="flex-shrink-0">
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
+                                    try {
+                                      const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
+                                        method: 'DELETE'
+                                      });
+                                      if (response.ok) {
+                                        alert('Richiesta eliminata con successo');
+                                        await fetchPendingRecoveryRequests();
+                                      } else {
+                                        const error = await response.json();
+                                        alert(error.error || 'Errore nell\'eliminazione');
+                                      }
+                                    } catch (e) {
+                                      console.error('Delete error:', e);
+                                      alert('Errore nell\'eliminazione');
                                     }
-                                  } catch (e) {
-                                    console.error('Delete error:', e);
-                                    alert('Errore nell\'eliminazione');
                                   }
-                                }
-                              }}
-                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              Elimina
-                            </button>
+                                }}
+                                className="flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                Elimina
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1589,45 +1579,42 @@ const RecuperiOre = () => {
                       const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                       return (
-                        <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-blue-500/10 p-3 hover:border-blue-500/30 transition-all border-l-2 border-l-blue-500/50">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
-                              <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                <span className="text-xl sm:text-2xl font-bold leading-none">{day}</span>
-                                <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
+                        <div key={recovery.id} className="group bg-zinc-900/40 rounded-lg border border-blue-500/10 p-3 hover:border-blue-500/30 transition-all border-l-2 border-l-blue-500/50">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="p-1.5 rounded-lg flex flex-col items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                <span className="text-lg sm:text-xl font-bold leading-none">{day}</span>
+                                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
                               </div>
                             </div>
 
-                            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                              <div>
+                            <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+                              <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                                  <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/10">
-                                    <User className="w-3 h-3" />
-                                    <span className="text-[10px] font-bold truncate max-w-[120px]">
-                                      {recovery.users?.first_name} {recovery.users?.last_name}
-                                    </span>
-                                  </div>
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                    Recupero Ore
+                                  </span>
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 bg-blue-500/10 text-blue-400 border-blue-500/20">
                                     {recovery.balance_added ? 'Completata' : 'Elaborazione in corso'}
                                   </span>
                                 </div>
 
-                                <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
-                                  {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
+                                <h3 className="text-sm font-semibold text-white mb-0.5 group-hover:text-blue-300 transition-colors truncate">
+                                  {recovery.users?.first_name} {recovery.users?.last_name}
                                 </h3>
-                              </div>
 
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 sm:pr-4">
-                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3 h-3 text-blue-400" />
-                                  <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
-                                </span>
-                                <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3 h-3 text-blue-400" />
-                                  <span className="font-semibold text-slate-200">
-                                    {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                  <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                    <Clock className="w-3 h-3 text-blue-400" />
+                                    <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
                                   </span>
-                                </span>
+                                  <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
+                                    <Clock className="w-3 h-3 text-blue-400" />
+                                    <span className="font-semibold text-slate-200">
+                                      {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                                    </span>
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
