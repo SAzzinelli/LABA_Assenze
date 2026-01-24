@@ -1476,17 +1476,18 @@ const Dashboard = () => {
                           <p className="text-slate-400 text-xs sm:text-sm truncate">
                             {person.department || 'N/A'}
                           </p>
-                          {person.hasRecoveryToday && person.recoveryStatus && (
-                            <span className="inline-flex items-center mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                              Recupero Ore
-                            </span>
-                          )}
                         </div>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
-                        <div className={`font-semibold text-base sm:text-lg ${statusColor}`}>
-                          {statusText}
-                        </div>
+                        {person.hasRecoveryToday && (person.recoveryStatus === 'completed' || person.status === 'recovery_completed') ? (
+                          <span className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
+                            Recupero terminato
+                          </span>
+                        ) : (
+                          <div className={`font-semibold text-base sm:text-lg ${statusColor}`}>
+                            {statusText}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
