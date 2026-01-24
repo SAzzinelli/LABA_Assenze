@@ -27,7 +27,8 @@ import {
   Minus,
   Clock,
   Accessibility,
-  Trash2
+  Trash2,
+  Zap
 } from 'lucide-react';
 import { calculateRealTimeHours } from '../utils/hoursCalculation';
 
@@ -1056,6 +1057,55 @@ const AdminAttendance = () => {
     }
   };
 
+  const handleForceOvertime = async (record) => {
+    const userId = record.user_id || record.users?.id;
+    const userName = record.users ? `${record.users.first_name} ${record.users.last_name}` : 'Dipendente';
+    const date = record.date;
+
+    if (!userId || !date) {
+      alert('Errore: dati record non validi');
+      return;
+    }
+
+    const hours = prompt(`Inserisci le ore di straordinario da aggiungere per ${userName} (${date}):`, '6');
+    if (!hours || isNaN(parseFloat(hours)) || parseFloat(hours) <= 0) {
+      return;
+    }
+
+    const reason = prompt('Motivo (opzionale):', `Straordinario forzato manualmente - ${hours}h`);
+
+    try {
+      const response = await apiCall('/api/attendance/force-overtime', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId,
+          date,
+          hours: parseFloat(hours),
+          reason: reason || undefined
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ ${data.message}\nNuovo saldo banca ore: ${data.newBalance.toFixed(2)}h`);
+        fetchAttendanceData();
+        fetchStats();
+        if (activeTab === 'history') {
+          fetchAttendanceHistory();
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Errore durante il forzamento delle ore');
+      }
+    } catch (error) {
+      console.error('Error forcing overtime:', error);
+      alert('Errore durante il forzamento delle ore');
+    }
+  };
+
   const handleSaveEdit = async () => {
     try {
       // Converti ore in formato HH:MM in ore decimali
@@ -1483,6 +1533,15 @@ const AdminAttendance = () => {
                     </button>
                     {!record.is_realtime && !record.is_vacation && (
                       <>
+                        {(realTime.status === 'non_working_day' || realTime.expectedHours === 0) && realTime.actualHours === 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleForceOvertime(record); }}
+                            className="p-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 rounded-lg transition-colors border border-amber-500/30 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                            title="Forza ore straordinario"
+                          >
+                            <Zap className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }}
                           className="p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors border border-zinc-700 touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -1652,6 +1711,15 @@ const AdminAttendance = () => {
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-2">
+                              {(displayData.status === 'non_working_day' || displayData.expectedHours === 0) && displayData.actualHours === 0 && !record.is_realtime && !record.is_vacation && (
+                                <button
+                                  onClick={() => handleForceOvertime(record)}
+                                  className="p-2 text-amber-400 hover:text-amber-300 hover:bg-amber-900/20 rounded-lg transition-colors"
+                                  title="Forza aggiunta ore straordinario (giorno non lavorativo)"
+                                >
+                                  <Zap className="h-4 w-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleEditRecord(record)}
                                 disabled={record.is_realtime || record.is_vacation}
