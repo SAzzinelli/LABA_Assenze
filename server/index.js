@@ -12022,7 +12022,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours_amount: creditHours,
-          description: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+          notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
           reference_type: 'manual_credit',
           running_balance: newOvertimeBalance
         });
@@ -12296,7 +12296,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         transaction_type: 'accrual',
         category: 'overtime_bank',
         hours_amount: creditHours,
-        description: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+        notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
         reference_type: 'manual_credit',
         running_balance: newOvertimeBalance
       });
@@ -13635,7 +13635,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         transaction_type: 'accrual',
         category: 'overtime_bank',
         hours_amount: overtimeHours,
-        description: reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`,
+        notes: reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`,
         reference_id: attendance.id,
         reference_type: 'attendance_overtime',
         running_balance: newOvertimeBalance
