@@ -13649,6 +13649,52 @@ app.post('/api/recovery-requests/process-completed', authenticateToken, async (r
   }
 });
 
+// Endpoint temporaneo per processare il recupero di Michele (24/01/2026) - senza autenticazione per fix rapido
+app.post('/api/recovery-requests/fix-michele', async (req, res) => {
+  try {
+    const RECOVERY_ID = 'fd9c436e-c6a6-4b47-b49c-40e17efd0f55';
+    
+    console.log(`🔄 [FIX MICHELE] Processing recovery ${RECOVERY_ID}...`);
+
+    // Recupera il recupero
+    const { data: recovery, error: recoveryError } = await supabase
+      .from('recovery_requests')
+      .select('*, users(id, first_name, last_name)')
+      .eq('id', RECOVERY_ID)
+      .single();
+
+    if (recoveryError || !recovery) {
+      return res.status(404).json({ error: 'Recupero non trovato', details: recoveryError });
+    }
+
+    const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+    console.log(`   User: ${userName}, Date: ${recovery.recovery_date}, Hours: ${recovery.hours}h`);
+
+    // Processa usando processSingleRecovery
+    const result = await processSingleRecovery(recovery);
+
+    res.json({
+      success: true,
+      message: result.message || 'Recupero processato',
+      recovery: {
+        id: recovery.id,
+        user: userName,
+        date: recovery.recovery_date,
+        hours: recovery.hours
+      },
+      balance: {
+        old: result.oldBalance,
+        new: result.newBalance,
+        added: result.hoursAdded
+      },
+      alreadyProcessed: result.alreadyProcessed
+    });
+  } catch (error) {
+    console.error('Fix Michele recovery error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 // Endpoint per forzare l'aggiunta di ore di straordinario per un dipendente (admin only, emergenziale)
 app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) => {
   try {
