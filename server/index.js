@@ -11828,20 +11828,7 @@ async function processDailyOvertime() {
     console.log(`🔄 Processing ${overtimeRecords.length} daily overtime records...`);
 
     for (const record of overtimeRecords) {
-      // Per i record di oggi, processa solo se la giornata è già finita (dopo le 23:00)
-      // o se il record è stato esplicitamente finalizzato (ha una nota o è stato salvato manualmente)
-      const recordDate = record.date;
-      const isToday = recordDate === today;
-      
-      if (isToday) {
-        const currentHour = now.getHours();
-        // Processa solo se siamo dopo le 23:00 (giornata praticamente finita)
-        // oppure se il record ha una nota che indica che è stato finalizzato
-        if (currentHour < 23 && !record.notes) {
-          // Giornata ancora in corso e non finalizzata, salta
-          continue;
-        }
-      }
+      // Processa tutti i record, anche quelli di oggi (vengono processati dopo il salvataggio dal cron)
 
       // Verifica se questo straordinario è già stato processato
       // Controlla se esiste già un record nel hours_ledger per questa attendance
@@ -13827,6 +13814,10 @@ async function saveHourlyAttendance() {
 
     console.log(`✅ Salvataggio automatico completato: ${successCount} salvati, ${errorCount} errori`);
 
+    // Processa gli straordinari subito dopo il salvataggio
+    console.log('🔄 Processamento straordinari giornalieri dopo salvataggio presenze...');
+    await processDailyOvertime();
+
   } catch (error) {
     console.error('❌ Errore durante il salvataggio automatico:', error.message);
   }
@@ -13934,6 +13925,10 @@ async function finalizeDailyAttendance() {
     }
 
     console.log(`✅ Finalizzazione automatica completata: ${successCount} finalizzati, ${skippedCount} saltati, ${errorCount} errori`);
+
+    // Processa gli straordinari subito dopo la finalizzazione
+    console.log('🔄 Processamento straordinari giornalieri dopo finalizzazione giornata...');
+    await processDailyOvertime();
 
   } catch (error) {
     console.error('❌ Errore durante la finalizzazione automatica:', error.message);
