@@ -13977,7 +13977,10 @@ app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async 
     // Trova tutti i recuperi completati con balance_added=true
     const { data: completedRecoveries, error: recoveriesError } = await supabase
       .from('recovery_requests')
-      .select('*, users(id, first_name, last_name)')
+      .select(`
+        *,
+        users!recovery_requests_user_id_fkey(id, first_name, last_name)
+      `)
       .eq('status', 'completed')
       .eq('balance_added', true);
 
