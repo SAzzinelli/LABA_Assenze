@@ -13303,6 +13303,145 @@ app.post('/api/recovery-requests/process-completed', authenticateToken, async (r
   }
 });
 
+// Endpoint per forzare l'aggiunta di ore di straordinario per un dipendente (admin only, emergenziale)
+app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { userId, date, hours, reason } = req.body;
+
+    if (!userId || !date || !hours) {
+      return res.status(400).json({ error: 'userId, date e hours sono obbligatori' });
+    }
+
+    const overtimeHours = parseFloat(hours);
+    if (isNaN(overtimeHours) || overtimeHours <= 0) {
+      return res.status(400).json({ error: 'Le ore devono essere un numero positivo maggiore di 0' });
+    }
+
+    // Verifica che l'utente esista
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Dipendente non trovato' });
+    }
+
+    // Crea o aggiorna il record di attendance
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .upsert({
+        user_id: userId,
+        date: date,
+        actual_hours: overtimeHours,
+        expected_hours: 0, // Giorno non lavorativo
+        balance_hours: overtimeHours, // Tutte le ore sono straordinario
+        notes: reason || `Straordinario forzato manualmente dall'admin - ${overtimeHours}h`
+      }, {
+        onConflict: 'user_id,date'
+      })
+      .select()
+      .single();
+
+    if (attendanceError) {
+      console.error('Error creating/updating attendance:', attendanceError);
+      return res.status(500).json({ error: 'Errore nella creazione/aggiornamento del record di presenza' });
+    }
+
+    // Processa immediatamente questo straordinario
+    const recordYear = new Date(date).getFullYear();
+    
+    // Verifica se già processato
+    const { data: existingLedger } = await supabase
+      .from('hours_ledger')
+      .select('id')
+      .eq('reference_id', attendance.id)
+      .eq('reference_type', 'attendance_overtime')
+      .single();
+
+    if (existingLedger) {
+      return res.json({ 
+        success: true, 
+        message: `Le ${overtimeHours}h sono già state processate e aggiunte alla banca ore`,
+        attendance,
+        alreadyProcessed: true
+      });
+    }
+
+    // Recupera il saldo corrente della banca ore
+    const { data: currentBalance } = await supabase
+      .from('current_balances')
+      .select('current_balance, total_accrued')
+      .eq('user_id', userId)
+      .eq('category', 'overtime_bank')
+      .eq('year', recordYear)
+      .single();
+
+    const currentOvertimeBalance = currentBalance?.current_balance || 0;
+    const newOvertimeBalance = currentOvertimeBalance + overtimeHours;
+    const totalAccrued = (currentBalance?.total_accrued || 0) + overtimeHours;
+
+    // Inserisci movimento nel ledger
+    const { error: ledgerError } = await supabase
+      .from('hours_ledger')
+      .insert({
+        user_id: userId,
+        transaction_date: date,
+        transaction_type: 'accrual',
+        category: 'overtime_bank',
+        hours_amount: overtimeHours,
+        description: reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`,
+        reference_id: attendance.id,
+        reference_type: 'attendance_overtime',
+        running_balance: newOvertimeBalance
+      });
+
+    if (ledgerError) {
+      console.error('Error inserting ledger:', ledgerError);
+      return res.status(500).json({ error: 'Errore nell\'inserimento nel ledger' });
+    }
+
+    // Aggiorna o crea il saldo corrente della banca ore
+    const { error: balanceUpdateError } = await supabase
+      .from('current_balances')
+      .upsert({
+        user_id: userId,
+        category: 'overtime_bank',
+        year: recordYear,
+        total_accrued: totalAccrued,
+        current_balance: newOvertimeBalance,
+        last_transaction_date: date,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,category,year'
+      });
+
+    if (balanceUpdateError) {
+      console.error('Error updating balance:', balanceUpdateError);
+      return res.status(500).json({ error: 'Errore nell\'aggiornamento della banca ore' });
+    }
+
+    console.log(`💰 Straordinario forzato per ${user.first_name} ${user.last_name} (${date}): ${currentOvertimeBalance}h → ${newOvertimeBalance}h (+${overtimeHours}h)`);
+
+    res.json({
+      success: true,
+      message: `${overtimeHours}h aggiunte con successo alla banca ore di ${user.first_name} ${user.last_name}`,
+      attendance,
+      newBalance: newOvertimeBalance,
+      previousBalance: currentOvertimeBalance,
+      addedHours: overtimeHours
+    });
+  } catch (error) {
+    console.error('Force overtime error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Endpoint per verificare lo stato di un recupero specifico (debug)
 app.get('/api/recovery-requests/:id/status', authenticateToken, async (req, res) => {
   try {
