@@ -11870,7 +11870,7 @@ async function processDailyOvertime() {
           user_id: record.user_id,
           transaction_date: record.date,
           transaction_type: 'accrual',
-          category: 'overtime_bank',
+          category: 'overtime',
           hours: overtimeHours,
           reason: overtimeReason,
           notes: overtimeReason,
@@ -11891,7 +11891,7 @@ async function processDailyOvertime() {
         .from('current_balances')
         .upsert({
           user_id: record.user_id,
-          category: 'overtime_bank',
+          category: 'overtime',
           year: recordYear,
           total_accrued: totalAccrued,
           current_balance: newOvertimeBalance,
@@ -12029,7 +12029,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           user_id: userId,
           transaction_date: date,
           transaction_type: 'accrual',
-          category: 'overtime_bank',
+          category: 'overtime',
           hours: creditHours,
           reason: creditReason,
           notes: creditReason,
@@ -12048,7 +12048,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         .from('current_balances')
         .upsert({
           user_id: userId,
-          category: 'overtime_bank',
+          category: 'overtime',
           year: creditYear,
           total_accrued: totalAccrued,
           current_balance: newOvertimeBalance,
@@ -13378,7 +13378,7 @@ async function processSingleRecovery(recovery) {
           user_id: recovery.user_id,
           transaction_date: recovery.recovery_date,
           transaction_type: 'accrual',
-          category: 'overtime_bank',
+          category: 'overtime',
           hours: recoveryHours,
           reason: recoveryReason,
           notes: recoveryReason,
