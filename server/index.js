@@ -8544,39 +8544,50 @@ app.get('/api/cron/test', async (req, res) => {
 });
 
 // Endpoint per salvataggio orario (chiamabile da servizi esterni come cron-job.org)
-app.post('/api/cron/hourly-save', async (req, res) => {
+// Endpoint cron per servizi esterni (cron-job.org, etc.)
+// NOTA: Ora abbiamo anche cron job interni che fanno la stessa cosa, questi endpoint servono come backup
+// Supporta sia GET che POST per compatibilità con diversi servizi cron
+app.get('/api/cron/hourly-save', async (req, res) => {
   try {
-    console.log('🕘 Salvataggio orario richiesto via API...');
-    console.log('📋 Request details:', {
-      method: req.method,
-      path: req.path,
-      headers: req.headers,
-      body: req.body
-    });
+    console.log('🕘 Salvataggio orario richiesto via API (GET)...');
     await saveHourlyAttendance();
     res.json({ success: true, message: 'Salvataggio orario completato' });
   } catch (error) {
     console.error('❌ Errore salvataggio orario API:', error);
-    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Errore nel salvataggio orario', details: error.message });
+  }
+});
+
+app.post('/api/cron/hourly-save', async (req, res) => {
+  try {
+    console.log('🕘 Salvataggio orario richiesto via API (POST)...');
+    await saveHourlyAttendance();
+    res.json({ success: true, message: 'Salvataggio orario completato' });
+  } catch (error) {
+    console.error('❌ Errore salvataggio orario API:', error);
     res.status(500).json({ error: 'Errore nel salvataggio orario', details: error.message });
   }
 });
 
 // Endpoint per finalizzazione giornaliera
-app.post('/api/cron/daily-finalize', async (req, res) => {
+app.get('/api/cron/daily-finalize', async (req, res) => {
   try {
-    console.log('🌙 Finalizzazione giornaliera richiesta via API...');
-    console.log('📋 Request details:', {
-      method: req.method,
-      path: req.path,
-      headers: req.headers,
-      body: req.body
-    });
+    console.log('🌙 Finalizzazione giornaliera richiesta via API (GET)...');
     await finalizeDailyAttendance();
     res.json({ success: true, message: 'Finalizzazione giornaliera completata' });
   } catch (error) {
     console.error('❌ Errore finalizzazione API:', error);
-    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Errore nella finalizzazione giornaliera', details: error.message });
+  }
+});
+
+app.post('/api/cron/daily-finalize', async (req, res) => {
+  try {
+    console.log('🌙 Finalizzazione giornaliera richiesta via API (POST)...');
+    await finalizeDailyAttendance();
+    res.json({ success: true, message: 'Finalizzazione giornaliera completata' });
+  } catch (error) {
+    console.error('❌ Errore finalizzazione API:', error);
     res.status(500).json({ error: 'Errore nella finalizzazione giornaliera', details: error.message });
   }
 });
