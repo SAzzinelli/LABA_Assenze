@@ -11866,7 +11866,7 @@ async function processDailyOvertime() {
           transaction_date: record.date,
           transaction_type: 'accrual',
           category: 'overtime_bank',
-          hours_amount: overtimeHours,
+          hours: overtimeHours,
           notes: record.expected_hours === 0 
             ? `Straordinario giornaliero: +${overtimeHours}h (giorno non lavorativo)`
             : `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
@@ -12021,7 +12021,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           transaction_date: date,
           transaction_type: 'accrual',
           category: 'overtime_bank',
-          hours_amount: creditHours,
+          hours: creditHours,
           notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
           reference_type: 'manual_credit',
           running_balance: newOvertimeBalance
@@ -12295,7 +12295,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         transaction_date: date,
         transaction_type: 'accrual',
         category: 'overtime_bank',
-        hours_amount: creditHours,
+        hours: creditHours,
         notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
         reference_type: 'manual_credit',
         running_balance: newOvertimeBalance
@@ -13360,7 +13360,7 @@ async function processSingleRecovery(recovery) {
           transaction_date: recovery.recovery_date,
           transaction_type: 'accrual',
           category: 'overtime_bank',
-          hours_amount: recoveryHours,
+          hours: recoveryHours,
           notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
           reference_id: recovery.id,
           reference_type: 'recovery_request',
@@ -13634,7 +13634,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         transaction_date: date,
         transaction_type: 'accrual',
         category: 'overtime_bank',
-        hours_amount: overtimeHours,
+        hours: overtimeHours,
         notes: reason || `Straordinario forzato manualmente: +${overtimeHours}h (giorno non lavorativo)`,
         reference_id: attendance.id,
         reference_type: 'attendance_overtime',
