@@ -13977,7 +13977,7 @@ app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async 
     // Trova tutti i recuperi completati con balance_added=true
     const { data: completedRecoveries, error: recoveriesError } = await supabase
       .from('recovery_requests')
-      .select('*')
+      .select('*, users(id, first_name, last_name)')
       .eq('status', 'completed')
       .eq('balance_added', true);
 
@@ -13988,63 +13988,105 @@ app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async 
     const results = [];
     let fixedCount = 0;
 
+    console.log(`📋 Trovati ${completedRecoveries?.length || 0} recuperi completati da verificare`);
+
     for (const recovery of completedRecoveries || []) {
       try {
+        const recoveryHours = parseFloat(recovery.hours);
+        const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+        
         // Verifica se l'attendance è corretto
-        const { data: attendance } = await supabase
+        const { data: attendance, error: attendanceError } = await supabase
           .from('attendance')
-          .select('balance_hours, actual_hours, notes')
+          .select('id, balance_hours, actual_hours, notes, date')
           .eq('user_id', recovery.user_id)
           .eq('date', recovery.recovery_date)
           .single();
 
-        const recoveryHours = parseFloat(recovery.hours);
-        const currentBalance = attendance ? parseFloat(attendance.balance_hours || 0) : 0;
+        const currentBalance = attendance ? parseFloat(attendance.balance_hours || 0) : null;
         const notes = attendance?.notes || '';
         const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || 
                                 notes.includes(`[Recupero ore: +${recoveryHours}h]`) ||
                                 notes.includes(`Recupero ore: +${recoveryHours}`);
 
-        // LOGICA MIGLIORATA: Se l'attendance non esiste OPPURE se esiste ma non ha le ore corrette, fixa
-        // Un recupero processato deve avere almeno recoveryHours nel balance_hours
-        // Se il balance_hours è 0 o negativo quando dovrebbe essere positivo, significa che le ore non sono state aggiunte
-        // Controllo principale: se balance_hours < recoveryHours, fixa (indipendentemente dalla nota)
-        const expectedMinBalance = recoveryHours; // Un recupero di 6h deve avere almeno 6h nel balance
+        // VERIFICA ANCHE IL BALANCE TOTALE: calcola il balance totale dell'utente
+        const { data: allAttendance } = await supabase
+          .from('attendance')
+          .select('balance_hours')
+          .eq('user_id', recovery.user_id)
+          .lte('date', recovery.recovery_date);
+
+        const totalBalance = allAttendance ? allAttendance.reduce((sum, a) => sum + parseFloat(a.balance_hours || 0), 0) : 0;
+
+        // LOGICA: Fixa se:
+        // 1. Attendance non esiste
+        // 2. Balance_hours del record specifico < recoveryHours
+        // 3. Il balance totale è 0 o negativo quando dovrebbe essere positivo (per recuperi recenti)
+        const expectedMinBalance = recoveryHours;
         const needsFix = !attendance || 
-                        currentBalance < expectedMinBalance;
+                        (attendance && currentBalance < expectedMinBalance) ||
+                        (totalBalance <= 0 && recoveryHours > 0 && new Date(recovery.recovery_date) >= new Date('2026-01-01'));
 
         // Log dettagliato per debug
-        console.log(`🔍 Recovery ${recovery.id} (${recovery.recovery_date}, ${recoveryHours}h):`, {
+        console.log(`🔍 Recovery ${recovery.id} - ${userName} (${recovery.recovery_date}, ${recoveryHours}h):`, {
           attendance_exists: !!attendance,
+          attendance_id: attendance?.id,
           current_balance: currentBalance,
           expected_min: expectedMinBalance,
           has_note: hasRecoveryNote,
-          needs_fix: needsFix
+          total_balance_all_dates: totalBalance,
+          needs_fix: needsFix,
+          attendance_error: attendanceError?.message
         });
 
         if (needsFix) {
-          console.log(`🔧 Fixing recovery ${recovery.id} (date: ${recovery.recovery_date}, hours: ${recoveryHours})`);
-          console.log(`   Current attendance: ${attendance ? `balance=${currentBalance}, hasNote=${hasRecoveryNote}` : 'NOT FOUND'}`);
+          console.log(`🔧 FIXING recovery ${recovery.id} (${userName}, date: ${recovery.recovery_date}, hours: ${recoveryHours})`);
+          console.log(`   Current attendance: ${attendance ? `id=${attendance.id}, balance=${currentBalance}` : 'NOT FOUND'}`);
           
           // Reset balance_added per permettere il riprocessamento
-          await supabase
+          const { error: resetError } = await supabase
             .from('recovery_requests')
             .update({ balance_added: false })
             .eq('id', recovery.id);
+
+          if (resetError) {
+            console.error(`❌ Errore reset balance_added:`, resetError);
+            results.push({
+              recovery_id: recovery.id,
+              user: userName,
+              date: recovery.recovery_date,
+              action: 'error',
+              error: `Reset failed: ${resetError.message}`
+            });
+            continue;
+          }
 
           // Processa di nuovo
           const result = await processSingleRecovery(recovery);
           fixedCount++;
           results.push({
             recovery_id: recovery.id,
+            user: userName,
             date: recovery.recovery_date,
             hours: recoveryHours,
             previous_balance: currentBalance,
+            previous_total_balance: totalBalance,
             action: 'reprocessed',
             result: result
           });
+          console.log(`✅ Recovery ${recovery.id} riprocessato con successo`);
         } else {
-          console.log(`✅ Recovery ${recovery.id} OK (balance: ${currentBalance}, expected: ${recoveryHours})`);
+          console.log(`✅ Recovery ${recovery.id} OK (balance: ${currentBalance}, total: ${totalBalance}, expected: ${recoveryHours})`);
+          results.push({
+            recovery_id: recovery.id,
+            user: userName,
+            date: recovery.recovery_date,
+            hours: recoveryHours,
+            current_balance: currentBalance,
+            total_balance: totalBalance,
+            action: 'skipped',
+            reason: 'Already correct'
+          });
         }
       } catch (error) {
         console.error(`❌ Errore riprocessando recovery ${recovery.id}:`, error);
@@ -14052,7 +14094,8 @@ app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async 
           recovery_id: recovery.id,
           date: recovery.recovery_date,
           action: 'error',
-          error: error.message
+          error: error.message,
+          stack: error.stack
         });
       }
     }
