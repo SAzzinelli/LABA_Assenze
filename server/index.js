@@ -11663,14 +11663,14 @@ async function processCompletedRecoveries() {
     const today = now.toISOString().split('T')[0];
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-    // Trova tutti i recuperi approvati (sia da dipendente che proposte admin approvate)
-    // che non sono ancora stati processati e per cui la data e l'orario sono passati
+    // Trova tutti i recuperi che devono essere processati:
+    // 1. Recuperi approvati (status = 'approved') con data/orario passati e balance_added = false
+    // 2. Recuperi completati (status = 'completed') con balance_added = false (da processare una volta)
     const { data: completedRecoveries, error } = await supabase
       .from('recovery_requests')
       .select('*')
-      .eq('status', 'approved')
       .eq('balance_added', false)
-      .lte('recovery_date', today);
+      .or('status.eq.completed,and(status.eq.approved,recovery_date.lte.' + today + ')');
 
     if (error) {
       console.error('Error fetching completed recoveries:', error);
@@ -11697,7 +11697,36 @@ async function processCompletedRecoveries() {
 
       console.log(`   isDatePast: ${isDatePast}, isTimePast: ${isTimePast} (recoveryDateStr=${recoveryDateStr}, today=${today}, recoveryTime=${recoveryTime}, currentTime=${currentTime})`);
 
-      if (isDatePast || isTimePast) {
+      // Se status è 'completed', processa sempre (indipendentemente dalla data/orario)
+      // Se status è 'approved', processa solo se la data/orario sono passati
+      const shouldProcess = recovery.status === 'completed' || (recovery.status === 'approved' && (isDatePast || isTimePast));
+
+      if (shouldProcess) {
+        // Verifica se questo recupero è già stato processato (controlla il ledger per evitare duplicati)
+        const { data: existingLedger } = await supabase
+          .from('hours_ledger')
+          .select('id')
+          .eq('reference_id', recovery.id)
+          .eq('reference_type', 'recovery_request')
+          .single();
+
+        if (existingLedger) {
+          console.log(`   ⚠️  Recovery ${recovery.id} già processato (esiste già ledger entry), aggiorno solo balance_added...`);
+          
+          // Aggiorna solo balance_added e status se necessario
+          await supabase
+            .from('recovery_requests')
+            .update({
+              balance_added: true,
+              status: 'completed',
+              completed_at: recovery.completed_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', recovery.id);
+          
+          console.log(`   ✅ Recovery ${recovery.id} aggiornato (già processato)\n`);
+          continue;
+        }
         // Aggiungi le ore al saldo
         // Crea un record di presenza per quella data con le ore di recupero
         const { data: existingAttendance } = await supabase
