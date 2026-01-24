@@ -12,7 +12,8 @@ import {
   Settings,
   MoreVertical,
   Shield,
-  Filter
+  Filter,
+  Users
 } from 'lucide-react';
 
 const BancaOreAdmin = () => {
@@ -346,6 +347,64 @@ const BancaOreAdmin = () => {
           Banca Ore
         </h1>
       </div>
+
+      {/* Dashboard Statistiche */}
+      {(() => {
+        const totalEmployees = allEmployees.length;
+        const employeesWithDebt = allEmployees.filter(e => e.balance < 0);
+        const employeesWithCredit = allEmployees.filter(e => e.balance > 0);
+        const employeesInPari = allEmployees.filter(e => e.balance === 0);
+        const totalDebt = employeesWithDebt.reduce((sum, e) => sum + Math.abs(e.balance), 0);
+        const totalCredit = employeesWithCredit.reduce((sum, e) => sum + e.balance, 0);
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-zinc-900 rounded-lg border border-slate-500/20 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-slate-400" />
+                  <span className="text-sm font-semibold text-slate-300">Totale Dipendenti</span>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-white mb-1">{totalEmployees}</div>
+              <div className="text-xs text-slate-400">Attivi</div>
+            </div>
+
+            <div className="bg-zinc-900 rounded-lg border border-red-500/20 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-400" />
+                  <span className="text-sm font-semibold text-slate-300">Con Debito</span>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-red-400 mb-1">{employeesWithDebt.length}</div>
+              <div className="text-xs text-slate-400">{formatHours(totalDebt)} totali</div>
+            </div>
+
+            <div className="bg-zinc-900 rounded-lg border border-green-500/20 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-sm font-semibold text-slate-300">Con Credito</span>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-green-400 mb-1">{employeesWithCredit.length}</div>
+              <div className="text-xs text-slate-400">{formatHours(totalCredit)} totali</div>
+            </div>
+
+            <div className="bg-zinc-900 rounded-lg border border-slate-500/20 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-slate-400" />
+                  <span className="text-sm font-semibold text-slate-300">In Pari</span>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-slate-300 mb-1">{employeesInPari.length}</div>
+              <div className="text-xs text-slate-400">Saldo zero</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Tab Navigation */}
       <div className="bg-zinc-900 rounded-lg border border-zinc-800">

@@ -1258,6 +1258,48 @@ const RecuperiOre = () => {
         </h1>
       </div>
 
+      {/* Dashboard Statistiche */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-zinc-900 rounded-lg border border-amber-500/20 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-400" />
+              <span className="text-sm font-semibold text-slate-300">Da Approvare</span>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-amber-400 mb-1">{toApproveRequests.length}</div>
+          <div className="text-xs text-slate-400">
+            {toApproveRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h totali
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg border border-green-500/20 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <span className="text-sm font-semibold text-slate-300">Approvati</span>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-green-400 mb-1">{approvedFutureRequests.length}</div>
+          <div className="text-xs text-slate-400">
+            {approvedFutureRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h programmate
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg border border-blue-500/20 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-blue-400" />
+              <span className="text-sm font-semibold text-slate-300">Completati</span>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-blue-400 mb-1">{completedRecoveryRequests.length}</div>
+          <div className="text-xs text-slate-400">
+            {completedRecoveryRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h processate
+          </div>
+        </div>
+      </div>
+
       {/* Tab Navigation Principale */}
       <div className="bg-zinc-900 rounded-lg border border-zinc-800">
         <div className="flex gap-2 border-b border-slate-700 p-2 overflow-x-auto">
@@ -1279,7 +1321,7 @@ const RecuperiOre = () => {
               }`}
           >
             <CheckCircle className="h-4 w-4 inline mr-2" />
-            Approvate ({approvedFutureRequests.length})
+            Approvati ({approvedFutureRequests.length})
           </button>
           <button
             onClick={() => setActiveTab('completed')}
@@ -1289,7 +1331,7 @@ const RecuperiOre = () => {
               }`}
           >
             <CheckCircle2 className="h-4 w-4 inline mr-2" />
-            Completate ({completedRecoveryRequests.length})
+            Completati ({completedRecoveryRequests.length})
           </button>
         </div>
 
