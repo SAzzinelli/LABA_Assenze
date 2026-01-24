@@ -11682,6 +11682,11 @@ async function processCompletedRecoveries() {
       .eq('status', 'completed')
       .eq('balance_added', false);
     
+    console.log(`🔍 Query recuperi completati: trovati ${completedStatusRecoveries?.length || 0} con status='completed' e balance_added=false`);
+    if (completedStatusRecoveries && completedStatusRecoveries.length > 0) {
+      console.log(`   IDs:`, completedStatusRecoveries.map(r => r.id));
+    }
+    
     // Poi cerca i recuperi approvati con data passata
     const { data: approvedRecoveries, error: approvedError } = await supabase
       .from('recovery_requests')
@@ -11690,28 +11695,60 @@ async function processCompletedRecoveries() {
       .eq('balance_added', false)
       .lte('recovery_date', today);
     
+    console.log(`🔍 Query recuperi approvati: trovati ${approvedRecoveries?.length || 0} con status='approved', balance_added=false, e data <= ${today}`);
+    if (approvedRecoveries && approvedRecoveries.length > 0) {
+      console.log(`   IDs:`, approvedRecoveries.map(r => r.id));
+    }
+    
     if (completedError || approvedError) {
       console.error('Error fetching completed recoveries:', completedError || approvedError);
       return;
     }
     
     // DEBUG: Verifica anche tutti i recuperi completati (anche con balance_added=true) per capire cosa c'è
-    const { data: allCompletedRecoveries } = await supabase
+    const { data: allCompletedRecoveries, error: allCompletedError } = await supabase
       .from('recovery_requests')
       .select('id, user_id, recovery_date, hours, status, balance_added')
       .eq('status', 'completed')
       .order('recovery_date', { ascending: false })
       .limit(10);
     
-    if (allCompletedRecoveries && allCompletedRecoveries.length > 0) {
-      console.log(`🔍 DEBUG: Trovati ${allCompletedRecoveries.length} recuperi con status='completed' (tutti):`, 
-        allCompletedRecoveries.map(r => ({
+    if (allCompletedError) {
+      console.error('❌ Errore query recuperi completati (debug):', allCompletedError);
+    } else {
+      console.log(`🔍 DEBUG: Query recuperi completati: trovati ${allCompletedRecoveries?.length || 0} recuperi con status='completed'`);
+      if (allCompletedRecoveries && allCompletedRecoveries.length > 0) {
+        console.log(`   Dettagli:`, allCompletedRecoveries.map(r => ({
           id: r.id,
           date: r.recovery_date,
           hours: r.hours,
           balance_added: r.balance_added
-        }))
-      );
+        })));
+      } else {
+        console.log(`   ⚠️ Nessun recupero con status='completed' trovato nel database`);
+      }
+    }
+    
+    // DEBUG: Verifica anche recuperi del 24/01/2026 specificamente
+    const { data: dateRecoveries, error: dateError } = await supabase
+      .from('recovery_requests')
+      .select('id, user_id, recovery_date, hours, status, balance_added')
+      .eq('recovery_date', '2026-01-24')
+      .order('status', { ascending: false });
+    
+    if (dateError) {
+      console.error('❌ Errore query recuperi del 24/01:', dateError);
+    } else {
+      console.log(`🔍 DEBUG: Recuperi del 24/01/2026: trovati ${dateRecoveries?.length || 0}`);
+      if (dateRecoveries && dateRecoveries.length > 0) {
+        console.log(`   Dettagli:`, dateRecoveries.map(r => ({
+          id: r.id,
+          user_id: r.user_id,
+          status: r.status,
+          balance_added: r.balance_added,
+          hours: r.hours
+        })));
+      }
     }
     
     // Combina i due array (rimuovi duplicati se ce ne sono)
