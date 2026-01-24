@@ -11738,6 +11738,12 @@ async function processCompletedRecoveries() {
       const shouldProcess = recovery.status === 'completed' || (recovery.status === 'approved' && (isDatePast || isTimePast));
 
       if (shouldProcess) {
+        // Doppio controllo: verifica anche balance_added prima di processare (protezione extra)
+        if (recovery.balance_added) {
+          console.log(`⏭️  Recovery ${recovery.id} già processato (balance_added=true), salto`);
+          continue;
+        }
+        
         try {
           const result = await processSingleRecovery(recovery);
           if (result.alreadyProcessed) {
