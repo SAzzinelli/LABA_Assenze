@@ -11867,7 +11867,7 @@ async function processDailyOvertime() {
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours_amount: overtimeHours,
-          description: record.expected_hours === 0 
+          notes: record.expected_hours === 0 
             ? `Straordinario giornaliero: +${overtimeHours}h (giorno non lavorativo)`
             : `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
           reference_id: record.id,
@@ -13352,20 +13352,20 @@ async function processSingleRecovery(recovery) {
   const newOvertimeBalance = currentOvertimeBalance + recoveryHours;
   const totalAccrued = (currentBalance?.total_accrued || 0) + recoveryHours;
 
-  // Inserisci movimento nel ledger
-  const { error: ledgerError } = await supabase
-    .from('hours_ledger')
-    .insert({
-      user_id: recovery.user_id,
-      transaction_date: recovery.recovery_date,
-      transaction_type: 'accrual',
-      category: 'overtime_bank',
-      hours_amount: recoveryHours,
-      description: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
-      reference_id: recovery.id,
-      reference_type: 'recovery_request',
-      running_balance: newOvertimeBalance
-    });
+      // Inserisci movimento nel ledger
+      const { error: ledgerError } = await supabase
+        .from('hours_ledger')
+        .insert({
+          user_id: recovery.user_id,
+          transaction_date: recovery.recovery_date,
+          transaction_type: 'accrual',
+          category: 'overtime_bank',
+          hours_amount: recoveryHours,
+          notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
+          reference_id: recovery.id,
+          reference_type: 'recovery_request',
+          running_balance: newOvertimeBalance
+        });
 
   if (ledgerError) {
     throw new Error(`Errore inserimento ledger: ${ledgerError.message}`);
