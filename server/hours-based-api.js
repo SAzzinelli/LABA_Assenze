@@ -690,7 +690,7 @@ router.put('/admin/leave-requests/:id/approve', async (req, res) => {
           transaction_type: 'usage',
           category: category,
           hours: -request.hours_requested,
-          description: `${request.type} dal ${request.start_date} al ${request.end_date}`,
+          notes: `${request.type} dal ${request.start_date} al ${request.end_date}`,
           reference_id: request.id,
           reference_type: 'leave_request',
           running_balance: 0 // Will be calculated by trigger
