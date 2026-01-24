@@ -11799,6 +11799,115 @@ async function processCompletedRecoveries() {
   }
 }
 
+// Processa gli straordinari giornalieri (quando actual_hours > expected_hours)
+async function processDailyOvertime() {
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Trova tutti i record di attendance con balance_hours > 0 (straordinari) 
+    // che non sono ancora stati processati come straordinari nella banca ore
+    // Processiamo solo i record fino a ieri (non quelli di oggi che potrebbero ancora cambiare)
+    const { data: overtimeRecords, error } = await supabase
+      .from('attendance')
+      .select('*, users(id, first_name, last_name)')
+      .gt('balance_hours', 0)
+      .lte('date', yesterdayStr)
+      .not('actual_hours', 'is', null)
+      .not('expected_hours', 'is', null);
+
+    if (error) {
+      console.error('Error fetching overtime records:', error);
+      return;
+    }
+
+    if (!overtimeRecords || overtimeRecords.length === 0) {
+      return;
+    }
+
+    console.log(`🔄 Processing ${overtimeRecords.length} daily overtime records...`);
+
+    for (const record of overtimeRecords) {
+      // Verifica se questo straordinario è già stato processato
+      // Controlla se esiste già un record nel hours_ledger per questa attendance
+      const { data: existingLedger } = await supabase
+        .from('hours_ledger')
+        .select('id')
+        .eq('reference_id', record.id)
+        .eq('reference_type', 'attendance_overtime')
+        .single();
+
+      if (existingLedger) {
+        // Già processato, salta
+        continue;
+      }
+
+      const overtimeHours = parseFloat(record.balance_hours);
+      const recordYear = new Date(record.date).getFullYear();
+      const userName = record.users ? `${record.users.first_name} ${record.users.last_name}` : record.user_id;
+
+      // Recupera il saldo corrente della banca ore
+      const { data: currentBalance, error: balanceError } = await supabase
+        .from('current_balances')
+        .select('current_balance, total_accrued')
+        .eq('user_id', record.user_id)
+        .eq('category', 'overtime_bank')
+        .eq('year', recordYear)
+        .single();
+
+      const currentOvertimeBalance = currentBalance?.current_balance || 0;
+      const newOvertimeBalance = currentOvertimeBalance + overtimeHours;
+      const totalAccrued = (currentBalance?.total_accrued || 0) + overtimeHours;
+
+      // Inserisci movimento nel ledger
+      const { error: ledgerError } = await supabase
+        .from('hours_ledger')
+        .insert({
+          user_id: record.user_id,
+          transaction_date: record.date,
+          transaction_type: 'accrual',
+          category: 'overtime_bank',
+          hours_amount: overtimeHours,
+          description: `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
+          reference_id: record.id,
+          reference_type: 'attendance_overtime',
+          running_balance: newOvertimeBalance
+        });
+
+      if (ledgerError) {
+        console.error(`❌ Errore inserimento ledger per attendance ${record.id}:`, ledgerError);
+        continue;
+      }
+
+      // Aggiorna o crea il saldo corrente della banca ore
+      const { error: balanceUpdateError } = await supabase
+        .from('current_balances')
+        .upsert({
+          user_id: record.user_id,
+          category: 'overtime_bank',
+          year: recordYear,
+          total_accrued: totalAccrued,
+          current_balance: newOvertimeBalance,
+          last_transaction_date: record.date,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,category,year'
+        });
+
+      if (balanceUpdateError) {
+        console.error(`❌ Errore aggiornamento banca ore per attendance ${record.id}:`, balanceUpdateError);
+      } else {
+        console.log(`💰 Straordinario processato per ${userName} (${record.date}): ${currentOvertimeBalance}h → ${newOvertimeBalance}h (+${overtimeHours}h)`);
+      }
+    }
+  } catch (error) {
+    console.error('Error processing daily overtime:', error);
+  }
+}
+
 // =====================================================
 // ENDPOINT: Aggiungi ore a credito manualmente (admin only)
 // IMPORTANTE: Deve essere PRIMA di /api/recovery-requests per evitare conflitti di routing
@@ -13171,9 +13280,10 @@ app.post('/api/recovery-requests/process-completed', authenticateToken, async (r
       return res.status(403).json({ error: 'Accesso negato' });
     }
 
-    console.log('🔄 [MANUAL PROCESS] Forcing process of completed recoveries...');
+    console.log('🔄 [MANUAL PROCESS] Forcing process of completed recoveries and daily overtime...');
     await processCompletedRecoveries();
-    res.json({ success: true, message: 'Recuperi completati processati' });
+    await processDailyOvertime();
+    res.json({ success: true, message: 'Recuperi completati e straordinari giornalieri processati' });
   } catch (error) {
     console.error('Process completed recoveries error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
@@ -14172,13 +14282,15 @@ server.listen(PORT, () => {
   console.log('📅 Salvataggio ore: Ogni ora al minuto 0');
   console.log('📅 Finalizzazione giornata: Ogni giorno a mezzanotte');
 
-  // Processa recuperi completati ogni ora
+  // Processa recuperi completati e straordinari giornalieri ogni ora
   setInterval(async () => {
     await processCompletedRecoveries();
+    await processDailyOvertime();
   }, 60 * 60 * 1000); // Ogni ora
 
   // Processa anche all'avvio
   processCompletedRecoveries();
+  processDailyOvertime();
 });
 
 module.exports = app;

@@ -763,10 +763,10 @@ const BancaOreAdmin = () => {
                                   notes: ''
                                 });
                               }}
-                              className="flex-shrink-0 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs gap-1.5"
+                              className="flex-shrink-0 px-4 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 rounded-lg transition-all shadow-lg shadow-red-900/20 font-medium text-xs flex items-center gap-1.5"
                             >
                               <Shield className="h-3.5 w-3.5" />
-                              Aggiungi Ore
+                              <span>Aggiungi Ore</span>
                             </button>
                           </div>
                         </div>
