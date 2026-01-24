@@ -14154,6 +14154,156 @@ app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async 
   }
 });
 
+// Endpoint per correggere recuperi con balance errato (es. 12h invece di 6h per doppio processamento)
+app.post('/api/recovery-requests/fix-duplicate-balance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    console.log('🔧 [FIX DUPLICATE] Correggendo recuperi con balance duplicato...');
+
+    // Trova tutti i recuperi completati
+    const { data: completedRecoveries, error: recoveriesError } = await supabase
+      .from('recovery_requests')
+      .select(`
+        *,
+        users!recovery_requests_user_id_fkey(id, first_name, last_name)
+      `)
+      .eq('status', 'completed')
+      .eq('balance_added', true);
+
+    if (recoveriesError) {
+      return res.status(500).json({ error: 'Errore nel recupero recuperi', details: recoveriesError.message });
+    }
+
+    const results = [];
+    let fixedCount = 0;
+
+    for (const recovery of completedRecoveries || []) {
+      try {
+        const recoveryHours = parseFloat(recovery.hours);
+        const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+
+        // Verifica il record di attendance
+        const { data: attendance, error: attendanceError } = await supabase
+          .from('attendance')
+          .select('id, balance_hours, actual_hours, notes')
+          .eq('user_id', recovery.user_id)
+          .eq('date', recovery.recovery_date)
+          .single();
+
+        if (attendanceError && attendanceError.code !== 'PGRST116') {
+          // Errore diverso da "not found"
+          results.push({
+            recovery_id: recovery.id,
+            user: userName,
+            date: recovery.recovery_date,
+            action: 'error',
+            error: `Attendance error: ${attendanceError.message}`
+          });
+          continue;
+        }
+
+        if (!attendance) {
+          // Nessun record di attendance, non c'è nulla da fixare
+          continue;
+        }
+
+        const currentBalance = parseFloat(attendance.balance_hours || 0);
+        const notes = attendance.notes || '';
+        
+        // Conta quante volte appare la nota del recupero
+        const recoveryNotePattern = `[Recupero ore: +${recoveryHours}h]`;
+        const noteCount = (notes.match(new RegExp(recoveryNotePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        const hasFullNote = notes.includes(`Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`);
+
+        // Se il balance è maggiore delle ore di recupero E ci sono note duplicate, fixa
+        // Oppure se il balance è esattamente il doppio (indicatore di doppio processamento)
+        const isDuplicate = (currentBalance > recoveryHours && (noteCount > 1 || hasFullNote)) ||
+                            (currentBalance === recoveryHours * 2);
+
+        if (isDuplicate) {
+          console.log(`🔧 Fixing duplicate balance per recovery ${recovery.id} (${userName}):`);
+          console.log(`   Current balance: ${currentBalance}h, Recovery hours: ${recoveryHours}h`);
+          console.log(`   Note count: ${noteCount}, Has full note: ${hasFullNote}`);
+
+          // Calcola il balance corretto: sottrai le ore duplicate
+          // Se il balance è esattamente il doppio, imposta a recoveryHours
+          // Altrimenti, sottrai recoveryHours
+          const correctedBalance = currentBalance === recoveryHours * 2 
+            ? recoveryHours 
+            : currentBalance - recoveryHours;
+          
+          const correctedActual = parseFloat(attendance.actual_hours || 0) - recoveryHours;
+
+          // Rimuovi una delle note duplicate (mantieni solo la prima)
+          let correctedNotes = notes;
+          if (noteCount > 1) {
+            // Rimuovi l'ultima occorrenza della nota
+            const lastIndex = correctedNotes.lastIndexOf(recoveryNotePattern);
+            if (lastIndex !== -1) {
+              correctedNotes = correctedNotes.substring(0, lastIndex) + 
+                              correctedNotes.substring(lastIndex + recoveryNotePattern.length);
+            }
+          }
+
+          const { error: updateError } = await supabase
+            .from('attendance')
+            .update({
+              balance_hours: correctedBalance,
+              actual_hours: Math.max(0, correctedActual), // Non può essere negativo
+              notes: correctedNotes.trim()
+            })
+            .eq('id', attendance.id);
+
+          if (updateError) {
+            console.error(`❌ Errore fix balance per recovery ${recovery.id}:`, updateError);
+            results.push({
+              recovery_id: recovery.id,
+              user: userName,
+              date: recovery.recovery_date,
+              action: 'error',
+              error: `Update failed: ${updateError.message}`
+            });
+          } else {
+            fixedCount++;
+            results.push({
+              recovery_id: recovery.id,
+              user: userName,
+              date: recovery.recovery_date,
+              hours: recoveryHours,
+              previous_balance: currentBalance,
+              corrected_balance: correctedBalance,
+              action: 'fixed'
+            });
+            console.log(`✅ Balance corretto: da ${currentBalance}h a ${correctedBalance}h`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Errore fixando recovery ${recovery.id}:`, error);
+        results.push({
+          recovery_id: recovery.id,
+          date: recovery.recovery_date,
+          action: 'error',
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Corretti ${fixedCount} recuperi con balance duplicato su ${completedRecoveries?.length || 0}`,
+      fixed: fixedCount,
+      total: completedRecoveries?.length || 0,
+      results
+    });
+  } catch (error) {
+    console.error('Fix duplicate balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
