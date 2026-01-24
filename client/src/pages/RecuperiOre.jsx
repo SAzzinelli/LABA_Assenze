@@ -160,15 +160,17 @@ const RecuperiOre = () => {
   // Fetch richieste recupero in attesa (admin)
   const fetchPendingRecoveryRequests = async () => {
     try {
-      const [pendingResponse, proposedResponse, approvedResponse] = await Promise.all([
+      const [pendingResponse, proposedResponse, approvedResponse, completedResponse] = await Promise.all([
         apiCall('/api/recovery-requests?status=pending'),
         apiCall('/api/recovery-requests?status=proposed'),
-        apiCall('/api/recovery-requests?status=approved')
+        apiCall('/api/recovery-requests?status=approved'),
+        apiCall('/api/recovery-requests?status=completed')
       ]);
 
       const pendingData = pendingResponse.ok ? await pendingResponse.json() : [];
       const proposedData = proposedResponse.ok ? await proposedResponse.json() : [];
       const approvedData = approvedResponse.ok ? await approvedResponse.json() : [];
+      const completedData = completedResponse.ok ? await completedResponse.json() : [];
 
       // Separa approved in future (non processati) e completed (processati o passati)
       const now = new Date();
@@ -183,7 +185,11 @@ const RecuperiOre = () => {
         return isFuture; // Solo future o in corso
       });
 
-      const completed = (approvedData || []).filter(r => {
+      // I recuperi completati includono:
+      // 1. Recuperi con status='completed' (già processati)
+      // 2. Recuperi con status='approved' ma balance_added=true (processati)
+      // 3. Recuperi con status='approved' ma data/orario passati (non ancora processati ma passati)
+      const completedFromApproved = (approvedData || []).filter(r => {
         if (r.balance_added) return true; // Già processati
         const recoveryDate = new Date(r.recovery_date);
         recoveryDate.setHours(0, 0, 0, 0);
@@ -191,13 +197,15 @@ const RecuperiOre = () => {
         return isPast; // Passati o completati oggi
       });
 
+      const allCompleted = [...(completedData || []), ...completedFromApproved];
+
       const allRequests = [
         ...(pendingData || []),
         ...(proposedData || []),
         ...pendingApproved
       ];
       setPendingRecoveryRequests(allRequests);
-      setCompletedRecoveryRequests(completed);
+      setCompletedRecoveryRequests(allCompleted);
     } catch (error) {
       console.error('Error fetching pending recovery requests:', error);
     }
@@ -1836,6 +1844,36 @@ const RecuperiOre = () => {
           {/* Tab: Completate (Past) */}
           {activeTab === 'completed' && (
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-1">Recuperi Completati</h4>
+                  <p className="text-sm text-slate-400">Recuperi passati e già elaborati, ordinati dal più recente</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await apiCall('/api/recovery-requests/process-completed', {
+                        method: 'POST'
+                      });
+                      if (response.ok) {
+                        alert('Recuperi completati processati con successo');
+                        await fetchPendingRecoveryRequests();
+                      } else {
+                        const error = await response.json();
+                        alert(error.error || 'Errore nel processamento');
+                      }
+                    } catch (e) {
+                      console.error('Process error:', e);
+                      alert('Errore nel processamento');
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Forza Processamento
+                </button>
+              </div>
+
               {completedRecoveryRequests.length > 0 ? (
                 <div className="space-y-3">
                   {completedRecoveryRequests

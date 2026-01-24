@@ -535,33 +535,41 @@ const Dashboard = () => {
     try {
       if (user?.role !== 'admin') return;
 
-      const response = await apiCall('/api/recovery-requests?status=approved');
-      if (response.ok) {
-        const data = await response.json();
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const nextWeek = new Date(today);
-        nextWeek.setDate(nextWeek.getDate() + 7);
+      // Fetch sia recuperi approved che completed per includere tutti i recuperi di oggi
+      const [approvedResponse, completedResponse] = await Promise.all([
+        apiCall('/api/recovery-requests?status=approved'),
+        apiCall('/api/recovery-requests?status=completed')
+      ]);
 
-        // Filtra solo recuperi approvati nei prossimi 7 giorni
-        const upcoming = (data || []).filter(recovery => {
-          const recoveryDate = new Date(recovery.recovery_date);
-          recoveryDate.setHours(0, 0, 0, 0);
-          return recoveryDate >= today && recoveryDate <= nextWeek && !recovery.balance_added;
-        });
+      const approvedData = approvedResponse.ok ? await approvedResponse.json() : [];
+      const completedData = completedResponse.ok ? await completedResponse.json() : [];
+      
+      // Combina approved e completed per avere tutti i recuperi
+      const allRecoveries = [...(approvedData || []), ...(completedData || [])];
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
 
-        setUpcomingRecoveries(upcoming);
+      // Filtra solo recuperi approvati nei prossimi 7 giorni (non ancora processati)
+      const upcoming = allRecoveries.filter(recovery => {
+        const recoveryDate = new Date(recovery.recovery_date);
+        recoveryDate.setHours(0, 0, 0, 0);
+        return recoveryDate >= today && recoveryDate <= nextWeek && !recovery.balance_added && recovery.status === 'approved';
+      });
 
-        // Filtra recuperi per oggi (per pill "recupero ore")
-        // IMPORTANTE: Include anche recuperi già processati (balance_added=true) se sono di oggi
-        // perché il dipendente deve comunque comparire in "Presenti adesso" per tutta la giornata
-        const todayRecoveriesList = (data || []).filter(recovery => {
-          const recoveryDate = new Date(recovery.recovery_date);
-          recoveryDate.setHours(0, 0, 0, 0);
-          return recoveryDate.getTime() === today.getTime();
-        });
-        setTodayRecoveries(todayRecoveriesList);
-      }
+      setUpcomingRecoveries(upcoming);
+
+      // Filtra recuperi per oggi (per pill "recupero ore")
+      // IMPORTANTE: Include anche recuperi già processati (balance_added=true o status=completed) se sono di oggi
+      // perché il dipendente deve comunque comparire in "Presenti adesso" per tutta la giornata
+      const todayRecoveriesList = allRecoveries.filter(recovery => {
+        const recoveryDate = new Date(recovery.recovery_date);
+        recoveryDate.setHours(0, 0, 0, 0);
+        return recoveryDate.getTime() === today.getTime();
+      });
+      setTodayRecoveries(todayRecoveriesList);
     } catch (error) {
       console.error('Error fetching upcoming recoveries:', error);
     }
