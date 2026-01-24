@@ -13458,6 +13458,56 @@ app.post('/api/recovery-requests/:id/process', authenticateToken, async (req, re
   }
 });
 
+// Endpoint di debug per verificare stato recuperi (admin only)
+app.get('/api/recovery-requests/debug', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { userId, date } = req.query;
+    
+    let query = supabase
+      .from('recovery_requests')
+      .select('*, users(id, first_name, last_name)')
+      .order('recovery_date', { ascending: false })
+      .limit(50);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    if (date) {
+      query = query.eq('recovery_date', date);
+    }
+
+    const { data: recoveries, error } = await query;
+
+    if (error) {
+      return res.status(500).json({ error: 'Errore nel recupero', details: error.message });
+    }
+
+    res.json({
+      success: true,
+      count: recoveries?.length || 0,
+      recoveries: recoveries?.map(r => ({
+        id: r.id,
+        user: r.users ? `${r.users.first_name} ${r.users.last_name}` : `User ${r.user_id}`,
+        date: r.recovery_date,
+        hours: r.hours,
+        status: r.status,
+        balance_added: r.balance_added,
+        start_time: r.start_time,
+        end_time: r.end_time,
+        created_at: r.created_at,
+        updated_at: r.updated_at
+      })) || []
+    });
+  } catch (error) {
+    console.error('Debug recoveries error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 app.post('/api/recovery-requests/process-completed', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
