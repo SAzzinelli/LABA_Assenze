@@ -11850,7 +11850,7 @@ async function processDailyOvertime() {
         .from('current_balances')
         .select('current_balance, total_accrued')
         .eq('user_id', record.user_id)
-        .eq('category', 'overtime_bank')
+        .eq('category', 'overtime')
         .eq('year', recordYear)
         .single();
 
@@ -12011,7 +12011,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         .from('current_balances')
         .select('current_balance, total_accrued')
         .eq('user_id', userId)
-        .eq('category', 'overtime_bank')
+        .eq('category', 'overtime')
         .eq('year', creditYear)
         .single();
 
@@ -12291,7 +12291,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       .from('current_balances')
       .select('current_balance, total_accrued')
       .eq('user_id', userId)
-      .eq('category', 'overtime_bank')
+      .eq('category', 'overtime')
       .eq('year', creditYear)
       .single();
 
@@ -12308,7 +12308,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         user_id: userId,
         transaction_date: date,
         transaction_type: 'accrual',
-        category: 'overtime_bank',
+        category: 'overtime',
         hours: creditHours,
         notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
         reference_type: 'manual_credit',
@@ -12326,7 +12326,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       .from('current_balances')
       .upsert({
         user_id: userId,
-        category: 'overtime_bank',
+        category: 'overtime',
         year: creditYear,
         total_accrued: totalAccrued,
         current_balance: newOvertimeBalance,
@@ -13360,7 +13360,7 @@ async function processSingleRecovery(recovery) {
     .from('current_balances')
     .select('current_balance, total_accrued')
     .eq('user_id', recovery.user_id)
-    .eq('category', 'overtime_bank')
+    .eq('category', 'overtime')
     .eq('year', recoveryYear)
     .single();
 
@@ -13398,7 +13398,7 @@ async function processSingleRecovery(recovery) {
     .from('current_balances')
     .upsert({
       user_id: recovery.user_id,
-      category: 'overtime_bank',
+      category: 'overtime',
       year: recoveryYear,
       total_accrued: totalAccrued,
       current_balance: newOvertimeBalance,
@@ -13640,7 +13640,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
       .from('current_balances')
       .select('current_balance, total_accrued')
       .eq('user_id', userId)
-      .eq('category', 'overtime_bank')
+      .eq('category', 'overtime')
       .eq('year', recordYear)
       .single();
 
@@ -13658,7 +13658,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         user_id: userId,
         transaction_date: date,
         transaction_type: 'accrual',
-        category: 'overtime_bank',
+        category: 'overtime',
         hours: overtimeHours,
         reason: overtimeReason,
         notes: overtimeReason,
@@ -13679,7 +13679,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
       .from('current_balances')
       .upsert({
         user_id: userId,
-        category: 'overtime_bank',
+        category: 'overtime',
         year: recordYear,
         total_accrued: totalAccrued,
         current_balance: newOvertimeBalance,
@@ -13744,7 +13744,7 @@ app.get('/api/recovery-requests/:id/status', authenticateToken, async (req, res)
       .from('current_balances')
       .select('*')
       .eq('user_id', recovery.user_id)
-      .eq('category', 'overtime_bank')
+      .eq('category', 'overtime')
       .eq('year', recoveryYear)
       .single();
 
