@@ -8551,6 +8551,10 @@ app.get('/api/cron/hourly-save', async (req, res) => {
   try {
     console.log('🕘 Salvataggio orario richiesto via API (GET)...');
     await saveHourlyAttendance();
+    // Processa anche i recuperi completati e gli straordinari
+    console.log('🔄 Processamento recuperi completati e straordinari...');
+    await processCompletedRecoveries();
+    await processDailyOvertime();
     res.json({ success: true, message: 'Salvataggio orario completato' });
   } catch (error) {
     console.error('❌ Errore salvataggio orario API:', error);
@@ -8562,6 +8566,10 @@ app.post('/api/cron/hourly-save', async (req, res) => {
   try {
     console.log('🕘 Salvataggio orario richiesto via API (POST)...');
     await saveHourlyAttendance();
+    // Processa anche i recuperi completati e gli straordinari
+    console.log('🔄 Processamento recuperi completati e straordinari...');
+    await processCompletedRecoveries();
+    await processDailyOvertime();
     res.json({ success: true, message: 'Salvataggio orario completato' });
   } catch (error) {
     console.error('❌ Errore salvataggio orario API:', error);
