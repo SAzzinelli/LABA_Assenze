@@ -1538,34 +1538,9 @@ const RecuperiOre = () => {
           {/* Tab: Completate (Past) */}
           {activeTab === 'completed' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-1">Recuperi Completati</h4>
-                  <p className="text-sm text-slate-400">Recuperi passati e già elaborati, ordinati dal più recente</p>
-                </div>
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await apiCall('/api/recovery-requests/process-completed', {
-                        method: 'POST'
-                      });
-                      if (response.ok) {
-                        alert('Recuperi completati processati con successo');
-                        await fetchPendingRecoveryRequests();
-                      } else {
-                        const error = await response.json();
-                        alert(error.error || 'Errore nel processamento');
-                      }
-                    } catch (e) {
-                      console.error('Process error:', e);
-                      alert('Errore nel processamento');
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Forza Processamento
-                </button>
+              <div className="mb-4">
+                <h4 className="text-lg font-semibold text-white mb-1">Recuperi Completati</h4>
+                <p className="text-sm text-slate-400">Recuperi passati e già elaborati, ordinati dal più recente</p>
               </div>
 
               {completedRecoveryRequests.length > 0 ? (
