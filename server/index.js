@@ -11895,7 +11895,6 @@ async function processDailyOvertime() {
           year: recordYear,
           total_accrued: totalAccrued,
           current_balance: newOvertimeBalance,
-          last_transaction_date: record.date,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,category,year'
@@ -12052,7 +12051,6 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           year: creditYear,
           total_accrued: totalAccrued,
           current_balance: newOvertimeBalance,
-          last_transaction_date: date,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,category,year'
@@ -13402,7 +13400,6 @@ async function processSingleRecovery(recovery) {
       year: recoveryYear,
       total_accrued: totalAccrued,
       current_balance: newOvertimeBalance,
-      last_transaction_date: recovery.recovery_date,
       updated_at: new Date().toISOString()
     }, {
       onConflict: 'user_id,category,year'
