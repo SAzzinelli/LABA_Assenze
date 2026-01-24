@@ -56,8 +56,9 @@ const RecuperiOre = () => {
   const [suggestedTimeSlots, setSuggestedTimeSlots] = useState([]); // Slot orari suggeriti
 
   // Dati per admin gestione recuperi
-  const [activeTab, setActiveTab] = useState('debt'); // 'debt', 'proposals' o 'add-hours'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'completed', 'debt', 'proposals', 'add-hours'
   const [pendingRecoveryRequests, setPendingRecoveryRequests] = useState([]); // Richieste in attesa (admin)
+  const [completedRecoveryRequests, setCompletedRecoveryRequests] = useState([]); // Richieste completate/passate (admin)
   const [employeesWithDebt, setEmployeesWithDebt] = useState([]); // Dipendenti con debito (admin)
   const [allEmployees, setAllEmployees] = useState([]); // Tutti i dipendenti per la tab "Proposte"
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -65,7 +66,6 @@ const RecuperiOre = () => {
   const [showRejectRecoveryModal, setShowRejectRecoveryModal] = useState(false);
   const [showProposeRecoveryModal, setShowProposeRecoveryModal] = useState(false);
   const [showAddHoursModal, setShowAddHoursModal] = useState(false); // Modal per aggiungere ore a credito
-  const [showApprovedAccordion, setShowApprovedAccordion] = useState(false); // Accordion per richieste approvate (admin)
   const [selectedRecoveryId, setSelectedRecoveryId] = useState(null);
   const [selectedEmployeeForProposal, setSelectedEmployeeForProposal] = useState(null);
   const [selectedEmployeeForAddHours, setSelectedEmployeeForAddHours] = useState(null); // Dipendente selezionato per aggiungere ore
@@ -170,8 +170,26 @@ const RecuperiOre = () => {
       const proposedData = proposedResponse.ok ? await proposedResponse.json() : [];
       const approvedData = approvedResponse.ok ? await approvedResponse.json() : [];
 
-      // Filtra approvedData per includere solo quelli NON ancora processati (balance_added = false)
-      const pendingApproved = (approvedData || []).filter(r => !r.balance_added);
+      // Separa approved in future (non processati) e completed (processati o passati)
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+      const pendingApproved = (approvedData || []).filter(r => {
+        if (r.balance_added) return false; // Già processati vanno in completed
+        const recoveryDate = new Date(r.recovery_date);
+        recoveryDate.setHours(0, 0, 0, 0);
+        const isFuture = recoveryDate > today || (recoveryDate.getTime() === today.getTime() && r.end_time > currentTime);
+        return isFuture; // Solo future o in corso
+      });
+
+      const completed = (approvedData || []).filter(r => {
+        if (r.balance_added) return true; // Già processati
+        const recoveryDate = new Date(r.recovery_date);
+        recoveryDate.setHours(0, 0, 0, 0);
+        const isPast = recoveryDate < today || (recoveryDate.getTime() === today.getTime() && r.end_time <= currentTime);
+        return isPast; // Passati o completati oggi
+      });
 
       const allRequests = [
         ...(pendingData || []),
@@ -179,6 +197,7 @@ const RecuperiOre = () => {
         ...pendingApproved
       ];
       setPendingRecoveryRequests(allRequests);
+      setCompletedRecoveryRequests(completed);
     } catch (error) {
       console.error('Error fetching pending recovery requests:', error);
     }
@@ -1504,6 +1523,9 @@ const RecuperiOre = () => {
   }
 
   // Vista Admin
+  const toApproveRequests = pendingRecoveryRequests.filter(r => r && (r.status === 'pending' || r.status === 'proposed'));
+  const approvedFutureRequests = pendingRecoveryRequests.filter(r => r && r.status === 'approved' && !r.balance_added);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -1513,32 +1535,57 @@ const RecuperiOre = () => {
         </h1>
       </div>
 
-      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 mb-6">
-        <div className="flex items-start">
-          <Info className="h-5 w-5 text-slate-400 mr-3 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-bold text-slate-300 mb-1">Elaborazione Banca Ore</h4>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Le ore delle richieste approvate verranno aggiunte automaticamente al saldo banca ore del dipendente solo <strong>dopo il passaggio della data e dell'orario di fine</strong> della sessione di recupero/straordinario. Finché non vengono elaborate, le vedrai in questo elenco come "Approvata (Programmata)".
-            </p>
-          </div>
+      {/* Tab Navigation Principale */}
+      <div className="bg-zinc-900 rounded-lg border border-zinc-800">
+        <div className="flex gap-2 border-b border-slate-700 p-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'pending'
+              ? 'text-amber-400 border-amber-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <Clock className="h-4 w-4 inline mr-2" />
+            Da Approvare ({toApproveRequests.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('approved')}
+            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'approved'
+              ? 'text-green-400 border-green-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <CheckCircle className="h-4 w-4 inline mr-2" />
+            Approvate ({approvedFutureRequests.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === 'completed'
+              ? 'text-blue-400 border-blue-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <CheckCircle2 className="h-4 w-4 inline mr-2" />
+            Completate ({completedRecoveryRequests.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('debt')}
+            className={`px-4 py-2.5 font-semibold transition-colors border-b-2 whitespace-nowrap ${(activeTab === 'management' || activeTab === 'debt' || activeTab === 'proposals' || activeTab === 'add-hours')
+              ? 'text-purple-400 border-purple-400'
+              : 'text-slate-400 border-transparent hover:text-slate-300'
+              }`}
+          >
+            <AlertCircle className="h-4 w-4 inline mr-2" />
+            Gestione
+          </button>
         </div>
-      </div>
 
-      {/* Richieste Recupero Ore in Attesa */}
-      {(() => {
-        const toApproveRequests = pendingRecoveryRequests.filter(r => r && (r.status === 'pending' || r.status === 'proposed'));
-        const approvedWaitRequests = pendingRecoveryRequests.filter(r => r && r.status === 'approved' && !r.balance_added);
-
-        return (
-          <>
-            {toApproveRequests.length > 0 && (
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-6 mb-8 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-                <h3 className="text-xl font-bold text-amber-100 mb-6 flex items-center">
-                  <Clock className="h-6 w-6 mr-3 text-amber-500" />
-                  Richieste da Approvare o in Attesa ({toApproveRequests.length})
-                </h3>
+        {/* Tab Content */}
+        <div className="p-6">
+          {/* Tab: Da Approvare */}
+          {activeTab === 'pending' && (
+            <div>
+              {toApproveRequests.length > 0 ? (
                 <div className="space-y-3">
                   {toApproveRequests.map((recovery) => {
                     const dateObj = new Date(recovery.recovery_date);
@@ -1669,34 +1716,140 @@ const RecuperiOre = () => {
                     );
                   })}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">Nessuna richiesta da approvare</p>
+                  <p className="text-sm">Tutte le richieste sono state processate</p>
+                </div>
+              )}
+            </div>
+          )}
 
-            {approvedWaitRequests.length > 0 && (
-              <div className="mb-8 overflow-hidden rounded-xl border border-green-500/20 bg-green-500/5">
-                <button
-                  onClick={() => setShowApprovedAccordion(!showApprovedAccordion)}
-                  className="flex w-full items-center justify-between p-4 bg-green-500/10 hover:bg-green-500/20 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-6 w-6 text-green-500" />
-                    <span className="text-lg font-bold text-green-100">Richieste Approvate (Programmate) ({approvedWaitRequests.length})</span>
+          {/* Tab: Approvate (Future) */}
+          {activeTab === 'approved' && (
+            <div>
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 mb-6">
+                <div className="flex items-start">
+                  <Info className="h-5 w-5 text-slate-400 mr-3 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-300 mb-1">Elaborazione Banca Ore</h4>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Le ore delle richieste approvate verranno aggiunte automaticamente al saldo banca ore del dipendente solo <strong>dopo il passaggio della data e dell'orario di fine</strong> della sessione di recupero/straordinario.
+                    </p>
                   </div>
-                  {showApprovedAccordion ? <ChevronUp className="h-6 w-6 text-green-500" /> : <ChevronDown className="h-6 w-6 text-green-500" />}
-                </button>
+                </div>
+              </div>
 
-                {showApprovedAccordion && (
-                  <div className="p-4 space-y-3">
-                    {approvedWaitRequests.map((recovery) => {
+              {approvedFutureRequests.length > 0 ? (
+                <div className="space-y-3">
+                  {approvedFutureRequests.map((recovery) => {
+                    const dateObj = new Date(recovery.recovery_date);
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
+
+                    return (
+                      <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
+                            <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-green-500/10 text-green-400 border border-green-500/20">
+                              <span className="text-xl sm:text-2xl font-bold leading-none">{day}</span>
+                              <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <div className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-500/10">
+                                  <User className="w-3 h-3" />
+                                  <span className="text-[10px] font-bold truncate max-w-[120px]">
+                                    {recovery.users?.first_name} {recovery.users?.last_name}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
+                                  Approvata (Programmata)
+                                </span>
+                              </div>
+
+                              <h3 className="text-base font-bold text-white group-hover:text-green-300 transition-colors">
+                                {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
+                              </h3>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 sm:pr-4">
+                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                                <Clock className="w-3 h-3 text-green-400" />
+                                <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
+                              </span>
+                              <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
+                                <Clock className="w-3 h-3 text-green-400" />
+                                <span className="font-semibold text-slate-200">
+                                  {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
+                                  try {
+                                    const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
+                                      method: 'DELETE'
+                                    });
+                                    if (response.ok) {
+                                      alert('Richiesta eliminata con successo');
+                                      await fetchPendingRecoveryRequests();
+                                    } else {
+                                      const error = await response.json();
+                                      alert(error.error || 'Errore nell\'eliminazione');
+                                    }
+                                  } catch (e) {
+                                    console.error('Delete error:', e);
+                                    alert('Errore nell\'eliminazione');
+                                  }
+                                }
+                              }}
+                              className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Elimina
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">Nessuna richiesta approvata programmata</p>
+                  <p className="text-sm">Le richieste approvate future appariranno qui</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Completate (Past) */}
+          {activeTab === 'completed' && (
+            <div>
+              {completedRecoveryRequests.length > 0 ? (
+                <div className="space-y-3">
+                  {completedRecoveryRequests
+                    .sort((a, b) => new Date(b.recovery_date) - new Date(a.recovery_date)) // Ordina per data decrescente
+                    .map((recovery) => {
                       const dateObj = new Date(recovery.recovery_date);
                       const day = dateObj.getDate();
                       const month = dateObj.toLocaleString('it-IT', { month: 'short' }).replace('.', '').toUpperCase();
 
                       return (
-                        <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-green-500/10 p-3 hover:border-green-500/30 transition-all border-l-2 border-l-green-500/50">
+                        <div key={recovery.id} className="group bg-zinc-900/40 rounded-xl border border-blue-500/10 p-3 hover:border-blue-500/30 transition-all border-l-2 border-l-blue-500/50">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-3 flex-shrink-0 sm:w-20 pr-3 border-r border-slate-700/30">
-                              <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-green-500/10 text-green-400 border border-green-500/20">
+                              <div className="rounded-lg flex flex-col items-center justify-center w-11 h-11 sm:w-14 sm:h-14 bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                 <span className="text-xl sm:text-2xl font-bold leading-none">{day}</span>
                                 <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider mt-0.5 opacity-80">{month}</span>
                               </div>
@@ -1711,115 +1864,84 @@ const RecuperiOre = () => {
                                       {recovery.users?.first_name} {recovery.users?.last_name}
                                     </span>
                                   </div>
-                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-green-500/10 text-green-400 border-green-500/20">
-                                    Approvata (Programmata)
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                    {recovery.balance_added ? 'Completata' : 'Elaborazione in corso'}
                                   </span>
                                 </div>
 
-                                <h3 className="text-base font-bold text-white group-hover:text-green-300 transition-colors">
+                                <h3 className="text-base font-bold text-white group-hover:text-blue-300 transition-colors">
                                   {recovery.reason?.toLowerCase().includes('straordinario') || recovery.notes?.toLowerCase().includes('straordinario') ? 'Straordinario' : 'Recupero Ore'}
                                 </h3>
                               </div>
 
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 sm:pr-4">
                                 <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <Clock className="w-3 h-3 text-blue-400" />
                                   <span className="font-semibold text-slate-200">{formatHours(recovery.hours)}</span>
                                 </span>
                                 <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded">
-                                  <Clock className="w-3 h-3 text-green-400" />
+                                  <Clock className="w-3 h-3 text-blue-400" />
                                   <span className="font-semibold text-slate-200">
                                     {recovery.start_time.substring(0, 5)} - {recovery.end_time.substring(0, 5)}
                                   </span>
                                 </span>
                               </div>
                             </div>
-
-                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 border-t sm:border-t-0 sm:border-l border-slate-700/50 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 w-full sm:w-auto min-w-[120px]">
-                              <button
-                                onClick={async () => {
-                                  if (window.confirm('Sei sicuro di voler eliminare questa richiesta?')) {
-                                    try {
-                                      const response = await apiCall(`/api/recovery-requests/${recovery.id}`, {
-                                        method: 'DELETE'
-                                      });
-                                      if (response.ok) {
-                                        alert('Richiesta eliminata con successo');
-                                        await fetchPendingRecoveryRequests();
-                                      } else {
-                                        const error = await response.json();
-                                        alert(error.error || 'Errore nell\'eliminazione');
-                                      }
-                                    } catch (e) {
-                                      console.error('Delete error:', e);
-                                      alert('Errore nell\'eliminazione');
-                                    }
-                                  }
-                                }}
-                                className="flex-1 sm:flex-none w-full flex items-center justify-center px-3 py-1.5 bg-zinc-800 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-all border border-zinc-700 font-medium text-[10px] gap-1"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                Elimina
-                              </button>
-                            </div>
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">Nessun recupero completato</p>
+                  <p className="text-sm">I recuperi passati appariranno qui in ordine cronologico</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab: Gestione */}
+          {(activeTab === 'management' || activeTab === 'debt' || activeTab === 'proposals' || activeTab === 'add-hours') && (
+            <div>
+              {/* Sub-tabs per Gestione */}
+              <div className="flex gap-2 mb-6 border-b border-slate-700">
+                <button
+                  onClick={() => setActiveTab('debt')}
+                  className={`px-4 py-2 font-semibold transition-colors border-b-2 ${(activeTab === 'debt' || activeTab === 'management')
+                    ? 'text-red-400 border-red-400'
+                    : 'text-slate-400 border-transparent hover:text-slate-300'
+                    }`}
+                >
+                  <AlertCircle className="h-4 w-4 inline mr-2" />
+                  Debiti ({employeesWithDebt.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('proposals')}
+                  className={`px-4 py-2 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
+                    ? 'text-slate-300 border-zinc-700'
+                    : 'text-slate-400 border-transparent hover:text-slate-300'
+                    }`}
+                >
+                  <Plus className="h-4 w-4 inline mr-2" />
+                  Proposte Straordinari
+                </button>
+                <button
+                  onClick={() => setActiveTab('add-hours')}
+                  className={`px-4 py-2 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
+                    ? 'text-green-400 border-green-400'
+                    : 'text-slate-400 border-transparent hover:text-slate-300'
+                    }`}
+                >
+                  <CheckCircle className="h-4 w-4 inline mr-2" />
+                  Aggiungi Ore
+                </button>
               </div>
-            )}
-          </>
-        );
-      })()}
 
-      {/* Tab Navigation */}
-      <div className="bg-zinc-900 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-white flex items-center">
-            <AlertCircle className="h-6 w-6 mr-3 text-red-400" />
-            Gestione Recuperi Ore
-          </h3>
-        </div>
-
-        {/* Tab Buttons */}
-        <div className="flex gap-2 mb-6 border-b border-slate-700">
-          <button
-            onClick={() => setActiveTab('debt')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'debt'
-              ? 'text-red-400 border-red-400'
-              : 'text-slate-400 border-transparent hover:text-slate-300'
-              }`}
-          >
-            <AlertCircle className="h-4 w-4 inline mr-2" />
-            Debiti ({employeesWithDebt.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('proposals')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'proposals'
-              ? 'text-slate-300 border-zinc-700'
-              : 'text-slate-400 border-transparent hover:text-slate-300'
-              }`}
-          >
-            <Plus className="h-4 w-4 inline mr-2" />
-            Proposte Straordinari
-          </button>
-          <button
-            onClick={() => setActiveTab('add-hours')}
-            className={`px-6 py-3 font-semibold transition-colors border-b-2 ${activeTab === 'add-hours'
-              ? 'text-green-400 border-green-400'
-              : 'text-slate-400 border-transparent hover:text-slate-300'
-              }`}
-          >
-            <CheckCircle className="h-4 w-4 inline mr-2" />
-            Aggiungi Ore
-          </button>
-        </div>
-
-        {/* Tab Content: Debiti */}
-        {activeTab === 'debt' && (
-          <div>
+              {/* Sub-tab Content: Debiti */}
+              {(activeTab === 'debt' || activeTab === 'management') && (
+                <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-semibold text-white">Monitoraggio Debiti Banca Ore</h4>
               <div className="text-sm text-slate-400">
@@ -1905,10 +2027,10 @@ const RecuperiOre = () => {
             )
             }
           </div>
-        )}
+                )}
 
-        {/* Tab Content: Proposte Straordinari */}
-        {activeTab === 'proposals' && (
+              {/* Sub-tab Content: Proposte Straordinari */}
+              {activeTab === 'proposals' && (
           <div>
             <div className="mb-4">
               <h4 className="text-lg font-semibold text-white mb-2">Proponi Straordinari a Qualsiasi Dipendente</h4>
@@ -2016,10 +2138,10 @@ const RecuperiOre = () => {
               </div>
             )}
           </div>
-        )}
+              )}
 
-        {/* Tab Content: Aggiungi Ore */}
-        {activeTab === 'add-hours' && (
+              {/* Sub-tab Content: Aggiungi Ore */}
+              {activeTab === 'add-hours' && (
           <div>
             <div className="mb-4">
               <h4 className="text-lg font-semibold text-white mb-2">Aggiungi Ore a Credito</h4>
@@ -2113,9 +2235,12 @@ const RecuperiOre = () => {
             )}
           </div>
         )}
+
+            </div>
+          )}
+
+        </div>
       </div>
-
-
 
       {/* Modal Approva Recupero */}
       {

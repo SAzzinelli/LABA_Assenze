@@ -553,10 +553,12 @@ const Dashboard = () => {
         setUpcomingRecoveries(upcoming);
 
         // Filtra recuperi per oggi (per pill "recupero ore")
+        // IMPORTANTE: Include anche recuperi già processati (balance_added=true) se sono di oggi
+        // perché il dipendente deve comunque comparire in "Presenti adesso" per tutta la giornata
         const todayRecoveriesList = (data || []).filter(recovery => {
           const recoveryDate = new Date(recovery.recovery_date);
           recoveryDate.setHours(0, 0, 0, 0);
-          return recoveryDate.getTime() === today.getTime() && !recovery.balance_added;
+          return recoveryDate.getTime() === today.getTime();
         });
         setTodayRecoveries(todayRecoveriesList);
       }
