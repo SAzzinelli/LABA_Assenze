@@ -3828,25 +3828,27 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         return sum + 0; // Con permesso 104, balance = 0
       }
 
-      // Per OGGI: includi se:
-      // 1. La giornata è conclusa (usando DB), OPPURE
-      // 2. C'è un permesso approvato (balance già definitivo)
+      // Per OGGI: includi sempre se è un credito/recupero (ore positive)
+      // Escludi solo se è un debito (ore negative) senza permesso approvato
       if (record.date === today) {
-        // Controlla se c'è un permesso approvato per oggi (controlla sia record.notes che todayRecord.notes)
+        const recordBalance = parseFloat(record.balance_hours || 0);
         const recordNotes = record.notes || todayRecord?.notes || '';
         const hasApprovedPermission = recordNotes && (
           recordNotes.includes('Permesso approvato') ||
           recordNotes.includes('Permesso creato dall\'admin')
         );
+        const isRecovery = recordNotes.includes('Recupero ore') || recordNotes.includes('recupero ore');
+        const isCredit = recordNotes.includes('credito') || recordNotes.includes('Credito') || recordNotes.includes('Ricarica') || recordNotes.includes('ricarica');
 
-        if ((isTodayCompleted && !hasRealTimeCalculation) || hasApprovedPermission) {
-          // Giornata conclusa OPPURE permesso approvato, usa il balance dal DB
-          const recordBalance = record.balance_hours || 0;
-          console.log(`✅ [total-balance] Today ${hasApprovedPermission ? 'has approved permission' : 'completed'}, using DB balance: ${recordBalance.toFixed(2)}h`);
+        // Include sempre: crediti, recuperi, permessi approvati
+        // Escludi solo: debiti (ore negative) senza permesso approvato
+        if (recordBalance > 0 || isRecovery || isCredit || hasApprovedPermission || (isTodayCompleted && !hasRealTimeCalculation)) {
+          // Include: crediti, recuperi, permessi approvati, o giornata conclusa
+          console.log(`✅ [total-balance] Today included: ${recordBalance.toFixed(2)}h (${isRecovery ? 'recupero' : isCredit ? 'credito' : hasApprovedPermission ? 'permesso approvato' : isTodayCompleted ? 'giornata conclusa' : 'credito ore'})`);
           return sum + recordBalance;
         } else {
-          // Giornata non conclusa e senza permesso, escludi dal totale (balance parziale)
-          console.log(`⏰ [total-balance] Excluding today (${today}) from balance - day not completed yet (real-time: ${todayBalance.toFixed(2)}h)`);
+          // Escludi solo debiti (ore negative) senza permesso approvato
+          console.log(`⏰ [total-balance] Excluding today (${today}) from balance - debt without approved permission (balance: ${recordBalance.toFixed(2)}h)`);
           return sum + 0;
         }
       }
