@@ -18,6 +18,7 @@ import Ferie from './pages/Ferie';
 import Notifiche from './pages/Notifiche';
 import Impostazioni from './pages/Impostazioni';
 import RecuperiOre from './pages/RecuperiOre';
+import BancaOreAdmin from './pages/BancaOreAdmin';
 import Layout from './components/Layout';
 
 function App() {
@@ -209,6 +210,22 @@ function App() {
                 <Layout>
                   <RecuperiOre />
                 </Layout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/banca-ore-admin"
+            element={
+              isAuthenticated ? (
+                (user?.role === 'admin' || user?.role === 'supervisor') ? (
+                  <Layout>
+                    <BancaOreAdmin />
+                  </Layout>
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
               ) : (
                 <Navigate to="/login" replace />
               )
