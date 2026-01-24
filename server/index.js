@@ -11808,16 +11808,16 @@ async function processDailyOvertime() {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Trova tutti i record di attendance con balance_hours > 0 (straordinari) 
-    // che non sono ancora stati processati come straordinari nella banca ore
+    // Trova tutti i record di attendance con straordinari:
+    // 1. balance_hours > 0 (actual_hours > expected_hours in giorni lavorativi)
+    // 2. actual_hours > 0 AND expected_hours = 0 (lavoro in giorni non lavorativi = straordinario)
     // Processiamo solo i record fino a ieri (non quelli di oggi che potrebbero ancora cambiare)
     const { data: overtimeRecords, error } = await supabase
       .from('attendance')
       .select('*, users(id, first_name, last_name)')
-      .gt('balance_hours', 0)
       .lte('date', yesterdayStr)
       .not('actual_hours', 'is', null)
-      .not('expected_hours', 'is', null);
+      .or('balance_hours.gt.0,and(actual_hours.gt.0,expected_hours.eq.0)');
 
     if (error) {
       console.error('Error fetching overtime records:', error);
@@ -11845,7 +11845,19 @@ async function processDailyOvertime() {
         continue;
       }
 
-      const overtimeHours = parseFloat(record.balance_hours);
+      // Calcola le ore di straordinario:
+      // - Se balance_hours > 0: usa balance_hours (giorno lavorativo con straordinario)
+      // - Se expected_hours = 0 e actual_hours > 0: usa actual_hours (giorno non lavorativo = tutto straordinario)
+      let overtimeHours = 0;
+      if (record.balance_hours > 0) {
+        overtimeHours = parseFloat(record.balance_hours);
+      } else if (record.expected_hours === 0 && record.actual_hours > 0) {
+        overtimeHours = parseFloat(record.actual_hours);
+      } else {
+        // Non è uno straordinario valido, salta
+        continue;
+      }
+
       const recordYear = new Date(record.date).getFullYear();
       const userName = record.users ? `${record.users.first_name} ${record.users.last_name}` : record.user_id;
 
@@ -11871,7 +11883,9 @@ async function processDailyOvertime() {
           transaction_type: 'accrual',
           category: 'overtime_bank',
           hours_amount: overtimeHours,
-          description: `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
+          description: record.expected_hours === 0 
+            ? `Straordinario giornaliero: +${overtimeHours}h (giorno non lavorativo)`
+            : `Straordinario giornaliero: +${overtimeHours}h (${record.actual_hours}h lavorate - ${record.expected_hours}h previste)`,
           reference_id: record.id,
           reference_type: 'attendance_overtime',
           running_balance: newOvertimeBalance
