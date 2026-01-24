@@ -11706,12 +11706,8 @@ async function processCompletedRecoveries() {
       index === self.findIndex(r => r.id === recovery.id)
     );
 
-    if (error) {
-      console.error('Error fetching completed recoveries:', error);
-      return;
-    }
-
     if (!uniqueRecoveries || uniqueRecoveries.length === 0) {
+      console.log('📭 Nessun recupero da processare');
       return;
     }
 
@@ -11719,12 +11715,20 @@ async function processCompletedRecoveries() {
     console.log(`   - ${completedStatusRecoveries?.length || 0} con status='completed'`);
     console.log(`   - ${approvedRecoveries?.length || 0} con status='approved' e data passata`);
     console.log(`📅 Today: ${today}, Current time: ${currentTime}`);
+    console.log(`📋 Dettagli recuperi trovati:`, uniqueRecoveries.map(r => ({
+      id: r.id,
+      user_id: r.user_id,
+      status: r.status,
+      balance_added: r.balance_added,
+      recovery_date: r.recovery_date,
+      hours: r.hours
+    })));
 
     for (const recovery of uniqueRecoveries) {
       const recoveryDateStr = recovery.recovery_date; // Stringa nel formato "YYYY-MM-DD"
       const recoveryTime = recovery.end_time; // Fine recupero (formato "HH:MM")
 
-      console.log(`🔍 Checking recovery ${recovery.id}: date=${recoveryDateStr}, end_time=${recoveryTime}, user_id=${recovery.user_id}`);
+      console.log(`🔍 Checking recovery ${recovery.id}: date=${recoveryDateStr}, end_time=${recoveryTime}, user_id=${recovery.user_id}, status=${recovery.status}, balance_added=${recovery.balance_added}, hours=${recovery.hours}`);
 
       // Verifica se la data è passata
       const isDatePast = recoveryDateStr < today;
