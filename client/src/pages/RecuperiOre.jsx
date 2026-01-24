@@ -1580,9 +1580,38 @@ const RecuperiOre = () => {
           {/* Tab: Completate (Past) */}
           {activeTab === 'completed' && (
             <div>
-              <div className="mb-4">
-                <h4 className="text-lg font-semibold text-white mb-1">Recuperi Completati</h4>
-                <p className="text-sm text-slate-400">Recuperi passati e già elaborati, ordinati dal più recente</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-1">Recuperi Completati</h4>
+                  <p className="text-sm text-slate-400">Recuperi passati e già elaborati, ordinati dal più recente</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!confirm('Processare tutti i recuperi completati mancanti? Questo aggiungerà le ore alla banca ore.')) {
+                      return;
+                    }
+                    try {
+                      const response = await apiCall('/api/recovery-requests/process-completed', {
+                        method: 'POST'
+                      });
+                      if (response.ok) {
+                        alert('✅ Recuperi processati con successo!');
+                        // Ricarica i dati
+                        await fetchPendingRecoveryRequests();
+                      } else {
+                        const error = await response.json();
+                        alert(error.error || 'Errore durante il processamento');
+                      }
+                    } catch (error) {
+                      console.error('Error processing recoveries:', error);
+                      alert('Errore durante il processamento');
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Processa Recuperi Mancanti
+                </button>
               </div>
 
               {completedRecoveryRequests.length > 0 ? (
