@@ -12328,7 +12328,6 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         year: creditYear,
         total_accrued: totalAccrued,
         current_balance: newOvertimeBalance,
-        last_transaction_date: date,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,category,year'
@@ -13680,7 +13679,6 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         year: recordYear,
         total_accrued: totalAccrued,
         current_balance: newOvertimeBalance,
-        last_transaction_date: date,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,category,year'
