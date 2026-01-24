@@ -11804,18 +11804,15 @@ async function processDailyOvertime() {
   try {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
     // Trova tutti i record di attendance con straordinari:
     // 1. balance_hours > 0 (actual_hours > expected_hours in giorni lavorativi)
     // 2. actual_hours > 0 AND expected_hours = 0 (lavoro in giorni non lavorativi = straordinario)
-    // Processiamo solo i record fino a ieri (non quelli di oggi che potrebbero ancora cambiare)
+    // Processiamo anche i record di oggi se sono già stati salvati (presenze già finalizzate)
     const { data: overtimeRecords, error } = await supabase
       .from('attendance')
       .select('*, users(id, first_name, last_name)')
-      .lte('date', yesterdayStr)
       .not('actual_hours', 'is', null)
       .or('balance_hours.gt.0,and(actual_hours.gt.0,expected_hours.eq.0)');
 
@@ -11831,6 +11828,21 @@ async function processDailyOvertime() {
     console.log(`🔄 Processing ${overtimeRecords.length} daily overtime records...`);
 
     for (const record of overtimeRecords) {
+      // Per i record di oggi, processa solo se la giornata è già finita (dopo le 23:00)
+      // o se il record è stato esplicitamente finalizzato (ha una nota o è stato salvato manualmente)
+      const recordDate = record.date;
+      const isToday = recordDate === today;
+      
+      if (isToday) {
+        const currentHour = now.getHours();
+        // Processa solo se siamo dopo le 23:00 (giornata praticamente finita)
+        // oppure se il record ha una nota che indica che è stato finalizzato
+        if (currentHour < 23 && !record.notes) {
+          // Giornata ancora in corso e non finalizzata, salta
+          continue;
+        }
+      }
+
       // Verifica se questo straordinario è già stato processato
       // Controlla se esiste già un record nel hours_ledger per questa attendance
       const { data: existingLedger } = await supabase
