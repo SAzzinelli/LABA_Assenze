@@ -11717,6 +11717,63 @@ async function processCompletedRecoveries() {
             });
         }
 
+        // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank)
+        const recoveryYear = new Date(recovery.recovery_date).getFullYear();
+        const recoveryHours = parseFloat(recovery.hours);
+        
+        // Recupera il saldo corrente della banca ore
+        const { data: currentBalance, error: balanceError } = await supabase
+          .from('current_balances')
+          .select('current_balance, total_accrued')
+          .eq('user_id', recovery.user_id)
+          .eq('category', 'overtime_bank')
+          .eq('year', recoveryYear)
+          .single();
+
+        const currentOvertimeBalance = currentBalance?.current_balance || 0;
+        const newOvertimeBalance = currentOvertimeBalance + recoveryHours;
+        const totalAccrued = (currentBalance?.total_accrued || 0) + recoveryHours;
+
+        // Inserisci movimento nel ledger
+        const { error: ledgerError } = await supabase
+          .from('hours_ledger')
+          .insert({
+            user_id: recovery.user_id,
+            transaction_date: recovery.recovery_date,
+            transaction_type: 'accrual',
+            category: 'overtime_bank',
+            hours_amount: recoveryHours,
+            description: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`,
+            reference_id: recovery.id,
+            reference_type: 'recovery_request',
+            running_balance: newOvertimeBalance
+          });
+
+        if (ledgerError) {
+          console.error(`❌ Errore inserimento ledger per recovery ${recovery.id}:`, ledgerError);
+        }
+
+        // Aggiorna o crea il saldo corrente della banca ore
+        const { error: balanceUpdateError } = await supabase
+          .from('current_balances')
+          .upsert({
+            user_id: recovery.user_id,
+            category: 'overtime_bank',
+            year: recoveryYear,
+            total_accrued: totalAccrued,
+            current_balance: newOvertimeBalance,
+            last_transaction_date: recovery.recovery_date,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,category,year'
+          });
+
+        if (balanceUpdateError) {
+          console.error(`❌ Errore aggiornamento banca ore per recovery ${recovery.id}:`, balanceUpdateError);
+        } else {
+          console.log(`💰 Banca ore aggiornata: ${currentOvertimeBalance}h → ${newOvertimeBalance}h (+${recoveryHours}h)`);
+        }
+
         // Marca il recupero come completato
         await supabase
           .from('recovery_requests')
@@ -11728,7 +11785,7 @@ async function processCompletedRecoveries() {
           })
           .eq('id', recovery.id);
 
-        console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance`);
+        console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance and overtime bank`);
       }
     }
   } catch (error) {
@@ -11827,6 +11884,61 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
       console.log(`✅ Record creato: balance = ${creditHours}h`);
 
+      // AGGIORNA BANCA ORE (overtime_bank)
+      const creditYear = new Date(date).getFullYear();
+      
+      // Recupera il saldo corrente della banca ore
+      const { data: currentOvertimeBalance, error: overtimeBalanceError } = await supabase
+        .from('current_balances')
+        .select('current_balance, total_accrued')
+        .eq('user_id', userId)
+        .eq('category', 'overtime_bank')
+        .eq('year', creditYear)
+        .single();
+
+      const currentOvertime = currentOvertimeBalance?.current_balance || 0;
+      const newOvertimeBalance = currentOvertime + creditHours;
+      const totalAccrued = (currentOvertimeBalance?.total_accrued || 0) + creditHours;
+
+      // Inserisci movimento nel ledger
+      const { error: ledgerError } = await supabase
+        .from('hours_ledger')
+        .insert({
+          user_id: userId,
+          transaction_date: date,
+          transaction_type: 'accrual',
+          category: 'overtime_bank',
+          hours_amount: creditHours,
+          description: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+          reference_type: 'manual_credit',
+          running_balance: newOvertimeBalance
+        });
+
+      if (ledgerError) {
+        console.error(`❌ Errore inserimento ledger per crediti manuali:`, ledgerError);
+      }
+
+      // Aggiorna o crea il saldo corrente della banca ore
+      const { error: overtimeUpdateError } = await supabase
+        .from('current_balances')
+        .upsert({
+          user_id: userId,
+          category: 'overtime_bank',
+          year: creditYear,
+          total_accrued: totalAccrued,
+          current_balance: newOvertimeBalance,
+          last_transaction_date: date,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,category,year'
+        });
+
+      if (overtimeUpdateError) {
+        console.error(`❌ Errore aggiornamento banca ore per crediti manuali:`, overtimeUpdateError);
+      } else {
+        console.log(`💰 Banca ore aggiornata: ${currentOvertime}h → ${newOvertimeBalance}h (+${creditHours}h)`);
+      }
+
       // Crea notifica
       await createCreditHoursNotification(userId, creditHours, date, reason);
 
@@ -11836,7 +11948,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         hours: creditHours,
         date: date,
         employee: { id: user.id, name: `${user.first_name} ${user.last_name}` },
-        newBalance: creditHours
+        newBalance: creditHours,
+        overtimeBankBalance: newOvertimeBalance
       });
     }
 
@@ -12045,7 +12158,62 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
     console.log(`   Expected: ${updatedRecord.expected_hours}h`);
     console.log(`   Balance: ${updatedRecord.balance_hours}h`);
 
-    // 10. CREA NOTIFICA
+    // 10. AGGIORNA BANCA ORE (overtime_bank)
+    const creditYear = new Date(date).getFullYear();
+    
+    // Recupera il saldo corrente della banca ore
+    const { data: currentOvertimeBalance, error: overtimeBalanceError } = await supabase
+      .from('current_balances')
+      .select('current_balance, total_accrued')
+      .eq('user_id', userId)
+      .eq('category', 'overtime_bank')
+      .eq('year', creditYear)
+      .single();
+
+    const currentOvertime = currentOvertimeBalance?.current_balance || 0;
+    const newOvertimeBalance = currentOvertime + creditHours;
+    const totalAccrued = (currentOvertimeBalance?.total_accrued || 0) + creditHours;
+
+    // Inserisci movimento nel ledger
+    const { error: ledgerError } = await supabase
+      .from('hours_ledger')
+      .insert({
+        user_id: userId,
+        transaction_date: date,
+        transaction_type: 'accrual',
+        category: 'overtime_bank',
+        hours_amount: creditHours,
+        description: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+        reference_type: 'manual_credit',
+        running_balance: newOvertimeBalance
+      });
+
+    if (ledgerError) {
+      console.error(`❌ Errore inserimento ledger per crediti manuali:`, ledgerError);
+    }
+
+    // Aggiorna o crea il saldo corrente della banca ore
+    const { error: overtimeUpdateError } = await supabase
+      .from('current_balances')
+      .upsert({
+        user_id: userId,
+        category: 'overtime_bank',
+        year: creditYear,
+        total_accrued: totalAccrued,
+        current_balance: newOvertimeBalance,
+        last_transaction_date: date,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,category,year'
+      });
+
+    if (overtimeUpdateError) {
+      console.error(`❌ Errore aggiornamento banca ore per crediti manuali:`, overtimeUpdateError);
+    } else {
+      console.log(`💰 Banca ore aggiornata: ${currentOvertime}h → ${newOvertimeBalance}h (+${creditHours}h)`);
+    }
+
+    // 11. CREA NOTIFICA
     await createCreditHoursNotification(userId, creditHours, date, reason);
 
     console.log('═══════════════════════════════════════════════════════════');
@@ -12058,7 +12226,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       hours: creditHours,
       date: date,
       employee: { id: user.id, name: `${user.first_name} ${user.last_name}` },
-      newBalance: finalBalanceHours
+      newBalance: finalBalanceHours,
+      overtimeBankBalance: newOvertimeBalance
     });
   } catch (error) {
     console.error('❌ ERRORE GENERALE:', error);
