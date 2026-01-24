@@ -1477,7 +1477,6 @@ const RecuperiOre = () => {
                               <h3 className="text-sm font-semibold text-white mb-0.5 group-hover:text-green-300 transition-colors truncate">
                                 {recovery.users?.first_name} {recovery.users?.last_name}
                               </h3>
-                            </div>
 
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
                                 <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
