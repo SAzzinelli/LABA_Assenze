@@ -71,6 +71,8 @@ const Dashboard = () => {
   const [upcomingRecoveries, setUpcomingRecoveries] = useState([]);
   // Recuperi approvati per oggi (per mostrare pill "recupero ore")
   const [todayRecoveries, setTodayRecoveries] = useState([]);
+  // Lista di tutti i dipendenti (per includere quelli con recuperi ma senza presenza)
+  const [allEmployees, setAllEmployees] = useState([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -89,7 +91,8 @@ const Dashboard = () => {
             fetchAdminWorkSchedules(),
             fetchSickToday(), // Fetch employees on sick leave today
             fetchRecentRequests(),
-            fetchUpcomingRecoveries()
+            fetchUpcomingRecoveries(),
+            fetchAllEmployeesForRecoveries() // Fetch all employees per includere quelli con recuperi
           ]);
           // Calcola dopo che i dati sono caricati
           calculateAdminRealTimeData();
@@ -184,12 +187,12 @@ const Dashboard = () => {
     }
   }, [attendanceData, workSchedules, user?.role]);
 
-  // Ricalcola i dati admin quando cambiano workSchedules, currentAttendance o todayRecoveries
+  // Ricalcola i dati admin quando cambiano workSchedules, currentAttendance, todayRecoveries o allEmployees
   useEffect(() => {
-    if (user?.role === 'admin' && workSchedules.length > 0 && currentAttendance.length > 0) {
+    if (user?.role === 'admin' && workSchedules.length > 0 && (currentAttendance.length > 0 || todayRecoveries.length > 0)) {
       calculateAdminRealTimeData();
     }
-  }, [workSchedules, currentAttendance, todayRecoveries, user?.role]);
+  }, [workSchedules, currentAttendance, todayRecoveries, allEmployees, user?.role]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -305,7 +308,8 @@ const Dashboard = () => {
     console.log('🔍 Current attendance state:', currentAttendance);
     console.log('🔍 Current attendance length:', currentAttendance?.length || 0);
     
-    if (!currentAttendance || currentAttendance.length === 0) {
+    // Permetti il calcolo anche se non ci sono dati di presenza, ma ci sono recuperi
+    if ((!currentAttendance || currentAttendance.length === 0) && (!todayRecoveries || todayRecoveries.length === 0)) {
       console.log('⚠️ No data available for admin real-time calculation');
       setAdminRealTimeData([]);
       return;
@@ -325,13 +329,38 @@ const Dashboard = () => {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
 
-    // Verifica se un dipendente ha un recupero approvato per oggi
-    const hasRecoveryToday = (userId) => {
-      return todayRecoveries.some(recovery => recovery.user_id === userId);
+    // Verifica se un dipendente ha un recupero approvato per oggi e restituisce i dettagli
+    const getRecoveryToday = (userId) => {
+      return todayRecoveries.find(recovery => recovery.user_id === userId);
+    };
+    
+    // Verifica se un recupero è attualmente in corso o terminato
+    const getRecoveryStatus = (recovery) => {
+      if (!recovery) return null;
+      
+      const now = new Date();
+      const currentTime = now.getHours() * 60 + now.getMinutes(); // minuti dall'inizio del giorno
+      
+      const [startHour, startMin] = recovery.start_time.split(':').map(Number);
+      const [endHour, endMin] = recovery.end_time.split(':').map(Number);
+      const startTime = startHour * 60 + startMin;
+      const endTime = endHour * 60 + endMin;
+      
+      if (currentTime < startTime) {
+        return 'scheduled'; // Recupero programmato ma non ancora iniziato
+      } else if (currentTime >= startTime && currentTime < endTime) {
+        return 'active'; // Recupero in corso
+      } else {
+        return 'completed'; // Recupero terminato
+      }
     };
 
     // Ricalcola lo status real-time per ogni employee
     const realTimeData = currentAttendance.map(employee => {
+      // Verifica se ha un recupero per oggi
+      const recoveryToday = getRecoveryToday(employee.user_id);
+      const recoveryStatus = getRecoveryStatus(recoveryToday);
+      
       // IMPORTANTE: Preserva lo status per ferie, malattia, permessi 104
       // Questi status non devono essere modificati
       if (employee.status === 'vacation' || employee.status === 'sick_leave' || employee.status === 'permission_104') {
@@ -341,7 +370,9 @@ const Dashboard = () => {
           status: employee.status,
           is_working_day: employee.is_working_day || true,
           is_absent: false,
-          hasRecoveryToday: hasRecoveryToday(employee.user_id)
+          hasRecoveryToday: !!recoveryToday,
+          recoveryToday: recoveryToday,
+          recoveryStatus: recoveryStatus
         };
         console.log(`👤 [Dashboard] Preserved employee data:`, preserved);
         return preserved;
@@ -377,21 +408,61 @@ const Dashboard = () => {
         status: finalStatus,
         is_working_day: employee.is_working_day || true,
         is_absent: finalStatus === 'not_started' && employee.actual_hours === 0,
-        hasRecoveryToday: hasRecoveryToday(employee.user_id)
+        hasRecoveryToday: !!recoveryToday,
+        recoveryToday: recoveryToday,
+        recoveryStatus: recoveryStatus
       };
     });
     
+    // Aggiungi dipendenti con recuperi che non sono in currentAttendance
+    const employeesWithRecoveriesNotInAttendance = todayRecoveries
+      .filter(recovery => {
+        // Verifica se il dipendente non è già in realTimeData
+        return !realTimeData.some(emp => emp.user_id === recovery.user_id);
+      })
+      .map(recovery => {
+        // Trova i dati del dipendente da allEmployees
+        const employee = allEmployees.find(emp => emp.id === recovery.user_id);
+        if (!employee) return null;
+        
+        const recoveryStatus = getRecoveryStatus(recovery);
+        
+        // Crea un entry virtuale per il dipendente con recupero
+        return {
+          user_id: employee.id,
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          name: `${employee.first_name} ${employee.last_name}`,
+          department: employee.department || 'Non specificato',
+          status: recoveryStatus === 'completed' ? 'recovery_completed' : 
+                  recoveryStatus === 'active' ? 'recovery_active' : 
+                  'recovery_scheduled',
+          is_working_day: true,
+          is_absent: false,
+          actual_hours: 0,
+          expected_hours: 0,
+          balance_hours: 0,
+          hasRecoveryToday: true,
+          recoveryToday: recovery,
+          recoveryStatus: recoveryStatus
+        };
+      })
+      .filter(emp => emp !== null); // Rimuovi null se employee non trovato
+    
+    // Combina i dati esistenti con quelli dei dipendenti con recuperi
+    const finalRealTimeData = [...realTimeData, ...employeesWithRecoveriesNotInAttendance];
+    
     // Log status breakdown dopo il processing
     const finalStatusBreakdown = {
-      vacation: realTimeData.filter(e => e.status === 'vacation').length,
-      working: realTimeData.filter(e => e.status === 'working').length,
-      sick_leave: realTimeData.filter(e => e.status === 'sick_leave').length,
-      permission_104: realTimeData.filter(e => e.status === 'permission_104').length,
-      other: realTimeData.filter(e => !['vacation', 'working', 'sick_leave', 'permission_104'].includes(e.status)).length
+      vacation: finalRealTimeData.filter(e => e.status === 'vacation').length,
+      working: finalRealTimeData.filter(e => e.status === 'working').length,
+      sick_leave: finalRealTimeData.filter(e => e.status === 'sick_leave').length,
+      permission_104: finalRealTimeData.filter(e => e.status === 'permission_104').length,
+      other: finalRealTimeData.filter(e => !['vacation', 'working', 'sick_leave', 'permission_104'].includes(e.status)).length
     };
-    console.log('📊 Admin real-time data calculated:', realTimeData.length, 'employees');
+    console.log('📊 Admin real-time data calculated:', finalRealTimeData.length, 'employees');
     console.log('🔍 Status breakdown AFTER processing:', finalStatusBreakdown);
-    setAdminRealTimeData(realTimeData);
+    setAdminRealTimeData(finalRealTimeData);
   };
 
   const fetchRecentRequests = async () => {
@@ -444,6 +515,21 @@ const Dashboard = () => {
   };
 
   // Fetch saldo totale banca ore
+  // Fetch tutti i dipendenti (per includere quelli con recuperi ma senza presenza)
+  const fetchAllEmployeesForRecoveries = async () => {
+    try {
+      if (user?.role !== 'admin') return;
+      
+      const response = await apiCall('/api/employees');
+      if (response.ok) {
+        const data = await response.json();
+        setAllEmployees(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching all employees:', error);
+    }
+  };
+
   // Fetch recuperi imminenti (admin) - solo approvati oggi o nei prossimi 7 giorni
   const fetchUpcomingRecoveries = async () => {
     try {
@@ -1232,12 +1318,23 @@ const Dashboard = () => {
             console.log('🔍 [Dashboard] adminRealTimeData length:', adminRealTimeData.length);
             
             const presentNow = adminRealTimeData.filter(person => {
-              const shouldInclude = person.status === 'working' || 
+              // Includi dipendenti con status standard
+              const hasStandardStatus = person.status === 'working' || 
                 person.status === 'on_break' || 
                 person.status === 'vacation' ||
                 person.status === 'sick_leave' ||
                 person.status === 'permission_104' ||
                 person.status === 'completed';
+              
+              // Includi dipendenti con status di recupero specifici
+              const hasRecoveryStatus = person.status === 'recovery_completed' || 
+                person.status === 'recovery_active' || 
+                person.status === 'recovery_scheduled';
+              
+              // IMPORTANTE: Includi anche dipendenti con recuperi approvati per oggi
+              // anche se non hanno uno status standard (es. recupero terminato)
+              const hasRecovery = person.hasRecoveryToday && 
+                (person.recoveryStatus === 'active' || person.recoveryStatus === 'completed' || person.recoveryStatus === 'scheduled');
               
               // IMPORTANTE: Escludi esplicitamente i permessi (giornata intera o orari)
               const shouldExclude = person.status === 'permission';
@@ -1248,8 +1345,11 @@ const Dashboard = () => {
               if (person.status === 'permission') {
                 console.log('🚫 [Dashboard] Escluso dipendente con permesso:', person.name, person.status);
               }
+              if (hasRecovery || hasRecoveryStatus) {
+                console.log('🔄 [Dashboard] Trovato dipendente con recupero:', person.name, 'status:', person.status, 'recoveryStatus:', person.recoveryStatus);
+              }
               
-              return shouldInclude && !shouldExclude;
+              return (hasStandardStatus || hasRecovery || hasRecoveryStatus) && !shouldExclude;
             });
             
             console.log('🔍 [Dashboard] presentNow filtered:', presentNow.length, 'dipendenti');
@@ -1275,7 +1375,48 @@ const Dashboard = () => {
                 let statusText = 'Sconosciuto';
                 let statusColor = 'text-slate-400';
                 
-                if (isWorking) {
+                // Gestisci status di recupero specifici
+                if (person.status === 'recovery_completed') {
+                  // Quando il recupero è terminato, mostra "Recupero terminato" con badge grigio
+                  badgeColor = 'bg-zinc-700';
+                  statusText = 'Recupero terminato';
+                  statusColor = 'text-slate-300';
+                } else if (person.status === 'recovery_active') {
+                  badgeColor = 'bg-orange-500';
+                  statusText = 'Recupero in corso';
+                  statusColor = 'text-orange-300';
+                } else if (person.status === 'recovery_scheduled') {
+                  badgeColor = 'bg-orange-400';
+                  statusText = 'Recupero programmato';
+                  statusColor = 'text-orange-200';
+                } else if (person.hasRecoveryToday && person.recoveryStatus) {
+                  // Priorità: se ha un recupero, mostra lo status del recupero
+                  if (person.recoveryStatus === 'active') {
+                    // Se sta facendo il recupero e ha uno status working, mostra "A lavoro" con pill recupero
+                    if (isWorking) {
+                      badgeColor = 'bg-green-500';
+                      statusText = 'A lavoro';
+                      statusColor = 'text-green-400';
+                    } else if (isOnBreak) {
+                      badgeColor = 'bg-yellow-500';
+                      statusText = 'In pausa';
+                      statusColor = 'text-yellow-400';
+                    } else {
+                      badgeColor = 'bg-orange-500';
+                      statusText = 'Recupero in corso';
+                      statusColor = 'text-orange-300';
+                    }
+                  } else if (person.recoveryStatus === 'completed') {
+                    // Quando il recupero è terminato, mostra "Recupero terminato" con badge grigio
+                    badgeColor = 'bg-zinc-700';
+                    statusText = 'Recupero terminato';
+                    statusColor = 'text-slate-300';
+                  } else if (person.recoveryStatus === 'scheduled') {
+                    badgeColor = 'bg-orange-400';
+                    statusText = 'Recupero programmato';
+                    statusColor = 'text-orange-200';
+                  }
+                } else if (isWorking) {
                   badgeColor = 'bg-green-500';
                   statusText = 'A lavoro';
                   statusColor = 'text-green-400';
@@ -1325,9 +1466,9 @@ const Dashboard = () => {
                           <p className="text-slate-400 text-xs sm:text-sm truncate">
                             {person.department || 'N/A'}
                           </p>
-                          {person.hasRecoveryToday && (person.status === 'working' || person.status === 'on_break' || person.status === 'completed') && (
+                          {person.hasRecoveryToday && person.recoveryStatus && (
                             <span className="inline-flex items-center mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
-                              recupero ore
+                              Recupero Ore
                             </span>
                           )}
                         </div>
