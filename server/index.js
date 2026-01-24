@@ -13363,7 +13363,7 @@ async function processSingleRecovery(recovery) {
     const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(recovery.hours);
     const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(recovery.hours);
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('attendance')
       .update({
         actual_hours: newActualHours,
@@ -13371,9 +13371,15 @@ async function processSingleRecovery(recovery) {
         notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${recovery.hours}h]`
       })
       .eq('id', existingAttendance.id);
+
+    if (updateError) {
+      console.error(`❌ Errore aggiornamento attendance per recovery ${recovery.id}:`, updateError);
+      throw new Error(`Errore aggiornamento attendance: ${updateError.message}`);
+    }
+    console.log(`✅ Attendance aggiornato per recovery ${recovery.id}: balance_hours da ${existingAttendance.balance_hours || 0} a ${newBalanceHours}`);
   } else {
     // Crea nuovo record
-    await supabase
+    const { error: insertError } = await supabase
       .from('attendance')
       .insert({
         user_id: recovery.user_id,
@@ -13383,6 +13389,12 @@ async function processSingleRecovery(recovery) {
         balance_hours: parseFloat(recovery.hours),
         notes: `Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
       });
+
+    if (insertError) {
+      console.error(`❌ Errore creazione attendance per recovery ${recovery.id}:`, insertError);
+      throw new Error(`Errore creazione attendance: ${insertError.message}`);
+    }
+    console.log(`✅ Attendance creato per recovery ${recovery.id}: balance_hours = ${recovery.hours}`);
   }
 
   // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank)
@@ -13443,6 +13455,64 @@ async function processSingleRecovery(recovery) {
 
   if (balanceUpdateError) {
     throw new Error(`Errore aggiornamento banca ore: ${balanceUpdateError.message}`);
+  }
+
+  // IMPORTANTE: Verifica che l'attendance sia stato aggiornato correttamente
+  // Se non lo è, fixalo automaticamente (per evitare problemi come quello di Michele)
+  const { data: verifyAttendance } = await supabase
+    .from('attendance')
+    .select('balance_hours, actual_hours, notes')
+    .eq('user_id', recovery.user_id)
+    .eq('date', recovery.recovery_date)
+    .single();
+
+  if (!verifyAttendance) {
+    // Se non esiste, crealo
+    console.log(`⚠️ Attendance non trovato dopo processamento, creo...`);
+    const { error: fixInsertError } = await supabase
+      .from('attendance')
+      .insert({
+        user_id: recovery.user_id,
+        date: recovery.recovery_date,
+        actual_hours: recoveryHours,
+        expected_hours: 0,
+        balance_hours: recoveryHours,
+        notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+      });
+    
+    if (fixInsertError) {
+      console.error(`❌ Errore fix automatico attendance (insert):`, fixInsertError);
+    } else {
+      console.log(`✅ Attendance creato automaticamente dopo verifica`);
+    }
+  } else {
+    // Verifica che le ore siano state aggiunte correttamente
+    const currentBalance = parseFloat(verifyAttendance.balance_hours || 0);
+    const notes = verifyAttendance.notes || '';
+    const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`);
+    
+    // Se le ore non sono state aggiunte correttamente, fixa
+    if (!hasRecoveryNote || currentBalance < recoveryHours) {
+      console.log(`⚠️ Attendance non aggiornato correttamente (balance: ${currentBalance}, expected: ${recoveryHours}), fixo...`);
+      const newBalance = currentBalance + recoveryHours;
+      const newActual = parseFloat(verifyAttendance.actual_hours || 0) + recoveryHours;
+      
+      const { error: fixUpdateError } = await supabase
+        .from('attendance')
+        .update({
+          actual_hours: newActual,
+          balance_hours: newBalance,
+          notes: notes + (notes ? '\n' : '') + `[Recupero ore: +${recoveryHours}h]`
+        })
+        .eq('user_id', recovery.user_id)
+        .eq('date', recovery.recovery_date);
+      
+      if (fixUpdateError) {
+        console.error(`❌ Errore fix automatico attendance (update):`, fixUpdateError);
+      } else {
+        console.log(`✅ Attendance fixato automaticamente: balance da ${currentBalance} a ${newBalance}`);
+      }
+    }
   }
 
   // Marca il recupero come completato
@@ -13611,25 +13681,369 @@ app.get('/api/recovery-requests/debug', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Errore nel recupero', details: error.message });
     }
 
+    // Per ogni recupero, verifica anche il record di attendance
+    const recoveriesWithAttendance = await Promise.all(
+      (recoveries || []).map(async (r) => {
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', r.user_id)
+          .eq('date', r.recovery_date)
+          .single();
+
+        return {
+          id: r.id,
+          user: r.users ? `${r.users.first_name} ${r.users.last_name}` : `User ${r.user_id}`,
+          date: r.recovery_date,
+          hours: r.hours,
+          status: r.status,
+          balance_added: r.balance_added,
+          start_time: r.start_time,
+          end_time: r.end_time,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          attendance: attendance ? {
+            id: attendance.id,
+            actual_hours: attendance.actual_hours,
+            expected_hours: attendance.expected_hours,
+            balance_hours: attendance.balance_hours,
+            notes: attendance.notes
+          } : null
+        };
+      })
+    );
+
     res.json({
       success: true,
       count: recoveries?.length || 0,
-      recoveries: recoveries?.map(r => ({
-        id: r.id,
-        user: r.users ? `${r.users.first_name} ${r.users.last_name}` : `User ${r.user_id}`,
-        date: r.recovery_date,
-        hours: r.hours,
-        status: r.status,
-        balance_added: r.balance_added,
-        start_time: r.start_time,
-        end_time: r.end_time,
-        created_at: r.created_at,
-        updated_at: r.updated_at
-      })) || []
+      recoveries: recoveriesWithAttendance
     });
   } catch (error) {
     console.error('Debug recoveries error:', error);
     res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
+// Endpoint per verificare e fixare il record di attendance per un recupero
+app.post('/api/recovery-requests/:id/fix-attendance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    const { id } = req.params;
+
+    // Recupera il recupero
+    const { data: recovery, error: recoveryError } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (recoveryError || !recovery) {
+      return res.status(404).json({ error: 'Recupero non trovato' });
+    }
+
+    // Verifica il record di attendance
+    const { data: attendance, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', recovery.user_id)
+      .eq('date', recovery.recovery_date)
+      .single();
+
+    const recoveryHours = parseFloat(recovery.hours);
+
+    if (attendanceError && attendanceError.code !== 'PGRST116') {
+      // Errore diverso da "not found"
+      return res.status(500).json({ error: 'Errore nel recupero attendance', details: attendanceError.message });
+    }
+
+    if (!attendance) {
+      // Crea nuovo record
+      const { data: newAttendance, error: insertError } = await supabase
+        .from('attendance')
+        .insert({
+          user_id: recovery.user_id,
+          date: recovery.recovery_date,
+          actual_hours: recoveryHours,
+          expected_hours: 0,
+          balance_hours: recoveryHours,
+          notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        return res.status(500).json({ error: 'Errore nella creazione attendance', details: insertError.message });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Record di attendance creato',
+        recovery: {
+          id: recovery.id,
+          date: recovery.recovery_date,
+          hours: recoveryHours
+        },
+        attendance: {
+          id: newAttendance.id,
+          balance_hours: newAttendance.balance_hours,
+          actual_hours: newAttendance.actual_hours
+        }
+      });
+    } else {
+      // Aggiorna record esistente
+      const currentBalance = parseFloat(attendance.balance_hours || 0);
+      const newBalance = currentBalance + recoveryHours;
+      const newActual = parseFloat(attendance.actual_hours || 0) + recoveryHours;
+
+      // Verifica se le ore sono già state aggiunte
+      const notes = attendance.notes || '';
+      const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`);
+
+      if (hasRecoveryNote && currentBalance >= recoveryHours) {
+        return res.json({
+          success: true,
+          message: 'Record di attendance già aggiornato correttamente',
+          recovery: {
+            id: recovery.id,
+            date: recovery.recovery_date,
+            hours: recoveryHours
+          },
+          attendance: {
+            id: attendance.id,
+            balance_hours: attendance.balance_hours,
+            actual_hours: attendance.actual_hours,
+            notes: attendance.notes
+          }
+        });
+      }
+
+      const { data: updatedAttendance, error: updateError } = await supabase
+        .from('attendance')
+        .update({
+          actual_hours: newActual,
+          balance_hours: newBalance,
+          notes: notes + (notes ? '\n' : '') + `[Recupero ore: +${recoveryHours}h]`
+        })
+        .eq('id', attendance.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        return res.status(500).json({ error: 'Errore nell\'aggiornamento attendance', details: updateError.message });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Record di attendance aggiornato',
+        recovery: {
+          id: recovery.id,
+          date: recovery.recovery_date,
+          hours: recoveryHours
+        },
+        attendance: {
+          id: updatedAttendance.id,
+          balance_hours: updatedAttendance.balance_hours,
+          actual_hours: updatedAttendance.actual_hours,
+          previous_balance: currentBalance,
+          new_balance: newBalance
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Fix attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
+// Endpoint per fixare tutti i recuperi completati che hanno problemi con attendance
+app.post('/api/recovery-requests/fix-all-attendance', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    // Trova tutti i recuperi completati con balance_added=true
+    const { data: completedRecoveries, error: recoveriesError } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('status', 'completed')
+      .eq('balance_added', true);
+
+    if (recoveriesError) {
+      return res.status(500).json({ error: 'Errore nel recupero recuperi', details: recoveriesError.message });
+    }
+
+    const results = [];
+
+    for (const recovery of completedRecoveries || []) {
+      try {
+        // Verifica il record di attendance
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', recovery.user_id)
+          .eq('date', recovery.recovery_date)
+          .single();
+
+        const recoveryHours = parseFloat(recovery.hours);
+        const currentBalance = attendance ? parseFloat(attendance.balance_hours || 0) : 0;
+
+        // Verifica se le ore sono già state aggiunte
+        const notes = attendance?.notes || '';
+        const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`);
+
+        // Se le ore non sono state aggiunte correttamente, fixa
+        if (!hasRecoveryNote || currentBalance < recoveryHours) {
+          if (!attendance) {
+            // Crea nuovo record
+            const { error: insertError } = await supabase
+              .from('attendance')
+              .insert({
+                user_id: recovery.user_id,
+                date: recovery.recovery_date,
+                actual_hours: recoveryHours,
+                expected_hours: 0,
+                balance_hours: recoveryHours,
+                notes: `Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+              });
+
+            if (!insertError) {
+              results.push({
+                recovery_id: recovery.id,
+                date: recovery.recovery_date,
+                action: 'created',
+                balance_hours: recoveryHours
+              });
+            }
+          } else {
+            // Aggiorna record esistente
+            const newBalance = currentBalance + recoveryHours;
+            const newActual = parseFloat(attendance.actual_hours || 0) + recoveryHours;
+
+            const { error: updateError } = await supabase
+              .from('attendance')
+              .update({
+                actual_hours: newActual,
+                balance_hours: newBalance,
+                notes: notes + (notes ? '\n' : '') + `[Recupero ore: +${recoveryHours}h]`
+              })
+              .eq('id', attendance.id);
+
+            if (!updateError) {
+              results.push({
+                recovery_id: recovery.id,
+                date: recovery.recovery_date,
+                action: 'updated',
+                previous_balance: currentBalance,
+                new_balance: newBalance
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Errore fixando recovery ${recovery.id}:`, error);
+        results.push({
+          recovery_id: recovery.id,
+          date: recovery.recovery_date,
+          action: 'error',
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Processati ${results.length} recuperi`,
+      results
+    });
+  } catch (error) {
+    console.error('Fix all attendance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
+// Endpoint per riprocessare tutti i recuperi completati (fix automatico per problemi di attendance)
+app.post('/api/recovery-requests/reprocess-completed', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    console.log('🔄 [REPROCESS] Riprocessando tutti i recuperi completati per fixare problemi di attendance...');
+
+    // Trova tutti i recuperi completati con balance_added=true
+    const { data: completedRecoveries, error: recoveriesError } = await supabase
+      .from('recovery_requests')
+      .select('*')
+      .eq('status', 'completed')
+      .eq('balance_added', true);
+
+    if (recoveriesError) {
+      return res.status(500).json({ error: 'Errore nel recupero recuperi', details: recoveriesError.message });
+    }
+
+    const results = [];
+    let fixedCount = 0;
+
+    for (const recovery of completedRecoveries || []) {
+      try {
+        // Verifica se l'attendance è corretto
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('balance_hours, notes')
+          .eq('user_id', recovery.user_id)
+          .eq('date', recovery.recovery_date)
+          .single();
+
+        const recoveryHours = parseFloat(recovery.hours);
+        const currentBalance = attendance ? parseFloat(attendance.balance_hours || 0) : 0;
+        const notes = attendance?.notes || '';
+        const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`);
+
+        // Se l'attendance non è corretto, riprocessa il recupero
+        if (!attendance || !hasRecoveryNote || currentBalance < recoveryHours) {
+          console.log(`🔧 Fixing recovery ${recovery.id} (attendance balance: ${currentBalance}, expected: ${recoveryHours})`);
+          
+          // Reset balance_added per permettere il riprocessamento
+          await supabase
+            .from('recovery_requests')
+            .update({ balance_added: false })
+            .eq('id', recovery.id);
+
+          // Processa di nuovo
+          const result = await processSingleRecovery(recovery);
+          fixedCount++;
+          results.push({
+            recovery_id: recovery.id,
+            date: recovery.recovery_date,
+            action: 'reprocessed',
+            result: result
+          });
+        }
+      } catch (error) {
+        console.error(`❌ Errore riprocessando recovery ${recovery.id}:`, error);
+        results.push({
+          recovery_id: recovery.id,
+          date: recovery.recovery_date,
+          action: 'error',
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Riprocessati ${fixedCount} recuperi su ${completedRecoveries?.length || 0}`,
+      fixed: fixedCount,
+      total: completedRecoveries?.length || 0,
+      results
+    });
+  } catch (error) {
+    console.error('Reprocess completed error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
   }
 });
 
