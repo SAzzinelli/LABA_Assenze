@@ -13659,7 +13659,7 @@ app.post('/api/recovery-requests/fix-michele', async (req, res) => {
     // Recupera il recupero
     const { data: recovery, error: recoveryError } = await supabase
       .from('recovery_requests')
-      .select('*, users!recovery_requests_user_id_fkey(id, first_name, last_name)')
+      .select('*')
       .eq('id', RECOVERY_ID)
       .single();
 
@@ -13667,7 +13667,14 @@ app.post('/api/recovery-requests/fix-michele', async (req, res) => {
       return res.status(404).json({ error: 'Recupero non trovato', details: recoveryError });
     }
 
-    const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+    // Recupera i dati dell'utente separatamente
+    const { data: user } = await supabase
+      .from('users')
+      .select('first_name, last_name')
+      .eq('id', recovery.user_id)
+      .single();
+    
+    const userName = user ? `${user.first_name} ${user.last_name}` : recovery.user_id;
     console.log(`   User: ${userName}, Date: ${recovery.recovery_date}, Hours: ${recovery.hours}h`);
 
     // Processa usando processSingleRecovery
