@@ -689,7 +689,7 @@ router.put('/admin/leave-requests/:id/approve', async (req, res) => {
           transaction_date: request.start_date,
           transaction_type: 'usage',
           category: category,
-          hours_amount: -request.hours_requested,
+          hours: -request.hours_requested,
           description: `${request.type} dal ${request.start_date} al ${request.end_date}`,
           reference_id: request.id,
           reference_type: 'leave_request',
