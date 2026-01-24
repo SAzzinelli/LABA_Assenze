@@ -13473,11 +13473,7 @@ app.post('/api/recovery-requests/:id/process', authenticateToken, async (req, re
     }
 
     const { id } = req.params;
-    const recoveryId = parseInt(id);
-
-    if (isNaN(recoveryId)) {
-      return res.status(400).json({ error: 'ID recupero non valido' });
-    }
+    const recoveryId = id; // UUID, non un numero
 
     console.log(`🔄 [MANUAL PROCESS] Processing recovery ${recoveryId}...`);
 
@@ -13540,11 +13536,7 @@ app.post('/api/recovery-requests/:id/reset-balance', authenticateToken, async (r
     }
 
     const { id } = req.params;
-    const recoveryId = parseInt(id);
-
-    if (isNaN(recoveryId)) {
-      return res.status(400).json({ error: 'ID recupero non valido' });
-    }
+    const recoveryId = id; // UUID, non un numero
 
     console.log(`🔄 [RESET BALANCE] Resetting balance_added for recovery ${recoveryId}...`);
 
