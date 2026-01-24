@@ -13659,7 +13659,7 @@ app.post('/api/recovery-requests/fix-michele', async (req, res) => {
     // Recupera il recupero
     const { data: recovery, error: recoveryError } = await supabase
       .from('recovery_requests')
-      .select('*, users(id, first_name, last_name)')
+      .select('*, users!recovery_requests_user_id_fkey(id, first_name, last_name)')
       .eq('id', RECOVERY_ID)
       .single();
 
