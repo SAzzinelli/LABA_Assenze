@@ -308,16 +308,21 @@ const RecuperiOre = () => {
     return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
   };
 
-  // Funzione helper per calcolare ore da startTime e endTime
+  // Funzione helper per calcolare ore da startTime e endTime (sottrae la pausa pranzo)
   const calculateHours = (startTime, endTime) => {
     if (!startTime || !endTime) return '';
 
     const dateStr = recoveryFormData.recoveryDate || proposalFormData.recoveryDate;
     const dayOfWeek = dateStr ? new Date(dateStr).getDay() : null;
-    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => s.day_of_week === dayOfWeek) : null;
+    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => Number(s.day_of_week) === dayOfWeek) : null;
 
     const breakStart = daySchedule?.break_start_time || '13:00';
-    const breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+    let breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+    breakDuration = parseInt(breakDuration, 10) || 0;
+    // Coerente con calculateEndTime: se pausa 0 ma il range copre la fascia 13-14, usa 60 min così 9-18 = 8h
+    const parseMin = (t) => { const [h, m] = (t || '').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+    const spanMinutes = parseMin(endTime) - parseMin(startTime);
+    if (spanMinutes >= 6 * 60 && breakDuration === 0) breakDuration = 60;
 
     const hours = calculateNetWorkHours(startTime, endTime, breakStart, breakDuration);
     return hours > 0 ? hours.toFixed(2) : '';
