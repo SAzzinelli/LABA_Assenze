@@ -254,12 +254,18 @@ const RecuperiOre = () => {
     const hoursToAdd = parseFloat(hours);
 
     // Recupera la pausa dell'utente per il giorno selezionato
+    // Per recupero ore: se ore >= 6, assumi sempre almeno 1h di pausa pranzo (13-14) se non definita
     const dateStr = recoveryFormData.recoveryDate || proposalFormData.recoveryDate;
     const dayOfWeek = dateStr ? new Date(dateStr).getDay() : null;
-    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => s.day_of_week === dayOfWeek) : null;
+    const daySchedule = dayOfWeek !== null ? userWorkSchedule.find(s => Number(s.day_of_week) === dayOfWeek) : null;
 
     const breakStart = daySchedule?.break_start_time || '13:00';
-    const breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+    let breakDuration = (daySchedule?.break_duration !== null && daySchedule?.break_duration !== undefined) ? daySchedule.break_duration : 60;
+    breakDuration = parseInt(breakDuration, 10) || 0;
+    // Per recupero ore: se ore >= 6 e pausa è zero (o non definita), usa 60 min (1h pranzo) così 8h lavoro = 9h span (es. 9-18)
+    if (hoursToAdd >= 6 && breakDuration === 0) {
+      breakDuration = 60;
+    }
 
     const parseTimeToMinutes = (t) => {
       if (!t) return 0;
