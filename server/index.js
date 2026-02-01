@@ -12477,9 +12477,19 @@ app.post('/api/recovery-requests', authenticateToken, async (req, res) => {
       .single();
 
     const breakStart = schedule?.break_start_time || '13:00';
-    const breakDuration = (schedule?.break_duration !== null && schedule?.break_duration !== undefined) ? schedule.break_duration : 60;
+    let breakDuration = (schedule?.break_duration !== null && schedule?.break_duration !== undefined) ? schedule.break_duration : 60;
 
-    // Calcola le ore nette usando la nuova utility
+    // Se l'orario copre 6+ ore e la pausa è 0, assumi 1h di pausa pranzo: si conteggiano solo le ore lavorate (es. 09:00-18:00 = 8h, non 9h)
+    if (breakDuration === 0 && startTime && endTime) {
+      const parseTime = (t) => {
+        const [h, m] = (t || '').split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      const spanMinutes = parseTime(endTime) - parseTime(startTime);
+      if (spanMinutes >= 360) breakDuration = 60;
+    }
+
+    // Calcola le ore nette usando la nuova utility (pausa esclusa)
     const calculatedHours = calculateNetWorkHours(startTime, endTime, breakStart, breakDuration);
 
     if (calculatedHours <= 0) {
@@ -13023,8 +13033,23 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
         existingRequest.end_time <= currentTime;
 
       if (isDatePast || isTimePast) {
+        // Ore effettive: se le ore salvate coincidono con l'arco orario lordo (pausa non sottratta), usa ore nette
+        let effectiveHours = parseFloat(existingRequest.hours);
+        if (existingRequest.start_time && existingRequest.end_time) {
+          const parseTime = (t) => {
+            const [h, m] = (t || '').split(':').map(Number);
+            return (h || 0) * 60 + (m || 0);
+          };
+          const rawSpanMinutes = parseTime(existingRequest.end_time) - parseTime(existingRequest.start_time);
+          const rawSpanHours = rawSpanMinutes / 60;
+          const netWithBreak = calculateNetWorkHours(existingRequest.start_time, existingRequest.end_time, '13:00', 60);
+          if (rawSpanHours >= 6 && Math.abs(existingRequest.hours - rawSpanHours) < 0.02) {
+            effectiveHours = netWithBreak;
+          }
+        }
+
         // Processa immediatamente per aggiornare il saldo banca ore
-        console.log(`🔄 Processing approved recovery ${id} immediately (date/time passed)`);
+        console.log(`🔄 Processing approved recovery ${id} immediately (date/time passed), ore: ${effectiveHours}`);
 
         // Aggiungi le ore al saldo della banca ore nella tabella attendance
         const { data: existingAttendance } = await supabase
@@ -13035,15 +13060,15 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
           .single();
 
         if (existingAttendance) {
-          const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + parseFloat(existingRequest.hours);
-          const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + parseFloat(existingRequest.hours);
+          const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + effectiveHours;
+          const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + effectiveHours;
 
           await supabase
             .from('attendance')
             .update({
               actual_hours: newActualHours,
               balance_hours: newBalanceHours,
-              notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${existingRequest.hours}h]`
+              notes: (existingAttendance.notes || '') + `\n[Recupero ore: +${effectiveHours}h]`
             })
             .eq('id', existingAttendance.id);
         } else {
@@ -13052,23 +13077,28 @@ app.put('/api/recovery-requests/:id', authenticateToken, async (req, res) => {
             .insert({
               user_id: existingRequest.user_id,
               date: existingRequest.recovery_date,
-              actual_hours: parseFloat(existingRequest.hours),
+              actual_hours: effectiveHours,
               expected_hours: 0,
-              balance_hours: parseFloat(existingRequest.hours),
-              notes: `Recupero ore: +${existingRequest.hours}h (dalle ${existingRequest.start_time} alle ${existingRequest.end_time})`
+              balance_hours: effectiveHours,
+              notes: `Recupero ore: +${effectiveHours}h (dalle ${existingRequest.start_time} alle ${existingRequest.end_time})`
             });
         }
 
-        // Marca come processato
+        // Marca come processato (e aggiorna hours se corretto)
+        const updatePayload = {
+          balance_added: true,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        if (effectiveHours !== parseFloat(existingRequest.hours)) {
+          updatePayload.hours = effectiveHours;
+        }
         await supabase
           .from('recovery_requests')
-          .update({
-            balance_added: true,
-            completed_at: new Date().toISOString()
-          })
+          .update(updatePayload)
           .eq('id', id);
 
-        console.log(`✅ Recovery ${id} processed immediately: +${existingRequest.hours}h added to balance`);
+        console.log(`✅ Recovery ${id} processed immediately: +${effectiveHours}h added to balance`);
       }
     }
 
@@ -13355,6 +13385,24 @@ async function processSingleRecovery(recovery) {
     return { success: true, message: 'Recovery già processato, aggiornato solo balance_added', alreadyProcessed: true };
   }
 
+  // Ore effettive da conteggiare: se le ore salvate coincidono con l'arco orario lordo (pausa non sottratta), usa le ore nette
+  let effectiveHours = parseFloat(recovery.hours);
+  if (recovery.start_time && recovery.end_time) {
+    const parseTime = (t) => {
+      const [h, m] = (t || '').split(':').map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+    const rawSpanMinutes = parseTime(recovery.end_time) - parseTime(recovery.start_time);
+    const rawSpanHours = rawSpanMinutes / 60;
+    const netWithBreak = calculateNetWorkHours(recovery.start_time, recovery.end_time, '13:00', 60);
+    if (rawSpanHours >= 6 && Math.abs(recovery.hours - rawSpanHours) < 0.02) {
+      effectiveHours = netWithBreak;
+      if (Math.abs(effectiveHours - parseFloat(recovery.hours)) > 0.01) {
+        console.log(`   📐 Ore corrette da ${recovery.hours} a ${effectiveHours.toFixed(2)} (arco ${recovery.start_time}-${recovery.end_time}, pausa 1h non conteggiata)`);
+      }
+    }
+  }
+
   // Aggiungi le ore al saldo
   // Crea un record di presenza per quella data con le ore di recupero
   const { data: existingAttendance } = await supabase
@@ -13367,25 +13415,25 @@ async function processSingleRecovery(recovery) {
   if (existingAttendance) {
     // IMPORTANTE: Verifica se questo recupero è già stato processato guardando le note
     const notes = existingAttendance.notes || '';
-    const recoveryHours = parseFloat(recovery.hours);
-    const recoveryNotePattern = `[Recupero ore: +${recoveryHours}h]`;
+    const recoveryNotePattern = `[Recupero ore: +${effectiveHours}h]`;
     const hasRecoveryNote = notes.includes(recoveryNotePattern) || 
-                            notes.includes(`Recupero ore: +${recoveryHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`);
+                            notes.includes(`Recupero ore: +${effectiveHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`) ||
+                            notes.includes(`Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`);
     
     // Se le ore sono già state aggiunte, non aggiungerle di nuovo
     if (hasRecoveryNote) {
       console.log(`⚠️ Recovery ${recovery.id} già processato in attendance (trovato nelle note), salto aggiunta ore`);
-      // Verifica che il balance sia corretto
+      // Verifica che il balance sia corretto (usa effectiveHours)
       const currentBalance = parseFloat(existingAttendance.balance_hours || 0);
-      if (currentBalance < recoveryHours) {
+      if (currentBalance < effectiveHours) {
         // Se il balance è minore delle ore di recupero, fixalo
-        console.log(`🔧 Balance non corretto (${currentBalance} < ${recoveryHours}), fixo...`);
-        const newBalanceHours = currentBalance + recoveryHours;
+        console.log(`🔧 Balance non corretto (${currentBalance} < ${effectiveHours}), fixo...`);
+        const newBalanceHours = currentBalance + effectiveHours;
         const { error: fixError } = await supabase
           .from('attendance')
           .update({
             balance_hours: newBalanceHours,
-            actual_hours: parseFloat(existingAttendance.actual_hours || 0) + recoveryHours
+            actual_hours: parseFloat(existingAttendance.actual_hours || 0) + effectiveHours
           })
           .eq('id', existingAttendance.id);
         
@@ -13399,9 +13447,9 @@ async function processSingleRecovery(recovery) {
       return;
     }
 
-    // Aggiorna il record esistente aggiungendo le ore di recupero
-    const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + recoveryHours;
-    const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + recoveryHours;
+    // Aggiorna il record esistente aggiungendo le ore di recupero (usa effectiveHours)
+    const newBalanceHours = parseFloat(existingAttendance.balance_hours || 0) + effectiveHours;
+    const newActualHours = parseFloat(existingAttendance.actual_hours || 0) + effectiveHours;
 
     const { error: updateError } = await supabase
       .from('attendance')
@@ -13418,28 +13466,28 @@ async function processSingleRecovery(recovery) {
     }
     console.log(`✅ Attendance aggiornato per recovery ${recovery.id}: balance_hours da ${existingAttendance.balance_hours || 0} a ${newBalanceHours}`);
   } else {
-    // Crea nuovo record
+    // Crea nuovo record (usa effectiveHours)
     const { error: insertError } = await supabase
       .from('attendance')
       .insert({
         user_id: recovery.user_id,
         date: recovery.recovery_date,
-        actual_hours: parseFloat(recovery.hours),
+        actual_hours: effectiveHours,
         expected_hours: 0, // Recupero ore, non sono ore previste
-        balance_hours: parseFloat(recovery.hours),
-        notes: `Recupero ore: +${recovery.hours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
+        balance_hours: effectiveHours,
+        notes: `Recupero ore: +${effectiveHours}h (dalle ${recovery.start_time} alle ${recovery.end_time})`
       });
 
     if (insertError) {
       console.error(`❌ Errore creazione attendance per recovery ${recovery.id}:`, insertError);
       throw new Error(`Errore creazione attendance: ${insertError.message}`);
     }
-    console.log(`✅ Attendance creato per recovery ${recovery.id}: balance_hours = ${recovery.hours}`);
+    console.log(`✅ Attendance creato per recovery ${recovery.id}: balance_hours = ${effectiveHours}`);
   }
 
-  // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank)
+  // AGGIUNGI LE ORE ALLA BANCA ORE (overtime_bank) — usa effectiveHours
   const recoveryYear = new Date(recovery.recovery_date).getFullYear();
-  const recoveryHours = parseFloat(recovery.hours);
+  const recoveryHours = effectiveHours;
   
   // Recupera il saldo corrente della banca ore
   const { data: currentBalance, error: balanceError } = await supabase
@@ -13526,13 +13574,33 @@ async function processSingleRecovery(recovery) {
       console.log(`✅ Attendance creato automaticamente dopo verifica`);
     }
   } else {
-    // Verifica che le ore siano state aggiunte correttamente
+    // Verifica che le ore siano state aggiunte correttamente (considera sia effectiveHours che valore originale recovery.hours)
     const currentBalance = parseFloat(verifyAttendance.balance_hours || 0);
     const notes = verifyAttendance.notes || '';
-    const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`);
+    const storedHours = parseFloat(recovery.hours);
+    const hasRecoveryNote = notes.includes(`Recupero ore: +${recoveryHours}h`) || notes.includes(`[Recupero ore: +${recoveryHours}h]`) ||
+      notes.includes(`Recupero ore: +${storedHours}h`) || notes.includes(`[Recupero ore: +${storedHours}h]`);
     
-    // Se le ore non sono state aggiunte correttamente, fixa
-    if (!hasRecoveryNote || currentBalance < recoveryHours) {
+    // Se era stato conteggiato il valore sbagliato (es. 9h incluso pausa invece di 8h), correggi riducendo a effectiveHours
+    if (hasRecoveryNote && storedHours > recoveryHours && currentBalance >= storedHours) {
+      const excess = storedHours - recoveryHours;
+      const newBalance = currentBalance - excess;
+      const newActual = Math.max(0, parseFloat(verifyAttendance.actual_hours || 0) - excess);
+      console.log(`⚠️ Correzione ore recupero: erano ${storedHours}h (con pausa), effettive ${recoveryHours}h. Balance da ${currentBalance} a ${newBalance}`);
+      const { error: fixUpdateError } = await supabase
+        .from('attendance')
+        .update({
+          actual_hours: newActual,
+          balance_hours: newBalance,
+          notes: notes.replace(new RegExp(`Recupero ore: \\+${storedHours}h`, 'g'), `Recupero ore: +${recoveryHours}h`)
+        })
+        .eq('user_id', recovery.user_id)
+        .eq('date', recovery.recovery_date);
+      if (fixUpdateError) {
+        console.error(`❌ Errore correzione ore recupero:`, fixUpdateError);
+      }
+    } else if (!hasRecoveryNote || currentBalance < recoveryHours) {
+      // Se le ore non sono state aggiunte correttamente, fixa
       console.log(`⚠️ Attendance non aggiornato correttamente (balance: ${currentBalance}, expected: ${recoveryHours}), fixo...`);
       const newBalance = currentBalance + recoveryHours;
       const newActual = parseFloat(verifyAttendance.actual_hours || 0) + recoveryHours;
@@ -14302,6 +14370,146 @@ app.post('/api/recovery-requests/fix-duplicate-balance', authenticateToken, asyn
     });
   } catch (error) {
     console.error('Fix duplicate balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
+// Endpoint per correggere recuperi in cui sono state conteggiate le ore incluso la pausa (es. 9h invece di 8h)
+app.post('/api/recovery-requests/fix-overcount', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+
+    console.log('🔧 [FIX OVERCOUNT] Correggendo recuperi con ore conteggiate incluso pausa...');
+
+    const { data: completedRecoveries, error: recoveriesError } = await supabase
+      .from('recovery_requests')
+      .select('*, users!recovery_requests_user_id_fkey(id, first_name, last_name)')
+      .eq('status', 'completed')
+      .eq('balance_added', true)
+      .not('start_time', 'is', null)
+      .not('end_time', 'is', null);
+
+    if (recoveriesError) {
+      return res.status(500).json({ error: 'Errore nel recupero recuperi', details: recoveriesError.message });
+    }
+
+    const results = [];
+    let fixedCount = 0;
+
+    for (const recovery of completedRecoveries || []) {
+      const userName = recovery.users ? `${recovery.users.first_name} ${recovery.users.last_name}` : recovery.user_id;
+      const parseTime = (t) => {
+        const [h, m] = (t || '').split(':').map(Number);
+        return (h || 0) * 60 + (m || 0);
+      };
+      const rawSpanMinutes = parseTime(recovery.end_time) - parseTime(recovery.start_time);
+      const rawSpanHours = rawSpanMinutes / 60;
+      const netWithBreak = calculateNetWorkHours(recovery.start_time, recovery.end_time, '13:00', 60);
+      const storedHours = parseFloat(recovery.hours);
+
+      if (rawSpanHours < 6 || Math.abs(storedHours - rawSpanHours) >= 0.02) continue;
+      const overcount = storedHours - netWithBreak;
+      if (overcount <= 0) continue;
+      const recoveryYear = new Date(recovery.recovery_date).getFullYear();
+
+      try {
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('id, balance_hours, actual_hours, notes')
+          .eq('user_id', recovery.user_id)
+          .eq('date', recovery.recovery_date)
+          .single();
+
+        if (attendance) {
+          const newBalance = Math.round((parseFloat(attendance.balance_hours || 0) - overcount) * 100) / 100;
+          const newActual = Math.max(0, Math.round((parseFloat(attendance.actual_hours || 0) - overcount) * 100) / 100);
+          let notes = (attendance.notes || '').replace(
+            new RegExp(`Recupero ore: \\+${storedHours}h`, 'g'),
+            `Recupero ore: +${netWithBreak}h`
+          );
+          const { error: updErr } = await supabase
+            .from('attendance')
+            .update({ balance_hours: newBalance, actual_hours: newActual, notes })
+            .eq('id', attendance.id);
+          if (updErr) throw updErr;
+        }
+
+        const { data: cb } = await supabase
+          .from('current_balances')
+          .select('current_balance')
+          .eq('user_id', recovery.user_id)
+          .eq('category', 'overtime')
+          .eq('year', recoveryYear)
+          .single();
+        const newOvertimeBalance = Math.round(((cb?.current_balance || 0) - overcount) * 100) / 100;
+
+        const { error: ledgerErr } = await supabase
+          .from('hours_ledger')
+          .insert({
+            user_id: recovery.user_id,
+            transaction_date: recovery.recovery_date,
+            transaction_type: 'usage',
+            category: 'overtime',
+            hours: -overcount,
+            reason: `Correzione: ore recupero includevano pausa (da ${storedHours}h a ${netWithBreak}h)`,
+            notes: `Correzione recupero ${recovery.id}`,
+            reference_id: recovery.id,
+            reference_type: 'recovery_request_fix',
+            period_year: recoveryYear,
+            period_month: new Date(recovery.recovery_date).getMonth() + 1,
+            running_balance: newOvertimeBalance
+          });
+        if (ledgerErr) throw ledgerErr;
+
+        await supabase
+          .from('current_balances')
+          .upsert({
+            user_id: recovery.user_id,
+            category: 'overtime',
+            year: recoveryYear,
+            current_balance: newOvertimeBalance,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,category,year' });
+
+        await supabase
+          .from('recovery_requests')
+          .update({ hours: netWithBreak, updated_at: new Date().toISOString() })
+          .eq('id', recovery.id);
+
+        fixedCount++;
+        results.push({
+          recovery_id: recovery.id,
+          user: userName,
+          date: recovery.recovery_date,
+          stored_hours: storedHours,
+          effective_hours: netWithBreak,
+          overcount,
+          action: 'fixed'
+        });
+        console.log(`✅ Overcount corretto: ${userName} ${recovery.recovery_date} da ${storedHours}h a ${netWithBreak}h`);
+      } catch (err) {
+        console.error(`❌ Fix overcount recovery ${recovery.id}:`, err);
+        results.push({
+          recovery_id: recovery.id,
+          user: userName,
+          date: recovery.recovery_date,
+          action: 'error',
+          error: err.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Corretti ${fixedCount} recuperi (ore incluso pausa → ore nette) su ${completedRecoveries?.length || 0} controllati`,
+      fixed: fixedCount,
+      total: completedRecoveries?.length || 0,
+      results
+    });
+  } catch (error) {
+    console.error('Fix overcount error:', error);
     res.status(500).json({ error: 'Errore interno del server', details: error.message });
   }
 });
