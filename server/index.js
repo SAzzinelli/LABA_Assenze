@@ -12652,10 +12652,10 @@ async function calculateOvertimeBalance(userId, year = null) {
     const { date: today } = await getCurrentDateTime();
 
     // Calcola il saldo totale dalle presenze (includi anni passati)
-    // Non limitare al solo anno corrente per il saldo totale
+    // Includi 'notes' per riconoscere ricariche manuali (Ricarica), recuperi ore e permessi approvati
     const { data: attendance, error: attendanceError } = await supabase
       .from('attendance')
-      .select('balance_hours, date')
+      .select('balance_hours, date, notes')
       .eq('user_id', userId)
       .lte('date', today); // Prendi tutto fino ad oggi (escludi futuro)
 
