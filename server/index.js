@@ -12908,6 +12908,90 @@ app.get('/api/recovery-requests/debt-summary', authenticateToken, async (req, re
   }
 });
 
+// Verifica in DB ore/ricariche per un utente (solo admin) – stesso controllo dello script check-alessia-balance
+app.get('/api/admin/check-user-balance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, name } = req.query;
+    let targetUserId = userId;
+
+    if (!targetUserId && name) {
+      const { data: users, error: uErr } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email, is_active')
+        .ilike('first_name', `%${String(name).trim()}%`);
+      if (uErr || !users?.length) {
+        return res.status(404).json({ error: 'Nessun utente trovato con quel nome', search: name });
+      }
+      targetUserId = users[0].id;
+    }
+    if (!targetUserId) {
+      return res.status(400).json({ error: 'Fornisci userId o name (es. name=alessia)' });
+    }
+
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, is_active')
+      .eq('id', targetUserId)
+      .single();
+    if (userErr || !user) {
+      return res.status(404).json({ error: 'Utente non trovato', userId: targetUserId });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const report = {
+      user: { id: user.id, name: `${user.first_name} ${user.last_name}`, email: user.email, is_active: user.is_active },
+      attendance: { totalRecords: 0, sumBalanceHours: 0, recordsWithCredit: [] },
+      hours_ledger_manual_credit: [],
+      current_balances_overtime: null
+    };
+
+    const { data: attendance, error: attErr } = await supabase
+      .from('attendance')
+      .select('id, date, balance_hours, actual_hours, expected_hours, notes')
+      .eq('user_id', targetUserId)
+      .order('date', { ascending: false })
+      .limit(100);
+    if (!attErr && attendance?.length) {
+      report.attendance.totalRecords = attendance.length;
+      report.attendance.sumBalanceHours = attendance.reduce((s, r) => s + parseFloat(r.balance_hours || 0), 0);
+      report.attendance.recordsWithCredit = attendance
+        .filter(r => (r.notes || '').toLowerCase().includes('ricarica') || (r.notes || '').toLowerCase().includes('credito') || parseFloat(r.balance_hours || 0) > 0)
+        .slice(0, 20)
+        .map(r => ({ date: r.date, balance_hours: r.balance_hours, notes: (r.notes || '').slice(0, 120) }));
+    }
+
+    const { data: ledger, error: ledErr } = await supabase
+      .from('hours_ledger')
+      .select('id, transaction_date, hours, reason, reference_type')
+      .eq('user_id', targetUserId)
+      .eq('reference_type', 'manual_credit')
+      .order('transaction_date', { ascending: false })
+      .limit(30);
+    if (!ledErr && ledger?.length) {
+      report.hours_ledger_manual_credit = ledger;
+    }
+
+    const { data: cb, error: cbErr } = await supabase
+      .from('current_balances')
+      .select('year, current_balance, total_accrued, updated_at')
+      .eq('user_id', targetUserId)
+      .eq('category', 'overtime')
+      .eq('year', currentYear)
+      .single();
+    if (!cbErr && cb) {
+      report.current_balances_overtime = cb;
+    }
+
+    const balanceFromApi = await calculateOvertimeBalance(targetUserId, currentYear);
+    report.calculatedBalance = balanceFromApi;
+
+    res.json({ success: true, report });
+  } catch (error) {
+    console.error('Check user balance error:', error);
+    res.status(500).json({ error: 'Errore interno del server', details: error.message });
+  }
+});
+
 // Lista richieste recupero ore
 app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
