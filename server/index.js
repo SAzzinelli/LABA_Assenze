@@ -12730,6 +12730,21 @@ async function calculateOvertimeBalance(userId, year = null) {
       }
     }
 
+    // Se oggi (o ieri, per fuso orario) c'è un credito (ricarica manuale o recupero ore), NON sottrarre todayPermissionHours
+    const isCreditRecord = (r) => {
+      const notes = (r.notes || '').toLowerCase();
+      const balance = parseFloat(r.balance_hours || 0);
+      return balance > 0 || notes.includes('ricarica') || notes.includes('recupero ore');
+    };
+    const todayIsCredit = todayRecord && isCreditRecord(todayRecord);
+    const yesterday = (() => { const [y, m, d] = today.split('-').map(Number); const d2 = new Date(Date.UTC(y, m - 1, d - 1)); return d2.toISOString().slice(0, 10); })();
+    const yesterdayRecord = attendance?.find(r => r.date === yesterday);
+    const yesterdayIsCredit = yesterdayRecord && isCreditRecord(yesterdayRecord);
+    if (todayIsCredit || yesterdayIsCredit) {
+      todayPermissionHours = 0;
+      console.log(`📅 Giornata credito/ricarica/recupero (oggi o ieri): non sottraggo permessi dal balance`);
+    }
+
     // IMPORTANTE: Aggiungi le ore delle richieste di recupero in stato "pending" o "proposed"
     // Queste richieste rappresentano ore che il dipendente deve ancora recuperare,
     // quindi aumentano il debito totale
