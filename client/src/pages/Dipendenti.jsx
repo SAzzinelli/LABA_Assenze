@@ -1135,6 +1135,9 @@ const Employees = () => {
                             const creditMatch = notes.match(/Aggiunta manuale ore: \+([\d.]+)h/);
                             if (creditMatch) {
                               manualCreditInfo = parseFloat(creditMatch[1]);
+                            } else {
+                              const creditMatch2 = notes.match(/Ricarica banca ore: \+([\d.]+)h/);
+                              if (creditMatch2) manualCreditInfo = parseFloat(creditMatch2[1]);
                             }
                           }
 

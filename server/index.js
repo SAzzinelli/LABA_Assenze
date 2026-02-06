@@ -3712,11 +3712,18 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
         hasRealTimeCalculation = true;
       }
     } else {
-      // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
-      // IMPORTANTE: Se siamo a mezzanotte/prima dell'inizio del turno, usa il balance del DB per evitare calcoli errati
-      if (schedule && schedule.start_time) {
-        // Se esiste uno schedule e siamo DOPO l'inizio del turno, usa calcolo real-time
-        // Se siamo prima dell'inizio (es. mezzanotte), usa il balance del DB per evitare crediti errati
+      // Se oggi c'è una ricarica manuale o recupero ore, usa il saldo salvato e NON il real-time
+      // (altrimenti il real-time sottrarrebbe il "tempo mancante fino alle 18" anche a chi finisce alle 17)
+      const todayNotes = todayRecord?.notes || '';
+      const todayIsManualCredit = todayNotes.includes('Ricarica') || todayNotes.includes('ricarica') ||
+        todayNotes.includes('Recupero ore') || todayNotes.includes('recupero ore');
+      if (todayRecord && todayIsManualCredit && parseFloat(todayRecord.balance_hours || 0) > 0) {
+        todayBalance = parseFloat(todayRecord.balance_hours || 0);
+        todayBalanceHours = todayBalance;
+        hasRealTimeCalculation = false;
+        console.log(`📅 [total-balance] Oggi ha ricarica/recupero: uso saldo salvato ${todayBalance}h (no real-time)`);
+      } else if (schedule && schedule.start_time) {
+        // Verifica se oggi (o data simulata) è un giorno lavorativo e calcola real-time
         const [startHour, startMin] = schedule.start_time.split(':').map(Number);
         const currentHour = now.getHours();
         const currentMin = now.getMinutes();
@@ -12761,13 +12768,32 @@ async function calculateOvertimeBalance(userId, year = null) {
       }, 0);
     }
 
+    // Ricariche manuali: se l'attendance è stata sovrascritta, recupera le ore da hours_ledger
+    let manualCreditTopUp = 0;
+    const { data: ledgerCredits } = await supabase
+      .from('hours_ledger')
+      .select('transaction_date, hours')
+      .eq('user_id', userId)
+      .eq('reference_type', 'manual_credit')
+      .eq('transaction_type', 'accrual');
+    if (ledgerCredits && ledgerCredits.length > 0) {
+      for (const row of ledgerCredits) {
+        const ledgerHours = parseFloat(row.hours || 0);
+        const attRecord = attendance?.find((r) => r.date === row.transaction_date);
+        const alreadyCounted = attRecord && ((attRecord.notes || '').toLowerCase().includes('ricarica') || (attRecord.notes || '').toLowerCase().includes('recupero ore'))
+          ? parseFloat(attRecord.balance_hours || 0)
+          : 0;
+        if (ledgerHours > alreadyCounted) {
+          manualCreditTopUp += ledgerHours - alreadyCounted;
+        }
+      }
+    }
+
     // Il debito totale include:
-    // 1. Il saldo negativo dalle presenze (già include i permessi approvati registrati)
-    // 2. Le ore dei permessi approvati per oggi non ancora registrati nell'attendance
-    // 3. Le ore di recupero richieste ma NON ancora approvate NON devono essere sottratte.
-    //    Rappresentano una intenzione di recupero, ma finché non sono approvate/svolte 
-    //    non incidono sul saldo attuale (né in positivo né in negativo).
-    const totalBalanceWithRecovery = totalBalance - todayPermissionHours;
+    // 1. Il saldo dalle presenze (già include i permessi approvati registrati)
+    // 2. Le ricariche manuali da ledger se non più in attendance (manualCreditTopUp)
+    // 3. Sottrazione ore permessi oggi (todayPermissionHours)
+    const totalBalanceWithRecovery = totalBalance + manualCreditTopUp - todayPermissionHours;
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log dettagliato per debug

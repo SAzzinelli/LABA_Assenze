@@ -513,9 +513,9 @@ const BancaOreAdmin = () => {
                                   <span className="flex items-center gap-1.5 bg-slate-700/30 px-2 py-0.5 rounded">
                                     <Wallet className={`w-3 h-3 ${statusColor}`} />
                                     <span className={`font-medium ${statusColor}`}>
-                                      Saldo: {formatHours(employee.balance)}
-                                      {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                      {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                      Saldo: {formatHours(employee.balance ?? 0)}
+                                      {isDebt && ` (Debito: ${formatHours(employee.debtHours ?? 0)})`}
+                                      {isCredit && ` (Credito: ${formatHours(employee.creditHours ?? employee.balance ?? 0)})`}
                                     </span>
                                   </span>
                                 </div>
@@ -642,7 +642,7 @@ const BancaOreAdmin = () => {
                                   <span className={`font-medium ${statusColor}`}>
                                     Saldo: {formatHours(employee.balance)}
                                     {isDebt && ` (Debito: ${formatHours(employee.debtHours)})`}
-                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours)})`}
+                                    {isCredit && ` (Credito: ${formatHours(employee.creditHours ?? employee.balance ?? 0)})`}
                                   </span>
                                 </span>
                               </div>
@@ -1035,7 +1035,7 @@ const BancaOreAdmin = () => {
               <p className="text-xs text-red-400 font-semibold mb-2">⚠️ Funzione riservata a casi eccezionali</p>
               <p className="text-sm text-slate-300">
                 {selectedEmployeeForAddHours 
-                  ? `Aggiungi ore direttamente al saldo di <strong>${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}</strong>.`
+                  ? <>Aggiungi ore direttamente al saldo di <strong>{selectedEmployeeForAddHours.first_name} {selectedEmployeeForAddHours.last_name}</strong>.</>
                   : 'Seleziona un dipendente dalla lista Situazione per aggiungere ore manualmente.'
                 }
               </p>
@@ -1045,9 +1045,10 @@ const BancaOreAdmin = () => {
               <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                 <p className="text-sm text-yellow-400 mb-2">Seleziona un dipendente dalla tab "Situazione" oppure:</p>
                 <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      const emp = allEmployees.find(e => e.id === parseInt(e.target.value));
+                  onChange={(ev) => {
+                    const value = ev.target.value;
+                    if (value) {
+                      const emp = allEmployees.find((m) => String(m.id) === value);
                       if (emp) {
                         setSelectedEmployeeForAddHours({
                           id: emp.id,
