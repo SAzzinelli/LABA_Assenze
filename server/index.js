@@ -15276,8 +15276,37 @@ async function saveHourlyAttendance() {
           }
         }
 
+        // Prima di salvare: se esiste già una ricarica manuale per oggi, preservala (non sovrascriverla)
+        let balanceToSave = Math.round(finalBalanceHours * 100) / 100;
+        let notesToSave = approvedPermissions && approvedPermissions.length > 0
+          ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
+          : 'Salvataggio automatico orario';
+
+        const { data: existingToday } = await supabase
+          .from('attendance')
+          .select('balance_hours, notes')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .single();
+        if (existingToday && existingToday.notes) {
+          const n = existingToday.notes;
+          const hasRicarica = n.includes('Ricarica banca ore') || n.includes('Aggiunta manuale ore') || n.includes('ricarica');
+          if (hasRicarica) {
+            const m1 = n.match(/Ricarica banca ore: \+([\d.]+)h/);
+            const m2 = n.match(/Aggiunta manuale ore: \+([\d.]+)h/);
+            const m3 = n.match(/\[💰 Ricarica banca ore: \+([\d.]+)h/);
+            const creditHours = (m1 && parseFloat(m1[1])) || (m2 && parseFloat(m2[1])) || (m3 && parseFloat(m3[1])) || 0;
+            if (creditHours > 0) {
+              balanceToSave = Math.round((finalBalanceHours + creditHours) * 100) / 100;
+              const ricaricaLine = n.includes('Ricarica banca ore') ? n.match(/[^\n]*Ricarica banca ore[^\n]*/)?.[0] : n.match(/[^\n]*Aggiunta manuale ore[^\n]*/)?.[0];
+              notesToSave = notesToSave + (ricaricaLine ? ` [${ricaricaLine.trim()}]` : '');
+              console.log(`💰 Preservata ricarica manuale per ${user.first_name}: +${creditHours}h → balance salvato ${balanceToSave}h`);
+            }
+          }
+        }
+
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
-        console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${finalExpectedHours.toFixed(2)}h - Balance: ${finalBalanceHours.toFixed(2)}h - Status: ${status}`);
+        console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${finalExpectedHours.toFixed(2)}h - Balance: ${balanceToSave} - Status: ${status}`);
 
         const { error: saveError } = await supabase
           .from('attendance')
@@ -15286,10 +15315,8 @@ async function saveHourlyAttendance() {
             date: today,
             actual_hours: Math.round(actualHours * 100) / 100,
             expected_hours: Math.round(finalExpectedHours * 100) / 100,
-            balance_hours: Math.round(finalBalanceHours * 100) / 100,
-            notes: approvedPermissions && approvedPermissions.length > 0
-              ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
-              : 'Salvataggio automatico orario'
+            balance_hours: balanceToSave,
+            notes: notesToSave
           }, {
             onConflict: 'user_id,date'
           });
