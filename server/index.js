@@ -22,7 +22,7 @@ const http = require('http');
 const { addPermissionEvent, initializeCalendarClient } = require('./googleCalendarService');
 const WebSocketManager = require('./websocket');
 const cron = require('node-cron');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 require('dotenv').config();
 
 /**
@@ -11266,404 +11266,199 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       };
     });
 
-    // Crea il workbook Excel con design completamente nuovo e professionale
-    const wb = XLSX.utils.book_new();
-    const wsData = [];
+    // Crea il workbook Excel con ExcelJS (sicuro, sostituisce xlsx vulnerabile)
+    const statsStartCol = 3 + monthDates.length;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Foglio 1');
 
     // ========== HEADER SECTION ==========
-    // Riga 1: Titolo principale (centrato, grande) - espanso su più colonne
     const titleRow = Array(50).fill('');
     titleRow[0] = `REPORT PRESENZE MENSILE`;
-    wsData.push(titleRow);
+    worksheet.addRow(titleRow);
 
-    // Riga 2: Sottotitolo con mese e anno - espanso
     const subtitleRow = Array(50).fill('');
     subtitleRow[0] = `${monthName.toUpperCase()} ${yearParam}`;
-    wsData.push(subtitleRow);
+    worksheet.addRow(subtitleRow);
 
-    // Riga 3: Informazioni azienda - espanso
     const companyRow = Array(50).fill('');
     companyRow[0] = 'Libera Accademia di Belle Arti';
-    wsData.push(companyRow);
+    worksheet.addRow(companyRow);
 
     // ========== TABLE HEADER ==========
-    // Calcola colonna di inizio statistiche (una sola volta)
-    const statsStartCol = 3 + monthDates.length;
-
-    // Riga 4: Header principale della tabella (inizia dalla riga 4 come nello screen2)
     const headerRow = Array(50).fill('');
     headerRow[0] = 'N°';
     headerRow[1] = 'Cognome';
     headerRow[2] = 'Nome';
-
-    // Header giorni del mese - solo numeri in grassetto (senza giorno settimana)
-    monthDates.forEach((dateInfo, idx) => {
-      headerRow[3 + idx] = dateInfo.dayNumber; // Solo il numero, senza giorno settimana
-    });
-
-    // Colonne statistiche finali
+    monthDates.forEach((dateInfo, idx) => { headerRow[3 + idx] = dateInfo.dayNumber; });
     headerRow[statsStartCol] = 'Ore Lavorate';
     headerRow[statsStartCol + 1] = 'Ferie';
     headerRow[statsStartCol + 2] = 'Malattia';
     headerRow[statsStartCol + 3] = 'Permessi';
     headerRow[statsStartCol + 4] = 'Festivi';
     headerRow[statsStartCol + 5] = 'Totale';
-    wsData.push(headerRow);
+    worksheet.addRow(headerRow);
 
     // ========== DATA ROWS ==========
-    // Calcola statistiche per ogni dipendente
     employeeData.forEach((emp, empIndex) => {
       const user = users[empIndex];
-      let totalWorkedHours = 0;
-      let vacationDays = 0;
-      let sickDays = 0;
-      let permissionHours = 0;
-      let holidayDays = 0;
-
-      // Calcola permessi totali per il mese (tutti i permessi approvati che cadono nel mese)
+      let totalWorkedHours = 0, vacationDays = 0, sickDays = 0, permissionHours = 0, holidayDays = 0;
       const userLeaves = leaveData?.filter(l => l.user_id === user.id && l.type === 'permission') || [];
-
-      // Controlla se ogni permesso cade nel mese (anche se inizia prima o finisce dopo)
       userLeaves.forEach(perm => {
         const permStart = new Date(perm.start_date);
         const permEnd = new Date(perm.end_date);
         const monthStart = new Date(`${yearParam}-${monthParam.toString().padStart(2, '0')}-01`);
-        const monthEnd = new Date(yearParam, monthParam, 0); // Ultimo giorno del mese
-
-        // Se il permesso si sovrappone al mese, conta le ore
+        const monthEnd = new Date(yearParam, monthParam, 0);
         if (permEnd >= monthStart && permStart <= monthEnd) {
           const permHours = parseFloat(perm.hours || 0);
-          if (permHours > 0) {
-            permissionHours += permHours;
-          }
+          if (permHours > 0) permissionHours += permHours;
         }
       });
-
       monthDates.forEach((dateInfo, idx) => {
         const dateStr = dateInfo.date;
         const value = emp.dailyValues[idx];
         const leaves = leaveMap[user.id]?.[dateStr] || [];
-
-        // Controlla permessi/ferie/malattie/104 dalla mappa leaveMap
         const sickLeave = leaves.find(l => l.type === 'sick_leave');
         const vacation = leaves.find(l => l.type === 'vacation');
         const permission104 = leaves.find(l => l.type === 'permission_104');
-
-        if (sickLeave) {
-          sickDays++;
-        } else if (vacation) {
-          vacationDays++;
-        } else if (permission104) {
-          // Permesso 104: non conta come permesso normale, ma come presenza speciale
-          // Se ci sono ore lavorate, aggiungile
-          if (typeof value === 'number' && value > 0) {
-            totalWorkedHours += value;
-          }
-        } else if (dateInfo.isHoliday) {
-          holidayDays++;
-        } else if (typeof value === 'number' && value > 0) {
-          // Ore lavorate normali (senza permessi)
-          totalWorkedHours += value;
-        }
-        // 'D' per domenica non viene contato nelle statistiche
-        // I permessi sono già contati sopra per tutto il mese
+        if (sickLeave) sickDays++;
+        else if (vacation) vacationDays++;
+        else if (permission104 && typeof value === 'number' && value > 0) totalWorkedHours += value;
+        else if (dateInfo.isHoliday) holidayDays++;
+        else if (typeof value === 'number' && value > 0) totalWorkedHours += value;
       });
-
-      // Riga dati dipendente
       const dataRow = Array(50).fill('');
       dataRow[0] = emp.number;
       dataRow[1] = emp.lastName;
       dataRow[2] = emp.firstName;
-
-      // Valori giorni
       monthDates.forEach((dateInfo, idx) => {
         const value = emp.dailyValues[idx];
-        // Formatta i valori: numeri come ore, sigle come sono
-        if (typeof value === 'number' && value > 0) {
-          dataRow[3 + idx] = value;
-        } else if (value === 'D') {
-          dataRow[3 + idx] = 'D';
-        } else if (value === 'F') {
-          dataRow[3 + idx] = 'F';
-        } else if (value === 'M') {
-          dataRow[3 + idx] = 'M';
-        } else if (value === 'FE') {
-          dataRow[3 + idx] = 'FE';
-        } else if (value === '104') {
-          dataRow[3 + idx] = '104';
-        } else {
-          dataRow[3 + idx] = '';
-        }
+        if (typeof value === 'number' && value > 0) dataRow[3 + idx] = value;
+        else if (['D', 'F', 'M', 'FE', '104'].includes(value)) dataRow[3 + idx] = value;
+        else dataRow[3 + idx] = '';
       });
-
-      // Colonne statistiche - sempre mostrate, anche se 0
       dataRow[statsStartCol] = Math.round(totalWorkedHours * 100) / 100;
       dataRow[statsStartCol + 1] = vacationDays;
       dataRow[statsStartCol + 2] = sickDays;
       dataRow[statsStartCol + 3] = Math.round(permissionHours * 100) / 100;
       dataRow[statsStartCol + 4] = holidayDays;
       dataRow[statsStartCol + 5] = Math.round(emp.totalHours * 100) / 100;
-
-      wsData.push(dataRow);
+      worksheet.addRow(dataRow);
     });
 
     // ========== FOOTER SECTION ==========
-    // 2 righe vuote
-    wsData.push(Array(50).fill(''));
-    wsData.push(Array(50).fill(''));
-
-    // Legenda con celle unite
+    worksheet.addRow(Array(50).fill(''));
+    worksheet.addRow(Array(50).fill(''));
     const legendRow = Array(50).fill('');
     legendRow[0] = 'LEGENDA: D = Domenica | F = Ferie | M = Malattia | FE = Festivo | 104 = Permesso 104 | Numeri = Ore lavorate';
-    wsData.push(legendRow);
+    worksheet.addRow(legendRow);
 
-    // Crea il worksheet
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Unisci celle
+    worksheet.mergeCells('A1:T1');
+    worksheet.mergeCells('A2:T2');
+    worksheet.mergeCells('A3:T3');
+    const legendRowIdx = worksheet.rowCount;
+    worksheet.mergeCells(`A${legendRowIdx}:T${legendRowIdx}`);
 
-    // Unisci celle per header (righe 1-3) e legenda
-    if (!ws['!merges']) ws['!merges'] = [];
-    // Riga 1: unisci A1:T1 per titolo
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 19 } });
-    // Riga 2: unisci A2:T2 per sottotitolo
-    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 19 } });
-    // Riga 3: unisci A3:T3 per azienda
-    ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 19 } });
-
-    // Imposta larghezza colonne ottimizzata per nuovo layout
-    const totalCols = 3 + monthDates.length + 6; // N°, Cognome, Nome + giorni + 6 statistiche
-    ws['!cols'] = [
-      { wch: 5 },   // Colonna A: N°
-      { wch: 20 },  // Colonna B: Cognome
-      { wch: 18 },  // Colonna C: Nome
-      ...Array(monthDates.length).fill({ wch: 4 }), // Colonne giorni - ridotte
-      { wch: 12 },  // Ore Lavorate
-      { wch: 8 },   // Ferie
-      { wch: 8 },   // Malattia
-      { wch: 10 },  // Permessi
-      { wch: 8 },   // Festivi
-      { wch: 10 }   // Totale
+    // Larghezza colonne
+    worksheet.columns = [
+      { width: 5 }, { width: 20 }, { width: 18 },
+      ...Array(monthDates.length).fill({ width: 4 }),
+      { width: 12 }, { width: 8 }, { width: 8 }, { width: 10 }, { width: 8 }, { width: 10 }
     ];
 
-    // ========== APPLICA STILI PROFESSIONALI ==========
-    const thinBorder = { style: 'thin', color: { rgb: 'CCCCCC' } };
-    const mediumBorder = { style: 'medium', color: { rgb: '666666' } };
-    const thickBorder = { style: 'thick', color: { rgb: '000000' } };
-
-    const borderStyle = {
-      top: thinBorder,
-      bottom: thinBorder,
-      left: thinBorder,
-      right: thinBorder
-    };
-
+    // Stili - ExcelJS usa argb: 'FFRRGGBB'
+    const toArgB = (rgb) => `FF${rgb}`;
+    const thinBorder = { style: 'thin', color: { argb: 'FFCCCCCC' } };
+    const borderStyle = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
     const headerBorderStyle = {
-      top: mediumBorder,
-      bottom: mediumBorder,
-      left: thinBorder,
-      right: thinBorder
+      top: { style: 'medium', color: { argb: 'FF666666' } },
+      bottom: { style: 'medium', color: { argb: 'FF666666' } },
+      left: thinBorder, right: thinBorder
     };
 
-    const applyStyle = (cellRef, style) => {
-      if (ws[cellRef]) {
-        if (!ws[cellRef].s) ws[cellRef].s = {};
-        Object.assign(ws[cellRef].s, style);
-      } else {
-        ws[cellRef] = { v: '', t: 's', s: style };
-      }
-    };
-
-    const totalRows = wsData.length;
-    const headerRowIndex = 3; // Riga 4 (indice 3) è l'header
-    const dataStartRow = 4; // Riga 5 (indice 4) inizia i dati
-    const legendRowIndex = totalRows - 1; // Ultima riga è la legenda
-
-    // Legenda: unisci celle come l'intestazione (dopo 2 righe vuote)
-    ws['!merges'].push({ s: { r: legendRowIndex, c: 0 }, e: { r: legendRowIndex, c: 19 } });
-
-    // Titolo principale (riga 1) - unisci celle A1:J1
-    // Nota: XLSX non supporta merge nativo, ma possiamo stilizzare tutte le celle unite
-    for (let col = 0; col < 20; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
-      applyStyle(cellRef, {
-        font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      });
+    // Titolo (riga 1)
+    for (let c = 1; c <= 20; c++) {
+      const cell = worksheet.getCell(1, c);
+      cell.font = { bold: true, size: 18, color: { argb: toArgB('1E40AF') } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
-    applyStyle('A1', {
-      font: { bold: true, sz: 18, color: { rgb: '1E40AF' } },
-      alignment: { horizontal: 'center', vertical: 'center' }
-    });
-
-    // Sottotitolo (riga 2) - unisci celle A2:J2
-    for (let col = 0; col < 20; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 1, c: col });
-      applyStyle(cellRef, {
-        font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      });
+    // Sottotitolo (riga 2)
+    for (let c = 1; c <= 20; c++) {
+      const cell = worksheet.getCell(2, c);
+      cell.font = { bold: true, size: 14, color: { argb: toArgB('3B82F6') } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
-    applyStyle('A2', {
-      font: { bold: true, sz: 14, color: { rgb: '3B82F6' } },
-      alignment: { horizontal: 'center', vertical: 'center' }
-    });
-
-    // Azienda (riga 3) - unisci celle A3:J3
-    for (let col = 0; col < 20; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 2, c: col });
-      applyStyle(cellRef, {
-        font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      });
+    // Azienda (riga 3)
+    for (let c = 1; c <= 20; c++) {
+      const cell = worksheet.getCell(3, c);
+      cell.font = { size: 11, italic: true, color: { argb: toArgB('6B7280') } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
-    applyStyle('A3', {
-      font: { sz: 11, italic: true, color: { rgb: '6B7280' } },
-      alignment: { horizontal: 'center', vertical: 'center' }
-    });
 
-    // Header tabella (riga 4) - stile professionale
-    // statsStartCol già dichiarato sopra
-    for (let col = 0; col < statsStartCol + 6; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: headerRowIndex, c: col });
-      let bgColor = '4B5563'; // Grigio scuro default
+    // Header tabella (riga 4) - ExcelJS usa colonne 1-based, statsStartCol è 0-based
+    const statsCol1Based = statsStartCol + 1; // Prima colonna statistiche in 1-based
+    const headerRowIdx = 4;
+    for (let col = 1; col <= statsStartCol + 6; col++) {
+      const cell = worksheet.getCell(headerRowIdx, col);
+      let bgColor = '4B5563';
+      if (col === 1) bgColor = '1F2937';
+      else if (col <= 3) bgColor = '374151';
+      else if (col < statsCol1Based) bgColor = '4B5563'; // Giorni
+      else bgColor = '2563EB'; // Statistiche
+      cell.font = { bold: true, size: col < statsCol1Based ? 11 : 10, color: { argb: toArgB('FFFFFF') } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB(bgColor) } };
+      cell.border = headerBorderStyle;
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: col >= statsCol1Based };
+    }
 
-      // Colori diversi per sezioni
-      if (col === 0) bgColor = '1F2937'; // N° più scuro
-      else if (col >= 1 && col <= 2) bgColor = '374151'; // Cognome/Nome
-      else if (col >= 3 && col < statsStartCol) {
-        bgColor = '4B5563'; // Giorni
-        // Numeri giorni in BOLD - FORZATO DIRETTAMENTE
-        const cell = ws[cellRef];
-        if (cell) {
-          if (!cell.s) cell.s = {};
-          cell.s.font = { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 };
-          cell.s.fill = { fgColor: { rgb: bgColor } };
-          cell.s.border = headerBorderStyle;
-          cell.s.alignment = { horizontal: 'center', vertical: 'center' };
-        } else {
-          ws[cellRef] = {
-            v: '', t: 's', s: {
-              font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-              fill: { fgColor: { rgb: bgColor } },
-              border: headerBorderStyle,
-              alignment: { horizontal: 'center', vertical: 'center' }
-            }
-          };
+    // Dati dipendenti (righe 5+)
+    const dataStartRow = 5;
+    const totalRows = worksheet.rowCount;
+    for (let row = dataStartRow; row <= totalRows; row++) {
+      const isLegendRow = row === totalRows;
+      if (isLegendRow) {
+        for (let c = 1; c <= 20; c++) {
+          const cell = worksheet.getCell(row, c);
+          cell.font = { bold: true, size: 10, color: { argb: toArgB('374151') } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = borderStyle;
         }
         continue;
-      } else bgColor = '2563EB'; // Statistiche in blu
-
-      // FORZATO DIRETTAMENTE per garantire bold
-      const cell = ws[cellRef];
-      if (cell) {
-        if (!cell.s) cell.s = {};
-        cell.s.font = { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 };
-        cell.s.fill = { fgColor: { rgb: bgColor } };
-        cell.s.border = headerBorderStyle;
-        cell.s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
-      } else {
-        ws[cellRef] = {
-          v: '', t: 's', s: {
-            font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
-            fill: { fgColor: { rgb: bgColor } },
-            border: headerBorderStyle,
-            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-          }
-        };
       }
-    }
-
-    // Dati dipendenti - formattazione alternata (zebrato)
-    for (let row = dataStartRow; row < totalRows; row++) { // Tutte le righe dati
       const isEven = (row - dataStartRow) % 2 === 0;
       const bgColor = isEven ? 'FFFFFF' : 'F9FAFB';
-
-      for (let col = 0; col < statsStartCol + 6; col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-        const cellValue = ws[cellRef]?.v;
-
-        let cellStyle = {
-          border: borderStyle,
-          fill: { fgColor: { rgb: bgColor } }
-        };
-
-        // Formattazione per colonne specifiche - BOLD FORZATO
-        if (col === 0) {
-          // N°: centrato, grassetto
-          cellStyle.font = { bold: true };
-          cellStyle.alignment = { horizontal: 'center' };
-        } else if (col >= 1 && col <= 2) {
-          // Cognome/Nome: grassetto FORZATO
-          cellStyle.font = { bold: true };
-        } else if (col >= 3 && col < statsStartCol) {
-          // Giorni: centrato, colori per tipo
-          cellStyle.alignment = { horizontal: 'center' };
-          if (cellValue === 'D') {
-            cellStyle.font = { color: { rgb: '9CA3AF' }, italic: true }; // Grigio per domenica
-          } else if (cellValue === 'F') {
-            cellStyle.font = { color: { rgb: '3B82F6' }, bold: true }; // Blu per ferie
-            cellStyle.fill = { fgColor: { rgb: 'DBEAFE' } };
-          } else if (cellValue === 'M') {
-            cellStyle.font = { color: { rgb: 'EF4444' }, bold: true }; // Rosso per malattia
-            cellStyle.fill = { fgColor: { rgb: 'FEE2E2' } };
-          } else if (cellValue === 'FE') {
-            cellStyle.font = { color: { rgb: 'F59E0B' }, bold: true }; // Arancione per festa
-            cellStyle.fill = { fgColor: { rgb: 'FEF3C7' } };
-          } else if (typeof cellValue === 'number') {
-            cellStyle.font = { bold: true, color: { rgb: '059669' } }; // Verde per ore
-          }
-        } else if (col >= statsStartCol) {
-          // Colonne statistiche: centrato, grassetto, sfondo colorato
-          cellStyle.font = { bold: true };
-          cellStyle.alignment = { horizontal: 'center' };
-          if (col === statsStartCol + 5) { // Totale
-            cellStyle.fill = { fgColor: { rgb: 'D1FAE5' } }; // Verde chiaro
-            cellStyle.font.color = { rgb: '047857' };
+      for (let col = 1; col <= statsStartCol + 6; col++) {
+        const cell = worksheet.getCell(row, col);
+        const cellValue = cell.value;
+        cell.border = borderStyle;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB(bgColor) } };
+        if (col === 1) {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center' };
+        } else if (col <= 3) {
+          cell.font = { bold: true };
+        } else if (col < statsCol1Based) {
+          cell.alignment = { horizontal: 'center' };
+          if (cellValue === 'D') cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
+          else if (cellValue === 'F') { cell.font = { color: { argb: toArgB('3B82F6') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } };
+          else if (cellValue === 'M') { cell.font = { color: { argb: toArgB('EF4444') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
+          else if (cellValue === 'FE') { cell.font = { color: { argb: toArgB('F59E0B') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } };
+          else if (typeof cellValue === 'number') cell.font = { bold: true, color: { argb: toArgB('059669') } };
+        } else if (col >= statsCol1Based) {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center' };
+          if (col === statsCol1Based + 5) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('D1FAE5') } };
+            cell.font = { bold: true, color: { argb: toArgB('047857') } };
           }
         }
-
-        applyStyle(cellRef, cellStyle);
       }
     }
 
-    // Legenda - formattazione con celle unite e bold
-    for (let col = 0; col < 20; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: col });
-      const cell = ws[cellRef];
-      if (cell) {
-        if (!cell.s) cell.s = {};
-        cell.s.font = { bold: true, sz: 10, color: { rgb: '374151' } };
-        cell.s.alignment = { horizontal: 'center', vertical: 'center' };
-        cell.s.border = borderStyle;
-      } else {
-        ws[cellRef] = {
-          v: '', t: 's', s: {
-            font: { bold: true, sz: 10, color: { rgb: '374151' } },
-            alignment: { horizontal: 'center', vertical: 'center' },
-            border: borderStyle
-          }
-        };
-      }
-    }
-    // Forza anche la prima cella della legenda (contenuto)
-    const legendCellRef = XLSX.utils.encode_cell({ r: legendRowIndex, c: 0 });
-    if (ws[legendCellRef]) {
-      if (!ws[legendCellRef].s) ws[legendCellRef].s = {};
-      ws[legendCellRef].s.font = { bold: true, sz: 10, color: { rgb: '374151' } };
-      ws[legendCellRef].s.alignment = { horizontal: 'center', vertical: 'center' };
-      ws[legendCellRef].s.border = borderStyle;
-    }
-
-    // Aggiungi il worksheet al workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Foglio 1');
-
-    // Genera il buffer Excel
-    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xls' });
-
-    // Invia il file
-    const monthString = String(monthParam).padStart(2, '0');
-    res.setHeader('Content-Type', 'application/vnd.ms-excel');
-    res.setHeader('Content-Disposition', `attachment; filename="foglio presenze dip ${monthName} ${yearParam}.xls"`);
-    res.status(200).send(excelBuffer);
+    const excelBuffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="foglio presenze dip ${monthName} ${yearParam}.xlsx"`);
+    res.status(200).send(Buffer.from(excelBuffer));
   } catch (error) {
     console.error('Monthly Excel report error:', error);
     res.status(500).json({ error: 'Errore nella generazione del report Excel' });

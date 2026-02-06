@@ -2,30 +2,8 @@
 
 ## Vulnerabilità Note
 
-### xlsx (SheetJS) - HIGH
-**Versione attuale:** 0.18.5  
-**Vulnerabilità:**
-- Prototype Pollution (GHSA-4r6h-8v6p-xvw6)
-- Regular Expression Denial of Service (ReDoS) (GHSA-5pgg-2g8v-p4x9)
-
-**Stato:** Nessun fix disponibile al momento
-
-**Contesto d'uso:**
-- `xlsx` è utilizzato **solo per generare file Excel** per i report delle presenze
-- **NON viene utilizzato per parsing di file Excel** caricati da utenti
-- I file Excel vengono generati internamente dal sistema con dati già validati dal database
-
-**Valutazione del rischio:**
-- **Rischio limitato** perché:
-  - Non viene processato input non fidato
-  - I dati provengono dal database Supabase (già validati)
-  - Non ci sono file Excel caricati da utenti esterni
-- Le vulnerabilità sono più critiche quando si parsa input non fidato
-
-**Raccomandazioni:**
-- Monitorare gli aggiornamenti di `xlsx` per quando sarà disponibile un fix
-- Valutare alternative come `exceljs` o `xlsx-populate` se necessario
-- Mantenere il sistema aggiornato con le altre dipendenze
+### ~~xlsx (SheetJS)~~ - RISOLTO (06/02/2026)
+**Sostituito con `exceljs`** - La libreria xlsx aveva vulnerabilità high (Prototype Pollution, ReDoS) senza fix disponibile. Migrazione completata a ExcelJS 4.4.0.
 
 ## Dipendenze Aggiornate
 
