@@ -11440,9 +11440,9 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         } else if (col < statsCol1Based) {
           cell.alignment = { horizontal: 'center' };
           if (cellValue === 'D') cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
-          else if (cellValue === 'F') { cell.font = { color: { argb: toArgB('3B82F6') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } };
-          else if (cellValue === 'M') { cell.font = { color: { argb: toArgB('EF4444') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
-          else if (cellValue === 'FE') { cell.font = { color: { argb: toArgB('F59E0B') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } };
+          else if (cellValue === 'F') { cell.font = { color: { argb: toArgB('3B82F6') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } }; }
+          else if (cellValue === 'M') { cell.font = { color: { argb: toArgB('EF4444') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } }; }
+          else if (cellValue === 'FE') { cell.font = { color: { argb: toArgB('F59E0B') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } }; }
           else if (typeof cellValue === 'number') cell.font = { bold: true, color: { argb: toArgB('059669') } };
         } else if (col >= statsCol1Based) {
           cell.font = { bold: true };
