@@ -3931,14 +3931,24 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return sum + recordBalance;
     }, 0);
 
-    console.log(`💰 Total balance for user ${targetUserId}: ${totalBalance.toFixed(2)}h (using real-time for today: ${todayBalance.toFixed(2)}h)`);
+    // Credito manuale di oggi: includi SOLO a fine giornata (stessa logica di calculateOvertimeBalance)
+    let finalTotalBalance = totalBalance;
+    const manualCreditToday = await getManualCreditForDate(targetUserId, today);
+    if (manualCreditToday > 0 && !isTodayCompleted) {
+      finalTotalBalance -= manualCreditToday;
+      console.log(`📅 [total-balance] Credito manuale +${manualCreditToday}h escluso (giornata in corso)`);
+    } else if (manualCreditToday > 0 && isTodayCompleted) {
+      // già incluso in totalBalance
+    }
+
+    console.log(`💰 Total balance for user ${targetUserId}: ${finalTotalBalance.toFixed(2)}h (using real-time for today: ${todayBalance.toFixed(2)}h)`);
 
     res.json({
       userId: targetUserId,
-      totalBalanceHours: Math.round(totalBalance * 100) / 100,
-      totalBalanceMinutes: Math.round(totalBalance * 60),
-      isCredit: totalBalance > 0,
-      isDebt: totalBalance < 0,
+      totalBalanceHours: Math.round(finalTotalBalance * 100) / 100,
+      totalBalanceMinutes: Math.round(finalTotalBalance * 60),
+      isCredit: finalTotalBalance > 0,
+      isDebt: finalTotalBalance < 0,
       realTime: hasRealTimeCalculation ? {
         actualHours: realTimeActualHours,
         effectiveExpectedHours: realTimeEffectiveHours,
