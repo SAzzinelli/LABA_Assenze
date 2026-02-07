@@ -79,7 +79,7 @@ async function getManualCreditForDate(userId, date) {
   try {
     const { data: ledgerRows, error } = await supabase
       .from('hours_ledger')
-      .select('hours')
+      .select('hours, hours_amount')
       .eq('user_id', userId)
       .eq('transaction_date', date)
       .eq('reference_type', 'manual_credit');
@@ -88,7 +88,7 @@ async function getManualCreditForDate(userId, date) {
       console.warn('⚠️ getManualCreditForDate error:', error?.message);
       return 0;
     }
-    const total = (ledgerRows || []).reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0);
+    const total = (ledgerRows || []).reduce((sum, r) => sum + (parseFloat(r.hours) || parseFloat(r.hours_amount) || 0), 0);
     return Math.round(total * 100) / 100;
   } catch (e) {
     console.warn('⚠️ getManualCreditForDate exception:', e?.message);
@@ -1988,6 +1988,23 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
     }
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
+
+    // Se esiste un record di SOLA ricarica manuale (expected=0, actual=0, Ricarica in notes), non sovrascriverlo
+    const { data: existingRec } = await supabase
+      .from('attendance')
+      .select('balance_hours, expected_hours, actual_hours, notes')
+      .eq('user_id', targetUserId)
+      .eq('date', date)
+      .single();
+    if (existingRec) {
+      const exp = parseFloat(existingRec.expected_hours || 0);
+      const act = parseFloat(existingRec.actual_hours || 0);
+      const n = (existingRec.notes || '').toLowerCase();
+      if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
+        console.log(`💰 [save-hourly] Record ricarica manuale pura per ${date}: non sovrascrivo`);
+        return res.json({ success: true, message: 'Presenza invariata (ricarica manuale)', attendance: existingRec });
+      }
+    }
 
     // Preserva ricarica manuale: se ci sono ore manual_credit per questa data, sommale al balance
     const baseBalance = parseFloat(balanceHours || 0);
@@ -4585,22 +4602,35 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h (sempre contrattuali), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
     }
 
-    // Preserva ricarica manuale: se ci sono ore manual_credit per oggi, sommale al balance
-    const manualCredit = await getManualCreditForDate(userId, today);
-    const finalBalanceWithManual = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
-    if (manualCredit > 0) {
-      console.log(`💰 [update-current] Preservata ricarica manuale: +${manualCredit}h → balance ${finalBalanceHours}h → ${finalBalanceWithManual}h`);
-    }
-
-    console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceWithManual.toFixed(2)}h, status=${status}`);
-
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
       .from('attendance')
-      .select('id')
+      .select('id, expected_hours, actual_hours, notes')
       .eq('user_id', userId)
       .eq('date', today)
       .single();
+
+    // Se esiste un record di SOLA ricarica manuale, non sovrascriverlo
+    if (existingAttendance) {
+      const exp = parseFloat(existingAttendance.expected_hours || 0);
+      const act = parseFloat(existingAttendance.actual_hours || 0);
+      const n = (existingAttendance.notes || '').toLowerCase();
+      if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
+        console.log(`💰 [update-current] Record ricarica manuale pura per ${today}: non sovrascrivo`);
+        return res.json({
+          success: true,
+          message: 'Presenza invariata (ricarica manuale)',
+          hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
+        });
+      }
+    }
+
+    // Preserva ricarica manuale: somma ore manual_credit al balance calcolato
+    const manualCredit = await getManualCreditForDate(userId, today);
+    const finalBalanceWithManual = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
+    if (manualCredit > 0) {
+      console.log(`💰 [update-current] Preservata ricarica manuale: +${manualCredit}h → balance ${finalBalanceWithManual}h`);
+    }
 
     if (existingAttendance) {
       // Aggiorna presenza esistente (aggiorna anche expected_hours per sicurezza)
@@ -12615,13 +12645,13 @@ async function calculateOvertimeBalance(userId, year = null) {
     let manualCreditTopUp = 0;
     const { data: ledgerCredits } = await supabase
       .from('hours_ledger')
-      .select('transaction_date, hours')
+      .select('transaction_date, hours, hours_amount')
       .eq('user_id', userId)
       .eq('reference_type', 'manual_credit')
       .eq('transaction_type', 'accrual');
     if (ledgerCredits && ledgerCredits.length > 0) {
       for (const row of ledgerCredits) {
-        const ledgerHours = parseFloat(row.hours || 0);
+        const ledgerHours = parseFloat(row.hours || row.hours_amount || 0);
         const attRecord = attendance?.find((r) => r.date === row.transaction_date);
         const alreadyCounted = attRecord && ((attRecord.notes || '').toLowerCase().includes('ricarica') || (attRecord.notes || '').toLowerCase().includes('recupero ore'))
           ? parseFloat(attRecord.balance_hours || 0)
@@ -15157,7 +15187,25 @@ async function saveHourlyAttendance() {
           }
         }
 
-        // Prima di salvare: preserva ricarica manuale da hours_ledger (fonte attendibile)
+        // Se esiste un record di SOLA ricarica manuale, non sovrascriverlo
+        const { data: existingToday } = await supabase
+          .from('attendance')
+          .select('expected_hours, actual_hours, notes')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .single();
+        if (existingToday) {
+          const exp = parseFloat(existingToday.expected_hours || 0);
+          const act = parseFloat(existingToday.actual_hours || 0);
+          const n = (existingToday.notes || '').toLowerCase();
+          if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
+            console.log(`💰 [cron] Record ricarica manuale pura per ${user.first_name} ${today}: salto`);
+            successCount++;
+            continue;
+          }
+        }
+
+        // Preserva ricarica manuale da hours_ledger (fonte attendibile)
         const manualCredit = await getManualCreditForDate(user.id, today);
         const balanceToSave = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
         const notesToSave = approvedPermissions && approvedPermissions.length > 0
