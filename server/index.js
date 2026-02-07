@@ -70,6 +70,32 @@ function formatNameForCalendarAndLogs(firstName, lastName, allUsers = []) {
   return `${firstName} ${index + 1}`;
 }
 
+/**
+ * Recupera le ore a credito manuali (ricarica banca ore) da hours_ledger per user+date.
+ * Usato per preservare le ore aggiunte dall'admin quando save-hourly o update-current sovrascrivono.
+ * @returns {Promise<number>} Somma ore manual_credit per quella data (0 se nessuna)
+ */
+async function getManualCreditForDate(userId, date) {
+  try {
+    const { data: ledgerRows, error } = await supabase
+      .from('hours_ledger')
+      .select('hours')
+      .eq('user_id', userId)
+      .eq('transaction_date', date)
+      .eq('reference_type', 'manual_credit');
+
+    if (error) {
+      console.warn('⚠️ getManualCreditForDate error:', error?.message);
+      return 0;
+    }
+    const total = (ledgerRows || []).reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0);
+    return Math.round(total * 100) / 100;
+  } catch (e) {
+    console.warn('⚠️ getManualCreditForDate exception:', e?.message);
+    return 0;
+  }
+}
+
 // Rate limiting rimosso per facilitare i test
 
 const app = express();
@@ -1963,6 +1989,14 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
 
+    // Preserva ricarica manuale: se ci sono ore manual_credit per questa data, sommale al balance
+    const baseBalance = parseFloat(balanceHours || 0);
+    const manualCredit = await getManualCreditForDate(targetUserId, date);
+    const finalBalance = Math.round((baseBalance + manualCredit) * 100) / 100;
+    if (manualCredit > 0) {
+      console.log(`💰 [save-hourly] Preservata ricarica manuale per ${date}: +${manualCredit}h → balance ${baseBalance}h → ${finalBalance}h`);
+    }
+
     // Aggiorna o inserisci il record di presenza
     const { data, error } = await supabase
       .from('attendance')
@@ -1971,7 +2005,7 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
         date: date,
         actual_hours: parseFloat(actualHours),
         expected_hours: parseFloat(expectedHours),
-        balance_hours: parseFloat(balanceHours || 0),
+        balance_hours: finalBalance,
         notes: notes || '',
         updated_at: new Date().toISOString()
       }, {
@@ -2463,6 +2497,13 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
     } else {
       // Nessun permesso: calcola normalmente
       balance_hours = actual_hours - attendance.expected_hours;
+    }
+
+    // Preserva ricarica manuale da hours_ledger
+    const manualCredit = await getManualCreditForDate(attendance.user_id, attendance.date);
+    balance_hours = Math.round((balance_hours + manualCredit) * 100) / 100;
+    if (manualCredit > 0) {
+      console.log(`💰 [attendance-edit] Preservata ricarica manuale: +${manualCredit}h → balance ${balance_hours}h`);
     }
 
     const { data: updatedAttendance, error } = await supabase
@@ -4544,7 +4585,14 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       console.log(`🔐 Permesso approvato rilevato: expected=${finalExpectedHours.toFixed(2)}h (sempre contrattuali), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h`);
     }
 
-    console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceHours.toFixed(2)}h, status=${status}`);
+    // Preserva ricarica manuale: se ci sono ore manual_credit per oggi, sommale al balance
+    const manualCredit = await getManualCreditForDate(userId, today);
+    const finalBalanceWithManual = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
+    if (manualCredit > 0) {
+      console.log(`💰 [update-current] Preservata ricarica manuale: +${manualCredit}h → balance ${finalBalanceHours}h → ${finalBalanceWithManual}h`);
+    }
+
+    console.log(`📊 Calculated (centralized): expected=${finalExpectedHours.toFixed(2)}h (contract=${contractHours.toFixed(2)}h), actual=${actualHours.toFixed(2)}h, balance=${finalBalanceWithManual.toFixed(2)}h, status=${status}`);
 
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
@@ -4561,7 +4609,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .update({
           actual_hours: actualHours,
           expected_hours: finalExpectedHours,
-          balance_hours: finalBalanceHours,
+          balance_hours: finalBalanceWithManual,
           notes: permissionsToday && permissionsToday.length > 0
             ? `Aggiornato alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
             : `Aggiornato alle ${currentTime} - ${status}`
@@ -4582,7 +4630,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
           date: today,
           expected_hours: finalExpectedHours,
           actual_hours: actualHours,
-          balance_hours: finalBalanceHours,
+          balance_hours: finalBalanceWithManual,
           notes: permissionsToday && permissionsToday.length > 0
             ? `Presenza aggiornata alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
             : `Presenza aggiornata alle ${currentTime} - ${status}`
@@ -15071,33 +15119,14 @@ async function saveHourlyAttendance() {
           }
         }
 
-        // Prima di salvare: se esiste già una ricarica manuale per oggi, preservala (non sovrascriverla)
-        let balanceToSave = Math.round(finalBalanceHours * 100) / 100;
-        let notesToSave = approvedPermissions && approvedPermissions.length > 0
+        // Prima di salvare: preserva ricarica manuale da hours_ledger (fonte attendibile)
+        const manualCredit = await getManualCreditForDate(user.id, today);
+        const balanceToSave = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
+        const notesToSave = approvedPermissions && approvedPermissions.length > 0
           ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
           : 'Salvataggio automatico orario';
-
-        const { data: existingToday } = await supabase
-          .from('attendance')
-          .select('balance_hours, notes')
-          .eq('user_id', user.id)
-          .eq('date', today)
-          .single();
-        if (existingToday && existingToday.notes) {
-          const n = existingToday.notes;
-          const hasRicarica = n.includes('Ricarica banca ore') || n.includes('Aggiunta manuale ore') || n.includes('ricarica');
-          if (hasRicarica) {
-            const m1 = n.match(/Ricarica banca ore: \+([\d.]+)h/);
-            const m2 = n.match(/Aggiunta manuale ore: \+([\d.]+)h/);
-            const m3 = n.match(/\[💰 Ricarica banca ore: \+([\d.]+)h/);
-            const creditHours = (m1 && parseFloat(m1[1])) || (m2 && parseFloat(m2[1])) || (m3 && parseFloat(m3[1])) || 0;
-            if (creditHours > 0) {
-              balanceToSave = Math.round((finalBalanceHours + creditHours) * 100) / 100;
-              const ricaricaLine = n.includes('Ricarica banca ore') ? n.match(/[^\n]*Ricarica banca ore[^\n]*/)?.[0] : n.match(/[^\n]*Aggiunta manuale ore[^\n]*/)?.[0];
-              notesToSave = notesToSave + (ricaricaLine ? ` [${ricaricaLine.trim()}]` : '');
-              console.log(`💰 Preservata ricarica manuale per ${user.first_name}: +${creditHours}h → balance salvato ${balanceToSave}h`);
-            }
-          }
+        if (manualCredit > 0) {
+          console.log(`💰 Preservata ricarica manuale per ${user.first_name}: +${manualCredit}h → balance salvato ${balanceToSave}h`);
         }
 
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
