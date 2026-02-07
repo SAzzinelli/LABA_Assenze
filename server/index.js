@@ -11830,8 +11830,8 @@ async function processDailyOvertime() {
           user_id: record.user_id,
           category: 'overtime',
           year: recordYear,
-          total_accrued: totalAccrued,
-          current_balance: newOvertimeBalance,
+          total_accrued: capLedgerValue(totalAccrued),
+          current_balance: capLedgerValue(newOvertimeBalance),
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,category,year'
@@ -11986,8 +11986,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           user_id: userId,
           category: 'overtime',
           year: creditYear,
-          total_accrued: totalAccrued,
-          current_balance: newOvertimeBalance,
+          total_accrued: capLedgerValue(totalAccrued),
+          current_balance: capLedgerValue(newOvertimeBalance),
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,category,year'
@@ -12265,8 +12265,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         user_id: userId,
         category: 'overtime',
         year: creditYear,
-        total_accrued: totalAccrued,
-        current_balance: newOvertimeBalance,
+        total_accrued: capLedgerValue(totalAccrued),
+        current_balance: capLedgerValue(newOvertimeBalance),
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,category,year'
@@ -13556,8 +13556,8 @@ async function processSingleRecovery(recovery) {
       user_id: recovery.user_id,
       category: 'overtime',
       year: recoveryYear,
-      total_accrued: totalAccrued,
-      current_balance: newOvertimeBalance,
+      total_accrued: capLedgerValue(totalAccrued),
+      current_balance: capLedgerValue(newOvertimeBalance),
       updated_at: new Date().toISOString()
     }, {
       onConflict: 'user_id,category,year'
@@ -14494,7 +14494,7 @@ app.post('/api/recovery-requests/fix-overcount', authenticateToken, async (req, 
             user_id: recovery.user_id,
             category: 'overtime',
             year: recoveryYear,
-            current_balance: newOvertimeBalance,
+            current_balance: capLedgerValue(newOvertimeBalance),
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,category,year' });
 
@@ -14671,8 +14671,8 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         user_id: userId,
         category: 'overtime',
         year: recordYear,
-        total_accrued: totalAccrued,
-        current_balance: newOvertimeBalance,
+        total_accrued: capLedgerValue(totalAccrued),
+        current_balance: capLedgerValue(newOvertimeBalance),
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id,category,year'
