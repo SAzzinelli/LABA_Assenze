@@ -1989,21 +1989,12 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
 
-    // Se esiste un record di SOLA ricarica manuale (expected=0, actual=0, Ricarica in notes), non sovrascriverlo
-    const { data: existingRec } = await supabase
-      .from('attendance')
-      .select('balance_hours, expected_hours, actual_hours, notes')
-      .eq('user_id', targetUserId)
-      .eq('date', date)
-      .single();
-    if (existingRec) {
-      const exp = parseFloat(existingRec.expected_hours || 0);
-      const act = parseFloat(existingRec.actual_hours || 0);
-      const n = (existingRec.notes || '').toLowerCase();
-      if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
-        console.log(`💰 [save-hourly] Record ricarica manuale pura per ${date}: non sovrascrivo`);
-        return res.json({ success: true, message: 'Presenza invariata (ricarica manuale)', attendance: existingRec });
-      }
+    // NON sovrascrivere mai se c'è manual_credit in hours_ledger (fonte attendibile)
+    const manualCreditCheck = await getManualCreditForDate(targetUserId, date);
+    if (manualCreditCheck > 0) {
+      console.log(`💰 [save-hourly] manual_credit +${manualCreditCheck}h per ${date}: non sovrascrivo`);
+      const { data: existingRec } = await supabase.from('attendance').select('*').eq('user_id', targetUserId).eq('date', date).single();
+      return res.json({ success: true, message: 'Presenza invariata (ore manuali)', attendance: existingRec || {} });
     }
 
     // Preserva ricarica manuale: se ci sono ore manual_credit per questa data, sommale al balance
@@ -4610,19 +4601,15 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       .eq('date', today)
       .single();
 
-    // Se esiste un record di SOLA ricarica manuale, non sovrascriverlo
-    if (existingAttendance) {
-      const exp = parseFloat(existingAttendance.expected_hours || 0);
-      const act = parseFloat(existingAttendance.actual_hours || 0);
-      const n = (existingAttendance.notes || '').toLowerCase();
-      if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
-        console.log(`💰 [update-current] Record ricarica manuale pura per ${today}: non sovrascrivo`);
-        return res.json({
-          success: true,
-          message: 'Presenza invariata (ricarica manuale)',
-          hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
-        });
-      }
+    // NON sovrascrivere mai se c'è manual_credit in hours_ledger per oggi
+    const manualCreditCheck = await getManualCreditForDate(userId, today);
+    if (manualCreditCheck > 0) {
+      console.log(`💰 [update-current] manual_credit +${manualCreditCheck}h per ${today}: non sovrascrivo`);
+      return res.json({
+        success: true,
+        message: 'Presenza invariata (ore manuali)',
+        hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
+      });
     }
 
     // Preserva ricarica manuale: somma ore manual_credit al balance calcolato
@@ -15189,25 +15176,15 @@ async function saveHourlyAttendance() {
           }
         }
 
-        // Se esiste un record di SOLA ricarica manuale, non sovrascriverlo
-        const { data: existingToday } = await supabase
-          .from('attendance')
-          .select('expected_hours, actual_hours, notes')
-          .eq('user_id', user.id)
-          .eq('date', today)
-          .single();
-        if (existingToday) {
-          const exp = parseFloat(existingToday.expected_hours || 0);
-          const act = parseFloat(existingToday.actual_hours || 0);
-          const n = (existingToday.notes || '').toLowerCase();
-          if (exp === 0 && act === 0 && (n.includes('ricarica') || n.includes('credito'))) {
-            console.log(`💰 [cron] Record ricarica manuale pura per ${user.first_name} ${today}: salto`);
-            successCount++;
-            continue;
-          }
+        // NON sovrascrivere mai se c'è manual_credit in hours_ledger per oggi (fonte attendibile)
+        const manualCreditForSkip = await getManualCreditForDate(user.id, today);
+        if (manualCreditForSkip > 0) {
+          console.log(`💰 [cron] ${user.first_name} ha manual_credit +${manualCreditForSkip}h per ${today}: salto (non tocco)`);
+          successCount++;
+          continue;
         }
 
-        // Preserva ricarica manuale da hours_ledger (fonte attendibile)
+        // Preserva ricarica manuale da hours_ledger (fonte attendibile) - ora non serve più per lo skip
         const manualCredit = await getManualCreditForDate(user.id, today);
         const balanceToSave = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
         const notesToSave = approvedPermissions && approvedPermissions.length > 0
