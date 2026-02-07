@@ -12949,6 +12949,70 @@ app.get('/api/admin/check-user-balance', authenticateToken, requireAdmin, async 
   }
 });
 
+// Rimuovi credito 3h57 da Alessia (da browser, solo admin) – prima di aggiungere 8h
+app.post('/api/admin/remove-alessia-credit', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .ilike('first_name', '%alessia%');
+
+    if (userError || !users?.length) {
+      return res.status(404).json({ success: false, error: 'Nessun utente Alessia trovato' });
+    }
+
+    const userId = users[0].id;
+
+    const { data: att, error: attError } = await supabase
+      .from('attendance')
+      .select('id, balance_hours, actual_hours, expected_hours')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .single();
+
+    if (att) {
+      const actual = parseFloat(att.actual_hours || 0);
+      const expected = parseFloat(att.expected_hours || 0);
+      const newBalance = Math.round((actual - expected) * 100) / 100;
+
+      const { error: updateError } = await supabase
+        .from('attendance')
+        .update({
+          balance_hours: newBalance,
+          notes: 'Rimosso credito manuale precedente - aggiungere 8h da interfaccia'
+        })
+        .eq('id', att.id);
+
+      if (updateError) {
+        return res.status(500).json({ success: false, error: updateError.message });
+      }
+    }
+
+    const { error: delError } = await supabase
+      .from('hours_ledger')
+      .delete()
+      .eq('user_id', userId)
+      .eq('transaction_date', today)
+      .eq('reference_type', 'manual_credit');
+
+    if (delError) {
+      return res.status(500).json({ success: false, error: delError.message });
+    }
+
+    res.json({
+      success: true,
+      message: 'Credito rimosso. Ora puoi aggiungere 8h da Banca Ore.',
+      user: `${users[0].first_name} ${users[0].last_name}`,
+      date: today
+    });
+  } catch (error) {
+    console.error('Remove Alessia credit error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Lista richieste recupero ore
 app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
