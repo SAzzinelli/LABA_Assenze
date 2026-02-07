@@ -84,7 +84,7 @@ async function main() {
     // 3. Hours_ledger: manual_credit per questo user
     const { data: ledgerManual, error: ledgerError } = await supabase
       .from('hours_ledger')
-      .select('id, transaction_date, hours, reason, reference_type, created_at')
+      .select('id, transaction_date, hours, hours_amount, description, notes, reference_type, created_at')
       .eq('user_id', userId)
       .eq('reference_type', 'manual_credit')
       .order('transaction_date', { ascending: false })
@@ -96,7 +96,8 @@ async function main() {
       console.log(`   📒 hours_ledger (manual_credit): ${ledgerManual?.length ?? 0} movimenti`);
       if (ledgerManual && ledgerManual.length > 0) {
         ledgerManual.forEach((l) => {
-          console.log(`      - ${l.transaction_date}: +${l.hours}h | ${(l.reason || '').slice(0, 50)}`);
+          const hrs = l.hours ?? l.hours_amount ?? 0;
+          console.log(`      - ${l.transaction_date}: +${hrs}h | ${(l.description || l.reason || l.notes || '').slice(0, 50)}`);
         });
       } else {
         console.log('   ⚠️ Nessun movimento manual_credit trovato.');

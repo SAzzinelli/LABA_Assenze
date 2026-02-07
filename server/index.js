@@ -11948,8 +11948,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           transaction_date: date,
           transaction_type: 'accrual',
           category: 'overtime',
-          hours: creditHours,
-          reason: creditReason,
+          hours_amount: creditHours,
+          description: creditReason,
           notes: creditReason,
           reference_type: 'manual_credit',
           period_year: creditYear,
@@ -12219,6 +12219,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
     // Inserisci movimento nel ledger
     const creditMonth = new Date(date).getMonth() + 1;
     
+    const ledgerDesc = `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`;
     const { error: ledgerError } = await supabase
       .from('hours_ledger')
       .insert({
@@ -12226,8 +12227,9 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         transaction_date: date,
         transaction_type: 'accrual',
         category: 'overtime',
-        hours: creditHours,
-        notes: `Ricarica banca ore manuale: +${creditHours}h - ${reason || 'Nessun motivo'}`,
+        hours_amount: creditHours,
+        description: ledgerDesc,
+        notes: ledgerDesc,
         reference_type: 'manual_credit',
         period_year: creditYear,
         period_month: creditMonth,
@@ -12876,7 +12878,7 @@ app.get('/api/admin/check-user-balance', authenticateToken, requireAdmin, async 
 
     const { data: ledger, error: ledErr } = await supabase
       .from('hours_ledger')
-      .select('id, transaction_date, hours, reason, reference_type')
+      .select('id, transaction_date, hours, hours_amount, description, notes, reference_type')
       .eq('user_id', targetUserId)
       .eq('reference_type', 'manual_credit')
       .order('transaction_date', { ascending: false })
@@ -14759,7 +14761,7 @@ app.get('/api/debug/check-alessia-balance', authenticateToken, requireAdmin, asy
     for (const u of users) {
       const userId = u.id;
       const { data: attendanceAll } = await supabase.from('attendance').select('id, date, balance_hours, actual_hours, expected_hours, notes').eq('user_id', userId).order('date', { ascending: false }).limit(50);
-      const { data: ledgerManual } = await supabase.from('hours_ledger').select('id, transaction_date, hours, reason, reference_type').eq('user_id', userId).eq('reference_type', 'manual_credit').order('transaction_date', { ascending: false }).limit(20);
+      const { data: ledgerManual } = await supabase.from('hours_ledger').select('id, transaction_date, hours, hours_amount, description, notes, reference_type').eq('user_id', userId).eq('reference_type', 'manual_credit').order('transaction_date', { ascending: false }).limit(20);
       const { data: balance } = await supabase.from('current_balances').select('year, current_balance, total_accrued, updated_at').eq('user_id', userId).eq('category', 'overtime').eq('year', currentYear).single();
 
       const withCredit = (attendanceAll || []).filter(r => (r.notes || '').toLowerCase().includes('ricarica') || (r.notes || '').toLowerCase().includes('credito') || parseFloat(r.balance_hours || 0) > 0);
