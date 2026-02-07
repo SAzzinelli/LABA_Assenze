@@ -96,6 +96,12 @@ async function getManualCreditForDate(userId, date) {
   }
 }
 
+/** Limita running_balance al range DECIMAL(6,2): -9999.99 .. 9999.99 (evita numeric overflow) */
+function capLedgerValue(v) {
+  const n = parseFloat(v) || 0;
+  return Math.min(9999.99, Math.max(-9999.99, n));
+}
+
 // Rate limiting rimosso per facilitare i test
 
 const app = express();
@@ -1995,6 +2001,17 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
       console.log(`💰 [save-hourly] manual_credit +${manualCreditCheck}h per ${date}: non sovrascrivo`);
       const { data: existingRec } = await supabase.from('attendance').select('*').eq('user_id', targetUserId).eq('date', date).single();
       return res.json({ success: true, message: 'Presenza invariata (ore manuali)', attendance: existingRec || {} });
+    }
+
+    // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
+    const { data: existingForSkip } = await supabase.from('attendance').select('*').eq('user_id', targetUserId).eq('date', date).single();
+    if (existingForSkip) {
+      const n = (existingForSkip.notes || '').toLowerCase();
+      const bal = parseFloat(existingForSkip.balance_hours || 0);
+      if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
+        console.log(`💰 [save-hourly] record con Ricarica/credito (${bal}h) per ${date}: non sovrascrivo`);
+        return res.json({ success: true, message: 'Presenza invariata (ore manuali)', attendance: existingForSkip });
+      }
     }
 
     // Preserva ricarica manuale: se ci sono ore manual_credit per questa data, sommale al balance
@@ -4596,7 +4613,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
     // Aggiorna o crea la presenza per oggi
     const { data: existingAttendance } = await supabase
       .from('attendance')
-      .select('id, expected_hours, actual_hours, notes')
+      .select('id, expected_hours, actual_hours, notes, balance_hours')
       .eq('user_id', userId)
       .eq('date', today)
       .single();
@@ -4610,6 +4627,20 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         message: 'Presenza invariata (ore manuali)',
         hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
       });
+    }
+
+    // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
+    if (existingAttendance) {
+      const n = (existingAttendance.notes || '').toLowerCase();
+      const bal = parseFloat(existingAttendance.balance_hours || 0);
+      if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
+        console.log(`💰 [update-current] record con Ricarica/credito (${bal}h) per ${today}: non sovrascrivo`);
+        return res.json({
+          success: true,
+          message: 'Presenza invariata (ore manuali)',
+          hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
+        });
+      }
     }
 
     // Preserva ricarica manuale: somma ore manual_credit al balance calcolato
@@ -11675,7 +11706,7 @@ async function processCompletedRecoveries() {
         
         try {
           const result = await processSingleRecovery(recovery);
-          if (result.alreadyProcessed) {
+          if (result?.alreadyProcessed) {
             console.log(`✅ Recovery ${recovery.id} aggiornato (già processato)\n`);
           } else {
             console.log(`✅ Recovery ${recovery.id} processed: +${recovery.hours}h added to balance and overtime bank`);
@@ -11784,7 +11815,7 @@ async function processDailyOvertime() {
           reference_type: 'attendance_overtime',
           period_year: recordYear,
           period_month: recordMonth,
-          running_balance: newOvertimeBalance
+          running_balance: capLedgerValue(newOvertimeBalance)
         });
 
       if (ledgerError) {
@@ -11941,7 +11972,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           reference_type: 'manual_credit',
           period_year: creditYear,
           period_month: creditMonth,
-          running_balance: newOvertimeBalance
+          running_balance: capLedgerValue(newOvertimeBalance)
         });
 
       if (ledgerError) {
@@ -12220,7 +12251,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         reference_type: 'manual_credit',
         period_year: creditYear,
         period_month: creditMonth,
-        running_balance: newOvertimeBalance
+        running_balance: capLedgerValue(newOvertimeBalance)
       });
 
     if (ledgerError) {
@@ -13431,7 +13462,11 @@ async function processSingleRecovery(recovery) {
         }
       }
       // Non aggiungere le ore di nuovo, sono già state aggiunte
-      return;
+      await supabase
+        .from('recovery_requests')
+        .update({ balance_added: true, updated_at: new Date().toISOString() })
+        .eq('id', recovery.id);
+      return { success: true, message: 'Recovery già processato (trovato in attendance)', alreadyProcessed: true };
     }
 
     // Aggiorna il record esistente aggiungendo le ore di recupero (usa effectiveHours)
@@ -13507,7 +13542,7 @@ async function processSingleRecovery(recovery) {
           reference_type: 'recovery_request',
           period_year: recoveryYear,
           period_month: recoveryMonth,
-          running_balance: newOvertimeBalance
+          running_balance: capLedgerValue(newOvertimeBalance)
         });
 
   if (ledgerError) {
@@ -13659,6 +13694,9 @@ app.post('/api/recovery-requests/:id/process', authenticateToken, async (req, re
     // Processa il recupero
     const result = await processSingleRecovery(recovery);
 
+    if (!result) {
+      return res.status(500).json({ error: 'Errore: processSingleRecovery non ha restituito un risultato' });
+    }
     if (result.alreadyProcessed) {
       return res.json({
         success: true,
@@ -14446,7 +14484,7 @@ app.post('/api/recovery-requests/fix-overcount', authenticateToken, async (req, 
             reference_type: 'recovery_request_fix',
             period_year: recoveryYear,
             period_month: new Date(recovery.recovery_date).getMonth() + 1,
-            running_balance: newOvertimeBalance
+            running_balance: capLedgerValue(newOvertimeBalance)
           });
         if (ledgerErr) throw ledgerErr;
 
@@ -14618,7 +14656,7 @@ app.post('/api/attendance/force-overtime', authenticateToken, async (req, res) =
         reference_type: 'attendance_overtime',
         period_year: recordYear,
         period_month: overtimeMonth,
-        running_balance: newOvertimeBalance
+        running_balance: capLedgerValue(newOvertimeBalance)
       });
 
     if (ledgerError) {
@@ -15182,6 +15220,24 @@ async function saveHourlyAttendance() {
           console.log(`💰 [cron] ${user.first_name} ha manual_credit +${manualCreditForSkip}h per ${today}: salto (non tocco)`);
           successCount++;
           continue;
+        }
+
+        // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
+        // (proteggiamo anche quando l'insert in hours_ledger fallisce)
+        const { data: existingForSkip } = await supabase
+          .from('attendance')
+          .select('notes, balance_hours')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .single();
+        if (existingForSkip) {
+          const n = (existingForSkip.notes || '').toLowerCase();
+          const bal = parseFloat(existingForSkip.balance_hours || 0);
+          if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
+            console.log(`💰 [cron] ${user.first_name} record con Ricarica/credito (${bal}h) per ${today}: salto`);
+            successCount++;
+            continue;
+          }
         }
 
         // Preserva ricarica manuale da hours_ledger (fonte attendibile) - ora non serve più per lo skip
