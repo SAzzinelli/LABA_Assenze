@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../utils/store';
+import { formatHours } from '../utils/hoursCalculation';
 import { X, Calendar, AlertCircle, User, FileText, Clock } from 'lucide-react';
 import CustomAlert from './CustomAlert';
 
@@ -401,7 +402,7 @@ const AdminCreatePermissionModal = ({ isOpen, onClose, onSuccess }) => {
                   
                   {calculatedHours !== null && (
                     <p className="text-xs text-slate-400 mt-2">
-                      Ore calcolate: {calculatedHours.toFixed(2)}h
+                      Ore calcolate: {formatHours(calculatedHours)}
                     </p>
                   )}
 

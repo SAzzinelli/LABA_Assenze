@@ -383,6 +383,28 @@ export function formatHours(hours) {
   return `${sign}${wholeHours}h`;
 }
 
+/**
+ * Formatta ore arrotondate ai quarti d'ora (15 min) per una visualizzazione più pulita.
+ * Evita valori tipo "3h 57min" -> mostra "4h" o "3h 45min"
+ */
+export function formatHoursRounded(hours) {
+  if (hours === null || hours === undefined || isNaN(hours)) {
+    return '0h';
+  }
+  const sign = hours < 0 ? '-' : '';
+  const abs = Math.abs(hours);
+  // Arrotonda ai quarti d'ora: 0, 0.25, 0.5, 0.75
+  const rounded = Math.round(abs * 4) / 4;
+  const wholeHours = Math.floor(rounded);
+  const quarterHours = Math.round((rounded - wholeHours) * 4);
+  const minutes = quarterHours * 15;
+
+  if (minutes > 0) {
+    return `${sign}${wholeHours}h ${minutes}min`;
+  }
+  return `${sign}${wholeHours}h`;
+}
+
 // =====================================================
 // 9. ESPORTI PRINCIPALI
 // =====================================================
@@ -403,6 +425,7 @@ export default {
   hoursToDays,
   daysToHours,
   formatHours,
+  formatHoursRounded,
   calculateExpectedHoursForSchedule,
   calculateRealTimeHours
 };

@@ -1204,16 +1204,16 @@ const Employees = () => {
                                       {hasPermissionReduction && permissionReductionInfo ? (
                                         <>
                                           <p className="text-xs text-amber-300 font-semibold mb-1">
-                                            💰 Aggiunta manuale: +{manualCreditInfo?.toFixed(2) || '0'}h
+                                            💰 Aggiunta manuale: +{formatHours(manualCreditInfo ?? 0)}
                                           </p>
                                           <p className="text-xs text-slate-400">
-                                            🔐 Permesso ridotto: {permissionReductionInfo.old.toFixed(2)}h → {permissionReductionInfo.new.toFixed(2)}h
-                                            <span className="text-green-300"> ({permissionReductionInfo.recovered.toFixed(2)}h recuperate)</span>
+                                            🔐 Permesso ridotto: {formatHours(permissionReductionInfo.old)} → {formatHours(permissionReductionInfo.new)}
+                                            <span className="text-green-300"> ({formatHours(permissionReductionInfo.recovered)} recuperate)</span>
                                           </p>
                                         </>
                                       ) : (
                                         <p className="text-xs text-amber-300">
-                                          💰 Ricarica banca ore: +{manualCreditInfo?.toFixed(2) || '0'}h
+                                          💰 Ricarica banca ore: +{formatHours(manualCreditInfo ?? 0)}
                                         </p>
                                       )}
                                     </div>

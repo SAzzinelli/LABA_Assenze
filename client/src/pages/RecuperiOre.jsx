@@ -1280,7 +1280,7 @@ const RecuperiOre = () => {
           </div>
           <div className="text-2xl font-bold text-amber-400 mb-1">{toApproveRequests.length}</div>
           <div className="text-xs text-slate-400">
-            {toApproveRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h totali
+            {formatHours(toApproveRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0))} totali
           </div>
         </div>
 
@@ -1293,7 +1293,7 @@ const RecuperiOre = () => {
           </div>
           <div className="text-2xl font-bold text-green-400 mb-1">{approvedFutureRequests.length}</div>
           <div className="text-xs text-slate-400">
-            {approvedFutureRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h programmate
+            {formatHours(approvedFutureRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0))} programmate
           </div>
         </div>
 
@@ -1306,7 +1306,7 @@ const RecuperiOre = () => {
           </div>
           <div className="text-2xl font-bold text-blue-400 mb-1">{completedRecoveryRequests.length}</div>
           <div className="text-xs text-slate-400">
-            {completedRecoveryRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0).toFixed(1)}h processate
+            {formatHours(completedRecoveryRequests.reduce((sum, r) => sum + (parseFloat(r.hours) || 0), 0))} processate
           </div>
         </div>
       </div>

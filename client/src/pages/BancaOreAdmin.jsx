@@ -273,7 +273,7 @@ const BancaOreAdmin = () => {
           await fetchDebtSummary();
         }, 300);
 
-        alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}${data.newBalance !== undefined ? `\nNuovo saldo: ${data.newBalance.toFixed(2)}h` : ''}`);
+        alert(`✅ ${totalText} aggiunte con successo a ${selectedEmployeeForAddHours.first_name} ${selectedEmployeeForAddHours.last_name}${data.newBalance !== undefined ? `\nNuovo saldo: ${formatHours(data.newBalance)}` : ''}`);
 
         setShowAddHoursModal(false);
         setSelectedEmployeeForAddHours(null);

@@ -11966,6 +11966,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           transaction_date: date,
           transaction_type: 'accrual',
           category: 'overtime',
+          hours: creditHours,
           hours_amount: creditHours,
           description: creditReason,
           notes: creditReason,
@@ -12245,6 +12246,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         transaction_date: date,
         transaction_type: 'accrual',
         category: 'overtime',
+        hours: creditHours,
         hours_amount: creditHours,
         description: ledgerDesc,
         notes: ledgerDesc,
@@ -12686,7 +12688,28 @@ async function calculateOvertimeBalance(userId, year = null) {
     // 1. Il saldo dalle presenze (già include i permessi approvati registrati)
     // 2. Le ricariche manuali da ledger se non più in attendance (manualCreditTopUp)
     // 3. Sottrazione ore permessi oggi (todayPermissionHours)
-    const totalBalanceWithRecovery = totalBalance + manualCreditTopUp - todayPermissionHours;
+    let totalBalanceWithRecovery = totalBalance + manualCreditTopUp - todayPermissionHours;
+
+    // Credito manuale di oggi: includi SOLO a fine giornata. Durante la giornata non mostrarlo,
+    // così il saldo "cresce" man mano che le ore vengono fatte (es. -4h → -2h → 0) e a fine
+    // giornata appariranno le +8h richieste.
+    const manualCreditToday = await getManualCreditForDate(userId, today);
+    if (manualCreditToday > 0) {
+      const { time: currentTime } = await getCurrentDateTime();
+      const dayOfWeek = new Date(today + 'T12:00:00').getDay();
+      const { data: todaySchedule } = await supabase
+        .from('work_schedules')
+        .select('end_time')
+        .eq('user_id', userId)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_working_day', true)
+        .single();
+      if (todaySchedule && currentTime < todaySchedule.end_time) {
+        totalBalanceWithRecovery -= manualCreditToday;
+        console.log(`📅 [BALANCE] Credito manuale +${manualCreditToday}h per oggi escluso (giornata in corso fino alle ${todaySchedule.end_time})`);
+      }
+    }
+
     const roundedBalance = Math.round(totalBalanceWithRecovery * 100) / 100;
 
     // Log dettagliato per debug

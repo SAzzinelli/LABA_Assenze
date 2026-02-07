@@ -1802,19 +1802,19 @@ const Attendance = () => {
                       <div className="text-center">
                         <p className="text-sm text-slate-400">Ore Attese</p>
                         <p className="text-lg font-bold text-blue-400">
-                          {selectedAttendanceDetails.summary.expectedHours}h
+                          {formatHours(selectedAttendanceDetails.summary.expectedHours)}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-slate-400">Ore Effettive</p>
                         <p className="text-lg font-bold text-green-400">
-                          {selectedAttendanceDetails.summary.actualHours}h
+                          {formatHours(selectedAttendanceDetails.summary.actualHours)}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-slate-400">Saldo Ore</p>
                         <p className={`text-lg font-bold ${selectedAttendanceDetails.summary.balanceHours >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {selectedAttendanceDetails.summary.balanceHours >= 0 ? '+' : ''}{selectedAttendanceDetails.summary.balanceHours}h
+                          {formatHoursWithSign(selectedAttendanceDetails.summary.balanceHours)}
                         </p>
                       </div>
                     </div>
