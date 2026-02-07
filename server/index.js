@@ -14712,6 +14712,44 @@ app.get('/api/recovery-requests/:id/status', authenticateToken, async (req, res)
   }
 });
 
+// Debug: verifica ore Alessia (admin only) – usabile da console browser
+app.get('/api/debug/check-alessia-balance', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { data: users, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, is_active')
+      .ilike('first_name', '%alessia%');
+
+    if (userError) return res.status(500).json({ error: userError.message });
+    if (!users?.length) return res.json({ users: [], message: 'Nessun utente trovato con nome Alessia' });
+
+    const results = [];
+    const currentYear = new Date().getFullYear();
+
+    for (const u of users) {
+      const userId = u.id;
+      const { data: attendanceAll } = await supabase.from('attendance').select('id, date, balance_hours, actual_hours, expected_hours, notes').eq('user_id', userId).order('date', { ascending: false }).limit(50);
+      const { data: ledgerManual } = await supabase.from('hours_ledger').select('id, transaction_date, hours, reason, reference_type').eq('user_id', userId).eq('reference_type', 'manual_credit').order('transaction_date', { ascending: false }).limit(20);
+      const { data: balance } = await supabase.from('current_balances').select('year, current_balance, total_accrued, updated_at').eq('user_id', userId).eq('category', 'overtime').eq('year', currentYear).single();
+
+      const withCredit = (attendanceAll || []).filter(r => (r.notes || '').toLowerCase().includes('ricarica') || (r.notes || '').toLowerCase().includes('credito') || parseFloat(r.balance_hours || 0) > 0);
+      const totalBalanceFromAttendance = (attendanceAll || []).reduce((s, r) => s + parseFloat(r.balance_hours || 0), 0);
+
+      results.push({
+        user: { id: u.id, name: `${u.first_name} ${u.last_name}`, email: u.email, is_active: u.is_active },
+        attendance: { count: attendanceAll?.length ?? 0, totalBalance: totalBalanceFromAttendance.toFixed(2), withCredit: withCredit.slice(0, 10) },
+        hours_ledger_manual_credit: ledgerManual || [],
+        current_balances_overtime: balance || null
+      });
+    }
+
+    res.json({ results });
+  } catch (error) {
+    console.error('Check Alessia balance error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Catch-all route for SPA (must be last - only for non-API GET requests)
 app.get('*', (req, res) => {
   // Solo per richieste GET che non sono API
