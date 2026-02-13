@@ -3959,6 +3959,33 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
   }
 });
 
+// Ricariche manuali da hours_ledger (per Ultime Fluttuazioni in Dettagli Dipendente)
+app.get('/api/attendance/ledger-manual-credits', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const targetUserId = userId || req.user.id;
+    if (req.user.role === 'employee' && targetUserId !== req.user.id) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    const { data: ledger, error } = await supabase
+      .from('hours_ledger')
+      .select('id, transaction_date, hours, hours_amount, description, notes')
+      .eq('user_id', targetUserId)
+      .eq('reference_type', 'manual_credit')
+      .eq('transaction_type', 'accrual')
+      .order('transaction_date', { ascending: false })
+      .limit(20);
+    if (error) {
+      console.error('Ledger manual credits fetch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei crediti manuali' });
+    }
+    res.json(ledger || []);
+  } catch (err) {
+    console.error('Ledger manual credits error:', err);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get approved permissions for today (early exit / late entry)
 app.get('/api/attendance/permissions-today', authenticateToken, async (req, res) => {
   try {

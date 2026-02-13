@@ -47,6 +47,7 @@ const Employees = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [detailActiveTab, setDetailActiveTab] = useState('details');
   const [balanceHistory, setBalanceHistory] = useState([]);
+  const [ledgerManualCredits, setLedgerManualCredits] = useState([]);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -313,6 +314,7 @@ const Employees = () => {
 
   const fetchEmployeeBalance = async (employeeId) => {
     try {
+      setLedgerManualCredits([]);
       // Fetch balance totale con logica real-time (singolo endpoint)
       let balanceValue = null;
       const singleBalanceResponse = await apiCall(`/api/attendance/total-balance?userId=${employeeId}`);
@@ -349,7 +351,16 @@ const Employees = () => {
       const historyResponse = await apiCall(`/api/attendance?userId=${employeeId}&limit=10`);
       if (historyResponse.ok) {
         const historyData = await historyResponse.json();
-        setBalanceHistory(historyData || []);
+        setBalanceHistory(Array.isArray(historyData) ? historyData : []);
+      }
+
+      // Fetch ricariche manuali da hours_ledger (per Ultime Fluttuazioni)
+      const ledgerResponse = await apiCall(`/api/attendance/ledger-manual-credits?userId=${employeeId}`);
+      if (ledgerResponse.ok) {
+        const ledgerData = await ledgerResponse.json();
+        setLedgerManualCredits(Array.isArray(ledgerData) ? ledgerData : []);
+      } else {
+        setLedgerManualCredits([]);
       }
     } catch (error) {
       console.error('Error fetching employee balance:', error);
@@ -1084,6 +1095,7 @@ const Employees = () => {
 
                     // Filtra: mostra giornate con balance != 0
                     // Include oggi se: giornata conclusa, permesso approvato, O recupero/credito
+                    // Record da attendance (ore lavoro) con balance != 0
                     const completedRecords = balanceHistory.filter(record => {
                       const balance = record.balance_hours || 0;
                       const isToday = record.date === today;
@@ -1119,8 +1131,38 @@ const Employees = () => {
 
                       return false;
                     });
-                    return completedRecords.length > 0 ? (
+
+                    // Ricariche manuali da hours_ledger (con descrizione)
+                    const hasLedgerCredits = ledgerManualCredits && ledgerManualCredits.length > 0;
+                    const hasAnyFluctuation = completedRecords.length > 0 || hasLedgerCredits;
+
+                    return hasAnyFluctuation ? (
                       <div className="space-y-3">
+                        {ledgerManualCredits.map((entry, index) => {
+                          const hrs = parseFloat(entry.hours ?? entry.hours_amount ?? 0);
+                          const desc = entry.description || entry.notes || 'Ricarica banca ore';
+                          return (
+                            <div key={`ledger-${entry.id || index}`} className="bg-zinc-800 rounded-lg p-4 border border-amber-500/30">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center">
+                                  <Calendar className="h-4 w-4 text-amber-400 mr-3" />
+                                  <div>
+                                    <p className="text-white font-medium">
+                                      {new Date(entry.transaction_date).toLocaleDateString('it-IT', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                      })}
+                                    </p>
+                                    <p className="text-amber-300 text-sm">💰 Aggiunta manuale</p>
+                                  </div>
+                                </div>
+                                <p className="text-lg font-bold text-green-400">{formatHoursValue(hrs).full}</p>
+                              </div>
+                              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+                            </div>
+                          );
+                        })}
                         {completedRecords.map((record, index) => {
                           // Estrai informazioni dalle note per audit trail
                           const notes = record.notes || '';
