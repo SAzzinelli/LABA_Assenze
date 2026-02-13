@@ -12975,31 +12975,7 @@ app.post('/api/admin/remove-alessia-credit', authenticateToken, requireAdmin, as
 
     const userId = users[0].id;
 
-    const { data: att, error: attError } = await supabase
-      .from('attendance')
-      .select('id, balance_hours, actual_hours, expected_hours')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .single();
-
-    if (att) {
-      const actual = parseFloat(att.actual_hours || 0);
-      const expected = parseFloat(att.expected_hours || 0);
-      const newBalance = Math.round((actual - expected) * 100) / 100;
-
-      const { error: updateError } = await supabase
-        .from('attendance')
-        .update({
-          balance_hours: newBalance,
-          notes: 'Rimosso credito manuale precedente - aggiungere 8h da interfaccia'
-        })
-        .eq('id', att.id);
-
-      if (updateError) {
-        return res.status(500).json({ success: false, error: updateError.message });
-      }
-    }
-
+    // SEPARAZIONE: non toccare attendance, solo ledger
     const { error: delError } = await supabase
       .from('hours_ledger')
       .delete()
@@ -13041,30 +13017,7 @@ app.post('/api/admin/subtract-credit-hours', authenticateToken, requireAdmin, as
       targetUserId = users[0].id;
     }
 
-    const { data: att, error: attErr } = await supabase
-      .from('attendance')
-      .select('id, balance_hours, notes')
-      .eq('user_id', targetUserId)
-      .eq('date', today)
-      .single();
-
-    if (attErr || !att) {
-      return res.status(404).json({ success: false, error: 'Nessuna presenza per oggi' });
-    }
-
-    const oldBalance = parseFloat(att.balance_hours || 0);
-    const newBalance = Math.round((oldBalance - amount) * 100) / 100;
-
-    const { error: updErr } = await supabase
-      .from('attendance')
-      .update({
-        balance_hours: newBalance,
-        notes: (att.notes || '').replace(/Ricarica banca ore[^.]*\.?/g, '').trim() || `Sottratte ${amount}h credito manuale`
-      })
-      .eq('id', att.id);
-
-    if (updErr) return res.status(500).json({ success: false, error: updErr.message });
-
+    // SEPARAZIONE: non toccare attendance, solo ledger
     const { error: delErr } = await supabase
       .from('hours_ledger')
       .delete()
@@ -13076,9 +13029,7 @@ app.post('/api/admin/subtract-credit-hours', authenticateToken, requireAdmin, as
 
     res.json({
       success: true,
-      message: `Sottratte ${amount}h. Nuovo saldo oggi: ${newBalance}h`,
-      previousBalance: oldBalance,
-      newBalance,
+      message: `Credito manuale rimosso per ${today} (ledger)`,
       date: today
     });
   } catch (error) {
