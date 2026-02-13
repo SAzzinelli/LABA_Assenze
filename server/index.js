@@ -11928,9 +11928,9 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       return res.status(500).json({ error: 'Errore nel recupero della presenza' });
     }
 
-    // 5. SE NON ESISTE PRESENZA: CREA RECORD CON SOLO RICARICA
+    // 5. SE NON ESISTE PRESENZA: crea record con balance=0 (credito solo in ledger)
     if (!existingAttendance) {
-      console.log('🆕 Nessuna presenza esistente, creo record con ricarica');
+      console.log('🆕 Nessuna presenza esistente, creo record con balance 0 (credito in ledger)');
       const { error: insertError } = await supabase
         .from('attendance')
         .insert({
@@ -11938,7 +11938,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           date: date,
           expected_hours: 0,
           actual_hours: 0,
-          balance_hours: creditHours,
+          balance_hours: 0,
           notes: `Ricarica banca ore: +${creditHours}h - ${reason || 'Nessun motivo'}${notes ? ` - ${notes}` : ''}`
         });
 
@@ -11947,7 +11947,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         return res.status(500).json({ error: 'Errore nella creazione del record' });
       }
 
-      console.log(`✅ Record creato: balance = ${creditHours}h`);
+      console.log(`✅ Record creato: balance = 0 (credito +${creditHours}h in ledger)`);
 
       // AGGIORNA BANCA ORE (overtime_bank)
       const creditYear = new Date(date).getFullYear();
@@ -12046,7 +12046,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     const hasPermissions = !permError && approvedPermissions && approvedPermissions.length > 0;
 
-    let finalBalanceHours = oldBalanceHours + creditHours; // SCENARIO 1: Ricarica base
+    // SEPARAZIONE: credito va solo in ledger, non in attendance
+    let finalBalanceHours = oldBalanceHours; // SCENARIO 1: non aggiungere creditHours a balance
     let finalExpectedHours = oldExpectedHours; // Di default non cambia
     let permissionRecalculated = false;
 
@@ -12116,13 +12117,13 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
           finalExpectedHours = contractHours - newTotalPermissionHours;
 
-          // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
-          finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
+          // Balance = actual - expected (credito manuale va in ledger, non qui)
+          finalBalanceHours = oldActualHours - finalExpectedHours;
           permissionRecalculated = true;
 
           console.log(`💰 Balance ricalcolato:`);
           console.log(`   Expected: ${oldExpectedHours}h → ${finalExpectedHours.toFixed(2)}h`);
-          console.log(`   Balance: ${oldBalanceHours}h → ${finalBalanceHours.toFixed(2)}h`);
+          console.log(`   Balance: ${oldBalanceHours}h → ${finalBalanceHours.toFixed(2)}h (credito +${creditHours}h in ledger)`);
         }
         // CASO B: Se si aggiungono ore manuali con permesso approvato,
         // queste ore rappresentano ore recuperate dal permesso
@@ -12166,9 +12167,8 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           const newTotalPermissionHours = updatedPerms?.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0) || 0;
           finalExpectedHours = contractHours - newTotalPermissionHours;
 
-          // Balance = actual - expected (con permesso ricalcolato) + crediti ore aggiunti manualmente
-          // Le ore aggiunte manualmente sono già incluse nel calcolo perché riducono il permesso
-          finalBalanceHours = oldActualHours - finalExpectedHours + creditHours;
+          // Balance = actual - expected (credito manuale va in ledger, non qui)
+          finalBalanceHours = oldActualHours - finalExpectedHours;
           permissionRecalculated = true;
 
           console.log(`💰 Balance ricalcolato:`);
