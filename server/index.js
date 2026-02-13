@@ -11947,6 +11947,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
           hours_amount: creditHours,
           description: creditReason,
           notes: creditReason,
+          reason: creditReason,
           reference_type: 'manual_credit',
           period_year: creditYear,
           period_month: creditMonth,
@@ -11955,6 +11956,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
       if (ledgerError) {
         console.error(`❌ Errore inserimento ledger per crediti manuali:`, ledgerError);
+        return res.status(500).json({ error: 'Errore nel salvataggio del credito ore' });
       }
 
       // Aggiorna o crea il saldo corrente della banca ore
@@ -11986,7 +11988,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         hours: creditHours,
         date: date,
         employee: { id: user.id, name: `${user.first_name} ${user.last_name}` },
-        newBalance: creditHours,
+        newBalance: newOvertimeBalance,
         overtimeBankBalance: newOvertimeBalance
       });
     }
@@ -12227,6 +12229,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
         hours_amount: creditHours,
         description: ledgerDesc,
         notes: ledgerDesc,
+        reason: ledgerDesc,
         reference_type: 'manual_credit',
         period_year: creditYear,
         period_month: creditMonth,
@@ -12235,6 +12238,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
 
     if (ledgerError) {
       console.error(`❌ Errore inserimento ledger per crediti manuali:`, ledgerError);
+      return res.status(500).json({ error: 'Errore nel salvataggio del credito ore' });
     }
 
     // Aggiorna o crea il saldo corrente della banca ore
@@ -12270,7 +12274,7 @@ app.post('/api/recovery-requests/add-credit-hours', authenticateToken, async (re
       hours: creditHours,
       date: date,
       employee: { id: user.id, name: `${user.first_name} ${user.last_name}` },
-      newBalance: finalBalanceHours,
+      newBalance: newOvertimeBalance,
       overtimeBankBalance: newOvertimeBalance
     });
   } catch (error) {
