@@ -3903,8 +3903,32 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
       return sum + recordBalance;
     }, 0);
 
+    // Ricariche manuali da hours_ledger (stessa logica di calculateOvertimeBalance)
+    let manualCreditTopUp = 0;
+    const { data: ledgerCredits } = await supabase
+      .from('hours_ledger')
+      .select('transaction_date, hours, hours_amount')
+      .eq('user_id', targetUserId)
+      .eq('reference_type', 'manual_credit')
+      .eq('transaction_type', 'accrual');
+    if (ledgerCredits && ledgerCredits.length > 0) {
+      for (const row of ledgerCredits) {
+        const ledgerHours = parseFloat(row.hours || row.hours_amount || 0);
+        const attRecord = allAttendance?.find((r) => r.date === row.transaction_date);
+        let alreadyCounted = 0;
+        if (attRecord && ((attRecord.notes || '').toLowerCase().includes('ricarica') || (attRecord.notes || '').toLowerCase().includes('recupero ore'))) {
+          const bal = parseFloat(attRecord.balance_hours || 0);
+          alreadyCounted = bal > 0 ? Math.min(bal, ledgerHours) : 0;
+        }
+        if (ledgerHours > alreadyCounted) {
+          manualCreditTopUp += ledgerHours - alreadyCounted;
+        }
+      }
+    }
+    const totalBalanceWithLedger = totalBalance + manualCreditTopUp;
+
     // Credito manuale di oggi: includi SOLO a fine giornata (stessa logica di calculateOvertimeBalance)
-    let finalTotalBalance = totalBalance;
+    let finalTotalBalance = totalBalanceWithLedger;
     const manualCreditToday = await getManualCreditForDate(targetUserId, today);
     if (manualCreditToday > 0 && !isTodayCompleted) {
       finalTotalBalance -= manualCreditToday;
