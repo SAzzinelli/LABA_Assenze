@@ -2500,12 +2500,8 @@ app.put('/api/attendance/:id', authenticateToken, async (req, res) => {
       balance_hours = actual_hours - attendance.expected_hours;
     }
 
-    // Preserva ricarica manuale da hours_ledger
-    const manualCredit = await getManualCreditForDate(attendance.user_id, attendance.date);
-    balance_hours = Math.round((balance_hours + manualCredit) * 100) / 100;
-    if (manualCredit > 0) {
-      console.log(`💰 [attendance-edit] Preservata ricarica manuale: +${manualCredit}h → balance ${balance_hours}h`);
-    }
+    // SEPARAZIONE: balance = solo ore lavoro, credito manuale resta in ledger
+    balance_hours = Math.round(balance_hours * 100) / 100;
 
     const { data: updatedAttendance, error } = await supabase
       .from('attendance')
@@ -12628,13 +12624,17 @@ async function calculateOvertimeBalance(userId, year = null) {
       .eq('user_id', userId)
       .eq('reference_type', 'manual_credit')
       .eq('transaction_type', 'accrual');
+    // SEPARAZIONE: con attendance puro (solo lavoro), aggiungiamo tutto il manual_credit da ledger
+    // alreadyCounted: evita doppio conteggio per vecchi record misti (balance > 0 con ricarica)
     if (ledgerCredits && ledgerCredits.length > 0) {
       for (const row of ledgerCredits) {
         const ledgerHours = parseFloat(row.hours || row.hours_amount || 0);
         const attRecord = attendance?.find((r) => r.date === row.transaction_date);
-        const alreadyCounted = attRecord && ((attRecord.notes || '').toLowerCase().includes('ricarica') || (attRecord.notes || '').toLowerCase().includes('recupero ore'))
-          ? parseFloat(attRecord.balance_hours || 0)
-          : 0;
+        let alreadyCounted = 0;
+        if (attRecord && ((attRecord.notes || '').toLowerCase().includes('ricarica') || (attRecord.notes || '').toLowerCase().includes('recupero ore'))) {
+          const bal = parseFloat(attRecord.balance_hours || 0);
+          alreadyCounted = bal > 0 ? Math.min(bal, ledgerHours) : 0; // balance<=0 = lavoro puro, niente già contato
+        }
         if (ledgerHours > alreadyCounted) {
           manualCreditTopUp += ledgerHours - alreadyCounted;
         }
