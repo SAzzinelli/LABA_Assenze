@@ -1995,32 +1995,8 @@ app.put('/api/attendance/save-hourly', authenticateToken, async (req, res) => {
 
     const targetUserId = req.user.role === 'employee' ? req.user.id : (req.body.userId || req.user.id);
 
-    // NON sovrascrivere mai se c'è manual_credit in hours_ledger (fonte attendibile)
-    const manualCreditCheck = await getManualCreditForDate(targetUserId, date);
-    if (manualCreditCheck > 0) {
-      console.log(`💰 [save-hourly] manual_credit +${manualCreditCheck}h per ${date}: non sovrascrivo`);
-      const { data: existingRec } = await supabase.from('attendance').select('*').eq('user_id', targetUserId).eq('date', date).single();
-      return res.json({ success: true, message: 'Presenza invariata (ore manuali)', attendance: existingRec || {} });
-    }
-
-    // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
-    const { data: existingForSkip } = await supabase.from('attendance').select('*').eq('user_id', targetUserId).eq('date', date).single();
-    if (existingForSkip) {
-      const n = (existingForSkip.notes || '').toLowerCase();
-      const bal = parseFloat(existingForSkip.balance_hours || 0);
-      if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
-        console.log(`💰 [save-hourly] record con Ricarica/credito (${bal}h) per ${date}: non sovrascrivo`);
-        return res.json({ success: true, message: 'Presenza invariata (ore manuali)', attendance: existingForSkip });
-      }
-    }
-
-    // Preserva ricarica manuale: se ci sono ore manual_credit per questa data, sommale al balance
-    const baseBalance = parseFloat(balanceHours || 0);
-    const manualCredit = await getManualCreditForDate(targetUserId, date);
-    const finalBalance = Math.round((baseBalance + manualCredit) * 100) / 100;
-    if (manualCredit > 0) {
-      console.log(`💰 [save-hourly] Preservata ricarica manuale per ${date}: +${manualCredit}h → balance ${baseBalance}h → ${finalBalance}h`);
-    }
+    // SEPARAZIONE: balance_hours = solo ore lavoro (actual - expected), credito manuale resta in ledger
+    const finalBalance = Math.round(parseFloat(balanceHours || 0) * 100) / 100;
 
     // Aggiorna o inserisci il record di presenza
     const { data, error } = await supabase
@@ -4628,37 +4604,8 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
       .eq('date', today)
       .single();
 
-    // NON sovrascrivere mai se c'è manual_credit in hours_ledger per oggi
-    const manualCreditCheck = await getManualCreditForDate(userId, today);
-    if (manualCreditCheck > 0) {
-      console.log(`💰 [update-current] manual_credit +${manualCreditCheck}h per ${today}: non sovrascrivo`);
-      return res.json({
-        success: true,
-        message: 'Presenza invariata (ore manuali)',
-        hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
-      });
-    }
-
-    // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
-    if (existingAttendance) {
-      const n = (existingAttendance.notes || '').toLowerCase();
-      const bal = parseFloat(existingAttendance.balance_hours || 0);
-      if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
-        console.log(`💰 [update-current] record con Ricarica/credito (${bal}h) per ${today}: non sovrascrivo`);
-        return res.json({
-          success: true,
-          message: 'Presenza invariata (ore manuali)',
-          hours: { actualHours, expectedHours, contractHours, balanceHours, remainingHours, status, progress: 100 }
-        });
-      }
-    }
-
-    // Preserva ricarica manuale: somma ore manual_credit al balance calcolato
-    const manualCredit = await getManualCreditForDate(userId, today);
-    const finalBalanceWithManual = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
-    if (manualCredit > 0) {
-      console.log(`💰 [update-current] Preservata ricarica manuale: +${manualCredit}h → balance ${finalBalanceWithManual}h`);
-    }
+    // SEPARAZIONE: balance_hours = solo ore lavoro, credito manuale resta in ledger
+    const balanceToSave = Math.round(finalBalanceHours * 100) / 100;
 
     if (existingAttendance) {
       // Aggiorna presenza esistente (aggiorna anche expected_hours per sicurezza)
@@ -4667,7 +4614,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
         .update({
           actual_hours: actualHours,
           expected_hours: finalExpectedHours,
-          balance_hours: finalBalanceWithManual,
+          balance_hours: balanceToSave,
           notes: permissionsToday && permissionsToday.length > 0
             ? `Aggiornato alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
             : `Aggiornato alle ${currentTime} - ${status}`
@@ -4688,7 +4635,7 @@ app.put('/api/attendance/update-current', authenticateToken, async (req, res) =>
           date: today,
           expected_hours: finalExpectedHours,
           actual_hours: actualHours,
-          balance_hours: finalBalanceWithManual,
+          balance_hours: balanceToSave,
           notes: permissionsToday && permissionsToday.length > 0
             ? `Presenza aggiornata alle ${currentTime} - ${status} [Permesso approvato: -${permissionsToday.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
             : `Presenza aggiornata alle ${currentTime} - ${status}`
