@@ -13023,6 +13023,70 @@ app.post('/api/admin/remove-alessia-credit', authenticateToken, requireAdmin, as
   }
 });
 
+// Sottrai ore di credito (admin, da console browser)
+// Body: { userId?, hours, date? } - se manca userId usa Alessia, date default oggi
+app.post('/api/admin/subtract-credit-hours', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId, hours, date } = req.body;
+    const today = date || new Date().toISOString().split('T')[0];
+    const amount = parseFloat(hours);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, error: 'hours deve essere un numero positivo (es. 4.58 per 4h35)' });
+    }
+
+    let targetUserId = userId;
+    if (!targetUserId) {
+      const { data: users } = await supabase.from('users').select('id, first_name, last_name').ilike('first_name', '%alessia%');
+      if (!users?.length) return res.status(404).json({ success: false, error: 'Alessia non trovata' });
+      targetUserId = users[0].id;
+    }
+
+    const { data: att, error: attErr } = await supabase
+      .from('attendance')
+      .select('id, balance_hours, notes')
+      .eq('user_id', targetUserId)
+      .eq('date', today)
+      .single();
+
+    if (attErr || !att) {
+      return res.status(404).json({ success: false, error: 'Nessuna presenza per oggi' });
+    }
+
+    const oldBalance = parseFloat(att.balance_hours || 0);
+    const newBalance = Math.round((oldBalance - amount) * 100) / 100;
+
+    const { error: updErr } = await supabase
+      .from('attendance')
+      .update({
+        balance_hours: newBalance,
+        notes: (att.notes || '').replace(/Ricarica banca ore[^.]*\.?/g, '').trim() || `Sottratte ${amount}h credito manuale`
+      })
+      .eq('id', att.id);
+
+    if (updErr) return res.status(500).json({ success: false, error: updErr.message });
+
+    const { error: delErr } = await supabase
+      .from('hours_ledger')
+      .delete()
+      .eq('user_id', targetUserId)
+      .eq('transaction_date', today)
+      .eq('reference_type', 'manual_credit');
+
+    if (delErr) return res.status(500).json({ success: false, error: delErr.message });
+
+    res.json({
+      success: true,
+      message: `Sottratte ${amount}h. Nuovo saldo oggi: ${newBalance}h`,
+      previousBalance: oldBalance,
+      newBalance,
+      date: today
+    });
+  } catch (error) {
+    console.error('Subtract credit error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Lista richieste recupero ore
 app.get('/api/recovery-requests', authenticateToken, async (req, res) => {
   try {
