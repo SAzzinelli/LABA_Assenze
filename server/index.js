@@ -3851,17 +3851,16 @@ app.get('/api/attendance/total-balance', authenticateToken, async (req, res) => 
 
     // Verifica se la giornata di oggi è conclusa (siamo dopo l'ora di fine lavoro)
     let isTodayCompleted = false;
-    if (todayRecord && schedule) {
-      // Se c'è un record nel DB e c'è uno schedule, verifica se siamo dopo la fine
+    if (schedule && schedule.end_time) {
       const [endHour, endMin] = schedule.end_time.split(':').map(Number);
       const currentHour = now.getHours();
       const currentMin = now.getMinutes();
       const currentTimeInMinutes = currentHour * 60 + currentMin;
-      const endTimeInMinutes = endHour * 60 + endMin;
-
-      // Se siamo almeno 30 minuti dopo la fine del lavoro, considera la giornata conclusa
-      // Altrimenti usa il balance del DB (se disponibile) che indica una giornata già salvata
-      isTodayCompleted = (currentTimeInMinutes >= endTimeInMinutes + 30) || (todayRecord.balance_hours !== null && !hasRealTimeCalculation);
+      const endTimeInMinutes = endHour * 60 + (endMin || 0);
+      isTodayCompleted = currentTimeInMinutes >= endTimeInMinutes + 30;
+      if (todayRecord && !isTodayCompleted) {
+        isTodayCompleted = todayRecord.balance_hours !== null && !hasRealTimeCalculation;
+      }
       console.log(`⏰ Today completion check: current=${currentHour}:${currentMin < 10 ? '0' + currentMin : currentMin}, end=${schedule.end_time}, completed=${isTodayCompleted}`);
     }
 
@@ -12689,9 +12688,17 @@ async function calculateOvertimeBalance(userId, year = null) {
         .eq('day_of_week', dayOfWeek)
         .eq('is_working_day', true)
         .single();
-      if (todaySchedule && currentTime < todaySchedule.end_time) {
+      let excludeTodayCredit = false;
+      if (todaySchedule && todaySchedule.end_time) {
+        const [ch, cm] = currentTime.split(':').map(Number);
+        const [eh, em] = todaySchedule.end_time.split(':').map(Number);
+        const currentMins = (ch || 0) * 60 + (cm || 0);
+        const endMins = (eh || 0) * 60 + (em || 0);
+        excludeTodayCredit = currentMins < endMins + 30;
+      }
+      if (excludeTodayCredit) {
         totalBalanceWithRecovery -= manualCreditToday;
-        console.log(`📅 [BALANCE] Credito manuale +${manualCreditToday}h per oggi escluso (giornata in corso fino alle ${todaySchedule.end_time})`);
+        console.log(`📅 [BALANCE] Credito manuale +${manualCreditToday}h per oggi escluso (giornata in corso fino alle ${todaySchedule?.end_time})`);
       }
     }
 
