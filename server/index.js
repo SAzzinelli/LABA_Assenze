@@ -15273,41 +15273,11 @@ async function saveHourlyAttendance() {
           }
         }
 
-        // NON sovrascrivere mai se c'è manual_credit in hours_ledger per oggi (fonte attendibile)
-        const manualCreditForSkip = await getManualCreditForDate(user.id, today);
-        if (manualCreditForSkip > 0) {
-          console.log(`💰 [cron] ${user.first_name} ha manual_credit +${manualCreditForSkip}h per ${today}: salto (non tocco)`);
-          successCount++;
-          continue;
-        }
-
-        // FALLBACK: se il record ha note "Ricarica"/"credito" e balance > 0, non sovrascrivere
-        // (proteggiamo anche quando l'insert in hours_ledger fallisce)
-        const { data: existingForSkip } = await supabase
-          .from('attendance')
-          .select('notes, balance_hours')
-          .eq('user_id', user.id)
-          .eq('date', today)
-          .single();
-        if (existingForSkip) {
-          const n = (existingForSkip.notes || '').toLowerCase();
-          const bal = parseFloat(existingForSkip.balance_hours || 0);
-          if ((n.includes('ricarica') || n.includes('credito')) && bal > 0) {
-            console.log(`💰 [cron] ${user.first_name} record con Ricarica/credito (${bal}h) per ${today}: salto`);
-            successCount++;
-            continue;
-          }
-        }
-
-        // Preserva ricarica manuale da hours_ledger (fonte attendibile) - ora non serve più per lo skip
-        const manualCredit = await getManualCreditForDate(user.id, today);
-        const balanceToSave = Math.round((finalBalanceHours + manualCredit) * 100) / 100;
+        // SEPARAZIONE: salva sempre balance = solo ore lavoro, credito manuale resta in ledger
+        const balanceToSave = Math.round(finalBalanceHours * 100) / 100;
         const notesToSave = approvedPermissions && approvedPermissions.length > 0
           ? `Salvataggio automatico orario [Permesso approvato: -${approvedPermissions.reduce((sum, p) => sum + (parseFloat(p.hours) || 0), 0)}h]`
           : 'Salvataggio automatico orario';
-        if (manualCredit > 0) {
-          console.log(`💰 Preservata ricarica manuale per ${user.first_name}: +${manualCredit}h → balance salvato ${balanceToSave}h`);
-        }
 
         // Salva SEMPRE i dati per giorni lavorativi (anche se actualHours = 0)
         console.log(`💾 Tentativo salvataggio: ${user.first_name} - ${actualHours.toFixed(2)}h/${finalExpectedHours.toFixed(2)}h - Balance: ${balanceToSave} - Status: ${status}`);
