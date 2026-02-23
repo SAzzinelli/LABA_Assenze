@@ -620,6 +620,8 @@ const Dashboard = () => {
       if (leaveResponse.ok) {
         const leaveData = await leaveResponse.json();
         leaveData.forEach(req => {
+          // Solo richieste approvate per "In programma oggi"
+          if (req.status !== 'approved') return;
           // Valida che le date siano valide prima di aggiungere l'evento
           if (req.start_date && req.end_date) {
             const startDate = new Date(req.start_date);
@@ -656,7 +658,7 @@ const Dashboard = () => {
                 type: req.type,
                 permissionType: req.permissionType,
                 name: eventName,
-                user: user?.role === 'admin' ? req.user_name : undefined,
+                user: user?.role === 'admin' ? (req.user?.name || (req.users ? `${req.users.first_name} ${req.users.last_name}` : undefined)) : undefined,
                 color: req.type === 'vacation' ? 'green' : req.type === 'sick' || req.type === 'sick_leave' ? 'red' : 'blue'
               });
             }
@@ -721,9 +723,23 @@ const Dashboard = () => {
         return !isNaN(eventDate.getTime());
       });
       
-      // Sort by date and take next 10 events
+      // Sort by date
       validEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setUpcomingEvents(validEvents.slice(0, 10));
+      
+      // Eventi di oggi DEVONO sempre comparire in "In programma oggi"
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEvents = validEvents.filter(e => {
+        const start = new Date(e.date);
+        const end = e.endDate ? new Date(e.endDate) : new Date(e.date);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        return start.getTime() <= todayStart.getTime() && todayStart.getTime() <= end.getTime();
+      });
+      const otherEvents = validEvents.filter(e => !todayEvents.includes(e));
+      // Mostra sempre tutti gli eventi di oggi + i prossimi 10 futuri
+      setUpcomingEvents([...todayEvents, ...otherEvents.slice(0, 10)]);
     } catch (error) {
       console.error('Error fetching upcoming events:', error);
     }
