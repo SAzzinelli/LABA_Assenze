@@ -11314,9 +11314,22 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           return;
         }
         if (permission) {
-          // Se c'è un permesso, mostra le ore lavorate (se presenti) o 0
-          const hours = attendance?.actualHours || 0;
-          dailyValues.push(hours > 0 ? Math.round(hours) : '');
+          // Permesso: mostra ore lavorate / ore permesso (es. 6 / 2) oppure A (8) se assente tutto il giorno
+          const workedHours = attendance?.actualHours || 0;
+          const permissionHours = leaves.filter(l => l.type === 'permission').reduce((s, p) => s + (parseFloat(p.hours) || 0), 0);
+          const schedule = workSchedulesMap[user.id]?.[dateInfo.dayOfWeek];
+          const expectedHours = schedule?.is_working_day && schedule?.start_time && schedule?.end_time
+            ? calculateExpectedHoursForSchedule({
+                start_time: schedule.start_time,
+                end_time: schedule.end_time,
+                break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
+              })
+            : 8;
+          if (workedHours > 0) {
+            dailyValues.push({ worked: Math.round(workedHours), permissionHours });
+          } else {
+            dailyValues.push({ absent: true, expectedHours: Math.round(expectedHours) });
+          }
           return;
         }
 
@@ -11347,11 +11360,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         dailyValues.push('');
       });
 
-      // Calcola totale ore del mese (solo numeri, escludi codici)
+      // Calcola totale ore del mese (solo numeri e ore lavorate da permessi, escludi codici)
       const totalHours = dailyValues.reduce((sum, val) => {
-        if (typeof val === 'number' && val > 0) {
-          return sum + val;
-        }
+        if (typeof val === 'number' && val > 0) return sum + val;
+        if (val && typeof val === 'object' && 'worked' in val) return sum + val.worked;
         return sum;
       }, 0);
 
@@ -11424,6 +11436,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         else if (permission104 && typeof value === 'number' && value > 0) totalWorkedHours += value;
         else if (dateInfo.isHoliday) holidayDays++;
         else if (typeof value === 'number' && value > 0) totalWorkedHours += value;
+        else if (value && typeof value === 'object' && 'worked' in value) totalWorkedHours += value.worked;
       });
       const dataRow = Array(50).fill('');
       dataRow[0] = emp.number;
@@ -11433,12 +11446,13 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         const value = emp.dailyValues[idx];
         if (typeof value === 'number' && value > 0) dataRow[3 + idx] = value;
         else if (['D', 'F', 'M', 'FE', '104'].includes(value)) dataRow[3 + idx] = value;
+        else if (value && typeof value === 'object') dataRow[3 + idx] = value; // { worked, permissionHours } o { absent, expectedHours }
         else dataRow[3 + idx] = '';
       });
       dataRow[statsStartCol] = Math.round(totalWorkedHours * 100) / 100;
       dataRow[statsStartCol + 1] = vacationDays;
       dataRow[statsStartCol + 2] = sickDays;
-      dataRow[statsStartCol + 3] = Math.round(permissionHours * 100) / 100;
+      dataRow[statsStartCol + 3] = formatHours(permissionHours);
       dataRow[statsStartCol + 4] = holidayDays;
       dataRow[statsStartCol + 5] = Math.round(emp.totalHours * 100) / 100;
       worksheet.addRow(dataRow);
@@ -11448,7 +11462,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     worksheet.addRow(Array(50).fill(''));
     worksheet.addRow(Array(50).fill(''));
     const legendRow = Array(50).fill('');
-    legendRow[0] = 'LEGENDA: D = Domenica | F = Ferie | M = Malattia | FE = Festivo | 104 = Permesso 104 | Numeri = Ore lavorate';
+    legendRow[0] = 'LEGENDA: D = Domenica | F = Ferie | M = Malattia | FE = Festivo | 104 = Permesso 104 | Numeri = Ore lavorate | X / Y = ore lavorate / ore permesso | A (N) = Assente (ore attese)';
     worksheet.addRow(legendRow);
 
     // Unisci celle
@@ -11461,7 +11475,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     // Larghezza colonne
     worksheet.columns = [
       { width: 5 }, { width: 20 }, { width: 18 },
-      ...Array(monthDates.length).fill({ width: 4 }),
+      ...Array(monthDates.length).fill({ width: 6 }),
       { width: 12 }, { width: 8 }, { width: 8 }, { width: 10 }, { width: 8 }, { width: 10 }
     ];
 
@@ -11510,9 +11524,17 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: col >= statsCol1Based };
     }
 
+    // Helper per formattare ore permesso compatte nella cella giornaliera
+    const formatPermissionHoursCompact = (h) => {
+      const hours = parseFloat(h) || 0;
+      if (hours % 1 === 0) return String(Math.round(hours));
+      return `${Math.floor(hours)}h${Math.round((hours % 1) * 60)}`;
+    };
+
     // Dati dipendenti (righe 5+)
     const dataStartRow = 5;
     const totalRows = worksheet.rowCount;
+    const redColor = { argb: toArgB('DC2626') };
     for (let row = dataStartRow; row <= totalRows; row++) {
       const isLegendRow = row === totalRows;
       if (isLegendRow) {
@@ -11528,7 +11550,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       const bgColor = isEven ? 'FFFFFF' : 'F9FAFB';
       for (let col = 1; col <= statsStartCol + 6; col++) {
         const cell = worksheet.getCell(row, col);
-        const cellValue = cell.value;
+        let cellValue = cell.value;
         cell.border = borderStyle;
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB(bgColor) } };
         if (col === 1) {
@@ -11538,7 +11560,25 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           cell.font = { bold: true };
         } else if (col < statsCol1Based) {
           cell.alignment = { horizontal: 'center' };
-          if (cellValue === 'D') cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
+          // Celle permesso: ore lavorate / ore permesso (es. 6 / 2) o A (8) se assente tutto il giorno
+          if (cellValue && typeof cellValue === 'object' && 'worked' in cellValue) {
+            const permStr = formatPermissionHoursCompact(cellValue.permissionHours);
+            cell.value = {
+              richText: [
+                { text: `${cellValue.worked} `, font: { bold: true, color: { argb: toArgB('059669') } } },
+                { text: `/ ${permStr}`, font: { bold: true, color: redColor } }
+              ]
+            };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
+          } else if (cellValue && typeof cellValue === 'object' && 'absent' in cellValue) {
+            cell.value = {
+              richText: [
+                { text: 'A', font: { bold: true, color: redColor } },
+                { text: ` (${cellValue.expectedHours})`, font: { bold: true } }
+              ]
+            };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
+          } else if (cellValue === 'D') cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
           else if (cellValue === 'F') { cell.font = { color: { argb: toArgB('3B82F6') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } }; }
           else if (cellValue === 'M') { cell.font = { color: { argb: toArgB('EF4444') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } }; }
           else if (cellValue === 'FE') { cell.font = { color: { argb: toArgB('F59E0B') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } }; }
