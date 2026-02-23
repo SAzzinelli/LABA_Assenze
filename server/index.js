@@ -11365,7 +11365,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           const isFutureDate = dateStr > todayStr;
 
           if (workedHours > 0) {
-            dailyValues.push({ worked: Math.round(workedHours), permissionHours });
+            dailyValues.push({ worked: Math.round(workedHours * 100) / 100, permissionHours });
           } else if (isFullDayPermission) {
             dailyValues.push({ absent: true, expectedHours: Math.round(expectedHours) });
           } else if (isFutureDate) {
@@ -11381,9 +11381,9 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           return;
         }
 
-        // Se c'è presenza, mostra le ore lavorate
+        // Se c'è presenza, mostra le ore lavorate (conserva decimali: 7.5, 6.25, ecc.)
         if (attendance && attendance.actualHours > 0) {
-          dailyValues.push(Math.round(attendance.actualHours));
+          dailyValues.push(Math.round(attendance.actualHours * 100) / 100);
           return;
         }
 
@@ -11399,7 +11399,7 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
               end_time: schedule.end_time,
               break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
             });
-            dailyValues.push(Math.round(expectedHours));
+            dailyValues.push(Math.round(expectedHours * 100) / 100);
             return;
           }
         }
@@ -11520,11 +11520,11 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const legendRowIdx = worksheet.rowCount;
     worksheet.mergeCells(`A${legendRowIdx}:T${legendRowIdx}`);
 
-    // Larghezza colonne
+    // Larghezza colonne (giorni sufficiente per "3/1h40", "7/0h45", ecc.)
     worksheet.columns = [
       { width: 5 }, { width: 20 }, { width: 18 },
-      ...Array(monthDates.length).fill({ width: 6 }),
-      { width: 12 }, { width: 8 }, { width: 8 }, { width: 10 }, { width: 8 }, { width: 10 }
+      ...Array(monthDates.length).fill({ width: 9 }),
+      { width: 12 }, { width: 8 }, { width: 8 }, { width: 12 }, { width: 8 }, { width: 10 }
     ];
 
     // Stili - ExcelJS usa argb: 'FFRRGGBB'
