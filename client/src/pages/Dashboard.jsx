@@ -1692,24 +1692,25 @@ const Dashboard = () => {
                     <div className="flex items-center">
                       <IconComponent className={`h-5 w-5 mr-3 ${iconColors[event.color]}`} />
                       <div>
-                        <h4 className="text-white font-semibold">{event.name} {event.user && `- ${event.user}`}</h4>
+                        <h4 className="text-white font-semibold">
+                          {event.user || (user && [user.firstName, user.lastName].filter(Boolean).join(' ')) || 'Evento'}
+                          <span className="font-normal text-slate-400"> ({event.name.toLowerCase()})</span>
+                        </h4>
                         <p className="text-slate-300 text-sm">
                           {eventDate.toLocaleDateString('it-IT', {
                             day: 'numeric',
                             month: 'long',
                             year: 'numeric'
                           })}
+                          {event.type === 'permission' && (event.exitTime || event.entryTime) && (
+                            <> - {event.exitTime && `Esce alle ${event.exitTime.slice(0, 5)}`}
+                            {event.exitTime && event.entryTime && ' · '}
+                            {event.entryTime && `Entra alle ${event.entryTime.slice(0, 5)}`}</>
+                          )}
                           {event.endDate && event.endDate !== event.date && (
                             <> - {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</>
                           )}
                         </p>
-                        {event.type === 'permission' && (event.exitTime || event.entryTime) && (
-                          <p className="text-orange-300 text-sm mt-1">
-                            {event.exitTime && `Esce alle ${event.exitTime.slice(0, 5)}`}
-                            {event.exitTime && event.entryTime && ' · '}
-                            {event.entryTime && `Entra alle ${event.entryTime.slice(0, 5)}`}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="text-right">
