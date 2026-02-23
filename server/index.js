@@ -11583,6 +11583,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
     const dataStartRow = 5;
     const totalRows = worksheet.rowCount;
     const redColor = { argb: toArgB('DC2626') };
+    // Altezza riga fissa per 2 linee di testo (aspetto uniforme)
+    for (let r = dataStartRow; r < totalRows; r++) {
+      worksheet.getRow(r).height = 36;
+    }
     for (let row = dataStartRow; row <= totalRows; row++) {
       const isLegendRow = row === totalRows;
       if (isLegendRow) {
@@ -11607,7 +11611,8 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         } else if (col <= 3) {
           cell.font = { bold: true };
         } else if (col < statsCol1Based) {
-          cell.alignment = { horizontal: 'center' };
+          // Tutte le celle giornaliere: 2 righe (anche seconda vuota) per aspetto grafico uniforme
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
           // Celle permesso: ore lavorate a capo, ore a debito (permesso) in rosso sulla seconda riga
           if (cellValue && typeof cellValue === 'object' && 'worked' in cellValue) {
             const permStr = formatPermissionHoursCompact(cellValue.permissionHours);
@@ -11617,21 +11622,38 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
                 { text: permStr, font: { bold: true, color: redColor } }
               ]
             };
-            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
           } else if (cellValue && typeof cellValue === 'object' && 'absent' in cellValue) {
             cell.value = {
               richText: [
                 { text: 'A', font: { bold: true, color: redColor } },
-                { text: ` (${cellValue.expectedHours})`, font: { bold: true } }
+                { text: ` (${cellValue.expectedHours})\n`, font: { bold: true } }
               ]
             };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
-          } else if (cellValue === 'D') cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
-          else if (cellValue === 'F') { cell.font = { color: { argb: toArgB('3B82F6') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } }; }
-          else if (cellValue === 'M') { cell.font = { color: { argb: toArgB('EF4444') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } }; }
-          else if (cellValue === 'FE') { cell.font = { color: { argb: toArgB('F59E0B') }, bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } }; }
-          else if (typeof cellValue === 'number') cell.font = { bold: true, color: { argb: toArgB('059669') } };
+          } else if (cellValue === 'D') {
+            cell.value = 'D\n';
+            cell.font = { color: { argb: toArgB('9CA3AF') }, italic: true };
+          } else if (cellValue === 'F') {
+            cell.value = 'F\n';
+            cell.font = { color: { argb: toArgB('3B82F6') }, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('DBEAFE') } };
+          } else if (cellValue === 'M') {
+            cell.value = 'M\n';
+            cell.font = { color: { argb: toArgB('EF4444') }, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
+          } else if (cellValue === 'FE') {
+            cell.value = 'FE\n';
+            cell.font = { color: { argb: toArgB('F59E0B') }, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } };
+          } else if (cellValue === '104') {
+            cell.value = '104\n';
+          } else if (typeof cellValue === 'number') {
+            cell.value = `${cellValue}\n`;
+            cell.font = { bold: true, color: { argb: toArgB('059669') } };
+          } else if (cellValue === '') {
+            cell.value = '\n';
+          }
         } else if (col >= statsCol1Based) {
           cell.font = { bold: true };
           cell.alignment = { horizontal: 'center' };
