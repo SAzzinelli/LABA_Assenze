@@ -11608,15 +11608,16 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           cell.font = { bold: true };
         } else if (col < statsCol1Based) {
           cell.alignment = { horizontal: 'center' };
-          // Celle permesso: ore lavorate / ore permesso (es. 6 / 2) o A (8) se assente tutto il giorno
+          // Celle permesso: ore lavorate a capo, ore a debito (permesso) in rosso sulla seconda riga
           if (cellValue && typeof cellValue === 'object' && 'worked' in cellValue) {
             const permStr = formatPermissionHoursCompact(cellValue.permissionHours);
             cell.value = {
               richText: [
-                { text: `${cellValue.worked} `, font: { bold: true, color: { argb: toArgB('059669') } } },
-                { text: `/ ${permStr}`, font: { bold: true, color: redColor } }
+                { text: `${cellValue.worked}\n`, font: { bold: true, color: { argb: toArgB('059669') } } },
+                { text: permStr, font: { bold: true, color: redColor } }
               ]
             };
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEE2E2') } };
           } else if (cellValue && typeof cellValue === 'object' && 'absent' in cellValue) {
             cell.value = {
