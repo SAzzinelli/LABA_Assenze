@@ -11497,12 +11497,12 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
         else if (value && typeof value === 'object') dataRow[3 + idx] = value; // { worked, permissionHours } o { absent, expectedHours }
         else dataRow[3 + idx] = '';
       });
-      dataRow[statsStartCol] = Math.round(totalWorkedHours * 100) / 100;
+      dataRow[statsStartCol] = formatHours(totalWorkedHours);
       dataRow[statsStartCol + 1] = vacationDays;
       dataRow[statsStartCol + 2] = sickDays;
       dataRow[statsStartCol + 3] = formatHours(permissionHours);
       dataRow[statsStartCol + 4] = holidayDays;
-      dataRow[statsStartCol + 5] = Math.round(emp.totalHours * 100) / 100;
+      dataRow[statsStartCol + 5] = formatHours(emp.totalHours);
       worksheet.addRow(dataRow);
     });
 
