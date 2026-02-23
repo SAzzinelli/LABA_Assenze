@@ -34,6 +34,13 @@ require('dotenv').config();
  * @returns {string} Nome formattato (es. "Silvia 1" o "Silvia 2")
  */
 function formatNameForCalendarAndLogs(firstName, lastName, allUsers = []) {
+  // Caso esplicito per le due Silvia: Consorti → Silvia 1, Nardi-Dei → Silvia 2
+  if (firstName && firstName.toLowerCase() === 'silvia') {
+    const lastLower = (lastName || '').toLowerCase();
+    if (lastLower.includes('consorti')) return 'Silvia 1';
+    if (lastLower.includes('nardi')) return 'Silvia 2';
+  }
+
   // Se non ci sono altri utenti, usa il nome completo
   if (!allUsers || allUsers.length === 0) {
     return `${firstName} ${lastName}`;
