@@ -1705,9 +1705,9 @@ const Dashboard = () => {
                         </p>
                         {event.type === 'permission' && (event.exitTime || event.entryTime) && (
                           <p className="text-orange-300 text-sm mt-1">
-                            {event.exitTime && `Esce alle ${event.exitTime}`}
+                            {event.exitTime && `Esce alle ${event.exitTime.slice(0, 5)}`}
                             {event.exitTime && event.entryTime && ' · '}
-                            {event.entryTime && `Entra alle ${event.entryTime}`}
+                            {event.entryTime && `Entra alle ${event.entryTime.slice(0, 5)}`}
                           </p>
                         )}
                       </div>

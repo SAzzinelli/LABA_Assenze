@@ -11361,14 +11361,22 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
             (p.permission_type || '').includes('giornata') ||
             (!p.exit_time && !p.entry_time) // nessun orario = giornata intera
           );
+          const todayStr = new Date().toISOString().split('T')[0];
+          const isFutureDate = dateStr > todayStr;
+
           if (workedHours > 0) {
             dailyValues.push({ worked: Math.round(workedHours), permissionHours });
           } else if (isFullDayPermission) {
             dailyValues.push({ absent: true, expectedHours: Math.round(expectedHours) });
+          } else if (isFutureDate) {
+            // Data futura: non mostrare ore lavorate (impossibile aver lavorato domani!)
+            // Solo permesso previsto: 0 / 0h30 (zero ore, permesso di 0h30)
+            dailyValues.push({ worked: 0, permissionHours });
           } else {
-            // Permesso parziale (uscita/entrata): lavorerà, mostra ore attese nette / ore permesso (es. 7 / 1 per 8h - 1h permesso)
-            const expectedWorked = Math.max(0, expectedHours - permissionHours);
-            dailyValues.push({ worked: Math.round(expectedWorked * 10) / 10 || Math.round(expectedHours), permissionHours });
+            // Permesso parziale (uscita/entrata) giorno passato SENZA record presenza:
+            // Non assumere ore lavorate - senza timbratura non abbiamo prova. Conta 0.
+            // (evita inflazione del totale: chi ha molti permessi non deve risultare con ore come chi non ne ha)
+            dailyValues.push({ worked: 0, permissionHours });
           }
           return;
         }
