@@ -11360,14 +11360,17 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
             (p.permission_type || '').includes('full') ||
             (p.permission_type || '').includes('giornata') ||
             (!p.exit_time && !p.entry_time) // nessun orario = giornata intera
-          );
+          ) || permissionHours >= expectedHours - 0.01; // permesso >= giornata intera (evita "8 / 8" Silvia)
           const todayStr = new Date().toISOString().split('T')[0];
           const isFutureDate = dateStr > todayStr;
 
-          if (workedHours > 0) {
-            dailyValues.push({ worked: Math.round(workedHours * 100) / 100, permissionHours });
-          } else if (isFullDayPermission) {
+          if (isFullDayPermission) {
             dailyValues.push({ absent: true, expectedHours: Math.round(expectedHours) });
+          } else if (workedHours > 0) {
+            // Cap: lavorate + permesso non può superare expected (evita "8 + 1h40" impossibile)
+            const maxWorked = Math.max(0, expectedHours - permissionHours);
+            const cappedWorked = Math.min(workedHours, maxWorked);
+            dailyValues.push({ worked: Math.round(cappedWorked * 100) / 100, permissionHours });
           } else if (isFutureDate) {
             // Data futura: non mostrare ore lavorate (impossibile aver lavorato domani!)
             // Solo permesso previsto: 0 / 0h30 (zero ore, permesso di 0h30)
@@ -11572,11 +11575,18 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: col >= statsCol1Based };
     }
 
-    // Helper per formattare ore permesso compatte nella cella giornaliera
+    // Helper ore permesso: "2" o "1h30"
     const formatPermissionHoursCompact = (h) => {
       const hours = parseFloat(h) || 0;
       if (hours % 1 === 0) return String(Math.round(hours));
       return `${Math.floor(hours)}h${Math.round((hours % 1) * 60)}`;
+    };
+    // Helper ore lavorate: "8" o "7h 20m" (evita decimali tipo 7.33)
+    const formatWorkedHoursForCell = (h) => {
+      const hours = parseFloat(h) || 0;
+      const mins = Math.round((hours % 1) * 60);
+      if (mins === 0) return String(Math.round(hours));
+      return `${Math.floor(hours)}h ${mins}m`;
     };
 
     // Dati dipendenti (righe 5+)
@@ -11615,10 +11625,11 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
           // Celle permesso: ore lavorate a capo, ore a debito (permesso) in rosso sulla seconda riga
           if (cellValue && typeof cellValue === 'object' && 'worked' in cellValue) {
+            const workedStr = formatWorkedHoursForCell(cellValue.worked);
             const permStr = formatPermissionHoursCompact(cellValue.permissionHours);
             cell.value = {
               richText: [
-                { text: `${cellValue.worked}\n`, font: { bold: true, color: { argb: toArgB('059669') } } },
+                { text: `${workedStr}\n`, font: { bold: true, color: { argb: toArgB('059669') } } },
                 { text: permStr, font: { bold: true, color: redColor } }
               ]
             };
@@ -11648,8 +11659,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('FEF3C7') } };
           } else if (cellValue === '104') {
             cell.value = '104\n';
+            cell.font = { color: { argb: toArgB('7C3AED') }, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgB('EDE9FE') } };
           } else if (typeof cellValue === 'number') {
-            cell.value = `${cellValue}\n`;
+            cell.value = `${formatWorkedHoursForCell(cellValue)}\n`;
             cell.font = { bold: true, color: { argb: toArgB('059669') } };
           } else if (cellValue === '') {
             cell.value = '\n';
