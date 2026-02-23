@@ -222,7 +222,7 @@ const AdminAttendance = () => {
         'LUGLIO', 'AGOSTO', 'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
       const monthName = monthNames[selectedMonth - 1];
       link.href = url;
-      link.download = `foglio presenze dip ${monthName} ${selectedYear}.xls`;
+      link.download = `foglio presenze dip ${monthName} ${selectedYear}.xlsx`;
       // Controllo sicurezza: assicurati che document.body esista
       if (document.body) {
         document.body.appendChild(link);

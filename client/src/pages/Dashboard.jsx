@@ -656,10 +656,12 @@ const Dashboard = () => {
                 date: req.start_date,
                 endDate: req.end_date,
                 type: req.type,
-                permissionType: req.permissionType,
+                permissionType: req.permissionType || req.permission_type,
                 name: eventName,
                 user: user?.role === 'admin' ? (req.user?.name || (req.users ? `${req.users.first_name} ${req.users.last_name}` : undefined)) : undefined,
-                color: req.type === 'vacation' ? 'green' : req.type === 'sick' || req.type === 'sick_leave' ? 'red' : 'blue'
+                color: req.type === 'vacation' ? 'green' : req.type === 'sick' || req.type === 'sick_leave' ? 'red' : req.type === 'permission' ? 'orange' : 'blue',
+                exitTime: req.exitTime || req.exit_time,
+                entryTime: req.entryTime || req.entry_time
               });
             }
           }
@@ -1665,14 +1667,16 @@ const Dashboard = () => {
                 green: 'bg-green-900/20 border-green-500/30',
                 red: 'bg-red-900/20 border-red-500/30',
                 blue: 'bg-zinc-900/50 border-zinc-800',
-                purple: 'bg-purple-900/20 border-purple-500/30'
+                purple: 'bg-purple-900/20 border-purple-500/30',
+                orange: 'bg-orange-900/20 border-orange-500/30'
               };
               
               const iconColors = {
                 green: 'text-green-400',
                 red: 'text-red-400',
                 blue: 'text-slate-400',
-                purple: 'text-purple-400'
+                purple: 'text-purple-400',
+                orange: 'text-orange-400'
               };
               
               const IconComponent = event.type === 'permission_104' ? AlertCircle : 
@@ -1699,6 +1703,13 @@ const Dashboard = () => {
                             <> - {new Date(event.endDate).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}</>
                           )}
                         </p>
+                        {event.type === 'permission' && (event.exitTime || event.entryTime) && (
+                          <p className="text-orange-300 text-sm mt-1">
+                            {event.exitTime && `Esce alle ${event.exitTime}`}
+                            {event.exitTime && event.entryTime && ' · '}
+                            {event.entryTime && `Entra alle ${event.entryTime}`}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">

@@ -11168,10 +11168,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
       return res.status(500).json({ error: 'Errore nel recupero delle presenze' });
     }
 
-    // Recupera permessi, ferie, malattie, permessi 104 approvati
+    // Recupera permessi, ferie, malattie, permessi 104 approvati (include permission_type per distinguere full_day da uscita/entrata)
     const { data: leaveData, error: leaveError } = await supabase
       .from('leave_requests')
-      .select('user_id, type, start_date, end_date, hours, days_requested')
+      .select('user_id, type, start_date, end_date, hours, days_requested, permission_type, exit_time, entry_time')
       .in('user_id', userIds)
       .eq('status', 'approved')
       .lte('start_date', endISO)
@@ -11257,7 +11257,10 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           }
           leaveMap[request.user_id][dateStr].push({
             type: request.type,
-            hours: request.hours || 0
+            hours: request.hours || 0,
+            permission_type: request.permission_type,
+            exit_time: request.exit_time,
+            entry_time: request.entry_time
           });
         }
       }
@@ -11314,7 +11317,8 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
           return;
         }
         if (permission) {
-          // Permesso: mostra ore lavorate / ore permesso (es. 6 / 2) oppure A (8) se assente tutto il giorno
+          // Permesso: ore lavorate / ore permesso (es. 6 / 2). A (8) solo se permesso GIORNATA INTERA (assente tutto il giorno)
+          // Per uscita anticipata/entrata posticipata: lavora quel giorno, non mostrare "A" anche se actualHours=0 (es. data futura)
           const workedHours = attendance?.actualHours || 0;
           const permissionHours = leaves.filter(l => l.type === 'permission').reduce((s, p) => s + (parseFloat(p.hours) || 0), 0);
           const schedule = workSchedulesMap[user.id]?.[dateInfo.dayOfWeek];
@@ -11325,10 +11329,20 @@ app.get('/api/admin/reports/monthly-attendance-excel', authenticateToken, requir
                 break_duration: schedule.break_duration !== null && schedule.break_duration !== undefined ? schedule.break_duration : 60
               })
             : 8;
+          const perms = leaves.filter(l => l.type === 'permission');
+          const isFullDayPermission = perms.some(p =>
+            (p.permission_type || '').includes('full') ||
+            (p.permission_type || '').includes('giornata') ||
+            (!p.exit_time && !p.entry_time) // nessun orario = giornata intera
+          );
           if (workedHours > 0) {
             dailyValues.push({ worked: Math.round(workedHours), permissionHours });
-          } else {
+          } else if (isFullDayPermission) {
             dailyValues.push({ absent: true, expectedHours: Math.round(expectedHours) });
+          } else {
+            // Permesso parziale (uscita/entrata): lavorerà, mostra ore attese nette / ore permesso (es. 7 / 1 per 8h - 1h permesso)
+            const expectedWorked = Math.max(0, expectedHours - permissionHours);
+            dailyValues.push({ worked: Math.round(expectedWorked * 10) / 10 || Math.round(expectedHours), permissionHours });
           }
           return;
         }

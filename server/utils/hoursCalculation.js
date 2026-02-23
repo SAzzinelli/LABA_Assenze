@@ -130,8 +130,12 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
       breakStartTimeStr = break_start_time;
       breakEndTimeStr = addMinutesToTimeString(break_start_time, breakDurationMinutes);
     } else {
-      const startTotalMinutes = effectiveStartTimeObj.getHours() * 60 + effectiveStartTimeObj.getMinutes();
-      const endTotalMinutes = effectiveEndTimeObj.getHours() * 60 + effectiveEndTimeObj.getMinutes();
+      // Usa start_time/end_time ORIGINALI (non effective) per posizionare la pausa.
+      // La pausa è sempre 13-14 nel turno standard 9-18; con uscita anticipata 9-13 non va ricalcolata a metà.
+      const origStart = parseTimeToDate(start_time);
+      const origEnd = parseTimeToDate(end_time);
+      const startTotalMinutes = origStart.getHours() * 60 + origStart.getMinutes();
+      const endTotalMinutes = origEnd.getHours() * 60 + origEnd.getMinutes();
       const totalMinutes = endTotalMinutes - startTotalMinutes;
 
       if (totalMinutes > breakDurationMinutes) {
@@ -202,7 +206,10 @@ function calculateRealTimeHours(schedule, currentTime, permissionData = null) {
     status = isOnBreak ? 'on_break' : 'working';
   } else {
     const totalWorkedMinutes = (effectiveEndTimeObj - effectiveStartTimeObj) / (1000 * 60);
-    const totalBreakMinutes = breakMinutesInShift;
+    // Sottrai la pausa SOLO se la persona ha lavorato OLTRE la pausa (effectiveEnd > breakEnd).
+    // Se esce alla fine/inizio pausa (es. 13:00 con pausa 12-13), non ha "preso" la pausa: ha lavorato 9-13 = 4h.
+    const workedPastBreak = !breakEndTimeObj || effectiveEndTimeObj > breakEndTimeObj;
+    const totalBreakMinutes = workedPastBreak ? breakMinutesInShift : 0;
     actualHours = Math.max(0, (totalWorkedMinutes - totalBreakMinutes) / 60);
     status = 'completed';
   }
