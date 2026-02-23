@@ -8207,10 +8207,14 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                     // Non bloccare l'approvazione, ma loggare l'errore
                   } else if (attendanceRecord) {
                     // Aggiorna la presenza con le nuove ore attese
-                    // Le actual_hours rimangono quelle già registrate (non le modifichiamo)
-                    // IMPORTANTE: Il balance_hours deve essere calcolato come actual_hours - expected_hours
-                    // Le ore attese rimangono sempre quelle originali (8h)
-                    const actualHours = parseFloat(attendanceRecord.actual_hours || 0);
+                    // FIX: correggi actual_hours se inconsistente (es. 8 + 1h40 permesso = impossibile)
+                    // actual non può superare expected - permission; usiamo min per non aumentare mai le ore
+                    const actualFromRecord = parseFloat(attendanceRecord.actual_hours || 0);
+                    const maxActualForPermission = Math.max(0, originalExpectedHours - totalPermissionHours);
+                    const actualHours = Math.min(actualFromRecord, maxActualForPermission);
+                    if (actualFromRecord > maxActualForPermission) {
+                      console.log(`🔧 [APPROVAZIONE PERMESSO] Corretto actual_hours da ${actualFromRecord}h a ${actualHours}h (permesso ${totalPermissionHours}h)`);
+                    }
 
                     // Validazione: actualHours deve essere un numero valido
                     if (isNaN(actualHours)) {
@@ -8224,13 +8228,17 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
                         console.error(`❌ [APPROVAZIONE PERMESSO] Balance hours non valido: ${newBalanceHours}`);
                         // Non aggiorniamo l'attendance se i calcoli non sono validi
                       } else {
+                        const updatePayload = {
+                          expected_hours: Math.round(finalExpectedHours * 100) / 100,
+                          balance_hours: Math.round(newBalanceHours * 100) / 100,
+                          notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
+                        };
+                        if (actualHours !== actualFromRecord) {
+                          updatePayload.actual_hours = Math.round(actualHours * 100) / 100;
+                        }
                         const { error: updateAttError } = await supabase
                           .from('attendance')
-                          .update({
-                            expected_hours: Math.round(finalExpectedHours * 100) / 100,
-                            balance_hours: Math.round(newBalanceHours * 100) / 100,
-                            notes: attendanceRecord.notes ? `${attendanceRecord.notes} [Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]` : `[Permesso approvato: -${permissionHours}h, totale permessi: -${totalPermissionHours}h]`
-                          })
+                          .update(updatePayload)
                           .eq('user_id', updatedRequest.user_id)
                           .eq('date', permissionDate);
 
@@ -15567,7 +15575,29 @@ async function finalizeDailyAttendance() {
           continue;
         }
 
-        // Per una giornata completa, le ore effettive = ore attese
+        // Controlla permessi approvati per ieri (evita 8h quando c'era uscita anticipata/entrata posticipata)
+        let permissionHoursYesterday = 0;
+        const { data: permissionsYesterday } = await supabase
+          .from('leave_requests')
+          .select('hours, permission_type')
+          .eq('user_id', user.id)
+          .eq('type', 'permission')
+          .eq('status', 'approved')
+          .lte('start_date', yesterdayStr)
+          .gte('end_date', yesterdayStr);
+        if (permissionsYesterday && permissionsYesterday.length > 0) {
+          const isFullDay = permissionsYesterday.some(p =>
+            (p.permission_type || '').includes('full') ||
+            (p.permission_type || '').includes('giornata')
+          );
+          if (isFullDay) {
+            permissionHoursYesterday = 999; // Segnale: permesso intera giornata
+          } else {
+            permissionHoursYesterday = permissionsYesterday.reduce((s, p) => s + (parseFloat(p.hours) || 0), 0);
+          }
+        }
+
+        // Per una giornata completa, le ore effettive = ore attese (meno permessi se parziali)
         const { start_time, end_time, break_duration } = yesterdaySchedule;
         const [startHour, startMin] = start_time.split(':').map(Number);
         const [endHour, endMin] = end_time.split(':').map(Number);
@@ -15575,9 +15605,21 @@ async function finalizeDailyAttendance() {
 
         const totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
         const workMinutes = totalMinutes - breakDuration;
-        const finalExpectedHours = workMinutes / 60;
-        const finalActualHours = finalExpectedHours; // Giornata completa
-        const finalBalanceHours = 0;
+        const fullExpectedHours = workMinutes / 60;
+        let finalExpectedHours = fullExpectedHours;
+        let finalActualHours = fullExpectedHours;
+        let finalBalanceHours = 0;
+
+        if (permissionHoursYesterday >= fullExpectedHours - 0.01) {
+          // Permesso intera giornata: actual=0, expected=8, balance=-8
+          finalActualHours = 0;
+          finalBalanceHours = -fullExpectedHours;
+        } else if (permissionHoursYesterday > 0) {
+          // Permesso parziale: actual = expected - permission
+          finalActualHours = Math.max(0, fullExpectedHours - permissionHoursYesterday);
+          finalBalanceHours = -permissionHoursYesterday;
+          console.log(`🔐 ${user.first_name} ${user.last_name}: permesso ${permissionHoursYesterday}h → actual=${finalActualHours}h`);
+        }
 
         // Salva il record finale per ieri
         const { error: saveError } = await supabase
