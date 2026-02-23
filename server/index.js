@@ -8019,7 +8019,6 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
             .single();
 
           if (!empError && employee) {
-            // Recupera tutti gli utenti per formattare nomi duplicati
             const { data: allUsers } = await supabase
               .from('users')
               .select('first_name, last_name');
@@ -8029,6 +8028,23 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               employee.last_name,
               allUsers || []
             );
+
+            // Recupera lo schedule per gli eventi con orario (entrata posticipata / uscita anticipata)
+            let scheduleStart = '09:00';
+            let scheduleEnd = '18:00';
+            const permDayOfWeek = new Date(updatedRequest.start_date).getDay();
+            const { data: permSchedule } = await supabase
+              .from('work_schedules')
+              .select('start_time, end_time')
+              .eq('user_id', updatedRequest.user_id)
+              .eq('day_of_week', permDayOfWeek)
+              .eq('is_working_day', true)
+              .single();
+            if (permSchedule?.start_time && permSchedule?.end_time) {
+              scheduleStart = permSchedule.start_time;
+              scheduleEnd = permSchedule.end_time;
+            }
+
             console.log(`📅 [APPROVAZIONE PERMESSO] Chiamata addPermissionEvent per ${userName}`);
 
             const calendarResult = await addPermissionEvent({
@@ -8039,7 +8055,10 @@ app.put('/api/leave-requests/:id', authenticateToken, requireAdmin, async (req, 
               type: updatedRequest.type,
               reason: updatedRequest.reason || notes || '',
               entryTime: updatedRequest.entry_time || null,
-              exitTime: updatedRequest.exit_time || null
+              exitTime: updatedRequest.exit_time || null,
+              permissionType: updatedRequest.permission_type || null,
+              scheduleStartTime: scheduleStart,
+              scheduleEndTime: scheduleEnd
             });
 
             if (calendarResult) {

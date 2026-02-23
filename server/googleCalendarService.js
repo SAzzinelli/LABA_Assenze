@@ -99,6 +99,9 @@ function initializeCalendarClient() {
  * @param {string} permissionData.reason - Motivo del permesso (opzionale)
  * @param {string} permissionData.entryTime - Ora di entrata (opzionale, per permessi)
  * @param {string} permissionData.exitTime - Ora di uscita (opzionale, per permessi)
+ * @param {string} permissionData.permissionType - 'late_entry' | 'early_exit' | 'full_day' (opzionale)
+ * @param {string} permissionData.scheduleStartTime - Ora inizio turno (es. '09:00') per eventi con orario
+ * @param {string} permissionData.scheduleEndTime - Ora fine turno (es. '18:00') per eventi con orario
  * @returns {Promise<Object|null>} Evento creato o null se errore
  */
 async function addPermissionEvent(permissionData) {
@@ -122,62 +125,63 @@ async function addPermissionEvent(permissionData) {
       console.log('✅ [Google Calendar] Client inizializzato con successo');
     }
 
-    // Calendar ID: può essere 'primary' (calendario principale) o l'ID di un calendario specifico
-    // Per trovare l'ID di un calendario: Google Calendar → Impostazioni calendario → Integra il calendario → ID calendario
-    // Default: 'primary' = calendario principale dell'account Google usato per l'autenticazione
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
-    const { userName, startDate, endDate, hours, type, reason, entryTime, exitTime } = permissionData;
+    const { userName, startDate, endDate, hours, type, reason, entryTime, exitTime, permissionType, scheduleStartTime, scheduleEndTime } = permissionData;
 
-    // Determina il titolo dell'evento in base al tipo
+    const schedStart = scheduleStartTime || '09:00';
+    const schedEnd = scheduleEndTime || '18:00';
+
+    // Determina titolo e tipo evento
     let eventTitle = '';
     let eventDescription = '';
+    let isAllDay = false;
 
     switch (type) {
-      case 'permission':
-        // Permesso normale: "Nome entra dopo" o "Nome esce prima" in base agli orari
-        const hoursFormatted = hours > 0
-          ? `${Math.floor(hours)}h${Math.round((hours - Math.floor(hours)) * 60) > 0 ? ` ${Math.round((hours - Math.floor(hours)) * 60)}min` : ''}`
-          : '0h';
-        
-        // Determina se entra dopo, esce prima, o assente tutta la giornata
-        if (!entryTime || entryTime.trim() === '') {
-          if (!exitTime || exitTime.trim() === '') {
-            // Nessun orario: permesso a giornata intera
-            eventTitle = `${userName} assente oggi`;
-          } else {
-            // Solo uscita: "esce prima"
-            eventTitle = `${userName} esce prima`;
-          }
-        } else if (!exitTime || exitTime.trim() === '') {
-          // Solo entrata: "entra dopo"
-          eventTitle = `${userName} entra dopo`;
+      case 'permission': {
+        const isFullDay = !entryTime && !exitTime || (permissionType || '').includes('full') || (permissionType || '').includes('giornata');
+        const hasLateEntry = (entryTime && entryTime.trim() !== '') || (permissionType === 'late_entry');
+        const hasEarlyExit = (exitTime && exitTime.trim() !== '') || (permissionType === 'early_exit');
+
+        if (isFullDay) {
+          eventTitle = `NO ${userName}`;
+          eventDescription = 'Permesso - Assenza';
+          isAllDay = true;
+        } else if (hasLateEntry && !hasEarlyExit) {
+          eventTitle = userName;
+          eventDescription = `Entrata posticipata - rientro alle ${entryTime}`;
+        } else if (hasEarlyExit && !hasLateEntry) {
+          eventTitle = userName;
+          eventDescription = `Uscita anticipata - esce alle ${exitTime}`;
         } else {
-          // Entrambi gli orari: "entra dopo" (priorità all'entrata)
-          eventTitle = `${userName} entra dopo`;
+          eventTitle = `NO ${userName}`;
+          eventDescription = 'Permesso';
+          isAllDay = true;
         }
-        
-        eventDescription = `permesso di ${hoursFormatted}`; // Solo le ore, senza motivo
         break;
+      }
 
       case 'vacation':
-        eventTitle = userName; // Solo nome dipendente
-        eventDescription = 'Ferie'; // Solo "Ferie", senza motivo
+        eventTitle = `NO ${userName}`;
+        eventDescription = 'Ferie';
+        isAllDay = true;
         break;
 
       case 'sick_leave':
-        eventTitle = userName; // Solo nome dipendente
-        eventDescription = 'Malattia'; // Solo "Malattia", senza motivo
+        eventTitle = `NO ${userName}`;
+        eventDescription = 'Malattia';
+        isAllDay = true;
         break;
 
       case 'permission_104':
-        // Permesso 104: "Nome - Assenza 104" nel titolo
-        eventTitle = `${userName} - Assenza 104`;
-        eventDescription = 'Assenza Legge 104'; // Solo "Assenza Legge 104", senza motivo
+        eventTitle = `NO ${userName}`;
+        eventDescription = 'Assenza Legge 104';
+        isAllDay = true;
         break;
 
       default:
-        eventTitle = userName;
+        eventTitle = `NO ${userName}`;
         eventDescription = type || 'Assenza';
+        isAllDay = true;
     }
 
     // Helper function per calcolare l'offset del timezone Europe/Rome per una data specifica
@@ -234,68 +238,53 @@ async function addPermissionEvent(permissionData) {
     };
 
     // Prepara le date per l'evento
-    // Google Calendar richiede date in formato ISO 8601 con timezone
-    let startDateTimeISO;
-    let endDateTimeISO;
+    let eventStart;
+    let eventEnd;
 
-    // Gestione orari in base al tipo di permesso
-    if (type === 'permission') {
-      // Permesso normale: usa gli orari specifici se disponibili
-      if (entryTime && entryTime.trim() !== '' && exitTime && exitTime.trim() !== '') {
-        // Entrambi gli orari specificati: da entryTime a exitTime (durata reale del permesso)
-        const [entryHour, entryMin] = entryTime.split(':').map(Number);
-        const [exitHour, exitMin] = exitTime.split(':').map(Number);
-        
-        startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
-        endDateTimeISO = createDateTimeISO(endDate, exitHour, exitMin);
-      } else if (entryTime && entryTime.trim() !== '') {
-        // Solo entrata: evento di 1 ora da entryTime (es. entra alle 10 → evento 10:00-11:00)
-        const [entryHour, entryMin] = entryTime.split(':').map(Number);
-        
-        startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
-        // Aggiungi 1 ora
-        const endHour = entryMin === 59 ? (entryHour + 1) % 24 : entryHour + 1;
-        const endMin = entryMin === 59 ? 0 : entryMin;
-        endDateTimeISO = createDateTimeISO(endDate, endHour, endMin);
-      } else if (exitTime && exitTime.trim() !== '') {
-        // Solo uscita: evento di 1 ora da exitTime (es. esce alle 16 → evento 16:00-17:00)
-        const [exitHour, exitMin] = exitTime.split(':').map(Number);
-        
-        startDateTimeISO = createDateTimeISO(startDate, exitHour, exitMin);
-        // Aggiungi 1 ora
-        const endHour = exitMin === 59 ? (exitHour + 1) % 24 : exitHour + 1;
-        const endMin = exitMin === 59 ? 0 : exitMin;
-        endDateTimeISO = createDateTimeISO(endDate, endHour, endMin);
-      } else {
-        // Nessun orario: permesso a giornata intera (9:00-18:00)
-        startDateTimeISO = createDateTimeISO(startDate, 9, 0);
-        endDateTimeISO = createDateTimeISO(endDate, 18, 0);
+    if (isAllDay) {
+      // Evento tutto il giorno: usa date (senza orario). End è ESCLUSIVO in Google Calendar.
+      const endDateExclusive = new Date(endDate);
+      endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+      const endDateStr = endDateExclusive.toISOString().split('T')[0];
+      eventStart = { date: startDate };
+      eventEnd = { date: endDateStr };
+    } else if (type === 'permission' && (entryTime || exitTime)) {
+      // Entrata posticipata: evento inizia all'ora di inizio turno, finisce all'ora di entrata (periodo assente)
+      // Es. Simone entra alle 11 → evento 9:00-11:00
+      if (entryTime && entryTime.trim() !== '' && (!exitTime || exitTime.trim() === '')) {
+        const [sH, sM] = schedStart.split(':').map(Number);
+        const [eH, eM] = entryTime.split(':').map(Number);
+        eventStart = { dateTime: createDateTimeISO(startDate, sH, sM), timeZone: 'Europe/Rome' };
+        eventEnd = { dateTime: createDateTimeISO(startDate, eH, eM), timeZone: 'Europe/Rome' };
       }
-    } else if (type === 'permission_104' && entryTime && exitTime && entryTime.trim() !== '' && exitTime.trim() !== '') {
-      // Permesso 104 con orari specifici
-      const [entryHour, entryMin] = entryTime.split(':').map(Number);
-      const [exitHour, exitMin] = exitTime.split(':').map(Number);
-      
-      startDateTimeISO = createDateTimeISO(startDate, entryHour, entryMin);
-      endDateTimeISO = createDateTimeISO(endDate, exitHour, exitMin);
+      // Uscita anticipata: evento inizia all'ora di uscita, finisce alla fine del turno (periodo assente)
+      // Es. Adriano esce alle 15 → evento 15:00-18:00
+      else if (exitTime && exitTime.trim() !== '' && (!entryTime || entryTime.trim() === '')) {
+        const [exH, exM] = exitTime.split(':').map(Number);
+        const [eH, eM] = schedEnd.split(':').map(Number);
+        eventStart = { dateTime: createDateTimeISO(startDate, exH, exM), timeZone: 'Europe/Rome' };
+        eventEnd = { dateTime: createDateTimeISO(endDate, eH, eM), timeZone: 'Europe/Rome' };
+      } else {
+        // Entrambi o nessuno: fallback evento tutto il giorno
+        const endDateExclusive = new Date(endDate);
+        endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+        eventStart = { date: startDate };
+        eventEnd = { date: endDateExclusive.toISOString().split('T')[0] };
+      }
     } else {
-      // Giornata intera: dalle 9:00 alle 18:00 (default per ferie, malattia, 104 senza orari)
-      startDateTimeISO = createDateTimeISO(startDate, 9, 0);
-      endDateTimeISO = createDateTimeISO(endDate, 18, 0);
+      // Fallback: evento tutto il giorno
+      const endDateExclusive = new Date(endDate);
+      endDateExclusive.setDate(endDateExclusive.getDate() + 1);
+      eventStart = { date: startDate };
+      eventEnd = { date: endDateExclusive.toISOString().split('T')[0] };
     }
 
     // Crea l'evento
     const event = {
       summary: eventTitle,
       description: eventDescription,
-      start: {
-        dateTime: startDateTimeISO,
-        timeZone: 'Europe/Rome'
-      },
-      end: {
-        dateTime: endDateTimeISO,
-        timeZone: 'Europe/Rome'
-      },
+      start: eventStart,
+      end: eventEnd,
       colorId: getColorIdForType(type), // Colore in base al tipo
       reminders: {
         useDefault: false,
@@ -308,8 +297,8 @@ async function addPermissionEvent(permissionData) {
     console.log(`📅 [Google Calendar] Dettagli evento:`, {
       title: eventTitle,
       description: eventDescription,
-      start: event.start.dateTime,
-      end: event.end.dateTime,
+      start: event.start.dateTime || event.start.date,
+      end: event.end.dateTime || event.end.date,
       colorId: event.colorId
     });
     
