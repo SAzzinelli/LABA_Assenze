@@ -5995,6 +5995,57 @@ app.get('/api/leave-requests', authenticateToken, async (req, res) => {
   }
 });
 
+// Get permission hours for multiple dates in one call (evita N richieste)
+app.get('/api/leave-requests/permission-hours-batch', authenticateToken, async (req, res) => {
+  try {
+    const { userId, dates } = req.query;
+
+    if (!dates) {
+      return res.status(400).json({ error: 'Parametro dates richiesto (date separate da virgola)' });
+    }
+
+    const targetUserId = req.user.role === 'admin' && userId ? userId : req.user.id;
+    const dateList = (typeof dates === 'string' ? dates : '').split(',').map(d => d.trim()).filter(Boolean);
+
+    if (dateList.length === 0) {
+      return res.json({ success: true, permissionsByDate: {} });
+    }
+
+    const minDate = dateList.reduce((a, b) => a < b ? a : b);
+    const maxDate = dateList.reduce((a, b) => a > b ? a : b);
+
+    const { data: allPerms, error } = await supabase
+      .from('leave_requests')
+      .select('start_date, end_date, hours, type')
+      .eq('user_id', targetUserId)
+      .eq('status', 'approved')
+      .eq('type', 'permission')
+      .lte('start_date', maxDate)
+      .gte('end_date', minDate);
+
+    if (error) {
+      console.error('Permission hours batch error:', error);
+      return res.status(500).json({ error: 'Errore nel recupero dei permessi' });
+    }
+
+    const permissionsByDate = {};
+    const dateSet = new Set(dateList);
+    if (allPerms && allPerms.length > 0) {
+      for (const dateStr of dateSet) {
+        const hasPermission = allPerms.some(p =>
+          dateStr >= p.start_date && dateStr <= p.end_date && parseFloat(p.hours || 0) > 0
+        );
+        if (hasPermission) permissionsByDate[dateStr] = true;
+      }
+    }
+
+    res.json({ success: true, permissionsByDate });
+  } catch (error) {
+    console.error('Permission hours batch error:', error);
+    res.status(500).json({ error: 'Errore interno del server' });
+  }
+});
+
 // Get permission hours for a specific user and date
 app.get('/api/leave-requests/permission-hours', authenticateToken, async (req, res) => {
   try {

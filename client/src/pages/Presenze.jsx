@@ -370,7 +370,7 @@ const Attendance = () => {
     });
   };
 
-  // Recupera permessi approvati per tutte le date visualizzate
+  // Recupera permessi approvati per tutte le date in UNA sola chiamata (evita centinaia di richieste)
   const fetchPermissionsForDates = async (attendanceRecords) => {
     try {
       if (!attendanceRecords || attendanceRecords.length === 0) {
@@ -378,31 +378,25 @@ const Attendance = () => {
         return;
       }
 
-      // Estrai tutte le date uniche
       const dates = [...new Set(attendanceRecords.map(r => r.date))];
-
-      // Recupera permessi per ogni data
-      const permissionsMapNew = {};
-      
-      for (const date of dates) {
-        try {
-          const response = await apiCall(`/api/leave-requests/permission-hours?userId=${user?.id}&date=${date}`);
-          if (response.ok) {
-            const data = await response.json();
-            // L'endpoint restituisce solo permessi normali (non 104), quindi se totalPermissionHours > 0, c'è un permesso
-            if (data.totalPermissionHours > 0) {
-              permissionsMapNew[date] = true;
-            }
-          }
-        } catch (err) {
-          console.error(`Error fetching permission for ${date}:`, err);
-        }
+      if (dates.length === 0) {
+        setPermissionsMap({});
+        return;
       }
 
-      setPermissionsMap(permissionsMapNew);
-      console.log('📋 Permissions map updated:', Object.keys(permissionsMapNew).length, 'permessi trovati');
+      const datesParam = dates.join(',');
+      const response = await apiCall(`/api/leave-requests/permission-hours-batch?userId=${user?.id}&dates=${encodeURIComponent(datesParam)}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setPermissionsMap(data.permissionsByDate || {});
+        console.log('📋 Permissions map updated:', Object.keys(data.permissionsByDate || {}).length, 'permessi trovati');
+      } else {
+        setPermissionsMap({});
+      }
     } catch (error) {
       console.error('Error fetching permissions for dates:', error);
+      setPermissionsMap({});
     }
   };
 
