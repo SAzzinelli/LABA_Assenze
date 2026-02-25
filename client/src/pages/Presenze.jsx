@@ -496,16 +496,17 @@ const Attendance = () => {
       let utilityPermissionData = null;
       try {
         const todayStr = now.toISOString().split('T')[0];
-        // Usa l'endpoint esistente per recuperare i permessi del giorno
-        const response = await apiCall(`/api/permissions/day/${todayStr}?userId=${user.id}`);
+        const response = await apiCall(`/api/leave-requests/permission-hours?userId=${user?.id}&date=${todayStr}`);
 
         if (response.ok) {
           const data = await response.json();
           if (data.permissions && data.permissions.length > 0) {
             console.log('🎟️ Permissions found for today:', data.permissions);
 
-            const earlyExitPerm = data.permissions.find(p => p.type === 'early_exit' && p.exitTime);
-            const lateEntryPerm = data.permissions.find(p => p.type === 'late_entry' && p.entryTime);
+            const isEarlyExit = (p) => ['early_exit', 'uscita_anticipata'].includes(p.type) && p.exitTime;
+            const isLateEntry = (p) => ['late_entry', 'entrata_posticipata'].includes(p.type) && p.entryTime;
+            const earlyExitPerm = data.permissions.find(isEarlyExit);
+            const lateEntryPerm = data.permissions.find(isLateEntry);
 
             if (earlyExitPerm || lateEntryPerm) {
               utilityPermissionData = {};
